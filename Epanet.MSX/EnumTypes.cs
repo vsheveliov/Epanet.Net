@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
+ * Copyright (C) 2012  Addition, Lda. (addition at addition dot pt)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012  Addition, Lda. (addition at addition dot pt)
+ * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -201,7 +201,7 @@ namespace org.addition.epanet.hydraulic.structures
                     {
                         if (lStat == (Rule.Values)(-1) || lStat <= Rule.Values.IS_NUMBER)
                         {
-                            if (double.IsNaN(lVal = Utilities.getDouble(Tok[Tok.Length - 1])))
+                            if(!Tok[Tok.Length - 1].ToDouble(out lVal))
                                 throw new ENException(ErrorCode.Err202);
 
                             if (lVar == Rule.Varwords.r_FILLTIME || lVar == Rule.Varwords.r_DRAINTIME)
@@ -825,7 +825,7 @@ namespace org.addition.epanet.hydraulic.structures
             double tempPriority = 0.0;
 
             Rule.Rulewords ruleState = Rule.Rulewords.r_RULE;
-            foreach (string _line  in  _rule.getCode().Split('\n'))
+            foreach(string _line in _rule.getCode().Split(new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] tok = _line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 Rule.Rulewords key;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012  Addition, Lda. (addition at addition dot pt)
+ * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using org.addition.epanet.hydraulic.io;
 using org.addition.epanet.hydraulic.models;

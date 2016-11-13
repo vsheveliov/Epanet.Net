@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012  Addition, Lda. (addition at addition dot pt)
+ * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,7 +129,7 @@ public class ReportGenerator {
      * @param value
      */
     public void setTransposedMode(bool value) {
-        sheet.setTransposedMode(value);
+        sheet.TransposedMode = value;
     }
 
     /**
@@ -161,7 +161,7 @@ public class ReportGenerator {
 
         object[] nodesHead = new object[dseek.getNodes() + 1];
 
-        nodesHead[0] = this.sheet.getTransposedMode() ? "Node/Time" : "Time/Node";
+        nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
         int count = 1;
         foreach(Node node in netNodes) {
@@ -170,7 +170,7 @@ public class ReportGenerator {
 
         object[] linksHead = new object[dseek.getLinks() + 1];
 
-        linksHead[0] = this.sheet.getTransposedMode() ? "Link/Time" : "Time/Link";
+        linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
         count = 1;
         foreach(Link link in netLinks) {
@@ -182,19 +182,8 @@ public class ReportGenerator {
 
         for (int i = 0; i < resultSheets.Length; i++) {
             if (values != null && !values[i]) continue;
-
-            resultSheets[i] = this.sheet.newSpreadsheet(HydVariable.Values[i].Name);
-
-            if (HydVariable.Values[i].IsNode) {
-                if (this.sheet.getTransposedMode())
-                    resultSheets[i].prepareTranspose(nodesHead.Length, reportCount + 1);
-                resultSheets[i].addRow(nodesHead);
-            }
-            else {
-                if (this.sheet.getTransposedMode())
-                    resultSheets[i].prepareTranspose(linksHead.Length, reportCount + 1);
-                resultSheets[i].addRow(linksHead);
-            }
+            resultSheets[i] = this.sheet.NewSpreadsheet(HydVariable.Values[i].Name);
+            resultSheets[i].addRow(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
         }
 
         object[] nodeRow = new object[dseek.getNodes() + 1];
@@ -208,8 +197,8 @@ public class ReportGenerator {
             AwareStep step = dseek.getStep(time);
 
             if (step != null) {
-                nodeRow[0] = Utilities.getClockTime(time);
-                linkRow[0] = Utilities.getClockTime(time);
+                nodeRow[0] = time.getClockTime();
+                linkRow[0] = time.getClockTime();
 
               
 
@@ -293,43 +282,29 @@ public class ReportGenerator {
         int reportCount = (int) ((net.getPropertiesMap().getDuration() - net.getPropertiesMap().getRstart()) / net.getPropertiesMap().getRstep()) + 1;
 
         using (QualityReader dseek = new QualityReader(qualFile, net.getFieldsMap())) {
-            object[] nodesHead = new string[dseek.getNodes() + 1];
-            if (sheet.getTransposedMode())
-                nodesHead[0] = "Node/Time";
-            else
-                nodesHead[0] = "Time/Node";
-            int count = 1;
-            foreach (Node node  in  net.getNodes()) {
-                nodesHead[count++] = node.getId();
+           
+            object[] nodesHead = new object[dseek.getNodes() + 1];
+            nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
+            for (int i = 0; i < net.getNodes().Length; i++) {
+                nodesHead[i + 1] = net.getNodes()[i].getId();
             }
 
-            object[] linksHead = new string[dseek.getLinks() + 1];
-            if (sheet.getTransposedMode())
-                linksHead[0] = "Link/Time";
-            else
-                linksHead[0] = "Time/Link";
-            count = 1;
-            foreach (Link link  in  net.getLinks()) {
-                linksHead[count++] = link.getId();
+            object[] linksHead = new object[dseek.getLinks() + 1];
+            linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
+            for (int i = 0; i < net.getLinks().Length; i++) {
+                linksHead[i + 1] = net.getLinks()[i].getId();
             }
 
             XLSXWriter.Spreadsheet[] resultSheets = new XLSXWriter.Spreadsheet[hydVariableName.Length];
             // Array.Clear(resultSheets, 0, resultSheets.Length);
 
             foreach (int var  in  Enum.GetValues(typeof(QualVariable))) {
-                if (QualVariableIsNode[var] && nodes || !QualVariableIsNode[var] && links) {
-                    resultSheets[var] = sheet.newSpreadsheet(QualVariableName[var]);
-                    if (QualVariableIsNode[var]) {
-                        if (sheet.getTransposedMode())
-                            resultSheets[var].prepareTranspose(nodesHead.Length, reportCount + 1);
-                        resultSheets[var].addRow(nodesHead);
-                    }
-                    else {
-                        if (sheet.getTransposedMode())
-                            resultSheets[var].prepareTranspose(linksHead.Length, reportCount + 1);
-                        resultSheets[var].addRow(linksHead);
-                    }
-                }
+                
+                if ((!QualVariableIsNode[var] || !nodes) && (QualVariableIsNode[var] || !links))
+                    continue;
+
+                resultSheets[var] = this.sheet.NewSpreadsheet(QualVariableName[var]);
+                resultSheets[var].addRow(QualVariableIsNode[var] ? nodesHead : linksHead);
             }
 
             object[] nodeRow = new object[dseek.getNodes() + 1];
@@ -345,8 +320,8 @@ public class ReportGenerator {
 
                 QualityReader.Step step = qIt.Current;
                 if (step != null) {
-                    nodeRow[0] = Utilities.getClockTime(time);
-                    linkRow[0] = Utilities.getClockTime(time);
+                    nodeRow[0] = time.getClockTime();
+                    linkRow[0] = time.getClockTime();
 
 
                     if (resultSheets[(int)QualVariable.Type.Nodes] != null) {
@@ -403,11 +378,11 @@ public class ReportGenerator {
         reader.open(msxBin);
 
 
-        string[] nodesHead = new string[nSpecies.Length + 1];
-        nodesHead[0] = this.sheet.getTransposedMode() ? "Node/Time" : "Time/Node";
+        object[] nodesHead = new object[nSpecies.Length + 1];
+        nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
-        string[] linksHead = new string[nSpecies.Length + 1];
-        linksHead[0] = this.sheet.getTransposedMode() ? "Link/Time" : "Time/Link";
+        object[] linksHead = new object[nSpecies.Length + 1];
+        linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
         int count = 1;
         for (int i = 0; i < nSpecies.Length; i++)
@@ -419,15 +394,14 @@ public class ReportGenerator {
         object[] nodeRow = new object[totalSpecies + 1];
         for (int i = 1; i < nodes.Length; i++) {
             if (nodes[i].getRpt()) {
-                XLSXWriter.Spreadsheet spr = sheet.newSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
-                if (sheet.getTransposedMode()) spr.prepareTranspose(nodesHead.Length, reportCount + 1);
+                var spr = sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
                 spr.addRow(nodesHead);
 
                 for (long time = net.getPropertiesMap().getRstart(), period = 0;
                      time <= net.getPropertiesMap().getDuration();
                      time += net.getPropertiesMap().getRstep(), period++) {
 
-                    nodeRow[0] = Utilities.getClockTime(time);
+                    nodeRow[0] = time.getClockTime();
 
                     for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
                         if (values == null || values[j])
@@ -442,15 +416,14 @@ public class ReportGenerator {
         object[] linkRow = new object[totalSpecies + 1];
         for (int i = 1; i < links.Length; i++) {
             if (links[i].getRpt()) {
-                XLSXWriter.Spreadsheet spr = sheet.newSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
-                if (sheet.getTransposedMode()) spr.prepareTranspose(linksHead.Length, reportCount + 1);
+                XLSXWriter.Spreadsheet spr = sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
                 spr.addRow(linksHead);
 
                 for (long time = net.getPropertiesMap().getRstart(), period = 0;
                      time <= net.getPropertiesMap().getDuration();
                      time += net.getPropertiesMap().getRstep(), period++) {
 
-                    linkRow[0] = Utilities.getClockTime(time);
+                    linkRow[0] = time.getClockTime();
 
                     for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
                         if (values == null || values[j])
@@ -472,8 +445,7 @@ public class ReportGenerator {
      * @throws IOException
      */
     public void writeWorksheet() {
-        sheet.save(File.OpenWrite(xlsxFile));
-        sheet.finish();
+        this.sheet.Save(xlsxFile);
     }
 
     /**
@@ -486,7 +458,7 @@ public class ReportGenerator {
      * @throws IOException
      */
     public void writeSummary(string inpFile, Network net, string msxFile, EpanetMSX msx) {
-        XLSXWriter.Spreadsheet sh = sheet.newSpreadsheet("Summary");
+        XLSXWriter.Spreadsheet sh = sheet.NewSpreadsheet("Summary");
 
         try {
             PropertiesMap pMap = net.getPropertiesMap();
@@ -522,7 +494,7 @@ public class ReportGenerator {
             sh.addRow(Utilities.getText("FMT24"), nValves);
             sh.addRow(Utilities.getText("FMT25"), pMap.getFormflag().ParseStr());
 
-            sh.addRow(Utilities.getText("FMT26"), Utilities.getClockTime(pMap.getHstep()));
+            sh.addRow(Utilities.getText("FMT26"), pMap.getHstep().getClockTime());
             sh.addRow(Utilities.getText("FMT27"), pMap.getHacc());
             sh.addRow(Utilities.getText("FMT27a"), pMap.getCheckFreq());
             sh.addRow(Utilities.getText("FMT27b"), pMap.getMaxCheck());
@@ -539,7 +511,7 @@ public class ReportGenerator {
                 sh.addRow(Utilities.getText("FMT32"), "Age");
 
             if (pMap.getQualflag() != PropertiesMap.QualType.NONE && pMap.getDuration() > 0) {
-                sh.addRow(Utilities.getText("FMT33"), "Time Step", Utilities.getClockTime(pMap.getQstep()));
+                sh.addRow(Utilities.getText("FMT33"), "Time Step", pMap.getQstep().getClockTime());
                 sh.addRow(Utilities.getText("FMT34"), "Tolerance", fMap.revertUnit(FieldsMap.Type.QUALITY, pMap.getCtol()),
                         fMap.getField(FieldsMap.Type.QUALITY).getUnits());
             }

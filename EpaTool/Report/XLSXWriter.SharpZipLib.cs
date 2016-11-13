@@ -1,20 +1,3 @@
-/*
- * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -22,13 +5,13 @@ using System.IO;
 using System.IO.Packaging;
 using System.Xml;
 
-namespace org.addition.epanet.util {
+namespace EpaTool.Report {
     /// <summary>
     /// See also http://msdn.microsoft.com/en-us/library/documentformat.openxml.spreadsheet(v=office.14).aspx
     /// </summary>
     internal sealed class XLSXWriter : IDisposable {
         private const string SCHEMA_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-
+        
         private const string RELATIONSHIP_ROOT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         private const string NS_ROOT = "application/vnd.openxmlformats-officedocument.spreadsheetml";
 
@@ -64,8 +47,8 @@ namespace org.addition.epanet.util {
 
         private void WriteSharedStringsXml() {
             int count = 0;
-
-            foreach(var x in this._sheets) {
+            
+            foreach (var x in this._sheets) {
                 count += x.WordCount;
             }
 
@@ -85,11 +68,11 @@ namespace org.addition.epanet.util {
             sstNode.SetAttribute("uniqueCount", this._sharedStrings.Count.ToString(NumberFormatInfo.InvariantInfo));
             sharedStringsDoc.AppendChild(sstNode);
 
-            var words = new List<KeyValuePair<string, int>>(this._sharedStrings);
-            words.Sort((a, b) => a.Value.CompareTo(b.Value));
+            var words = new List<KeyValuePair<string,int>>(this._sharedStrings);
+            words.Sort((a,b) => a.Value.CompareTo(b.Value));
 
-            foreach(KeyValuePair<string, int> kvp in words) {
-
+            foreach (KeyValuePair<string, int> kvp in words) {
+                
                 //Create and append the si node.
                 XmlElement siNode = sharedStringsDoc.CreateElement("si");
                 sstNode.AppendChild(siNode);
@@ -130,12 +113,12 @@ namespace org.addition.epanet.util {
             workBook.SetAttribute("xmlns", SCHEMA_MAIN);
             workBook.SetAttribute("xmlns:r", RELATIONSHIP_ROOT);
             workbookDoc.AppendChild(workBook);
-
+            
             //Create and append the sheets node to the workBook node.
             XmlElement sheets = workbookDoc.CreateElement("sheets");
             workBook.AppendChild(sheets);
 
-            for(int i = 1; i <= this._sheets.Count; i++) {
+            for (int i = 1; i <= this._sheets.Count; i++) {
                 string sid = i.ToString(NumberFormatInfo.InvariantInfo);
                 //Create and append the sheet node to the sheets node.
                 XmlElement sheet = workbookDoc.CreateElement("sheet");
@@ -148,17 +131,17 @@ namespace org.addition.epanet.util {
             Uri uri = PackUriHelper.CreatePartUri(new Uri("xl/workbook.xml", UriKind.Relative));
             var part = this._package.CreatePart(uri, NS_WORKBOOK, CompressionOption.Maximum);
             workbookDoc.Save(part.GetStream(FileMode.Create, FileAccess.Write));
-
-            this._package.CreateRelationship(uri, TargetMode.Internal, RELATIONSHIP_WORKBOOK, "rId1");
+     
+            this._package.CreateRelationship(uri, TargetMode.Internal, RELATIONSHIP_WORKBOOK, "rId1" );
         }
 
         public void Save(string outputFile) {
             this._package = Package.Open(outputFile, FileMode.Create);
-
+            
             this.WriteWorkbookXml();
             this.WriteSharedStringsXml();
 
-            for(int i = 0; i < this._sheets.Count; i++) {
+            for (int i = 0; i < this._sheets.Count; i++) {
                 this.WriteWorksheet(this._sheets[i], i + 1);
             }
 
@@ -173,7 +156,7 @@ namespace org.addition.epanet.util {
         }
 
         public void Dispose() {
-            if(this._package != null) {
+            if (this._package != null) {
                 this._package.Close();
                 this._package = null;
             }
@@ -182,12 +165,12 @@ namespace org.addition.epanet.util {
         }
 
         private static string GetColumnName(int columnNumber) {
-            if(columnNumber > EXCEL_MAX_COLUMNS || columnNumber < 0)
+            if (columnNumber > EXCEL_MAX_COLUMNS || columnNumber < 0)
                 throw new ArgumentOutOfRangeException("columnNumber");
-
+           
             string columnName = string.Empty;
-
-            for(int dividend = columnNumber; dividend > 0; ) {
+                       
+            for (int dividend = columnNumber; dividend > 0; ) {
                 int modulo = (dividend - 1) % 26;
                 columnName = (char)(65 + modulo) + columnName;
                 dividend = (dividend - modulo) / 26;
@@ -209,7 +192,7 @@ namespace org.addition.epanet.util {
                 this._transposedMode = transposedMode;
                 this._sharedStrings = sharedStrings;
                 this._xml = new XmlDocument { PreserveWhitespace = PRESERVE_WHITESPACE };
-
+                
                 // Get a reference to the root node, and then add the XML declaration.
                 XmlElement wsRoot = this._xml.DocumentElement;
                 XmlDeclaration wsxmldecl = this._xml.CreateXmlDeclaration("1.0", "UTF-8", "yes");
@@ -231,8 +214,8 @@ namespace org.addition.epanet.util {
             public int WordCount { get; private set; }
             public string Name { get { return this._name; } }
 
-            public void addRow(params object[] row) {
-                if(this._transposedMode)
+            public void AddData(params object[] row) {
+                if (this._transposedMode)
                     this.AddColumn(row);
                 else
                     this.AddRow(row);
@@ -252,7 +235,7 @@ namespace org.addition.epanet.util {
 
                 int col = 0;
 
-                foreach(object o in row) {
+                foreach (object o in row) {
                     string cellAddr = GetColumnName(col + 1) + rowName;
                     this.AddCell(rNode, o, cellAddr);
 
@@ -264,10 +247,10 @@ namespace org.addition.epanet.util {
                 XmlElement sheetData = this._xml["worksheet"]["sheetData"];
                 XmlNodeList rows = sheetData.GetElementsByTagName("row");
 
-                if(rows.Count < row.Length) {
-                    for(int i = rows.Count; i < row.Length; i++) {
+                if (rows.Count < row.Length) {
+                    for (int i = rows.Count; i < row.Length; i++) {
                         XmlElement rNode = this._xml.CreateElement("row");
-                        rNode.SetAttribute("r", (i + 1).ToString(NumberFormatInfo.InvariantInfo));
+                        rNode.SetAttribute("r", (i+1).ToString(NumberFormatInfo.InvariantInfo));
                         // rNode.SetAttribute("spans", "1:" + colspan);
                         sheetData.AppendChild(rNode);
                     }
@@ -278,7 +261,7 @@ namespace org.addition.epanet.util {
                 int iRow = 1;
                 string columnName = GetColumnName(this._rowsAdded);
 
-                foreach(object o in row) {
+                foreach (object o in row) {
                     XmlNode rNode = rows[iRow - 1];
                     string cellAddr = columnName + iRow.ToString(NumberFormatInfo.InvariantInfo);
 
@@ -294,34 +277,33 @@ namespace org.addition.epanet.util {
                 // if (!(value is ValueType)) return false;
 
                 var v = value as IConvertible;
-                if(v == null)
-                    return null;
+                if (v == null) return null;
 
-                switch(v.GetTypeCode()) {
-                case TypeCode.SByte:
-                case TypeCode.Byte:
-                case TypeCode.Int16:
-                case TypeCode.UInt16:
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                case TypeCode.Single:
-                case TypeCode.Double:
-                case TypeCode.Decimal:
-                return v.ToString(NumberFormatInfo.InvariantInfo);
+                switch (v.GetTypeCode()) {
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return v.ToString(NumberFormatInfo.InvariantInfo);
 
-                default:
-                return null;
+                    default:
+                        return null;
                 }
             }
 
             private void AddCell(XmlNode rNode, object o, string cellAddr) {
-
+      
                 string dataType;
                 string dataValue = NumberToStringInvariant(o);
 
-                if(!string.IsNullOrEmpty(dataValue)) {
+                if (!string.IsNullOrEmpty(dataValue)) {
                     dataType = "n";
                 }
                 else {
@@ -330,7 +312,7 @@ namespace org.addition.epanet.util {
                     int idx;
 
                     lock(this._sharedStrings) {
-                        if(!this._sharedStrings.TryGetValue(s, out idx)) {
+                        if (!this._sharedStrings.TryGetValue(s, out idx)) {
                             idx = this._sharedStrings.Count;
                             this._sharedStrings.Add(s, idx);
                         }
@@ -344,7 +326,7 @@ namespace org.addition.epanet.util {
 
                 //Create and add the column node.
                 XmlElement cNode = this._xml.CreateElement("c");
-
+                
                 cNode.SetAttribute("r", cellAddr);
                 cNode.SetAttribute("t", dataType);
                 rNode.AppendChild(cNode);
@@ -358,10 +340,9 @@ namespace org.addition.epanet.util {
 
         }
 
-        public Spreadsheet this[int i] {
-            get { return this._sheets[i]; }
-            set { this._sheets[i] = value; }
-        }
+        public Spreadsheet this[int i] { 
+            get { return this._sheets[i]; } 
+            set { this._sheets[i] = value; } }
     }
 
 }
