@@ -1,0 +1,426 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Microsoft ResX Schema
+
+    Version 2.0
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
+    associated with the data types.
+
+    Example:
+
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+
+    There are any number of "resheader" rows that contain simple
+    name/value pairs.
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
+    mimetype set.
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
+    extensible. For a given mimetype the value must be set accordingly:
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
+    read any of the formats listed below.
+
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="FMT01" xml:space="preserve">
+    <value>
+... EPANET Version 2.0
+</value>
+  </data>
+  <data name="FMT02" xml:space="preserve">
+    <value>
+  o Retrieving network data ...</value>
+  </data>
+  <data name="FMT03" xml:space="preserve">
+    <value>
+ Correct syntax is:
+ epanet &lt;input file&gt; &lt;output file&gt;
+</value>
+  </data>
+  <data name="FMT04" xml:space="preserve">
+    <value>
+    Cannot use duplicate file names.</value>
+  </data>
+  <data name="FMT05" xml:space="preserve">
+    <value>
+    Cannot open input file</value>
+  </data>
+  <data name="FMT06" xml:space="preserve">
+    <value>
+    Cannot open report file</value>
+  </data>
+  <data name="FMT07" xml:space="preserve">
+    <value>
+    Cannot open output file</value>
+  </data>
+  <data name="FMT08" xml:space="preserve">
+    <value>
+    Cannot open temporary output file</value>
+  </data>
+  <data name="FMT09" xml:space="preserve">
+    <value>
+
+... EPANET completed.
+</value>
+  </data>
+  <data name="FMT10" xml:space="preserve">
+    <value>
+
+... EPANET completed. There are warnings.
+</value>
+  </data>
+  <data name="FMT11" xml:space="preserve">
+    <value>
+
+... EPANET completed. There are errors.
+</value>
+  </data>
+  <data name="FMT14" xml:space="preserve">
+    <value>
+  o Computing hydraulics ...</value>
+  </data>
+  <data name="FMT15" xml:space="preserve">
+    <value>
+  o Computing water quality ...</value>
+  </data>
+  <data name="FMT16" xml:space="preserve">
+    <value>
+  o Transferring results to file</value>
+  </data>
+  <data name="FMT17" xml:space="preserve">
+    <value>
+  o Writing output report to</value>
+  </data>
+  <data name="FMT18" xml:space="preserve">
+    <value>  Page 1</value>
+  </data>
+  <data name="FMT19" xml:space="preserve">
+    <value>    Input Data File</value>
+  </data>
+  <data name="FMT20" xml:space="preserve">
+    <value>    Number of Junctions</value>
+  </data>
+  <data name="FMT21a" xml:space="preserve">
+    <value>    Number of Reservoirs</value>
+  </data>
+  <data name="FMT21b" xml:space="preserve">
+    <value>    Number of Tanks</value>
+  </data>
+  <data name="FMT22" xml:space="preserve">
+    <value>    Number of Pipes</value>
+  </data>
+  <data name="FMT23" xml:space="preserve">
+    <value>    Number of Pumps</value>
+  </data>
+  <data name="FMT24" xml:space="preserve">
+    <value>    Number of Valves</value>
+  </data>
+  <data name="FMT25" xml:space="preserve">
+    <value>    Headloss Formula</value>
+  </data>
+  <data name="FMT26" xml:space="preserve">
+    <value>    Hydraulic Timestep</value>
+  </data>
+  <data name="FMT27" xml:space="preserve">
+    <value>    Hydraulic Accuracy</value>
+  </data>
+  <data name="FMT27a" xml:space="preserve">
+    <value>    Status Check Frequency</value>
+  </data>
+  <data name="FMT27b" xml:space="preserve">
+    <value>    Maximum Trials Checked</value>
+  </data>
+  <data name="FMT27c" xml:space="preserve">
+    <value>    Damping Limit Threshold</value>
+  </data>
+  <data name="FMT28" xml:space="preserve">
+    <value>    Maximum Trials</value>
+  </data>
+  <data name="FMT29" xml:space="preserve">
+    <value>    Quality Analysis</value>
+  </data>
+  <data name="FMT30" xml:space="preserve">
+    <value>    Quality Analysis</value>
+  </data>
+  <data name="FMT31" xml:space="preserve">
+    <value>    Quality Analysis</value>
+  </data>
+  <data name="FMT32" xml:space="preserve">
+    <value>    Quality Analysis</value>
+  </data>
+  <data name="FMT33" xml:space="preserve">
+    <value>    Water Quality</value>
+  </data>
+  <data name="FMT34" xml:space="preserve">
+    <value>    Water Quality</value>
+  </data>
+  <data name="FMT36" xml:space="preserve">
+    <value>    Specific Gravity</value>
+  </data>
+  <data name="FMT37a" xml:space="preserve">
+    <value>    Relative Kinematic Viscosity</value>
+  </data>
+  <data name="FMT37b" xml:space="preserve">
+    <value>    Relative Chemical Diffusivity</value>
+  </data>
+  <data name="FMT38" xml:space="preserve">
+    <value>    Demand Multiplier</value>
+  </data>
+  <data name="FMT39" xml:space="preserve">
+    <value>    Total Duration</value>
+  </data>
+  <data name="FMT40" xml:space="preserve">
+    <value>    Reporting Criteria:</value>
+  </data>
+  <data name="FMT41" xml:space="preserve">
+    <value>       No Nodes</value>
+  </data>
+  <data name="FMT42" xml:space="preserve">
+    <value>       All Nodes</value>
+  </data>
+  <data name="FMT43" xml:space="preserve">
+    <value>       Selected Nodes</value>
+  </data>
+  <data name="FMT44" xml:space="preserve">
+    <value>       No Links</value>
+  </data>
+  <data name="FMT45" xml:space="preserve">
+    <value>       All Links</value>
+  </data>
+  <data name="FMT46" xml:space="preserve">
+    <value>       Selected Links</value>
+  </data>
+  <data name="FMT47" xml:space="preserve">
+    <value>       with {0} below {1:F2} {2}</value>
+  </data>
+  <data name="FMT48" xml:space="preserve">
+    <value>       with {0} above {1:F2} {2}</value>
+  </data>
+  <data name="FMT49" xml:space="preserve">
+    <value>Hydraulic Status:</value>
+  </data>
+  <data name="FMT50" xml:space="preserve">
+    <value>{0,10}: Tank {1} is {2} at {3:F2} {4}</value>
+  </data>
+  <data name="FMT51" xml:space="preserve">
+    <value>{0,10}: Reservoir {1} is {2}</value>
+  </data>
+  <data name="FMT52" xml:space="preserve">
+    <value>{0,10}: {1} {2} {3}</value>
+  </data>
+  <data name="FMT53" xml:space="preserve">
+    <value>{0,10}: {1} {2} changed from {3} to {4}</value>
+  </data>
+  <data name="FMT54" xml:space="preserve">
+    <value>{0,10}: {1} {2} changed by {3} {4} control</value>
+  </data>
+  <data name="FMT55" xml:space="preserve">
+    <value>{0,10}: {1} {2} changed by timer control</value>
+  </data>
+  <data name="FMT56" xml:space="preserve">
+    <value>            {0} {1} setting changed to {2:F2}</value>
+  </data>
+  <data name="FMT57" xml:space="preserve">
+    <value>            {0} {1} switched from {2} to {3}</value>
+  </data>
+  <data name="FMT58" xml:space="preserve">
+    <value>{0,10}: Balanced after {1} trials</value>
+  </data>
+  <data name="FMT59" xml:space="preserve">
+    <value>{0,10}: Unbalanced after {1} trials (flow change = {2:F6})</value>
+  </data>
+  <data name="FMT60a" xml:space="preserve">
+    <value>            Max. flow imbalance is {0:F4} {1} at Node {2}</value>
+  </data>
+  <data name="FMT60b" xml:space="preserve">
+    <value>            Max. head imbalance is {0:F4} {1} at Link {2}</value>
+  </data>
+  <data name="FMT61" xml:space="preserve">
+    <value>{0,10}: Valve {1} caused ill-conditioning</value>
+  </data>
+  <data name="FMT62" xml:space="preserve">
+    <value>{0,10}: System ill-conditioned at node {1}</value>
+  </data>
+  <data name="FMT63" xml:space="preserve">
+    <value>{0,10}: {1} {2} changed by rule {3}</value>
+  </data>
+  <data name="FMT64" xml:space="preserve">
+    <value>{0,10}: Balancing the network:</value>
+  </data>
+  <data name="FMT65" xml:space="preserve">
+    <value>            Trial {0,2}: relative flow change = {1:F6}</value>
+  </data>
+  <data name="FMT71" xml:space="preserve">
+    <value>Energy Usage:</value>
+  </data>
+  <data name="FMT72" xml:space="preserve">
+    <value>           Usage   Avg.     Kw-hr      Avg.      Peak      Cost</value>
+  </data>
+  <data name="FMT73" xml:space="preserve">
+    <value>Pump      Factor Effic.     {0}        Kw        Kw      /day</value>
+  </data>
+  <data name="FMT74" xml:space="preserve">
+    <value>{0,38} Demand Charge: {1,9:F2}</value>
+  </data>
+  <data name="FMT75" xml:space="preserve">
+    <value>{0,38} Total Cost:    {1,9:F2}</value>
+  </data>
+  <data name="FMT76" xml:space="preserve">
+    <value>{0} Node Results:</value>
+  </data>
+  <data name="FMT77" xml:space="preserve">
+    <value>Node Results:</value>
+  </data>
+  <data name="FMT78" xml:space="preserve">
+    <value>Node Results at {0} hrs:</value>
+  </data>
+  <data name="FMT79" xml:space="preserve">
+    <value>{0} Link Results:</value>
+  </data>
+  <data name="FMT80" xml:space="preserve">
+    <value>Link Results:</value>
+  </data>
+  <data name="FMT81" xml:space="preserve">
+    <value>Link Results at {0} hrs:</value>
+  </data>
+  <data name="FMT82" xml:space="preserve">
+    <value>
+&#xC;
+  Page {0}    {1,60}
+</value>
+  </data>
+  <data name="FMT100" xml:space="preserve">
+    <value>Retrieving network data...</value>
+  </data>
+  <data name="FMT101" xml:space="preserve">
+    <value>Computing hydraulics ...</value>
+  </data>
+  <data name="FMT102" xml:space="preserve">
+    <value>Computing water quality ...</value>
+  </data>
+  <data name="FMT103" xml:space="preserve">
+    <value>Saving results to file...</value>
+  </data>
+  <data name="FMT104" xml:space="preserve">
+    <value>Analysis begun {0}</value>
+  </data>
+  <data name="FMT105" xml:space="preserve">
+    <value>Analysis ended {0}</value>
+  </data>
+  <data name="t_FUNCCALL" xml:space="preserve">
+    <value>function call</value>
+  </data>
+  <data name="LOG01" xml:space="preserve">
+    <value>******************************************************************</value>
+  </data>
+  <data name="LOG02" xml:space="preserve">
+    <value>*                       E P A N E T  C#                          *</value>
+  </data>
+  <data name="LOG03" xml:space="preserve">
+    <value>*                   Hydraulic and Water Quality                  *</value>
+  </data>
+  <data name="LOG04" xml:space="preserve">
+    <value>*                   Analysis for Pipe Networks                   *</value>
+  </data>
+  <data name="LOG05" xml:space="preserve">
+    <value>*                                                                *</value>
+  </data>
+  <data name="LOG06" xml:space="preserve">
+    <value>******************************************************************</value>
+  </data>
+</root>

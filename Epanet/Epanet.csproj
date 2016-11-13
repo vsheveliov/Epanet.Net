@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F3001D0D-515D-43B5-B7A0-D77E112CB114}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Epanet</RootNamespace>
+    <AssemblyName>Epanet</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;COMMENTED</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="NPOI">
+      <HintPath>..\lib\NPOI.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OOXML">
+      <HintPath>..\lib\NPOI.OOXML.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OpenXml4Net">
+      <HintPath>..\lib\NPOI.OpenXml4Net.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OpenXmlFormats">
+      <HintPath>..\lib\NPOI.OpenXmlFormats.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Constants.cs" />
+    <Compile Include="ErrorCode.cs" />
+    <Compile Include="log\EpanetTraceListener.cs" />
+    <Compile Include="log\InvariantStreamWriter.cs" />
+    <Compile Include="log\RollingFileStream.cs" />
+    <Compile Include="log\TraceExtensions.cs" />
+    <Compile Include="Network\Collections.cs" />
+    <Compile Include="Network\IO\Input\ParseException.cs" />
+    <Compile Include="Hydraulic\HydraulicSim.cs" />
+    <Compile Include="Hydraulic\IO\AwareStep.cs" />
+    <Compile Include="Hydraulic\IO\HydraulicReader.cs" />
+    <Compile Include="Hydraulic\Models\CMModelCalculator.cs" />
+    <Compile Include="Hydraulic\Models\DwModelCalculator.cs" />
+    <Compile Include="Hydraulic\Models\HWModelCalculator.cs" />
+    <Compile Include="Hydraulic\Models\PipeHeadModel.cs" />
+    <Compile Include="Hydraulic\SparseMatrix.cs" />
+    <Compile Include="Hydraulic\Structures\LSVariables.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationControl.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationLink.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationNode.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationPump.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationRule.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationTank.cs" />
+    <Compile Include="Hydraulic\Structures\SimulationValve.cs" />
+    <Compile Include="Network\FieldsMap.cs" />
+    <Compile Include="Network\IO\Input\ExcelParser.cs" />
+    <Compile Include="Network\IO\Input\InpParser.cs" />
+    <Compile Include="Network\IO\Input\InputParser.cs" />
+    <Compile Include="Network\IO\Input\NullParser.cs" />
+    <Compile Include="Network\IO\Input\XMLParser.cs" />
+    <Compile Include="Network\IO\Keywords.cs" />
+    <Compile Include="Network\IO\Output\ExcelComposer.cs" />
+    <Compile Include="Network\IO\Output\InpComposer.cs" />
+    <Compile Include="Network\IO\Output\OutputComposer.cs" />
+    <Compile Include="Network\IO\Output\XMLComposer.cs" />
+    <Compile Include="Network\Network.cs" />
+    <Compile Include="Network\PropertiesMap.cs" />
+    <Compile Include="Network\Structures\Control.cs" />
+    <Compile Include="Network\Structures\Curve.cs" />
+    <Compile Include="Network\Structures\Demand.cs" />
+    <Compile Include="Network\Structures\Field.cs" />
+    <Compile Include="Network\Structures\Label.cs" />
+    <Compile Include="Network\Structures\Link.cs" />
+    <Compile Include="Network\Structures\Node.cs" />
+    <Compile Include="Network\Structures\NUConvert.cs" />
+    <Compile Include="Network\Structures\Pattern.cs" />
+    <Compile Include="Network\Structures\Point.cs" />
+    <Compile Include="Network\Structures\Pump.cs" />
+    <Compile Include="Network\Structures\Rule.cs" />
+    <Compile Include="Network\Structures\Source.cs" />
+    <Compile Include="Network\Structures\Tank.cs" />
+    <Compile Include="Network\Structures\Valve.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Error.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Error.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Text.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Text.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Quality\QualityReader.cs" />
+    <Compile Include="Quality\QualitySim.cs" />
+    <Compile Include="Quality\Structures\QualityLink.cs" />
+    <Compile Include="Quality\Structures\QualityNode.cs" />
+    <Compile Include="Quality\Structures\QualitySegment.cs" />
+    <Compile Include="Quality\Structures\QualityTank.cs" />
+    <Compile Include="Util\ENException.cs" />
+    <Compile Include="Util\EnumsTxt.cs" />
+    <Compile Include="Util\Utilities.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Hydraulic\IO\package.html" />
+    <Content Include="Hydraulic\Models\package.html" />
+    <Content Include="Hydraulic\package.html" />
+    <Content Include="Hydraulic\Structures\package.html" />
+    <Content Include="Network\IO\Input\package.html" />
+    <Content Include="Network\IO\Output\package.html" />
+    <Content Include="Network\IO\package.html" />
+    <Content Include="Network\package.html" />
+    <Content Include="Network\Structures\package.html" />
+    <Content Include="package.html" />
+    <Content Include="Quality\package.html" />
+    <Content Include="Quality\Structures\package.html" />
+    <Content Include="Util\package.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Error.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Error.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Text.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Text.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

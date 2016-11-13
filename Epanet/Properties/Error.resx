@@ -1,0 +1,339 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ERR101" xml:space="preserve">
+    <value>System Error 101: insufficient memory available.</value>
+  </data>
+  <data name="ERR102" xml:space="preserve">
+    <value>System Error 102: no network data available.</value>
+  </data>
+  <data name="ERR103" xml:space="preserve">
+    <value>System Error 103: hydraulics not initialized.</value>
+  </data>
+  <data name="ERR104" xml:space="preserve">
+    <value>System Error 104: no hydraulics for water quality analysis.</value>
+  </data>
+  <data name="ERR105" xml:space="preserve">
+    <value>System Error 105: water quality not initialized.</value>
+  </data>
+  <data name="ERR106" xml:space="preserve">
+    <value>System Error 106: no results saved to report on.</value>
+  </data>
+  <data name="ERR107" xml:space="preserve">
+    <value>System Error 107: hydraulics supplied from external file.</value>
+  </data>
+  <data name="ERR108" xml:space="preserve">
+    <value>System Error 108: cannot use external file while hydraulics solver is active.</value>
+  </data>
+  <data name="ERR109" xml:space="preserve">
+    <value>System Error 109: cannot change time parameter when solver is active.</value>
+  </data>
+  <data name="ERR110" xml:space="preserve">
+    <value>System Error 110: cannot solve network hydraulic equations.</value>
+  </data>
+  <data name="ERR120" xml:space="preserve">
+    <value>System Error 120: cannot solve water quality transport equations.</value>
+  </data>
+  <data name="ERR200" xml:space="preserve">
+    <value>Input Error 200: one or more errors in input file.</value>
+  </data>
+  <data name="ERR201" xml:space="preserve">
+    <value>Input Error 201: syntax error in following line of [{0}] section: {1}</value>
+  </data>
+  <data name="ERR202" xml:space="preserve">
+    <value>Input Error 202: {0} {1} contains illegal numeric value.</value>
+  </data>
+  <data name="ERR203" xml:space="preserve">
+    <value>Input Error 203: {0} {1} refers to undefined node.</value>
+  </data>
+  <data name="ERR204" xml:space="preserve">
+    <value>Input Error 204: {0} {1} refers to undefined link.</value>
+  </data>
+  <data name="ERR205" xml:space="preserve">
+    <value>Input Error 205: {0} {1} refers to undefined time pattern.</value>
+  </data>
+  <data name="ERR206" xml:space="preserve">
+    <value>Input Error 206: {0} {1} refers to undefined curve.</value>
+  </data>
+  <data name="ERR207" xml:space="preserve">
+    <value>Input Error 207: {0} {1} attempts to control a CV.</value>
+  </data>
+  <data name="ERR208" xml:space="preserve">
+    <value>Input Error 208: {0} specified for undefined Node {1}.</value>
+  </data>
+  <data name="ERR209" xml:space="preserve">
+    <value>Input Error 209: illegal {0} value for Node {1}.</value>
+  </data>
+  <data name="ERR210" xml:space="preserve">
+    <value>Input Error 210: {0} specified for undefined Link {1}.</value>
+  </data>
+  <data name="ERR211" xml:space="preserve">
+    <value>Input Error 211: illegal {0} value for Link {1}.</value>
+  </data>
+  <data name="ERR212" xml:space="preserve">
+    <value>Input Error 212: trace node {0} {1} is undefined.</value>
+  </data>
+  <data name="ERR213" xml:space="preserve">
+    <value>Input Error 213: illegal option value in [{0}] section: {1}</value>
+  </data>
+  <data name="ERR214" xml:space="preserve">
+    <value>Input Error 214: following line of [{0}] section contains too many characters:</value>
+  </data>
+  <data name="ERR215" xml:space="preserve">
+    <value>Input Error 215: {0} {1} is a duplicate ID.</value>
+  </data>
+  <data name="ERR216" xml:space="preserve">
+    <value>Input Error 216: {0} data specified for undefined Pump {1}.</value>
+  </data>
+  <data name="ERR217" xml:space="preserve">
+    <value>Input Error 217: invalid {0} data for Pump {1}.</value>
+  </data>
+  <data name="ERR219" xml:space="preserve">
+    <value>Input Error 219: {0} {1} illegally connected to a tank.</value>
+  </data>
+  <data name="ERR220" xml:space="preserve">
+    <value>Input Error 220: {0} {1} illegally connected to another valve.</value>
+  </data>
+  <data name="ERR222" xml:space="preserve">
+    <value>Input Error 222: {0} {1} has same start and end nodes.</value>
+  </data>
+  <data name="ERR223" xml:space="preserve">
+    <value>Input Error 201: syntax error in following line of [{0}] section:</value>
+  </data>
+  <data name="ERR224" xml:space="preserve">
+    <value>Input Error 224: no tanks or reservoirs in network.</value>
+  </data>
+  <data name="ERR225" xml:space="preserve">
+    <value>Input Error 225: invalid lower/upper levels for Tank {0}.</value>
+  </data>
+  <data name="ERR226" xml:space="preserve">
+    <value>Input Error 226: no head curve supplied for Pump {0}.</value>
+  </data>
+  <data name="ERR227" xml:space="preserve">
+    <value>Input Error 227: invalid head curve for Pump {0}.</value>
+  </data>
+  <data name="ERR233" xml:space="preserve">
+    <value>Input Error 233: Node {0} is unconnected.</value>
+  </data>
+  <data name="ERR240" xml:space="preserve">
+    <value>Input Error 240: {0} {1} refers to undefined source.</value>
+  </data>
+  <data name="ERR241" xml:space="preserve">
+    <value>Input Error 241: {0} {1} refers to undefined control.</value>
+  </data>
+  <data name="ERR250" xml:space="preserve">
+    <value>Input Error 250: function call contains invalid format.</value>
+  </data>
+  <data name="ERR251" xml:space="preserve">
+    <value>Input Error 251: function call contains invalid parameter code.</value>
+  </data>
+  <data name="ERR301" xml:space="preserve">
+    <value>File Error 301: identical file names.</value>
+  </data>
+  <data name="ERR302" xml:space="preserve">
+    <value>File Error 302: cannot open input file.</value>
+  </data>
+  <data name="ERR303" xml:space="preserve">
+    <value>File Error 303: cannot open report file.</value>
+  </data>
+  <data name="ERR304" xml:space="preserve">
+    <value>File Error 304: cannot open binary output file.</value>
+  </data>
+  <data name="ERR305" xml:space="preserve">
+    <value>File Error 305: cannot open hydraulics file.</value>
+  </data>
+  <data name="ERR306" xml:space="preserve">
+    <value>File Error 306: hydraulics file does not match network data.</value>
+  </data>
+  <data name="ERR307" xml:space="preserve">
+    <value>File Error 307: cannot read hydraulics file.</value>
+  </data>
+  <data name="ERR308" xml:space="preserve">
+    <value>File Error 308: cannot save results to file.</value>
+  </data>
+  <data name="ERR309" xml:space="preserve">
+    <value>File Error 309: cannot save results to report file.</value>
+  </data>
+  <data name="R_ERR201" xml:space="preserve">
+    <value>Input Error 201: syntax error in following line of</value>
+  </data>
+  <data name="R_ERR202" xml:space="preserve">
+    <value>Input Error 202: illegal numeric value in following line of</value>
+  </data>
+  <data name="R_ERR203" xml:space="preserve">
+    <value>Input Error 203: undefined node in following line of</value>
+  </data>
+  <data name="R_ERR204" xml:space="preserve">
+    <value>Input Error 204: undefined link in following line of</value>
+  </data>
+  <data name="R_ERR207" xml:space="preserve">
+    <value>Input Error 207: attempt to control a CV in following line of</value>
+  </data>
+  <data name="WARN01" xml:space="preserve">
+    <value>WARNING: System unbalanced at {0} hrs.</value>
+  </data>
+  <data name="WARN02" xml:space="preserve">
+    <value>WARNING: Maximum trials exceeded at {0} hrs. System may be unstable.</value>
+  </data>
+  <data name="WARN03a" xml:space="preserve">
+    <value>WARNING: Node {0} disconnected at {1} hrs</value>
+  </data>
+  <data name="WARN03b" xml:space="preserve">
+    <value>WARNING: {d} additional nodes disconnected at {1} hrs</value>
+  </data>
+  <data name="WARN03c" xml:space="preserve">
+    <value>WARNING: System disconnected because of Link {0}</value>
+  </data>
+  <data name="WARN04" xml:space="preserve">
+    <value>WARNING: Pump {0} {1} at {2} hrs.</value>
+  </data>
+  <data name="WARN05" xml:space="preserve">
+    <value>WARNING: {0} {1} {2} at {3} hrs.</value>
+  </data>
+  <data name="WARN06" xml:space="preserve">
+    <value>WARNING: Negative pressures at {0} hrs.</value>
+  </data>
+  <data name="WARN1" xml:space="preserve">
+    <value>WARNING: System hydraulically unbalanced.</value>
+  </data>
+  <data name="WARN2" xml:space="preserve">
+    <value>WARNING: System may be hydraulically unstable.</value>
+  </data>
+  <data name="WARN3" xml:space="preserve">
+    <value>WARNING: System disconnected.</value>
+  </data>
+  <data name="WARN4" xml:space="preserve">
+    <value>WARNING: Pumps cannot deliver enough flow or head.</value>
+  </data>
+  <data name="WARN5" xml:space="preserve">
+    <value>WARNING: Valves cannot deliver enough flow.</value>
+  </data>
+  <data name="WARN6" xml:space="preserve">
+    <value>WARNING: System has negative pressures.</value>
+  </data>
+  <data name="ERR700" xml:space="preserve">
+    <value>Property [{0}] already exists in the map.</value>
+  </data>
+  <data name="ERR701" xml:space="preserve">
+    <value>Property [{0}] doesn't exists in the map.</value>
+  </data>
+  <data name="ERR1000" xml:space="preserve">
+    <value>Simulation halted.</value>
+  </data>
+</root>

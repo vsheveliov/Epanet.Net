@@ -1,0 +1,11 @@
+*.suo
+src/*
+temp/*
+lib/*
+*/bin/*
+*/obj/*
+*.cache
+*копия*
+*.DotSettings
+*.user
+package.html
