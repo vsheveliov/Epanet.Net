@@ -28,14 +28,14 @@ namespace org.addition.epanet.msx {
         private TraceSource log;
         private const int MAXERRS = 100; // Max. input errors reported
 
-        private Network MSX;
+        private Network msx;
         private ENToolkit2 epanet;
         private Project project;
 
-        public void loadDependencies(EpanetMSX epa) {
-            this.MSX = epa.getNetwork();
-            this.epanet = epa.getENToolkit();
-            this.project = epa.getProject();
+        public void LoadDependencies(EpanetMSX epa) {
+            this.msx = epa.Network;
+            this.epanet = epa.EnToolkit;
+            this.project = epa.Project;
         }
 
         // Error codes (401 - 409)
@@ -54,7 +54,7 @@ namespace org.addition.epanet.msx {
         };
 
         // Respective error messages.
-        private static string[] InpErrorTxt = {
+        private static readonly string[] InpErrorTxt = {
             "",
             "Error 401 (too many characters)",
             "Error 402 (too few input items)",
@@ -67,22 +67,18 @@ namespace org.addition.epanet.msx {
             "Error 409 (illegal math expression)"
         };
 
-        // Reads multi-species input file to determine number of system objects.
-        public EnumTypes.ErrorCodeType countMsxObjects(TextReader reader) {
-            string line; // line from input data file
+        /// <summary>Reads multi-species input file to determine number of system objects.</summary>
+        public EnumTypes.ErrorCodeType CountMsxObjects(TextReader reader) {
             EnumTypes.SectionType sect = (EnumTypes.SectionType)(-1); // input data sections
             InpErrorCodes errcode = 0; // error code
             int errsum = 0; // number of errors found
             long lineCount = 0;
 
 
-            //MSX.Msg+=MSX.MsxFile.getFilename();
-            //epanet.ENwriteline(MSX.Msg);
-            //epanet.ENwriteline("");
-
             //BufferedReader reader = (BufferedReader)MSX.MsxFile.getFileIO();
 
             for (;;) {
+                string line; // line from input data file
                 try {
                     line = reader.ReadLine();
                 }
@@ -108,24 +104,24 @@ namespace org.addition.epanet.msx {
 
                 if (tok.Length == 0 || tok[0].Length > 0 && tok[0][0] == ';') continue;
 
-                EnumTypes.SectionType sect_temp;
-                if (getNewSection(tok[0], Constants.MsxSectWords, out sect_temp) != 0) {
-                    sect = sect_temp;
+                EnumTypes.SectionType sectTemp;
+                if (this.GetNewSection(tok[0], Constants.MsxSectWords, out sectTemp) != 0) {
+                    sect = sectTemp;
                     continue;
                 }
 
                 if (sect == EnumTypes.SectionType.s_SPECIES)
-                    errcode = addSpecies(tok);
+                    errcode = this.AddSpecies(tok);
                 if (sect == EnumTypes.SectionType.s_COEFF)
-                    errcode = addCoeff(tok);
+                    errcode = this.AddCoeff(tok);
                 if (sect == EnumTypes.SectionType.s_TERM)
-                    errcode = addTerm(tok);
+                    errcode = this.AddTerm(tok);
                 if (sect == EnumTypes.SectionType.s_PATTERN)
-                    errcode = addPattern(tok);
+                    errcode = this.AddPattern(tok);
 
 
                 if (errcode != 0) {
-                    writeInpErrMsg(errcode, Constants.MsxSectWords[(int)sect], line, (int)lineCount);
+                    this.WriteInpErrMsg(errcode, Constants.MsxSectWords[(int)sect], line, (int)lineCount);
                     errsum++;
                     if (errsum >= MAXERRS) break;
                 }
@@ -137,98 +133,97 @@ namespace org.addition.epanet.msx {
             return (EnumTypes.ErrorCodeType)errcode;
         }
 
-        // Queries EPANET database to determine number of network objects.
-        public EnumTypes.ErrorCodeType countNetObjects() {
-            MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE] = epanet.ENgetcount(ENToolkit2.EN_NODECOUNT);
-            MSX.Nobjects[(int)EnumTypes.ObjectTypes.TANK] = epanet.ENgetcount(ENToolkit2.EN_TANKCOUNT);
-            MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK] = epanet.ENgetcount(ENToolkit2.EN_LINKCOUNT);
+        /// <summary>Queries EPANET database to determine number of network objects.</summary>
+        public EnumTypes.ErrorCodeType CountNetObjects() {
+            this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE] = this.epanet.ENgetcount(ENToolkit2.EN_NODECOUNT);
+            this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TANK] = this.epanet.ENgetcount(ENToolkit2.EN_TANKCOUNT);
+            this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] = this.epanet.ENgetcount(ENToolkit2.EN_LINKCOUNT);
             return 0;
         }
 
-        // retrieves required input data from the EPANET project data.
-        public EnumTypes.ErrorCodeType readNetData() {
-            int i, k, n, t = 0;
-            int n1 = 0, n2 = 0;
-            float diam, len, v0, xmix, vmix;
-            float roughness = 0.0f;
-
+        /// <summary>Retrieves required input data from the EPANET project data.</summary>
+        public EnumTypes.ErrorCodeType ReadNetData() {
             // Get flow units & time parameters
-            MSX.Flowflag = epanet.ENgetflowunits();
+            this.msx.Flowflag = this.epanet.ENgetflowunits();
 
-            MSX.Unitsflag = MSX.Flowflag >= EnumTypes.FlowUnitsType.LPS
+            this.msx.Unitsflag = this.msx.Flowflag >= EnumTypes.FlowUnitsType.LPS
                 ? EnumTypes.UnitSystemType.SI
                 : EnumTypes.UnitSystemType.US;
 
-            MSX.Dur = epanet.ENgettimeparam(ENToolkit2.EN_DURATION);
-            MSX.Qstep = epanet.ENgettimeparam(ENToolkit2.EN_QUALSTEP);
-            MSX.Rstep = epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTEP);
-            MSX.Rstart = epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTART);
-            MSX.Pstep = epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTEP);
-            MSX.Pstart = epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTART);
-            MSX.Statflag = (EnumTypes.TstatType)epanet.ENgettimeparam(ENToolkit2.EN_STATISTIC);
+            this.msx.Dur = this.epanet.ENgettimeparam(ENToolkit2.EN_DURATION);
+            this.msx.Qstep = this.epanet.ENgettimeparam(ENToolkit2.EN_QUALSTEP);
+            this.msx.Rstep = this.epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTEP);
+            this.msx.Rstart = this.epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTART);
+            this.msx.Pstep = this.epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTEP);
+            this.msx.Pstart = this.epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTART);
+            this.msx.Statflag = (EnumTypes.TstatType)this.epanet.ENgettimeparam(ENToolkit2.EN_STATISTIC);
 
             // Read tank/reservoir data
-            n = MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE] - MSX.Nobjects[(int)EnumTypes.ObjectTypes.TANK];
-            for (i = 1; i <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; i++) {
-                k = i - n;
-                if (k > 0) {
-                    try {
-                        t = epanet.ENgetnodetype(i);
-                        v0 = epanet.ENgetnodevalue(i, ENToolkit2.EN_INITVOLUME);
-                        xmix = epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXMODEL);
-                        vmix = epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXZONEVOL);
-                    }
-                    catch (Exception e) {
-                        return (EnumTypes.ErrorCodeType)int.Parse(e.Message);
-                    }
+            int n = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE] - this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TANK];
+            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; i++) {
+                int k = i - n;
+                if (k <= 0) continue;
 
-                    MSX.Node[i].setTank(k);
-                    MSX.Tank[k].setNode(i);
-                    if (t == ENToolkit2.EN_RESERVOIR)
-                        MSX.Tank[k].setA(0.0);
-                    else
-                        MSX.Tank[k].setA(1.0);
-                    MSX.Tank[k].setV0(v0);
-                    MSX.Tank[k].setMixModel((EnumTypes.MixType)(int)xmix);
-                    MSX.Tank[k].setvMix(vmix);
+                int t;
+                float v0;
+                float xmix;
+                float vmix;
+
+                try {
+                    t = this.epanet.ENgetnodetype(i);
+                    v0 = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_INITVOLUME);
+                    xmix = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXMODEL);
+                    vmix = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXZONEVOL);
                 }
+                catch (Exception e) {
+                    return (EnumTypes.ErrorCodeType)int.Parse(e.Message);
+                }
+
+                this.msx.Node[i].Tank = k;
+                this.msx.Tank[k].Node = i;
+                this.msx.Tank[k].A = t == ENToolkit2.EN_RESERVOIR ? 0.0 : 1.0;
+                this.msx.Tank[k].V0 = v0;
+                this.msx.Tank[k].MixModel = (EnumTypes.MixType)(int)xmix;
+                this.msx.Tank[k].VMix = vmix;
             }
 
             // Read link data
-            for (i = 1; i <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
-                int[] n_temp;
+            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
+                int n1, n2;
+
                 try {
-                    n_temp = epanet.ENgetlinknodes(i);
-                }
-                catch (Exception e) {
-                    return (EnumTypes.ErrorCodeType)int.Parse(e.Message);
-                }
-                n1 = n_temp[0];
-                n2 = n_temp[1];
-                try {
-                    diam = epanet.ENgetlinkvalue(i, ENToolkit2.EN_DIAMETER);
-                    len = epanet.ENgetlinkvalue(i, ENToolkit2.EN_LENGTH);
-                    roughness = epanet.ENgetlinkvalue(i, ENToolkit2.EN_ROUGHNESS);
+                    this.epanet.ENgetlinknodes(i, out n1, out n2);
                 }
                 catch (Exception e) {
                     return (EnumTypes.ErrorCodeType)int.Parse(e.Message);
                 }
 
-                MSX.Link[i].setN1(n1);
-                MSX.Link[i].setN2(n2);
-                MSX.Link[i].setDiam(diam);
-                MSX.Link[i].setLen(len);
-                MSX.Link[i].setRoughness(roughness);
+                
+                float roughness;
+                float diam;
+                float len;
+                try {
+                    diam = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_DIAMETER);
+                    len = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_LENGTH);
+                    roughness = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_ROUGHNESS);
+                }
+                catch (Exception e) {
+                    return (EnumTypes.ErrorCodeType)int.Parse(e.Message);
+                }
+
+                this.msx.Link[i].setN1(n1);
+                this.msx.Link[i].setN2(n2);
+                this.msx.Link[i].setDiam(diam);
+                this.msx.Link[i].setLen(len);
+                this.msx.Link[i].setRoughness(roughness);
             }
             return 0;
         }
 
-        // Reads multi-species data from the EPANET-MSX input file.
-        public EnumTypes.ErrorCodeType readMsxData(TextReader rin) {
-            string line; // line from input data file
+        /// <summary>Reads multi-species data from the EPANET-MSX input file.</summary>
+        public EnumTypes.ErrorCodeType ReadMsxData(TextReader rin) {
             var sect = (EnumTypes.SectionType)(-1); // input data sections
             int errsum = 0; // number of errors found
-            InpErrorCodes inperr = 0; // input error code
             int lineCount = 0; // line count
 
             // rewind
@@ -238,11 +233,11 @@ namespace org.addition.epanet.msx {
             //BufferedReader rin = (BufferedReader)MSX.MsxFile.getFileIO();
 
             for (;;) {
-
+                string line; // line from input data file
                 try {
                     line = rin.ReadLine();
                 }
-                catch (IOException e) {
+                catch (IOException) {
                     break;
                 }
 
@@ -263,23 +258,24 @@ namespace org.addition.epanet.msx {
 
                 if (tok.Length == 0) continue;
 
-                if (getLineLength(line) >= Constants.MAXLINE) {
+                InpErrorCodes inperr; // input error code
+                if (this.GetLineLength(line) >= Constants.MAXLINE) {
                     inperr = InpErrorCodes.ERR_LINE_LENGTH;
-                    writeInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
+                    this.WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
                     errsum++;
                 }
 
-                EnumTypes.SectionType sect_tmp;
-                if (getNewSection(tok[0], Constants.MsxSectWords, out sect_tmp) != 0) {
-                    sect = sect_tmp;
+                EnumTypes.SectionType sectTmp;
+                if (this.GetNewSection(tok[0], Constants.MsxSectWords, out sectTmp) != 0) {
+                    sect = sectTmp;
                     continue;
                 }
 
-                inperr = parseLine(sect, line, tok);
+                inperr = this.ParseLine(sect, line, tok);
 
                 if (inperr > 0) {
                     errsum++;
-                    writeInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
+                    this.WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
                 }
 
                 // Stop if reach end of file or max. error count
@@ -292,20 +288,20 @@ namespace org.addition.epanet.msx {
             return 0;
         }
 
-        //  reads multi-species data from the EPANET-MSX input file.
+        /// <summary>Reads multi-species data from the EPANET-MSX input file.</summary>
         public string MSXinp_getSpeciesUnits(int m) {
-            string units = MSX.Species[m].getUnits();
+            string units = this.msx.Species[m].getUnits();
             units += "/";
-            if (MSX.Species[m].getType() == EnumTypes.SpeciesType.BULK)
+            if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK)
                 units += "L";
             else
-                units += Constants.AreaUnitsWords[(int)MSX.AreaUnits];
+                units += Constants.AreaUnitsWords[(int)this.msx.AreaUnits];
 
             return units;
         }
 
-        // determines number of characters of data in a line of input.
-        private int getLineLength(string line) {
+        /// <summary>Determines number of characters of data in a line of input.</summary>
+        private int GetLineLength(string line) {
             int index = line.IndexOf(';');
 
             if (index != -1) {
@@ -315,8 +311,8 @@ namespace org.addition.epanet.msx {
             return line.Length;
         }
 
-        // checks if a line begins a new section in the input file.
-        private int getNewSection(string tok, string[] sectWords, out EnumTypes.SectionType sect) {
+        /// <summary>Checks if a line begins a new section in the input file.</summary>
+        private int GetNewSection(string tok, string[] sectWords, out EnumTypes.SectionType sect) {
             sect = (EnumTypes.SectionType)(-1);
             if (tok.Length == 0)
                 return 0;
@@ -334,274 +330,272 @@ namespace org.addition.epanet.msx {
             return 0;
         }
 
-        // adds a species ID name to the project.
-        private InpErrorCodes addSpecies(string[] Tok) {
-            InpErrorCodes errcode;
-            if (Tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
-            errcode = checkID(Tok[1]);
+        /// <summary>Adds a species ID name to the project.</summary>
+        private InpErrorCodes AddSpecies(string[] tok) {
+            if (tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
+            InpErrorCodes errcode = this.CheckId(tok[1]);
             if (errcode != 0) return errcode;
-            if (
-                project.MSXproj_addObject(EnumTypes.ObjectTypes.SPECIES, Tok[1],
-                    MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + 1) < 0)
+            if (this.project.MSXproj_addObject(
+                        EnumTypes.ObjectTypes.SPECIES,
+                        tok[1],
+                        this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + 1) < 0)
                 errcode = (InpErrorCodes)101;
-            else MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]++;
+            else this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]++;
             return errcode;
         }
 
-        // adds a coefficient ID name to the project.
-        private InpErrorCodes addCoeff(string[] Tok) {
+        /// <summary>Adds a coefficient ID name to the project.</summary>
+        private InpErrorCodes AddCoeff(string[] tok) {
             EnumTypes.ObjectTypes k;
-            InpErrorCodes errcode;
 
             // determine the type of coeff.
 
-            if (Tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
-            if (Utilities.MSXutils_match(Tok[0], "PARAM")) k = EnumTypes.ObjectTypes.PARAMETER;
-            else if (Utilities.MSXutils_match(Tok[0], "CONST")) k = EnumTypes.ObjectTypes.CONSTANT;
+            if (tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
+            if (Utilities.MSXutils_match(tok[0], "PARAM")) k = EnumTypes.ObjectTypes.PARAMETER;
+            else if (Utilities.MSXutils_match(tok[0], "CONST")) k = EnumTypes.ObjectTypes.CONSTANT;
             else return InpErrorCodes.ERR_KEYWORD;
 
             // check for valid id name
 
-            errcode = checkID(Tok[1]);
+            InpErrorCodes errcode = this.CheckId(tok[1]);
             if (errcode != 0) return errcode;
-            if (project.MSXproj_addObject(k, Tok[1], MSX.Nobjects[(int)k] + 1) < 0)
+            if (this.project.MSXproj_addObject(k, tok[1], this.msx.Nobjects[(int)k] + 1) < 0)
                 errcode = (InpErrorCodes)101;
-            else MSX.Nobjects[(int)k]++;
+            else this.msx.Nobjects[(int)k]++;
             return errcode;
         }
 
 
-        // adds an intermediate expression term ID name to the project.
-        private InpErrorCodes addTerm(string[] id) {
-            InpErrorCodes errcode = checkID(id[0]);
+        /// <summary>Adds an intermediate expression term ID name to the project.</summary>
+        private InpErrorCodes AddTerm(string[] id) {
+            InpErrorCodes errcode = this.CheckId(id[0]);
             if (errcode == 0) {
-                if (
-                    project.MSXproj_addObject(EnumTypes.ObjectTypes.TERM, id[0],
-                        MSX.Nobjects[(int)EnumTypes.ObjectTypes.TERM] + 1) < 0)
+                if (this.project.MSXproj_addObject(
+                            EnumTypes.ObjectTypes.TERM,
+                            id[0],
+                            this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM] + 1) < 0)
                     errcode = (InpErrorCodes)101;
-                else MSX.Nobjects[(int)EnumTypes.ObjectTypes.TERM]++;
+                else this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM]++;
             }
             return errcode;
         }
 
 
-        // adds a time pattern ID name to the project.
-        private InpErrorCodes addPattern(string[] tok) {
+        /// <summary>Adds a time pattern ID name to the project.</summary>
+        private InpErrorCodes AddPattern(string[] tok) {
             InpErrorCodes errcode = 0;
 
             // A time pattern can span several lines
 
-            if (project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, tok[0]) <= 0) {
-                if (
-                    project.MSXproj_addObject(EnumTypes.ObjectTypes.PATTERN, tok[0],
-                        MSX.Nobjects[(int)EnumTypes.ObjectTypes.PATTERN] + 1) < 0)
+            if (this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, tok[0]) <= 0) {
+                if (this.project.MSXproj_addObject(
+                            EnumTypes.ObjectTypes.PATTERN,
+                            tok[0],
+                            this.msx.Nobjects[(int)EnumTypes.ObjectTypes.PATTERN] + 1) < 0)
                     errcode = (InpErrorCodes)101;
-                else MSX.Nobjects[(int)EnumTypes.ObjectTypes.PATTERN]++;
+                else this.msx.Nobjects[(int)EnumTypes.ObjectTypes.PATTERN]++;
             }
             return errcode;
         }
 
 
-        // checks that an object's name is unique
-        private InpErrorCodes checkID(string id) {
+        /// <summary>Checks that an object's name is unique.</summary>
+        private InpErrorCodes CheckId(string id) {
             // Check that id name is not a reserved word
-            int i = 1;
-            //while (HydVarWords[i] != NULL)
             foreach (string word  in  Constants.HydVarWords) {
-                if (Utilities.MSXutils_strcomp(id, word)) return InpErrorCodes.ERR_RESERVED_NAME;
-                i++;
+                if (string.Equals(id, word, StringComparison.OrdinalIgnoreCase)) 
+                    return InpErrorCodes.ERR_RESERVED_NAME;
             }
 
             // Check that id name not used before
 
-            if (project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, id) > 0 ||
-                project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, id) > 0 ||
-                project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, id) > 0 ||
-                project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, id) > 0
-                ) return InpErrorCodes.ERR_DUP_NAME;
+            if (this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, id) > 0
+                || this.project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, id) > 0
+                || this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, id) > 0
+                || this.project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, id) > 0
+            ) return InpErrorCodes.ERR_DUP_NAME;
             return 0;
         }
 
 
-        // parses the contents of a line of input data.
-        private InpErrorCodes parseLine(EnumTypes.SectionType sect, string line, string[] Tok) {
+        /// <summary>Parses the contents of a line of input data.</summary>
+        private InpErrorCodes ParseLine(EnumTypes.SectionType sect, string line, string[] tok) {
             switch (sect) {
-                case EnumTypes.SectionType.s_TITLE:
-                    MSX.Title = line;
-                    break;
+            case EnumTypes.SectionType.s_TITLE:
+                this.msx.Title = line;
+                break;
 
-                case EnumTypes.SectionType.s_OPTION:
-                    return parseOption(Tok);
+            case EnumTypes.SectionType.s_OPTION:
+                return this.ParseOption(tok);
 
-                case EnumTypes.SectionType.s_SPECIES:
-                    return parseSpecies(Tok);
+            case EnumTypes.SectionType.s_SPECIES:
+                return this.ParseSpecies(tok);
 
-                case EnumTypes.SectionType.s_COEFF:
-                    return parseCoeff(Tok);
+            case EnumTypes.SectionType.s_COEFF:
+                return this.ParseCoeff(tok);
 
-                case EnumTypes.SectionType.s_TERM:
-                    return parseTerm(Tok);
+            case EnumTypes.SectionType.s_TERM:
+                return this.ParseTerm(tok);
 
-                case EnumTypes.SectionType.s_PIPE:
-                    return parseExpression(EnumTypes.ObjectTypes.LINK, Tok);
+            case EnumTypes.SectionType.s_PIPE:
+                return this.ParseExpression(EnumTypes.ObjectTypes.LINK, tok);
 
-                case EnumTypes.SectionType.s_TANK:
-                    return parseExpression(EnumTypes.ObjectTypes.TANK, Tok);
+            case EnumTypes.SectionType.s_TANK:
+                return this.ParseExpression(EnumTypes.ObjectTypes.TANK, tok);
 
-                case EnumTypes.SectionType.s_SOURCE:
-                    return parseSource(Tok);
+            case EnumTypes.SectionType.s_SOURCE:
+                return this.ParseSource(tok);
 
-                case EnumTypes.SectionType.s_QUALITY:
-                    return parseQuality(Tok);
+            case EnumTypes.SectionType.s_QUALITY:
+                return this.ParseQuality(tok);
 
-                case EnumTypes.SectionType.s_PARAMETER:
-                    return parseParameter(Tok);
+            case EnumTypes.SectionType.s_PARAMETER:
+                return this.ParseParameter(tok);
 
-                case EnumTypes.SectionType.s_PATTERN:
-                    return parsePattern(Tok);
+            case EnumTypes.SectionType.s_PATTERN:
+                return this.ParsePattern(tok);
 
-                case EnumTypes.SectionType.s_REPORT:
-                    return parseReport(Tok);
+            case EnumTypes.SectionType.s_REPORT:
+                return this.ParseReport(tok);
             }
             return 0;
         }
 
-        // parses an input line containing a project option.
-        private InpErrorCodes parseOption(string[] Tok) {
-            int k;
-
+        /// <summary>Parses an input line containing a project option.</summary>
+        private InpErrorCodes ParseOption(string[] tok) {
             // Determine which option is being read
 
-            if (Tok.Length < 2) return 0;
-            k = Utilities.MSXutils_findmatch(Tok[0], Constants.OptionTypeWords);
+            if (tok.Length < 2) return 0;
+            int k = Utilities.MSXutils_findmatch(tok[0], Constants.OptionTypeWords);
             if (k < 0) return InpErrorCodes.ERR_KEYWORD;
 
             // Parse the value for the given option
             switch ((EnumTypes.OptionType)k) {
-                case EnumTypes.OptionType.AREA_UNITS_OPTION:
-                    k = Utilities.MSXutils_findmatch(Tok[1], Constants.AreaUnitsWords);
-                    if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                    MSX.AreaUnits = (EnumTypes.AreaUnitsType)k;
-                    break;
+            case EnumTypes.OptionType.AREA_UNITS_OPTION:
+                k = Utilities.MSXutils_findmatch(tok[1], Constants.AreaUnitsWords);
+                if (k < 0) return InpErrorCodes.ERR_KEYWORD;
+                this.msx.AreaUnits = (EnumTypes.AreaUnitsType)k;
+                break;
 
-                case EnumTypes.OptionType.RATE_UNITS_OPTION:
-                    k = Utilities.MSXutils_findmatch(Tok[1], Constants.TimeUnitsWords);
-                    if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                    MSX.RateUnits = (EnumTypes.RateUnitsType)k;
-                    break;
+            case EnumTypes.OptionType.RATE_UNITS_OPTION:
+                k = Utilities.MSXutils_findmatch(tok[1], Constants.TimeUnitsWords);
+                if (k < 0) return InpErrorCodes.ERR_KEYWORD;
+                this.msx.RateUnits = (EnumTypes.RateUnitsType)k;
+                break;
 
-                case EnumTypes.OptionType.SOLVER_OPTION:
-                    k = Utilities.MSXutils_findmatch(Tok[1], Constants.SolverTypeWords);
-                    if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                    MSX.Solver = (EnumTypes.SolverType)k;
-                    break;
+            case EnumTypes.OptionType.SOLVER_OPTION:
+                k = Utilities.MSXutils_findmatch(tok[1], Constants.SolverTypeWords);
+                if (k < 0) return InpErrorCodes.ERR_KEYWORD;
+                this.msx.Solver = (EnumTypes.SolverType)k;
+                break;
 
-                case EnumTypes.OptionType.COUPLING_OPTION:
-                    k = Utilities.MSXutils_findmatch(Tok[1], Constants.CouplingWords);
-                    if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                    MSX.Coupling = (EnumTypes.CouplingType)k;
-                    break;
+            case EnumTypes.OptionType.COUPLING_OPTION:
+                k = Utilities.MSXutils_findmatch(tok[1], Constants.CouplingWords);
+                if (k < 0) return InpErrorCodes.ERR_KEYWORD;
+                this.msx.Coupling = (EnumTypes.CouplingType)k;
+                break;
 
-                case EnumTypes.OptionType.TIMESTEP_OPTION:
-                    k = int.Parse(Tok[1]);
-                    if (k <= 0) return InpErrorCodes.ERR_NUMBER;
-                    MSX.Qstep = k;
-                    break;
+            case EnumTypes.OptionType.TIMESTEP_OPTION:
+                k = int.Parse(tok[1]);
+                if (k <= 0) return InpErrorCodes.ERR_NUMBER;
+                this.msx.Qstep = k;
+                break;
 
-                case EnumTypes.OptionType.RTOL_OPTION: {
-                    double tmp;
-                    if (!Tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
-                    MSX.DefRtol = tmp;
-                    break;
-                }
-                case EnumTypes.OptionType.ATOL_OPTION: {
-                    double tmp;
-                    if (!Tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
-                    MSX.DefAtol = tmp;
-                }
-                    break;
+            case EnumTypes.OptionType.RTOL_OPTION: {
+                double tmp;
+                if (!tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
+                this.msx.DefRtol = tmp;
+                break;
+            }
+            case EnumTypes.OptionType.ATOL_OPTION: {
+                double tmp;
+                if (!tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
+                this.msx.DefAtol = tmp;
+            }
+                break;
             }
             return 0;
         }
 
-        // Parses an input line containing a species variable.
-        private InpErrorCodes parseSpecies(string[] Tok) {
-            int i;
-
+        /// <summary>Parses an input line containing a species variable.</summary>
+        private InpErrorCodes ParseSpecies(string[] tok) {
             // Get secies index
-            if (Tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
-            i = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, Tok[1]);
+            if (tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
+            int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, tok[1]);
             if (i <= 0) return InpErrorCodes.ERR_NAME;
 
             // Get pointer to Species name
-            MSX.Species[i].setId(project.MSXproj_findID(EnumTypes.ObjectTypes.SPECIES, Tok[1]));
+            this.msx.Species[i].setId(this.project.MSXproj_findID(EnumTypes.ObjectTypes.SPECIES, tok[1]));
 
             // Get species type
-            if (Utilities.MSXutils_match(Tok[0], "BULK")) MSX.Species[i].setType(EnumTypes.SpeciesType.BULK);
-            else if (Utilities.MSXutils_match(Tok[0], "WALL")) MSX.Species[i].setType(EnumTypes.SpeciesType.WALL);
+            if (Utilities.MSXutils_match(tok[0], "BULK")) this.msx.Species[i].setType(EnumTypes.SpeciesType.BULK);
+            else if (Utilities.MSXutils_match(tok[0], "WALL")) this.msx.Species[i].setType(EnumTypes.SpeciesType.WALL);
             else return InpErrorCodes.ERR_KEYWORD;
 
             // Get Species units
-            MSX.Species[i].setUnits(Tok[2]);
+            this.msx.Species[i].setUnits(tok[2]);
 
             // Get Species error tolerance
-            MSX.Species[i].setaTol(0.0);
-            MSX.Species[i].setrTol(0.0);
-            if (Tok.Length >= 4) {
+            this.msx.Species[i].setaTol(0.0);
+            this.msx.Species[i].setrTol(0.0);
+            if (tok.Length >= 4) {
                 double tmp;
                 // BUG: Baseform bug
-                if (!Tok[3].ToDouble(out tmp))
-                    MSX.Species[i].setaTol(tmp);
+                if (!tok[3].ToDouble(out tmp))
+                    this.msx.Species[i].setaTol(tmp);
                 return InpErrorCodes.ERR_NUMBER;
             }
-            if (Tok.Length >= 5) {
+            if (tok.Length >= 5) {
                 double tmp;
                 // BUG: Baseform bug
-                if (!Tok[4].ToDouble(out tmp)) //&MSX.Species[i].rTol) )
-                    MSX.Species[i].setrTol(tmp);
+                if (!tok[4].ToDouble(out tmp)) //&MSX.Species[i].rTol) )
+                    this.msx.Species[i].setrTol(tmp);
                 return InpErrorCodes.ERR_NUMBER;
             }
             return 0;
         }
 
-        // parses an input line containing a coefficient definition.
-        private InpErrorCodes parseCoeff(string[] Tok) {
-            int i, j;
-            double x;
-
+        /// <summary>Parses an input line containing a coefficient definition.</summary>
+        private InpErrorCodes ParseCoeff(string[] tok) {
+            
             // Check if variable is a Parameter
-            if (Tok.Length < 2) return 0;
-            if (Utilities.MSXutils_match(Tok[0], "PARAM")) {
+            if (tok.Length < 2) return 0;
+       
+            if (Utilities.MSXutils_match(tok[0], "PARAM")) {
                 // Get Parameter's index
-                i = project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, Tok[1]);
+                int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, tok[1]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
 
                 // Get Parameter's value
-                MSX.Param[i].setId(project.MSXproj_findID(EnumTypes.ObjectTypes.PARAMETER, Tok[1]));
-                if (Tok.Length >= 3) {
+                this.msx.Param[i].setId(this.project.MSXproj_findID(EnumTypes.ObjectTypes.PARAMETER, tok[1]));
+                if (tok.Length >= 3) {
                     // BUG: Baseform bug
-                    if (Tok[2].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
-                    MSX.Param[i].setValue(x);
-                    for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) MSX.Link[j].getParam()[i] = x;
-                    for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.TANK]; j++) MSX.Tank[j].getParam()[i] = x;
+                    double x;
+                    if (tok[2].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
+                    this.msx.Param[i].setValue(x);
+                    
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++)
+                        this.msx.Link[j].getParam()[i] = x;
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TANK]; j++)
+                        this.msx.Tank[j].Param[i] = x;
                 }
                 return 0;
             }
 
-                // Check if variable is a Constant
-            else if (Utilities.MSXutils_match(Tok[0], "CONST")) {
+            // Check if variable is a Constant
+            else if (Utilities.MSXutils_match(tok[0], "CONST")) {
                 // Get Constant's index
-                i = project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, Tok[1]);
+                int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, tok[1]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
 
                 // Get constant's value
-                MSX.Const[i].setId(project.MSXproj_findID(EnumTypes.ObjectTypes.CONSTANT, Tok[1]));
-                MSX.Const[i].setValue(0.0);
-                if (Tok.Length >= 3) {
+                this.msx.Const[i].setId(this.project.MSXproj_findID(EnumTypes.ObjectTypes.CONSTANT, tok[1]));
+                this.msx.Const[i].setValue(0.0);
+                if (tok.Length >= 3) {
                     double tmp;
-                    if (!Tok[2].ToDouble(out tmp)) //&MSX.Const[i].value) )
+                    if (!tok[2].ToDouble(out tmp)) //&MSX.Const[i].value) )
                         return InpErrorCodes.ERR_NUMBER;
-                    MSX.Const[i].setValue(tmp);
+                    this.msx.Const[i].setValue(tmp);
                 }
                 return 0;
             }
@@ -609,259 +603,232 @@ namespace org.addition.epanet.msx {
                 return InpErrorCodes.ERR_KEYWORD;
         }
 
-        //=============================================================================
-        // parses an input line containing an intermediate expression term .
-        private InpErrorCodes parseTerm(string[] Tok) {
-            int i, j;
+       /// <summary>Parses an input line containing an intermediate expression term .</summary>
+        private InpErrorCodes ParseTerm(string[] tok) {
             string s = "";
-            MathExpr expr;
 
-            // --- get term's name
+           // --- get term's name
 
-            if (Tok.Length < 2) return 0;
-            i = project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, Tok[0]);
+            if (tok.Length < 2) return 0;
+            int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, tok[0]);
 
             // --- reconstruct the expression string from its tokens
 
-            for (j = 1; j < Tok.Length; j++) s += Tok[j];
+            for (int j = 1; j < tok.Length; j++) s += tok[j];
 
             // --- convert expression into a postfix stack of op codes
 
             //expr = mathexpr_create(s, getVariableCode);
-            expr = MathExpr.create(s, new VariableContainer(id => 0, this.getVariableCode));
+            MathExpr expr = MathExpr.create(s, new VariableContainer(id => 0, this.GetVariableCode));
             if (expr == null) return InpErrorCodes.ERR_MATH_EXPR;
 
             // --- assign the expression to a Term object
 
-            MSX.Term[i].setExpr(expr);
+            this.msx.Term[i].setExpr(expr);
             return 0;
         }
 
-        //=============================================================================
-        // parses an input line containing a math expression.
-        private InpErrorCodes parseExpression(EnumTypes.ObjectTypes classType, string[] Tok) {
-            int i, j, k;
+        /// <summary>Parses an input line containing a math expression.</summary>
+        private InpErrorCodes ParseExpression(EnumTypes.ObjectTypes classType, string[] tok) {
             string s = "";
-            MathExpr expr;
 
             // --- determine expression type
 
-            if (Tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
-            k = Utilities.MSXutils_findmatch(Tok[0], Constants.ExprTypeWords);
+            if (tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
+            int k = Utilities.MSXutils_findmatch(tok[0], Constants.ExprTypeWords);
             if (k < 0) return InpErrorCodes.ERR_KEYWORD;
 
             // --- determine species associated with expression
 
-            i = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, Tok[1]);
+            int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, tok[1]);
             if (i < 1) return InpErrorCodes.ERR_NAME;
 
             // --- check that species does not already have an expression
 
             if (classType == EnumTypes.ObjectTypes.LINK) {
-                if (MSX.Species[i].getPipeExprType() != EnumTypes.ExpressionType.NO_EXPR)
+                if (this.msx.Species[i].getPipeExprType() != EnumTypes.ExpressionType.NO_EXPR)
                     return InpErrorCodes.ERR_DUP_EXPR;
             }
 
             if (classType == EnumTypes.ObjectTypes.TANK) {
-                if (MSX.Species[i].getTankExprType() != EnumTypes.ExpressionType.NO_EXPR)
+                if (this.msx.Species[i].getTankExprType() != EnumTypes.ExpressionType.NO_EXPR)
                     return InpErrorCodes.ERR_DUP_EXPR;
             }
 
             // --- reconstruct the expression string from its tokens
 
-            for (j = 2; j < Tok.Length; j++) s += Tok[j];
+            for (int j = 2; j < tok.Length; j++) s += tok[j];
 
             // --- convert expression into a postfix stack of op codes
 
             //expr = mathexpr_create(s, getVariableCode);
-            expr = MathExpr.create(s, new VariableContainer(id => 0, this.getVariableCode)); //createMathExpr()
+            MathExpr expr = MathExpr.create(s, new VariableContainer(id => 0, this.GetVariableCode));
 
             if (expr == null) return InpErrorCodes.ERR_MATH_EXPR;
 
             // --- assign the expression to the species
 
             switch (classType) {
-                case EnumTypes.ObjectTypes.LINK:
-                    MSX.Species[i].setPipeExpr(expr);
-                    MSX.Species[i].setPipeExprType((EnumTypes.ExpressionType)k);
-                    break;
-                case EnumTypes.ObjectTypes.TANK:
-                    MSX.Species[i].setTankExpr(expr);
-                    MSX.Species[i].setTankExprType((EnumTypes.ExpressionType)k);
-                    break;
+            case EnumTypes.ObjectTypes.LINK:
+                this.msx.Species[i].setPipeExpr(expr);
+                this.msx.Species[i].setPipeExprType((EnumTypes.ExpressionType)k);
+                break;
+            case EnumTypes.ObjectTypes.TANK:
+                this.msx.Species[i].setTankExpr(expr);
+                this.msx.Species[i].setTankExprType((EnumTypes.ExpressionType)k);
+                break;
             }
             return 0;
         }
 
-        //=============================================================================
-        // parses an input line containing initial species concentrations.
-        private InpErrorCodes parseQuality(string[] Tok) {
+        /// <summary>Parses an input line containing initial species concentrations.</summary>
+        private InpErrorCodes ParseQuality(string[] tok) {
             int err, i, j, k, m;
             double x;
 
             // --- determine if quality value is global or object-specific
 
-            if (Tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
-            if (Utilities.MSXutils_match(Tok[0], "GLOBAL")) i = 1;
-            else if (Utilities.MSXutils_match(Tok[0], "NODE")) i = 2;
-            else if (Utilities.MSXutils_match(Tok[0], "LINK")) i = 3;
+            if (tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
+            if (Utilities.MSXutils_match(tok[0], "GLOBAL")) i = 1;
+            else if (Utilities.MSXutils_match(tok[0], "NODE")) i = 2;
+            else if (Utilities.MSXutils_match(tok[0], "LINK")) i = 3;
             else return InpErrorCodes.ERR_KEYWORD;
 
             // --- find species index
 
             k = 1;
             if (i >= 2) k = 2;
-            m = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, Tok[k]);
+            m = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, tok[k]);
             if (m <= 0) return InpErrorCodes.ERR_NAME;
 
             // --- get quality value
 
-            if (i >= 2 && Tok.Length < 4) return InpErrorCodes.ERR_ITEMS;
+            if (i >= 2 && tok.Length < 4) return InpErrorCodes.ERR_ITEMS;
             k = 2;
             if (i >= 2) k = 3;
-            if (!Tok[k].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
+            if (!tok[k].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
 
             // --- for global specification, set initial quality either for
             //     all nodes or links depending on type of species
 
             if (i == 1) {
-                MSX.C0[m] = x;
-                if (MSX.Species[m].getType() == EnumTypes.SpeciesType.BULK) {
-                    for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++) MSX.Node[j].getC0()[m] = x;
+                this.msx.C0[m] = x;
+                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK) {
+                    for (j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++)
+                        this.msx.Node[j].C0[m] = x;
                 }
-                for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) MSX.Link[j].getC0()[m] = x;
+                for (j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++)
+                    this.msx.Link[j].getC0()[m] = x;
             }
 
-                // --- for a specific node, get its index & set its initial quality
+            // --- for a specific node, get its index & set its initial quality
 
             else if (i == 2) {
                 int tmp;
-                err = epanet.ENgetnodeindex(Tok[1], out tmp);
+                err = this.epanet.ENgetnodeindex(tok[1], out tmp);
                 j = tmp;
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                if (MSX.Species[m].getType() == EnumTypes.SpeciesType.BULK) MSX.Node[j].getC0()[m] = x;
+                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK) this.msx.Node[j].C0[m] = x;
             }
 
-                // --- for a specific link, get its index & set its initial quality
+            // --- for a specific link, get its index & set its initial quality
 
             else if (i == 3) {
                 int tmp;
-                err = epanet.ENgetlinkindex(Tok[1], out tmp);
+                err = this.epanet.ENgetlinkindex(tok[1], out tmp);
                 j = tmp;
                 if (err != 0)
                     return InpErrorCodes.ERR_NAME;
 
-                MSX.Link[j].getC0()[m] = x;
+                this.msx.Link[j].getC0()[m] = x;
             }
             return 0;
         }
 
-        //=============================================================================
-        // parses an input line containing a parameter data.
-        private InpErrorCodes parseParameter(string[] Tok) {
-            int err, i, j;
-            double x;
+        /// <summary>Parses an input line containing a parameter data.</summary>
+        private InpErrorCodes ParseParameter(string[] tok) {
+            int err, j;
 
             // --- get parameter name
 
-            if (Tok.Length < 4) return 0;
-            i = project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, Tok[2]);
+            if (tok.Length < 4) return 0;
+            int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, tok[2]);
 
             // --- get parameter value
 
-            double x_tmp;
-            if (!Tok[3].ToDouble(out x_tmp)) return InpErrorCodes.ERR_NUMBER;
-            x = x_tmp;
+            double x;
+            if (!tok[3].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
+            
             // --- for pipe parameter, get pipe index and update parameter's value
 
-            if (Utilities.MSXutils_match(Tok[0], "PIPE")) {
-                int j_tmp;
-                err = epanet.ENgetlinkindex(Tok[1], out j_tmp);
-                j = j_tmp;
+            if (Utilities.MSXutils_match(tok[0], "PIPE")) {
+                err = this.epanet.ENgetlinkindex(tok[1], out j);
+              
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                MSX.Link[j].getParam()[i] = x;
+                this.msx.Link[j].getParam()[i] = x;
             }
 
-                // --- for tank parameter, get tank index and update parameter's value
+            // --- for tank parameter, get tank index and update parameter's value
 
-            else if (Utilities.MSXutils_match(Tok[0], "TANK")) {
-                int j_temp;
-                err = epanet.ENgetnodeindex(Tok[1], out j_temp);
-                j = j_temp;
+            else if (Utilities.MSXutils_match(tok[0], "TANK")) {
+                err = this.epanet.ENgetnodeindex(tok[1], out j);
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                j = MSX.Node[j].getTank();
-                if (j > 0) MSX.Tank[j].getParam()[i] = x;
+                j = this.msx.Node[j].Tank;
+                if (j > 0) this.msx.Tank[j].Param[i] = x;
             }
             else return InpErrorCodes.ERR_KEYWORD;
             return 0;
         }
 
-        //=============================================================================
-        // parses an input line containing a source input data.
-        private InpErrorCodes parseSource(string[] Tok) {
-            int err, i, j, k, m;
-            double x;
+    /// <summary>Parses an input line containing a source input data.</summary>
+        private InpErrorCodes ParseSource(string[] tok) {
+           
             Source source = null;
 
             // --- get source type
-
-            if (Tok.Length < 4) return InpErrorCodes.ERR_ITEMS;
-            k = Utilities.MSXutils_findmatch(Tok[0], Constants.SourceTypeWords);
+            if (tok.Length < 4) return InpErrorCodes.ERR_ITEMS;
+            int k = Utilities.MSXutils_findmatch(tok[0], Constants.SourceTypeWords);
             if (k < 0) return InpErrorCodes.ERR_KEYWORD;
 
             // --- get node index
-
-            int j_tmp;
-            err = epanet.ENgetnodeindex(Tok[1], out j_tmp);
-            j = j_tmp;
+            int j;
+            int err = this.epanet.ENgetnodeindex(tok[1], out j);
             if (err != 0) return InpErrorCodes.ERR_NAME;
 
             //  --- get species index
-
-            m = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, Tok[2]);
+            int m = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, tok[2]);
             if (m <= 0) return InpErrorCodes.ERR_NAME;
 
             // --- check that species is a BULK species
-
-            if (MSX.Species[m].getType() != EnumTypes.SpeciesType.BULK) return 0;
+            if (this.msx.Species[m].getType() != EnumTypes.SpeciesType.BULK) return 0;
 
             // --- get base strength
-
-            double x_tmp;
-            if (!Tok[3].ToDouble(out x_tmp)) return InpErrorCodes.ERR_NUMBER;
-            x = x_tmp;
+            double x;
+            if (!tok[3].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
+       
             // --- get time pattern if present
-
-            i = 0;
-            if (Tok.Length >= 5) {
-                i = project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, Tok[4]);
+            var i = 0;
+            if (tok.Length >= 5) {
+                i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, tok[4]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
             }
 
             // --- check if a source for this species already exists
-
-            /*source = MSX.Node[j].sources;
-        while ( source )
-        {
-            if ( source->species == m ) break;
-            source = source->next;
-        }*/
-
-            foreach (Source src  in  MSX.Node[j].getSources()) {
+            foreach (Source src  in  this.msx.Node[j].Sources) {
                 if (src.getSpecies() == m) {
                     source = src;
                     break;
                 }
 
             }
-            // --- otherwise create a new source object
 
+            // --- otherwise create a new source object
             if (source == null) {
                 source = new Source(); //(struct Ssource *) malloc(sizeof(struct Ssource));
                 //if ( source == NULL ) return 101;
                 //source->next = MSX.Node[j].sources;
                 //MSX.Node[j].sources = source;
-                MSX.Node[j].getSources().Insert(0, source);
+                this.msx.Node[j].Sources.Insert(0, source);
             }
 
             // --- save source's properties
@@ -873,229 +840,174 @@ namespace org.addition.epanet.msx {
             return 0;
         }
 
-        //=============================================================================
-        // parses an input line containing a time pattern data.
-        private InpErrorCodes parsePattern(string[] Tok) {
-            int i;
-            double x;
-            //List<Double> listItem = new ArrayList<Double>();
-            //SnumList *listItem;
+        /// <summary>Parses an input line containing a time pattern data.</summary>
+        private InpErrorCodes ParsePattern(string[] tok) {
 
             // --- get time pattern index
-
-            if (Tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
-            i = project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, Tok[0]);
+            if (tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
+            int i = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PATTERN, tok[0]);
             if (i <= 0) return InpErrorCodes.ERR_NAME;
-            MSX.Pattern[i].setId(project.MSXproj_findID(EnumTypes.ObjectTypes.PATTERN, Tok[0]));
+            this.msx.Pattern[i].setId(this.project.MSXproj_findID(EnumTypes.ObjectTypes.PATTERN, tok[0]));
 
             // --- begin reading pattern multipliers
 
-            //k = 1;
-            //while ( k < Tok.length )
-            for (int k = 1; k < Tok.Length; k++) //string token : Tok)
-            {
 
-                if (!Tok[k].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
+            for (int k = 1; k < tok.Length; k++) //string token : Tok)
+            {
+                double x;
+                if (!tok[k].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
 
-                MSX.Pattern[i].getMultipliers().Add(x);
-                /*listItem = (SnumList *) malloc(sizeof(SnumList));
-            if ( listItem == NULL ) return 101;
-            listItem->value = x;
-            listItem->next = NULL;
-            if ( MSX.Pattern[i].first == NULL )
-            {
-                MSX.Pattern[i].current = listItem;
-                MSX.Pattern[i].first = listItem;
-            }
-            else
-            {
-                MSX.Pattern[i].current->next = listItem;
-                MSX.Pattern[i].current = listItem;
-            } */
+                this.msx.Pattern[i].getMultipliers().Add(x);
+
 
                 // k++;
             }
             return 0;
         }
 
-        private InpErrorCodes parseReport(string[] Tok) {
-            int i, j, k, err;
+        private InpErrorCodes ParseReport(string[] tok) {
+            int err;
 
             // Get keyword
-            if (Tok.Length < 2)
+            if (tok.Length < 2)
                 return 0;
 
-            k = Utilities.MSXutils_findmatch(Tok[0], Constants.ReportWords);
+            int k = Utilities.MSXutils_findmatch(tok[0], Constants.ReportWords);
 
             if (k < 0)
                 return InpErrorCodes.ERR_KEYWORD;
 
             switch (k) {
-                    // Keyword is NODE; parse ID names of reported nodes
-                case 0:
-                    if (Utilities.MSXutils_strcomp(Tok[1], Constants.ALL)) {
-                        for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++) MSX.Node[j].setRpt(true);
-                    }
-                    else if (Utilities.MSXutils_strcomp(Tok[1], Constants.NONE)) {
-                        for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++) MSX.Node[j].setRpt(false);
-                    }
-                    else
-                        for (i = 1; i < Tok.Length; i++) {
-                            int j_tmp;
-                            err = epanet.ENgetnodeindex(Tok[i], out j_tmp);
-                            j = j_tmp;
-                            if (err != 0)
-                                return InpErrorCodes.ERR_NAME;
-                            MSX.Node[j].setRpt(true);
-                        }
-                    break;
+            // Keyword is NODE; parse ID names of reported nodes
+            case 0:
+                if (string.Equals(tok[1], Constants.ALL, StringComparison.OrdinalIgnoreCase)) {
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++)
+                        this.msx.Node[j].Rpt = true;
+                }
+                else if (string.Equals(tok[1], Constants.NONE, StringComparison.OrdinalIgnoreCase)) {
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++)
+                        this.msx.Node[j].Rpt = false;
+                }
+                else
+                    for (int i = 1; i < tok.Length; i++) {
+                        int j;
+                        err = this.epanet.ENgetnodeindex(tok[i], out j);
 
-                    // Keyword is LINK: parse ID names of reported links
-                case 1:
-                    if (Utilities.MSXutils_strcomp(Tok[1], Constants.ALL)) {
-                        for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) MSX.Link[j].setRpt(true);
+                        if (err != 0)
+                            return InpErrorCodes.ERR_NAME;
+
+                        this.msx.Node[j].Rpt = true;
                     }
-                    else if (Utilities.MSXutils_strcomp(Tok[1], Constants.NONE)) {
-                        for (j = 1; j <= MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) MSX.Link[j].setRpt(false);
+                break;
+
+            // Keyword is LINK: parse ID names of reported links
+            case 1:
+                if (string.Equals(tok[1], Constants.ALL, StringComparison.OrdinalIgnoreCase)) {
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++)
+                        this.msx.Link[j].setRpt(true);
+                }
+                else if (string.Equals(tok[1], Constants.NONE, StringComparison.OrdinalIgnoreCase)) {
+                    for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++)
+                        this.msx.Link[j].setRpt(false);
+                }
+                else
+                    for (int i = 1; i < tok.Length; i++) {
+                        int j;
+                        err = this.epanet.ENgetlinkindex(tok[i], out j);
+                        if (err != 0) return InpErrorCodes.ERR_NAME;
+                        this.msx.Link[j].setRpt(true);
                     }
-                    else
-                        for (i = 1; i < Tok.Length; i++) {
-                            int j_temp;
-                            err = epanet.ENgetlinkindex(Tok[i], out j_temp);
-                            j = j_temp;
-                            if (err != 0) return InpErrorCodes.ERR_NAME;
-                            MSX.Link[j].setRpt(true);
-                        }
-                    break;
+                break;
 
-                    // Keyword is SPECIES; get YES/NO & precision
-                case 2:
-                    j = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, Tok[1]);
-                    if (j <= 0) return InpErrorCodes.ERR_NAME;
-               
-                    if (Tok.Length >= 3) {
-                        if (Utilities.MSXutils_strcomp(Tok[2], Constants.YES)) MSX.Species[j].setRpt(1);
-                        else if (Utilities.MSXutils_strcomp(Tok[2], Constants.NO)) MSX.Species[j].setRpt(0);
-                        else return InpErrorCodes.ERR_KEYWORD;
-                    }
+            // Keyword is SPECIES; get YES/NO & precision
+            case 2: {
+                int j = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, tok[1]);
+                if (j <= 0) return InpErrorCodes.ERR_NAME;
 
-                    if (Tok.Length >= 4) {
-                        int precision_tmp;
-                        // BUG: Baseform bug
-                        if (!int.TryParse(Tok[3], out precision_tmp)) ;
-                        MSX.Species[j].setPrecision(precision_tmp);
-                        return InpErrorCodes.ERR_NUMBER;
-                    }
+                if (tok.Length >= 3) {
+                    if (string.Equals(tok[2], Constants.YES, StringComparison.OrdinalIgnoreCase)) this.msx.Species[j].setRpt(1);
+                    else if (string.Equals(tok[2], Constants.NO, StringComparison.OrdinalIgnoreCase)) this.msx.Species[j].setRpt(0);
+                    else return InpErrorCodes.ERR_KEYWORD;
+                }
 
-                    break;
+                if (tok.Length >= 4) {
+                    int i;
+                    // BUG: Baseform bug
+                    if (!int.TryParse(tok[3], out i)) ;
+                    this.msx.Species[j].setPrecision(i);
+                    return InpErrorCodes.ERR_NUMBER;
+                }
+            }
+                break;
 
-                    // Keyword is FILE: get name of report file
-                case 3:
-                    MSX.rptFilename = Tok[1];
-                    break;
+            // Keyword is FILE: get name of report file
+            case 3:
+                this.msx.RptFilename = tok[1];
+                break;
 
-                    // Keyword is PAGESIZE;
-                case 4:
-                    int pagesize_tmp;
-                    if (!Utilities.MSXutils_getInt(Tok[1], out pagesize_tmp))
-                        return InpErrorCodes.ERR_NUMBER;
-                    MSX.PageSize = pagesize_tmp;
-                    break;
+            // Keyword is PAGESIZE;
+            case 4: {
+                int i;
+                if (!int.TryParse(tok[1], out i))
+                    return InpErrorCodes.ERR_NUMBER;
+                this.msx.PageSize = i;
+            }
+                break;
             }
             return 0;
         }
 
-        //=============================================================================
-        // Finds the index assigned to a species, intermediate term, parameter, or constant that appears in a math expression.
-        private int getVariableCode(string id) {
-            int j = project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, id);
+        /// <summary>
+        ///  Finds the index assigned to a species, intermediate term, parameter, or constant that appears in a math expression.
+        /// </summary>
+        private int GetVariableCode(string id) {
+            int j = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.SPECIES, id);
 
             if (j >= 1) return j;
 
-            j = project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, id);
+            j = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.TERM, id);
 
-            if (j >= 1) return MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + j;
+            if (j >= 1) return this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + j;
 
-            j = project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, id);
+            j = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.PARAMETER, id);
 
             if (j >= 1)
-                return MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + MSX.Nobjects[(int)EnumTypes.ObjectTypes.TERM] +
+                return this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM] +
                        j;
 
-            j = project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, id);
+            j = this.project.MSXproj_findObject(EnumTypes.ObjectTypes.CONSTANT, id);
 
             if (j >= 1)
-                return MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + MSX.Nobjects[(int)EnumTypes.ObjectTypes.TERM] +
-                       MSX.Nobjects[(int)EnumTypes.ObjectTypes.PARAMETER] + j;
+                return this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.PARAMETER] + j;
 
             j = Utilities.MSXutils_findmatch(id, Constants.HydVarWords);
 
             if (j >= 1)
-                return MSX.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + MSX.Nobjects[(int)EnumTypes.ObjectTypes.TERM] +
-                       MSX.Nobjects[(int)EnumTypes.ObjectTypes.PARAMETER] +
-                       MSX.Nobjects[(int)EnumTypes.ObjectTypes.CONSTANT] + j;
+                return this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.PARAMETER]
+                       + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.CONSTANT] + j;
             return -1;
         }
 
-        //=============================================================================
-        // Scans a string for tokens, saving pointers to them
-        //in shared variable Tok[].
-        //int  getTokens(string s)
-        //{
-        //    int  len, m, n;
-        //    string c;
-        //
-        //    // --- begin with no tokens
-        //
-        //    for (n = 0; n < MAXTOKS; n++) Tok[n] = NULL;
-        //    n = 0;
-        //
-        //    // --- truncate s at start of comment
-        //
-        //    c = strchr(s,';');
-        //    if (c) *c = '\0';
-        //    len = strlen(s);
-        //
-        //    // --- scan s for tokens until nothing left
-        //
-        //    while (len > 0 && n < MAXTOKS)
-        //    {
-        //        m = strcspn(s,SEPSTR);              // find token length
-        //        if (m == 0) s++;                    // no token found
-        //        else
-        //        {
-        //            if (*s == '"')                  // token begins with quote
-        //            {
-        //                s++;                        // start token after quote
-        //                len--;                      // reduce length of s
-        //                m = strcspn(s,"\"\n");      // find end quote or new line
-        //            }
-        //            s[m] = '\0';                    // null-terminate the token
-        //            Tok[n] = s;                     // save pointer to token
-        //            n++;                            // update token count
-        //            s += m+1;                       // begin next token
-        //        }
-        //        len -= m+1;                         // update length of s
-        //    }
-        //    return(n);
-        //}
+        private void WriteInpErrMsg(InpErrorCodes errcode, string sect, string line, int lineCount) {
 
-        //=============================================================================
-
-        private void writeInpErrMsg(InpErrorCodes errcode, string sect, string line, int lineCount) {
-
-            string msg;
             if (errcode >= InpErrorCodes.INP_ERR_LAST || errcode <= InpErrorCodes.INP_ERR_FIRST) {
                 Console.Error.WriteLine("Error Code = {0}", (int)errcode);
             }
             else {
-                Console.Error.WriteLine("{0} at line {1} of {2}] section:",
-                    InpErrorTxt[errcode - InpErrorCodes.INP_ERR_FIRST], lineCount, sect);
+                Console.Error.WriteLine(
+                           "{0} at line {1} of {2}] section:",
+                           InpErrorTxt[errcode - InpErrorCodes.INP_ERR_FIRST],
+                           lineCount,
+                           sect);
             }
-            //epanet.ENwriteline("");
-            //epanet.ENwriteline(msg);
-            //epanet.ENwriteline(line);
+
         }
 
     }
+
 }

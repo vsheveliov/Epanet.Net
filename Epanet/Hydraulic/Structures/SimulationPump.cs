@@ -43,51 +43,51 @@ public class SimulationPump : SimulationLink {
     public SimulationPump(List<SimulationNode> indexedNodes, Link @ref, int idx):base(indexedNodes, @ref, idx) {
         
         for (int i = 0; i < 6; i++)
-            energy[i] = ((Pump) @ref).getEnergy(0);
+            energy[i] = ((Pump)@ref).Energy[0]; // BUG: Baseform bug ?
 
-        h0 = ((Pump) @ref).getH0();
-        flowCoefficient = ((Pump) @ref).getFlowCoefficient();
-        n = ((Pump) @ref).getN();
+        h0 = ((Pump) @ref).H0;
+        flowCoefficient = ((Pump) @ref).FlowCoefficient;
+        n = ((Pump) @ref).N;
     }
 
     private double[] energy = {0, 0, 0, 0, 0, 0};
 
 
-    public Pump.Type getPtype() {
-        return ((Pump) link).getPtype();
+    public Pump.PumpType getPtype() {
+        return ((Pump) this.link).Ptype;
     }
 
     public double getQ0() {
-        return ((Pump) link).getQ0();
+        return ((Pump) this.link).Q0;
     }
 
     public double getQmax() {
-        return ((Pump) link).getQmax();
+        return ((Pump) this.link).Qmax;
     }
 
     public double getHmax() {
-        return ((Pump) link).getHmax();
+        return ((Pump) this.link).Hmax;
     }
 
 
     public Curve getHcurve() {
-        return ((Pump) link).getHcurve();
+        return ((Pump) this.link).Hcurve;
     }
 
     public Curve getEcurve() {
-        return ((Pump) link).getEcurve();
+        return ((Pump) this.link).Ecurve;
     }
 
     public Pattern getUpat() {
-        return ((Pump) link).getUpat();
+        return ((Pump) this.link).Upat;
     }
 
     public Pattern getEpat() {
-        return ((Pump) link).getEpat();
+        return ((Pump) this.link).Epat;
     }
 
     public double getEcost() {
-        return ((Pump) link).getEcost();
+        return ((Pump) this.link).Ecost;
     }
 
 
@@ -138,18 +138,17 @@ public class SimulationPump : SimulationLink {
         double q = Math.Abs(flow);
         double dh = Math.Abs(first.getSimHead() - second.getSimHead());
 
-        double e = pMap.getEpump();
+        double e = pMap.Epump;
 
         if (getEcurve() != null) {
             Curve curve = getEcurve();
-            e = Utilities.linearInterpolator(curve.getNpts(),
-                    curve.getX(), curve.getY(), q * fMap.getUnits(FieldsMap.Type.FLOW));
+            e = curve.LinearInterpolator(q * fMap.GetUnits(FieldsMap.FieldType.FLOW));
         }
         e = Math.Min(e, 100.0);
         e = Math.Max(e, 1.0);
         e /= 100.0;
 
-        ret.power = dh * q * pMap.getSpGrav() / 8.814 / e * Constants.KWperHP;
+        ret.power = dh * q * pMap.SpGrav / 8.814 / e * Constants.KWperHP;
         ret.efficiency = e;
 
         return ret;
@@ -172,8 +171,8 @@ public class SimulationPump : SimulationLink {
             c = c0;
 
         if (getEpat() != null) {
-            int m = (int) (n % getEpat().getFactorsList().Count);
-            c *= getEpat().getFactorsList()[m];
+            int m = (int) (n % this.getEpat().FactorsList.Count);
+            c *= this.getEpat().FactorsList[m];
         } else
             c *= f0;
 
@@ -203,7 +202,7 @@ public class SimulationPump : SimulationLink {
 
         q = Math.Max(Math.Abs(flow), Constants.TINY);
 
-        if (getPtype() == Pump.Type.CUSTOM) {
+        if (getPtype() == Pump.PumpType.CUSTOM) {
 
             Curve.Coeffs coeffs = getHcurve().getCoeff(fMap, q / setting);
 
@@ -217,7 +216,7 @@ public class SimulationPump : SimulationLink {
         r = getFlowCoefficient() * Math.Pow(setting, 2.0 - n);
         if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
 
-        invHeadLoss = 1.0 / Math.Max(r, pMap.getRQtol());
+        invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);
         flowCorrection = flow / n + invHeadLoss * h0;
     }
 
@@ -226,12 +225,12 @@ public class SimulationPump : SimulationLink {
     public Link.StatType pumpStatus(PropertiesMap pMap, double dh) {
         double hmax;
 
-        if (getPtype() == Pump.Type.CONST_HP)
+        if (getPtype() == Pump.PumpType.CONST_HP)
             hmax = Constants.BIG;
         else
             hmax = (setting * setting) * getHmax();
 
-        if (dh > hmax + pMap.getHtol())
+        if (dh > hmax + pMap.Htol)
             return (Link.StatType.XHEAD);
 
         return (Link.StatType.OPEN);
@@ -245,9 +244,9 @@ public class SimulationPump : SimulationLink {
         double dt, psum = 0.0;
 
 
-        if (pMap.getDuration() == 0)
+        if (pMap.Duration == 0)
             dt = 1.0;
-        else if (htime < pMap.getDuration())
+        else if (htime < pMap.Duration)
             dt = (double) hstep / 3600.0;
         else
             dt = 0.0;
@@ -255,15 +254,15 @@ public class SimulationPump : SimulationLink {
         if (dt == 0.0)
             return 0.0;
 
-        long n = (htime + pMap.getPstart()) / pMap.getPstep();
+        long n = (htime + pMap.Pstart) / pMap.Pstep;
 
 
-        double c0 = pMap.getEcost();
+        double c0 = pMap.Ecost;
         double f0 = 1.0;
 
         if (Epat != null) {
-            long m = n % (long) Epat.getFactorsList().Count;
-            f0 = Epat.getFactorsList()[(int) m];
+            long m = n % (long) Epat.FactorsList.Count;
+            f0 = Epat.FactorsList[(int) m];
         }
 
         foreach (SimulationPump pump  in  pumps) {

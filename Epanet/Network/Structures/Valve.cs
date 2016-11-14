@@ -17,18 +17,13 @@
 
 namespace org.addition.epanet.network.structures {
 
-///<summary>Hydraulic valve structure.</summary>
-public class Valve : Link{
+    ///<summary>Hydraulic valve structure.</summary>
+    public class Valve:Link {
 
-    ///<summary>Settings curve.</summary>
-    Curve sCurve;
+        public Valve(string id):base(id) { }
 
-    public Curve getCurve() {
-        return sCurve;
+        ///<summary>Settings curve.</summary>
+        public Curve Curve { get; set; }
     }
 
-    public void setCurve(Curve cur) {
-        sCurve = cur;
-    }
-}
 }

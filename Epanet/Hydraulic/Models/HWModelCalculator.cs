@@ -21,35 +21,37 @@ using org.addition.epanet.network;
 
 namespace org.addition.epanet.hydraulic.models {
 
-///<summary>Hazen-Williams model calculator.</summary>
-public class HWModelCalculator : PipeHeadModel{
+    ///<summary>Hazen-Williams model calculator.</summary>
+    public class HWModelCalculator:PipeHeadModel {
 
-    public override LinkCoeffs compute(PropertiesMap pMap,SimulationLink sL) {
-        // Evaluate headloss coefficients
-        double q = Math.Abs(sL.getSimFlow());      // Absolute flow
-        double ml = sL.getLink().getKm();          // Minor loss coeff.
-        double r = sL.getLink().getFlowResistance();         // Resistance coeff.
+        public override LinkCoeffs compute(PropertiesMap pMap, SimulationLink sL) {
+            // Evaluate headloss coefficients
+            double q = Math.Abs(sL.SimFlow); // Absolute flow
+            double ml = sL.Link.Km; // Minor loss coeff.
+            double r = sL.Link.FlowResistance; // Resistance coeff.
 
-        double r1 = 1.0 * r + ml;
+            double r1 = 1.0 * r + ml;
 
-        // Use large P coefficient for small flow resistance product
-        if (r1 * q < pMap.getRQtol()){
-            return new LinkCoeffs(1d / pMap.getRQtol(),sL.getSimFlow() / pMap.getHexp());
+            // Use large P coefficient for small flow resistance product
+            if (r1 * q < pMap.RQtol) {
+                return new LinkCoeffs(1d / pMap.RQtol, sL.SimFlow / pMap.Hexp);
+            }
+
+            double hpipe = r * Math.Pow(q, pMap.Hexp); // Friction head loss
+            double p = pMap.Hexp * hpipe; // Q*dh(friction)/dQ
+            double hml;
+            if (ml > 0d) {
+                hml = ml * q * q; // Minor head loss
+                p += 2d * hml; // Q*dh(Total)/dQ
+            }
+            else
+                hml = 0d;
+
+            p = sL.SimFlow / p; // 1 / (dh/dQ)
+            return new LinkCoeffs(Math.Abs(p), p * (hpipe + hml));
         }
 
-        double hpipe = r * Math.Pow(q, pMap.getHexp());     // Friction head loss
-        double p = pMap.getHexp() * hpipe;                  // Q*dh(friction)/dQ
-        double hml;
-        if (ml > 0d) {
-            hml = ml * q * q;   // Minor head loss
-            p += 2d * hml;     // Q*dh(Total)/dQ
-        } else
-            hml = 0d;
 
-        p = sL.getSimFlow() / p;  // 1 / (dh/dQ)
-        return new LinkCoeffs(Math.Abs(p),p * (hpipe + hml));
     }
 
-
-}
 }

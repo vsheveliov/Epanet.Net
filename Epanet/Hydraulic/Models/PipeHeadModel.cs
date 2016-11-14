@@ -20,37 +20,29 @@ using org.addition.epanet.network;
 
 namespace org.addition.epanet.hydraulic.models {
 
-///<summary>Pipe head loss model calculator.</summary>
-public abstract class PipeHeadModel {
+    ///<summary>Pipe head loss model calculator.</summary>
+    public abstract class PipeHeadModel {
 
-    ///<summary>Link coefficients.</summary>
-    public class LinkCoeffs{
-        public LinkCoeffs(double invHeadLoss, double flowCorrection) {
-            this.invHeadLoss = invHeadLoss;
-            this.flowCorrection = flowCorrection;
+        ///<summary>Link coefficients.</summary>
+        public class LinkCoeffs {
+            public LinkCoeffs(double invHeadLoss, double flowCorrection) {
+                this.invHeadLoss = invHeadLoss;
+                this.flowCorrection = flowCorrection;
+            }
+
+            private readonly double invHeadLoss;
+            private readonly double flowCorrection;
+
+            public double InvHeadLoss { get { return this.invHeadLoss; } }
+
+            public double FlowCorrection { get { return this.flowCorrection; } }
         }
 
-        private double invHeadLoss;
-        private double flowCorrection;
-
-        public double getInvHeadLoss() {
-            return invHeadLoss;
-        }
-
-        public double getFlowCorrection() {
-            return flowCorrection;
-        }
+        ///<summary>Compute link coefficients through the implemented pipe headloss model.</summary>
+        /// <param name="pMap">Network properties map.</param>
+        /// <param name="sL">Simulation link.</param>
+        /// <returns>Computed link coefficients.</returns>
+        public abstract LinkCoeffs compute(PropertiesMap pMap, SimulationLink sL);
     }
 
-    //public double compute(PropertiesMap pMap,SimulationLink link)
-
-    /**
-     * Compute link coefficients through the implemented pipe headloss model.
-     * @param pMap Network properties map.
-     * @param sL Simulation link.
-     * @return Computed link coefficients.
-     * @throws ENException
-     */
-    public abstract LinkCoeffs compute(PropertiesMap pMap,SimulationLink sL);
-}
 }

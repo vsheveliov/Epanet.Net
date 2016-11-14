@@ -17,42 +17,24 @@
 
 namespace org.addition.epanet.network.structures {
 
-///<summary>Node demand category.</summary>
-public class Demand {
-    ///<summary>Baseline demand (Feet^3/t)</summary>
-    private double @base;
-    ///<summary>Pattern reference.</summary>
-    private Pattern pattern;
+    ///<summary>Node demand category.</summary>
+    public class Demand {
+        public Demand(double @base, Pattern pattern) {
+            this.Base = @base;
+            this.Pattern = pattern;
+        }
 
+        ///<summary>Baseline demand (Feet^3/t)</summary>
+        public double Base { get; set; }
 
-    public Demand(double @base, Pattern pattern) {
-        this.@base = @base;
-        this.pattern = pattern;
+        ///<summary>Pattern reference.</summary>
+        public Pattern Pattern { get; set; }
+
+        public double GetBaseNu(PropertiesMap.FlowUnitsType units) { return NUConvert.revertFlow(units, this.Base); }
+
+        public void SetBaseNu(PropertiesMap.FlowUnitsType units, double value) {
+            this.Base = NUConvert.convertFlow(units, value);
+        }
     }
 
-    public double getBase() {
-        return @base;
-    }
-
-    public double getBaseNU(PropertiesMap.FlowUnitsType units) {
-        return NUConvert.revertFlow(units,@base);
-    }
-
-    public Pattern getPattern() {
-        return pattern;
-    }
-
-    public void setBase(double @base) {
-        this.@base = @base;
-    }
-
-
-    public void setBaseNU(PropertiesMap.FlowUnitsType units,double value) {
-        @base = NUConvert.convertFlow(units,value);
-    }
-
-    public void setPattern(Pattern pattern) {
-        this.pattern = pattern;
-    }
-}
 }

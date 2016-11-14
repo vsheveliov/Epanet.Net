@@ -34,147 +34,110 @@ namespace org.addition.epanet.network.structures {
             LIFO = 3,
         }
 
+        public Tank(string id):base(id) { }
+
         ///<summary>Tank area (feet^2).</summary>
-        private double area;
-        ///<summary>Tank volume (feet^3).</summary>
-        //private double v;
+        public double Area { get; set; }
+
         ///<summary>Species concentration.</summary>
-        private double[] c;
+        public double[] Concentration { get; set; }
+
         ///<summary>Initial water elev.</summary>
-        private double h0;
+        public double H0 { get; set; }
+
         ///<summary>Maximum water elev (feet).</summary>
-        private double hMax;
+        public double Hmax { get; set; }
+
         ///<summary>Minimum water elev (feet).</summary>
-        private double hMin;
+        public double Hmin { get; set; }
+
         ///<summary>Reaction coeff. (1/days).</summary>
-        private double kb;
+        public double Kb { get; set; }
+
         ///<summary>Type of mixing model</summary>
-        private MixType mixModel;
+        public MixType MixModel { get; set; }
+
         ///<summary>Fixed grade time pattern.</summary>
-        private Pattern pattern;
+        public Pattern Pattern { get; set; }
+
         ///<summary>Initial volume (feet^3).</summary>
-        private double v0;
+        public double V0 { get; set; }
+
         ///<summary>Mixing compartment size</summary>
-        private double v1max;
+        public double V1Max { get; set; }
+
         ///<summary>Fixed grade time pattern</summary>
-        private Curve vCurve;
+        public Curve Vcurve { get; set; }
+
         ///<summary>Maximum volume (feet^3).</summary>
-        private double vMax;
+        public double Vmax { get; set; }
+
         ///<summary>Minimum volume (feet^3).</summary>
-        private double vMin;
+        public double Vmin { get; set; }
 
+        public bool IsReservoir { get { return Math.Abs(this.Area) < double.Epsilon * 10; } }
 
-        public double getArea() { return area; }
+#if DEBUG // NUCONVERT
 
-        public double[] getConcentration() { return c; }
+        public double GetNuArea(PropertiesMap.UnitsType type) { return NUConvert.revertArea(type, this.Area); }
 
-        public double getH0() { return h0; }
+        public double GetNuInitHead(PropertiesMap.UnitsType type) { return NUConvert.revertDistance(type, this.H0); }
 
-        public double getHmax() { return hMax; }
+        public double GetNuInitVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.V0); }
 
-        public double getHmin() { return hMin; }
+        public double GetNuMaximumHead(PropertiesMap.UnitsType type) {
+            return NUConvert.revertDistance(type, this.Hmax);
+        }
 
-        public double getKb() { return kb; }
+        public double GetNuMaxVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.Vmax); }
 
-        public MixType getMixModel() { return mixModel; }
+        public double GetNuMinimumHead(PropertiesMap.UnitsType type) {
+            return NUConvert.revertDistance(type, this.Hmin);
+        }
 
-        public double getNUArea(PropertiesMap.UnitsType type) { return NUConvert.revertArea(type, area); }
+        public double GetNuMinVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.Vmin); }
 
-        public double getNUInitHead(PropertiesMap.UnitsType type) { return NUConvert.revertDistance(type, h0); }
-
-        public double getNUInitVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, v0); }
-
-        public double getNUMaximumHead(PropertiesMap.UnitsType type) { return NUConvert.revertDistance(type, hMax); }
-
-        public double getNUMaxVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, vMax); }
-
-        public double getNUMinimumHead(PropertiesMap.UnitsType type) { return NUConvert.revertDistance(type, hMin); }
-
-        public double getNUMinVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, vMin); }
-
-        public void setNUMinVolume(PropertiesMap.UnitsType type, double value) {
-            vMin = NUConvert.convertVolume(type, value);
+        public void SetNuMinVolume(PropertiesMap.UnitsType type, double value) {
+            this.Vmin = NUConvert.convertVolume(type, value);
         }
 
 
-        public double getNUMixCompartimentSize(PropertiesMap.UnitsType type) {
-            return NUConvert.revertVolume(type, v1max);
+        public double GetNuMixCompartimentSize(PropertiesMap.UnitsType type) {
+            return NUConvert.revertVolume(type, this.V1Max);
         }
 
 
-        public Pattern getPattern() { return pattern; }
-
-        public double getV0() { return v0; }
-
-        public double getV1max() { return this.v1max; }
-
-        public Curve getVcurve() { return vCurve; }
-
-        public double getVmax() { return vMax; }
-
-        public double getVmin() { return vMin; }
-
-        public void setArea(double a) { area = a; }
-
-        public void setConcentration(double[] value) { this.c = value; }
-
-        public void setH0(double value) { this.h0 = value; }
-
-        public void setHmax(double value) { this.hMax = value; }
-
-        public void setHmin(double value) { this.hMin = value; }
-
-        public void setKb(double value) { this.kb = value; }
-
-        public void setMixModel(MixType value) { this.mixModel = value; }
-
-        public void setNUArea(PropertiesMap.UnitsType type, double value) { area = NUConvert.convertArea(type, value); }
-
-        public void setNUInitHead(PropertiesMap.UnitsType type, double value) {
-            h0 = NUConvert.revertDistance(type, value);
+        public void SetNuArea(PropertiesMap.UnitsType type, double value) {
+            this.Area = NUConvert.convertArea(type, value);
         }
 
-        public void setNUInitVolume(PropertiesMap.UnitsType type, double value) {
-            v0 = NUConvert.convertVolume(type, value);
+        public void SetNuInitHead(PropertiesMap.UnitsType type, double value) {
+            this.H0 = NUConvert.revertDistance(type, value);
         }
 
-        //public double getVolume() {
-        //    return v;
-        //}
-        //
-        //public void setVolume(double v) {
-        //    this.v = v;
-        //}
-
-        public void setNUMaximumHead(PropertiesMap.UnitsType type, double value) {
-            hMax = NUConvert.revertDistance(type, value);
+        public void SetNuInitVolume(PropertiesMap.UnitsType type, double value) {
+            this.V0 = NUConvert.convertVolume(type, value);
         }
 
-        public void setNUMaxVolume(PropertiesMap.UnitsType type, double value) {
-            vMax = NUConvert.convertVolume(type, value);
+
+        public void SetNuMaximumHead(PropertiesMap.UnitsType type, double value) {
+            this.Hmax = NUConvert.revertDistance(type, value);
         }
 
-        public void setNUMinimumHead(PropertiesMap.UnitsType type, double value) {
-            hMin = NUConvert.convertArea(type, value);
+        public void SetNuMaxVolume(PropertiesMap.UnitsType type, double value) {
+            this.Vmax = NUConvert.convertVolume(type, value);
         }
 
-        public void setNUMixCompartimentSize(PropertiesMap.UnitsType type, double value) {
-            v1max = NUConvert.convertVolume(type, value);
+        public void SetNuMinimumHead(PropertiesMap.UnitsType type, double value) {
+            this.Hmin = NUConvert.convertArea(type, value);
         }
 
-        public void setPattern(Pattern value) { this.pattern = value; }
+        public void SetNuMixCompartimentSize(PropertiesMap.UnitsType type, double value) {
+            this.V1Max = NUConvert.convertVolume(type, value);
+        }
 
-        public void setV0(double value) { this.v0 = value; }
+#endif
 
-        public void setV1max(double vLmax) { this.v1max = vLmax; }
-
-        public void setVcurve(Curve vcurve) { vCurve = vcurve; }
-
-        public void setVmax(double vmax) { vMax = vmax; }
-
-        public void setVmin(double vmin) { vMin = vmin; }
-
-        public bool IsReservoir { get { return Math.Abs(this.area) < double.Epsilon * 10; } }
     }
 
 }

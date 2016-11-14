@@ -46,9 +46,6 @@
       <HintPath>..\lib\NPOI.OpenXml4Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -98,7 +95,7 @@
     <Compile Include="Network\Structures\Node.cs" />
     <Compile Include="Network\Structures\NUConvert.cs" />
     <Compile Include="Network\Structures\Pattern.cs" />
-    <Compile Include="Network\Structures\Point.cs" />
+    <Compile Include="Network\Structures\EnPoint.cs" />
     <Compile Include="Network\Structures\Pump.cs" />
     <Compile Include="Network\Structures\Rule.cs" />
     <Compile Include="Network\Structures\Source.cs" />

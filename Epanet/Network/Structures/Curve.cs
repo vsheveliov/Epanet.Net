@@ -25,9 +25,9 @@ namespace org.addition.epanet.network.structures {
 
         ///<summary>Computed curve coefficients.</summary>
         public class Coeffs {
-            public double h0; // head at zero flow (y-intercept)
+            public readonly double h0; // head at zero flow (y-intercept)
 
-            public double r; // dHead/dFlow (slope)
+            public readonly double r; // dHead/dFlow (slope)
 
             public Coeffs(double h0, double r) {
                 this.h0 = h0;
@@ -50,84 +50,84 @@ namespace org.addition.epanet.network.structures {
             H_CURVE = 3
         }
 
-        ///<summary>Curve name.</summary>
-        private string id = "";
+        
+        private readonly string _id;
+        private readonly List<double> _x = new List<double>();
+        private readonly List<double> _y = new List<double>();
 
-        ///<summary>Curve type.</summary>
-        private CurveType type;
+        public Curve(string id) { this._id = id; }
 
-        ///<summary>Curve abscissa values.</summary>
-        private readonly List<double> x = new List<double>();
-
-
-        ///<summary>Curve ordinate values.</summary>
-        private readonly List<double> y = new List<double>();
-
-        /**
-     * Computes intercept and slope of head v. flow curve at current flow.
-     * @param q Flow value.
-     * @return
-     */
-
+        /// <summary>Computes intercept and slope of head v. flow curve at current flow.</summary>
+        /// <param name="fMap"></param>
+        /// <param name="q">Flow value.</param>
         public Coeffs getCoeff(FieldsMap fMap, double q) {
             double h0;
             double r;
             int k1, k2, npts;
 
-            q *= fMap.getUnits(FieldsMap.Type.FLOW);
+            q *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
 
-            npts = getNpts();
+            npts = this.Npts;
 
             k2 = 0;
-            while (k2 < npts && x[k2] < q) k2++;
+            while (k2 < npts && this._x[k2] < q) k2++;
             if (k2 == 0) k2++;
             else if (k2 == npts) k2--;
             k1 = k2 - 1;
 
-            r = (y[k2] - y[k1])/(x[k2] - x[k1]);
-            h0 = y[k1] - (r)*x[k1];
+            r = (this._y[k2] - this._y[k1])/(this._x[k2] - this._x[k1]);
+            h0 = this._y[k1] - (r)*this._x[k1];
 
-            h0 = (h0)/fMap.getUnits(FieldsMap.Type.HEAD);
-            r = (r)*fMap.getUnits(FieldsMap.Type.FLOW)/fMap.getUnits(FieldsMap.Type.HEAD);
+            h0 = (h0)/fMap.GetUnits(FieldsMap.FieldType.HEAD);
+            r = (r)*fMap.GetUnits(FieldsMap.FieldType.FLOW)/fMap.GetUnits(FieldsMap.FieldType.HEAD);
 
             return new Coeffs(h0, r);
         }
 
-        public string getId() {
-            return id;
-        }
+        ///<summary>Curve name.</summary>
+        public string Id { get { return this._id; } }
 
-        /**
-     * Get the number of points.
-     * @return If the abscissa points count differ from the ordinate it returns -1, otherwise,
-     * it returns the abscissa point count.
-     */
+        /// <summary>Get the number of points.</summary>
+        /// <value>
+        ///   If the abscissa points count differ from the ordinate it returns -1, otherwise,
+        ///   it returns the abscissa point count.
+        /// </value>
+        public int Npts { get { return this._x.Count != this._y.Count ? -1 : this._x.Count; } }
 
-        public int getNpts() {
-            if (x.Count != y.Count) {
-                return -1;
+        ///<summary>Curve type.</summary>
+        public CurveType Type { get; set; }
+
+        ///<summary>Curve abscissa values.</summary>
+        public List<double> X { get { return this._x; } }
+
+        ///<summary>Curve ordinate values.</summary>
+        public List<double> Y { get { return this._y; } }
+
+  
+        /// <summary>Compute the linear interpolation of a 2d cartesian graph.</summary>
+        /// <param name="xx">The abscissa value.</param>
+        /// <returns>The interpolated value.</returns>
+        public double LinearInterpolator(double xx) {
+            var x = this._x;
+            var y = this._y;
+            var n = this.Npts;
+
+            int    k,m;
+            double  dx,dy;
+
+            m = n - 1;
+            if (xx <= x[0]) return y[0];
+            for (k=1; k<=m; k++)
+            {
+                if (x[k] >= xx)
+                {
+                    dx = x[k]-x[k-1];
+                    dy = y[k]-y[k-1];
+                    if (Math.Abs(dx) < Constants.TINY) return y[k];
+                    else return y[k] - (x[k]-xx)*dy/dx;
+                }
             }
-            return x.Count;
-        }
-
-        public CurveType getType() {
-            return type;
-        }
-
-        public List<double> getX() {
-            return x;
-        }
-
-        public List<double> getY() {
-            return y;
-        }
-
-        public void setId(string Id) {
-            this.id = Id;
-        }
-
-        public void setType(CurveType Type) {
-            this.type = Type;
+            return y[m];
         }
     }
 }

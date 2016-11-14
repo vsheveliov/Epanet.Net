@@ -23,145 +23,104 @@ using System.IO;
 namespace org.addition.epanet.hydraulic.io {
 
 
-///<summary>Hydraulic binary file reader class.</summary>
-public class HydraulicReader : IEnumerable<AwareStep> {
+    ///<summary>Hydraulic binary file reader class.</summary>
+    public class HydraulicReader:IEnumerable<AwareStep>, IDisposable {
 
-    private AwareStep.HeaderInfo headerInfo;
-
-
-    ///<summary>Current hydraulic step snapshot.</summary>
-    private AwareStep curStep;
-
-    ///<summary>File input stream.</summary>
-    private BinaryReader inputStream;
+        private readonly AwareStep.HeaderInfo _headerInfo;
 
 
-    public HydraulicReader(BinaryReader inputStream) {
-        this.inputStream = inputStream;
-        headerInfo = AwareStep.readHeader(inputStream);
-    }
+        ///<summary>Current hydraulic step snapshot.</summary>
+        private AwareStep _curStep;
 
-    public HydraulicReader(string hydFile)
-        : this(new BinaryReader(File.OpenRead(hydFile))) {
-    }
+        ///<summary>File input stream.</summary>
+        private BinaryReader _inputStream;
 
-    /**
-     * Read step data from file with a given time instant — it assumes the requested timestep is the same or after the current one.
-     *
-     * @param time Step instant.
-     * @return Reference to step snapshot.
-     * @throws IOException
-     */
-    public AwareStep getStep(long time) {
-        if (curStep != null) {
-            if (curStep.getTime() == time) return curStep;
+
+        public HydraulicReader(BinaryReader inputStream) {
+            this._inputStream = inputStream;
+            this._headerInfo = AwareStep.readHeader(inputStream);
         }
-        while (curStep==null || curStep.getTime() < time)
-            curStep = new AwareStep(inputStream, headerInfo);
-        return curStep.getTime() >= time ? curStep : null;
 
-    }
+        public HydraulicReader(string hydFile)
+            :this(new BinaryReader(File.OpenRead(hydFile))) { }
 
-    /**
-     * Close the inputStream.
-     *
-     * @throws IOException
-     */
-    public void close() {
-        if (inputStream != null)
-            ((IDisposable)inputStream).Dispose();
-    }
+        /// <summary>
+        /// Read step data from file with a given time instant — 
+        /// it assumes the requested timestep is the same or after the current one.
+        /// </summary>
+        /// <param name="time">Step instant.</param>
+        /// <returns>Reference to step snapshot.</returns>
+        public AwareStep getStep(long time) {
+            if (this._curStep != null) {
+                if (this._curStep.getTime() == time) return this._curStep;
+            }
+            while (this._curStep == null || this._curStep.getTime() < time)
+                this._curStep = new AwareStep(this._inputStream, this._headerInfo);
+            return this._curStep.getTime() >= time ? this._curStep : null;
 
+        }
 
-    /**
-     * Get the epanet hydraulic file version.
-     *
-     * @return Version number.
-     */
-    public int getVersion() {
-        return headerInfo.version;
-    }
-
-    /**
-     * Get the number of nodes in the file.
-     *
-     * @return Number of nodes.
-     */
-    public int getNodes() {
-        return headerInfo.nodes;
-    }
-
-    /**
-     * Get the number of links in the file.
-     *
-     * @return Number of links.
-     */
-    public int getLinks() {
-        return headerInfo.links;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public long getReportStart() {
-        return headerInfo.rstart;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public long getReportStep() {
-        return headerInfo.rstep;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public long getDuration() {
-        return headerInfo.duration;
-    }
-
-    /**
-     * Get step snapshot iterator.
-     *
-     * @return StepSnapshot iterator.
-     */
-    public IEnumerator<AwareStep> GetEnumerator() {
-        return Steps.GetEnumerator();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
-
-    ///<summary>Step snapshot iterator class</summary>
-    private IEnumerable<AwareStep> Steps {
-        get {
-            if(this.inputStream == null)
-                throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock(this.inputStream) {
-
-                this.inputStream.BaseStream.Position = sizeof(int) * 6;
-                AwareStep stp;
-
-                do {
-                    try {
-                        stp = new AwareStep(this.inputStream, this.headerInfo);
-                    }
-                    catch(IOException e) {
-                        throw new SystemException(e.Message);
-                    }
-
-                    // if (stp == null) yield break;
-                    yield return stp;
-
-                } while(stp.getStep() != 0);
+        /// <summary>Close the inputStream.</summary>
+        public void Close() {
+            if (this._inputStream != null) {
+                ((IDisposable)this._inputStream).Dispose();
+                this._inputStream = null;
             }
         }
+
+        /// <summary>Get the epanet hydraulic file version.</summary>
+        /// <value>Version number.</value>
+        public int Version { get { return this._headerInfo.version; } }
+
+        /// <summary>Get the number of nodes in the file.</summary>
+        /// <value>Number of nodes.</value>
+        public int Nodes { get { return this._headerInfo.nodes; } }
+
+        /// <summary>Get the number of links in the file.</summary>
+        /// <value>Number of links.</value>
+        public int Links { get { return this._headerInfo.links; } }
+
+        public long ReportStart { get { return this._headerInfo.rstart; } }
+
+        public long ReportStep { get { return this._headerInfo.rstep; } }
+
+        public long Duration { get { return this._headerInfo.duration; } }
+
+        ///<summary>Get step snapshot iterator.</summary>
+        /// <returns>StepSnapshot iterator.</returns>
+        public IEnumerator<AwareStep> GetEnumerator() { return this.Steps.GetEnumerator(); }
+
+        IEnumerator IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
+
+        ///<summary>Step snapshot iterator class</summary>
+        private IEnumerable<AwareStep> Steps {
+            get {
+                if (this._inputStream == null)
+                    throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this._inputStream) {
+
+                    this._inputStream.BaseStream.Position = sizeof(int) * 6;
+                    AwareStep stp;
+
+                    do {
+                        try {
+                            stp = new AwareStep(this._inputStream, this._headerInfo);
+                        }
+                        catch (IOException e) {
+                            throw new SystemException(e.Message);
+                        }
+
+                        // if (stp == null) yield break;
+                        yield return stp;
+
+                    }
+                    while (stp.getStep() != 0);
+                }
+            }
+        }
+
+        public void Dispose() { this.Close(); }
     }
 
-    
-}
 }

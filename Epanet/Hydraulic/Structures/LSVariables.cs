@@ -19,181 +19,55 @@ using System;
 
 namespace org.addition.epanet.hydraulic.structures {
 
-public class LSVariables {
-    private double[] nodalInflows;         // Epanet 'X[n]' variable
-    private double[] matrixOffDiagonal;    // Epante Aij[n] variable
-    private double[] matrixDiagonal;       // Epanet Aii[n] variable
-    private double[] rightHandSideCoeffs;  // Epanet F[n] variable
+    public class LSVariables {
+        private readonly double[] nodalInflows; // Epanet 'X[n]' variable
+        private readonly double[] matrixOffDiagonal; // Epante Aij[n] variable
+        private readonly double[] matrixDiagonal; // Epanet Aii[n] variable
+        private readonly double[] rightHandSideCoeffs; // Epanet F[n] variable
 
-    public void clear() {
-        Array.Clear(nodalInflows, 0, nodalInflows.Length);
-        Array.Clear(matrixOffDiagonal, 0, this.matrixOffDiagonal.Length);
-        Array.Clear(matrixDiagonal, 0, this.matrixDiagonal.Length);
-        Array.Clear(rightHandSideCoeffs, 0, this.rightHandSideCoeffs.Length);
+        public void clear() {
+            Array.Clear(nodalInflows, 0, nodalInflows.Length);
+            Array.Clear(matrixOffDiagonal, 0, this.matrixOffDiagonal.Length);
+            Array.Clear(matrixDiagonal, 0, this.matrixDiagonal.Length);
+            Array.Clear(rightHandSideCoeffs, 0, this.rightHandSideCoeffs.Length);
+        }
+
+        public LSVariables(int nodes, int coeffs) {
+            nodalInflows = new double[nodes];
+            matrixDiagonal = new double[nodes];
+            matrixOffDiagonal = new double[coeffs];
+            rightHandSideCoeffs = new double[nodes];
+            clear();
+        }
+
+        public void addRHSCoeff(int id, double value) { rightHandSideCoeffs[id] += value; }
+
+        public double getRHSCoeff(int id) { return rightHandSideCoeffs[id]; }
+
+
+        public void addNodalInFlow(int id, double value) { nodalInflows[id] += value; }
+
+        public double getNodalInFlow(int id) { return nodalInflows[id]; }
+
+
+        public void addNodalInFlow(SimulationNode id, double value) { nodalInflows[id.Index] += value; }
+
+        public double getNodalInFlow(SimulationNode id) { return nodalInflows[id.Index]; }
+
+
+        public void addAii(int id, double value) { matrixDiagonal[id] += value; }
+
+        public double getAii(int id) { return matrixDiagonal[id]; }
+
+        public void addAij(int id, double value) { matrixOffDiagonal[id] += value; }
+
+        public double getAij(int id) { return matrixOffDiagonal[id]; }
+
+        public double[] getAiiVector() { return matrixDiagonal; }
+
+        public double[] getAijVector() { return matrixOffDiagonal; }
+
+        public double[] getRHSCoeffs() { return rightHandSideCoeffs; }
     }
 
-    public LSVariables(int nodes, int coeffs) {
-        nodalInflows = new double[nodes];
-        matrixDiagonal = new double[nodes];
-        matrixOffDiagonal = new double[coeffs];
-        rightHandSideCoeffs = new double[nodes];
-        clear();
-    }
-
-    public void addRHSCoeff(int id, double value) {
-        rightHandSideCoeffs[id] += value;
-    }
-
-    public double getRHSCoeff(int id) {
-        return rightHandSideCoeffs[id];
-    }
-
-
-    public void addNodalInFlow(int id, double value) {
-        nodalInflows[id] += value;
-    }
-
-    public double getNodalInFlow(int id) {
-        return nodalInflows[id];
-    }
-
-
-    public void addNodalInFlow(SimulationNode id, double value) {
-        nodalInflows[id.getIndex()] += value;
-    }
-
-    public double getNodalInFlow(SimulationNode id) {
-        return nodalInflows[id.getIndex()];
-    }
-
-
-    public void addAii(int id, double value) {
-        matrixDiagonal[id] += value;
-    }
-
-    public double getAii(int id) {
-        return matrixDiagonal[id];
-    }
-
-    public void addAij(int id, double value) {
-        matrixOffDiagonal[id] += value;
-    }
-
-    public double getAij(int id) {
-        return matrixOffDiagonal[id];
-    }
-
-    public double[] getAiiVector() {
-        return matrixDiagonal;
-    }
-
-    public double[] getAijVector() {
-        return matrixOffDiagonal;
-    }
-
-    public double[] getRHSCoeffs() {
-        return rightHandSideCoeffs;
-    }
-}
-
-/**
- * Linear System Variables that feed the sparse matrix for each iteration.
-
- public class LSVariablesSim {
- private double [] nodalInflows;         // Epanet 'X[n]' variable
- private double [] matrixOffDiagonal;    // Epante Aij[n] variable
- private double [] matrixDiagonal;       // Epanet Aii[n] variable
- private double [] rightHandSideCoeffs;  // Epanet F[n] variable
-
- public void clear(){
- Arrays.fill(nodalInflows,0);
- Arrays.fill(matrixOffDiagonal,0);
- Arrays.fill(matrixDiagonal,0);
- Arrays.fill(rightHandSideCoeffs,0);
- }
-
- public LSVariables(int nodes, int coeffs) {
- nodalInflows = new double[nodes];
- matrixDiagonal = new double[nodes];
- matrixOffDiagonal = new double[coeffs];
- rightHandSideCoeffs = new double[nodes];
- clear();
- }
-
- public void addRHSCoeff(int id, double value){
- synchronized (rightHandSideCoeffs){
- rightHandSideCoeffs[id]+=value;
- }
- }
-
- public double getRHSCoeff(int id){
- synchronized (rightHandSideCoeffs){
- return rightHandSideCoeffs[id];
- }
- }
-
-
- public void addNodalInFlow(int id, double value){
- synchronized (nodalInflows){
- nodalInflows[id]+=value;
- }
- }
-
- public double getNodalInFlow(int id){
- synchronized (nodalInflows){
- return nodalInflows[id];
- }
- }
-
-
- public void addNodalInFlow(SimulationNode id, double value){
- synchronized (nodalInflows){
- nodalInflows[id.getIndex()]+=value;
- }
- }
-
- public double getNodalInFlow(SimulationNode id){
- synchronized (nodalInflows){
- return nodalInflows[id.getIndex()];
- }
- }
-
-
- public void addAii(int id, double value){
- synchronized (matrixDiagonal){
- matrixDiagonal[id]+=value;
- }
- }
-
- public double getAii(int id){
- synchronized (matrixDiagonal){
- return matrixDiagonal[id];
- }
- }
-
- public void addAij(int id, double value){
- synchronized (matrixDiagonal){
- matrixOffDiagonal[id]+=value;
- }
- }
-
- public double getAij(int id){
- synchronized (matrixDiagonal){
- return matrixOffDiagonal[id];
- }
- }
-
- public double [] getAiiVector(){
- return matrixDiagonal;
- }
-
- public double [] getAijVector(){
- return matrixOffDiagonal;
- }
-
- public double [] getRHSCoeffs(){
- return rightHandSideCoeffs;
- }
- }
- */
 }

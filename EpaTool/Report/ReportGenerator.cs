@@ -17,6 +17,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Epanet.Properties;
 using org.addition.epanet.hydraulic.io;
 using org.addition.epanet.msx;
@@ -25,7 +26,6 @@ using org.addition.epanet.network;
 using org.addition.epanet.quality;
 using org.addition.epanet.util;
 using Network = org.addition.epanet.network.Network;
-using Utilities = org.addition.epanet.util.Utilities;
 
 namespace EpaTool.Report {
 
@@ -126,20 +126,20 @@ namespace EpaTool.Report {
         public void CreateHydReport(string hydFile, Network net, bool[] values) {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(hydFile);
-            var nodes = net.getNodes();
-            var links = net.getLinks();
+            var nodes = net.Nodes;
+            var links = net.Links;
 
-            var nodesHead = new object[dseek.getNodes() + 1];
+            var nodesHead = new object[dseek.Nodes + 1];
             nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
-        
-            for(int i = 0; i < nodes.Length; i++)
-                nodesHead[i + 1] = nodes[i].getId();
 
-            var linksHead = new object[dseek.getLinks() + 1];
+            for(int i = 0; i < nodes.Count; i++)
+                nodesHead[i + 1] = nodes[i].Id;
+
+            var linksHead = new object[dseek.Links + 1];
             linksHead[0] = this._sheet.TransposedMode ? "Link/Time" : "Time/Link";
           
-            for(int i = 0; i < links.Length; i++)
-                linksHead[i + 1] = links[i].getId();
+            for(int i = 0; i < links.Count; i++)
+                linksHead[i + 1] = links[i].Id;
 
             XLSXWriter.Spreadsheet[] resultSheets = new XLSXWriter.Spreadsheet[HydVariable.Values.Length];
 
@@ -149,19 +149,19 @@ namespace EpaTool.Report {
                 resultSheets[i].AddData(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
             }
 
-            var nodeRow = new object[dseek.getNodes() + 1];
-            var linkRow = new object[dseek.getLinks() + 1];
+            var nodeRow = new object[dseek.Nodes + 1];
+            var linkRow = new object[dseek.Links + 1];
 
-            for(long time = net.getPropertiesMap().getRstart(); time <= net.getPropertiesMap().getDuration(); time += net.getPropertiesMap().getRstep()) {
+            for(long time = net.PropertiesMap.Rstart; time <= net.PropertiesMap.Duration; time += net.PropertiesMap.Rstep) {
                 var step = dseek.getStep(time);
                 if (step != null) {
-                    nodeRow[0] = time.getClockTime();
-                    linkRow[0] = time.getClockTime();
+                    nodeRow[0] = time.GetClockTime();
+                    linkRow[0] = time.GetClockTime();
 
                     // NODES HEADS
                     if (resultSheets[(int)HydVariable.Type.Head] != null) {
-                        for (int i = 0; i < nodes.Length; i++) {
-                            nodeRow[i + 1] = step.getNodeHead(i, nodes[i], net.getFieldsMap());
+                        for (int i = 0; i < nodes.Count; i++) {
+                            nodeRow[i + 1] = step.getNodeHead(i, nodes[i], net.FieldsMap);
                         }
 
                         resultSheets[(int)HydVariable.Type.Head].AddData(nodeRow);
@@ -169,48 +169,48 @@ namespace EpaTool.Report {
 
                     // NODES DEMANDS
                     if (resultSheets[(int)HydVariable.Type.Demands] != null) {
-                        for(int i = 0; i < nodes.Length; i++) {
-                            nodeRow[i + 1] = step.getNodeDemand(i, nodes[i], net.getFieldsMap());
+                        for(int i = 0; i < nodes.Count; i++) {
+                            nodeRow[i + 1] = step.getNodeDemand(i, nodes[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Demands].AddData(nodeRow);
                     }
 
                     // NODES PRESSURE
                     if (resultSheets[(int)HydVariable.Type.Pressure] != null) {
-                        for(int i = 0; i < nodes.Length; i++) {
-                            nodeRow[i + 1] = step.getNodePressure(i, nodes[i], net.getFieldsMap());
+                        for(int i = 0; i < nodes.Count; i++) {
+                            nodeRow[i + 1] = step.getNodePressure(i, nodes[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Pressure].AddData(nodeRow);
                     }
 
                     // LINK FLOW
                     if (resultSheets[(int)HydVariable.Type.Flows] != null) {
-                        for(int i = 0; i < links.Length; i++) {
-                            linkRow[i + 1] = step.getLinkFlow(i, links[i], net.getFieldsMap());
+                        for(int i = 0; i < links.Count; i++) {
+                            linkRow[i + 1] = step.getLinkFlow(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Flows].AddData(linkRow);
                     }
 
                     // LINK VELOCITY
                     if (resultSheets[(int)HydVariable.Type.Velocity] != null) {
-                        for(int i = 0; i < links.Length; i++) {
-                            linkRow[i + 1] = step.getLinkVelocity(i, links[i], net.getFieldsMap());
+                        for(int i = 0; i < links.Count; i++) {
+                            linkRow[i + 1] = step.getLinkVelocity(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Velocity].AddData(linkRow);
                     }
 
                     // LINK HEADLOSS
                     if (resultSheets[(int)HydVariable.Type.Headloss] != null) {
-                        for(int i = 0; i < links.Length; i++) {
-                            linkRow[i + 1] = step.getLinkHeadLoss(i, links[i], net.getFieldsMap());
+                        for(int i = 0; i < links.Count; i++) {
+                            linkRow[i + 1] = step.getLinkHeadLoss(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Headloss].AddData(linkRow);
                     }
 
                     // LINK FRICTION
                     if (resultSheets[(int)HydVariable.Type.Friction] != null) {
-                        for(int i = 0; i < links.Length; i++) {
-                            linkRow[i + 1] = step.getLinkFriction(i, links[i], net.getFieldsMap());
+                        for(int i = 0; i < links.Count; i++) {
+                            linkRow[i + 1] = step.getLinkFriction(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Friction].AddData(linkRow);
                     }
@@ -218,7 +218,7 @@ namespace EpaTool.Report {
                 this.Rtime = time;
             }
 
-            dseek.close();
+            dseek.Close();
         }
 
         /// <summary>Generate quality report.</summary>
@@ -231,23 +231,23 @@ namespace EpaTool.Report {
         public void CreateQualReport(string qualFile, Network net, bool nodes, bool links) {
             this.Rtime = 0;
 
-            using (QualityReader dseek = new QualityReader(qualFile, net.getFieldsMap())) {
+            using (QualityReader dseek = new QualityReader(qualFile, net.FieldsMap)) {
 
-                var nodesHead = new object[dseek.getNodes() + 1];
+                var nodesHead = new object[dseek.Nodes + 1];
                 nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
-                var netNodes = net.getNodes();
-                var netLinks = net.getLinks();
+                var netNodes = net.Nodes;
+                var netLinks = net.Links;
 
 
-                for(int i = 0; i < netNodes.Length; i++)
-                    nodesHead[i + 1] = netNodes[i].getId();
+                for(int i = 0; i < netNodes.Count; i++)
+                    nodesHead[i + 1] = netNodes[i].Id;
 
-                var linksHead = new object[dseek.getLinks() + 1];
+                var linksHead = new object[dseek.Links + 1];
                 linksHead[0] = this._sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
-                for(int i = 0; i < netLinks.length(); i++)
-                    linksHead[i + 1] = netLinks[i].getId();
+                for(int i = 0; i < netLinks.Count; i++)
+                    linksHead[i + 1] = netLinks[i].Id;
 
                 XLSXWriter.Spreadsheet[] resultSheets = new XLSXWriter.Spreadsheet[QualVariable.Values.Length];
 
@@ -260,33 +260,33 @@ namespace EpaTool.Report {
                     resultSheets[v.ID].AddData(v.IsNode ? nodesHead : linksHead);
                 }
 
-                var nodeRow = new object[dseek.getNodes() + 1];
-                var linkRow = new object[dseek.getLinks() + 1];
+                var nodeRow = new object[dseek.Nodes + 1];
+                var linkRow = new object[dseek.Links + 1];
 
                 
                 using (var qIt = dseek.GetEnumerator())
-                for(long time = net.getPropertiesMap().getRstart();
-                    time <= net.getPropertiesMap().getDuration(); 
-                    time += net.getPropertiesMap().getRstep())
+                for(long time = net.PropertiesMap.Rstart;
+                    time <= net.PropertiesMap.Duration; 
+                    time += net.PropertiesMap.Rstep)
                 {
                     if (!qIt.MoveNext()) break;
 
                     var step = qIt.Current;
                     if (step == null) continue;
 
-                    nodeRow[0] = Utilities.getClockTime(time);
-                    linkRow[0] = Utilities.getClockTime(time);
+                    nodeRow[0] = time.GetClockTime();
+                    linkRow[0] = time.GetClockTime();
 
                     if (resultSheets[(int)QualVariable.Type.Nodes] != null) {
-                        for (int i = 0; i < dseek.getNodes(); i++) {
-                            nodeRow[i + 1] = (double)step.getNodeQuality(i);
+                        for (int i = 0; i < dseek.Nodes; i++) {
+                            nodeRow[i + 1] = (double)step.GetNodeQuality(i);
                         }
                         resultSheets[(int)QualVariable.Type.Nodes].AddData(nodeRow);
                     }
 
                     if (resultSheets[(int)QualVariable.Type.Links] != null) {
-                        for (int i = 0; i < dseek.getLinks(); i++) {
-                            linkRow[i + 1] = (double)step.getLinkQuality(i);
+                        for (int i = 0; i < dseek.Links; i++) {
+                            linkRow[i + 1] = (double)step.GetLinkQuality(i);
                         }
                         resultSheets[(int)QualVariable.Type.Links].AddData(linkRow);
                     }
@@ -306,16 +306,16 @@ namespace EpaTool.Report {
         public void CreateMSXReport(string msxBin, Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
             this.Rtime = 0;
 
-            var nodes = netMSX.getNetwork().getNodes();
-            var links = netMSX.getNetwork().getLinks();
+            var nodes = netMSX.Network.Node;
+            var links = netMSX.Network.Link;
 
-            string[] nSpecies = netMSX.getSpeciesNames();
+            string[] nSpecies = netMSX.GetSpeciesNames();
 
             MsxReader reader = new MsxReader(
                 nodes.Length - 1,
                 links.Length - 1,
                 nSpecies.Length,
-                netMSX.getResultsOffset());
+                netMSX.ResultsOffset);
 
             int totalSpecies;
 
@@ -326,7 +326,7 @@ namespace EpaTool.Report {
             else
                 totalSpecies = nSpecies.Length;
 
-            reader.open(msxBin);
+            reader.Open(msxBin);
 
             var nodesHead = new object[nSpecies.Length + 1];
             nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
@@ -345,21 +345,21 @@ namespace EpaTool.Report {
             var nodeRow = new object[totalSpecies + 1];
 
             for (int i = 1; i < nodes.Length; i++) {
-                if (!nodes[i].getRpt()) continue;
+                if (!nodes[i].Rpt) continue;
 
                 XLSXWriter.Spreadsheet spr =
                     this._sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
                 spr.AddData(nodesHead);
 
-                for (long time = net.getPropertiesMap().getRstart(), period = 0;
-                     time <= net.getPropertiesMap().getDuration();
-                     time += net.getPropertiesMap().getRstep(), period++) {
+                for (long time = net.PropertiesMap.Rstart, period = 0;
+                     time <= net.PropertiesMap.Duration;
+                     time += net.PropertiesMap.Rstep, period++) {
                     
-                    nodeRow[0] = Utilities.getClockTime(time);
+                    nodeRow[0] = time.GetClockTime();
 
                     for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
                         if (values == null || values[j])
-                            nodeRow[ji++ + 1] = reader.getNodeQual((int)period, i, j + 1);
+                            nodeRow[ji++ + 1] = reader.GetNodeQual((int)period, i, j + 1);
                     }
 
                     spr.AddData(nodeRow);
@@ -375,22 +375,22 @@ namespace EpaTool.Report {
                     
                 spr.AddData(linksHead);
 
-                for (long time = net.getPropertiesMap().getRstart(), period = 0;
-                     time <= net.getPropertiesMap().getDuration();
-                     time += net.getPropertiesMap().getRstep(), period++) 
+                for (long time = net.PropertiesMap.Rstart, period = 0;
+                     time <= net.PropertiesMap.Duration;
+                     time += net.PropertiesMap.Rstep, period++) 
                 {
-                    linkRow[0] = Utilities.getClockTime(time);
+                    linkRow[0] = time.GetClockTime();
 
                     for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
                         if (values == null || values[j])
-                            linkRow[ji++ + 1] = reader.getLinkQual((int)period, i, j + 1);
+                            linkRow[ji++ + 1] = reader.GetLinkQual((int)period, i, j + 1);
                     }
 
                     spr.AddData(linkRow);
                 }
             }
 
-            reader.close();
+            reader.Close();
         }
 
         /// <summary>Write the final worksheet.</summary>
@@ -409,85 +409,85 @@ namespace EpaTool.Report {
             XLSXWriter.Spreadsheet sh = this._sheet.NewSpreadsheet("Summary");
 
             try {
-                PropertiesMap pMap = net.getPropertiesMap();
-                FieldsMap fMap = net.getFieldsMap();
+                PropertiesMap pMap = net.PropertiesMap;
+                FieldsMap fMap = net.FieldsMap;
 
-                if (net.getTitleText() != null)
-                    for (int i = 0; i < net.getTitleText().Count && i < 3; i++) {
-                        if (!string.IsNullOrEmpty(net.getTitleText()[i])) {
-                            if (net.getTitleText()[i].Length <= 70)
-                                sh.AddData(net.getTitleText()[i]);
+                if (net.TitleText != null)
+                    for (int i = 0; i < net.TitleText.Count && i < 3; i++) {
+                        if (!string.IsNullOrEmpty(net.TitleText[i])) {
+                            if (net.TitleText[i].Length <= 70)
+                                sh.AddData(net.TitleText[i]);
                             else {
-                                sh.AddData(net.getTitleText()[i].Substring(0, 70));
+                                sh.AddData(net.TitleText[i].Substring(0, 70));
                             }
                         }
                     }
                 sh.AddData("\n");
                 sh.AddData(Text.FMT19, inpFile);
-                sh.AddData(Text.FMT20, net.getJunctions().Length);
+                sh.AddData(Text.FMT20, net.Junctions.Count());
 
                 int nReservoirs = 0;
                 int nTanks = 0;
-                foreach (var tk  in  net.getTanks()) {
+                foreach (var tk  in  net.Tanks) {
                     if (tk.IsReservoir)
                         nReservoirs++;
                     else
                         nTanks++;
                 }
 
-                int nValves = net.getValves().Length;
-                int nPumps = net.getPumps().Length;
-                int nPipes = net.getLinks().Length - nPumps - nValves;
+                int nValves = net.Valves.Count();
+                int nPumps = net.Pumps.Count();
+                int nPipes = net.Links.Count - nPumps - nValves;
 
                 sh.AddData(Text.FMT21a, nReservoirs);
                 sh.AddData(Text.FMT21b, nTanks);
                 sh.AddData(Text.FMT22, nPipes);
                 sh.AddData(Text.FMT23, nPumps);
                 sh.AddData(Text.FMT24, nValves);
-                sh.AddData(Text.FMT25, pMap.getFormflag().ParseStr());
+                sh.AddData(Text.FMT25, pMap.Formflag.ParseStr());
 
-                sh.AddData(Text.FMT26, Utilities.getClockTime(pMap.getHstep()));
-                sh.AddData(Text.FMT27, pMap.getHacc());
-                sh.AddData(Text.FMT27a, pMap.getCheckFreq());
-                sh.AddData(Text.FMT27b, pMap.getMaxCheck());
-                sh.AddData(Text.FMT27c, pMap.getDampLimit());
-                sh.AddData(Text.FMT28, pMap.getMaxIter());
+                sh.AddData(Text.FMT26, pMap.Hstep.GetClockTime());
+                sh.AddData(Text.FMT27, pMap.Hacc);
+                sh.AddData(Text.FMT27a, pMap.CheckFreq);
+                sh.AddData(Text.FMT27b, pMap.MaxCheck);
+                sh.AddData(Text.FMT27c, pMap.DampLimit);
+                sh.AddData(Text.FMT28, pMap.MaxIter);
 
-                switch (pMap.getDuration() == 0 ? PropertiesMap.QualType.NONE : pMap.getQualflag()) {
+                switch (pMap.Duration == 0 ? PropertiesMap.QualType.NONE : pMap.Qualflag) {
                 case PropertiesMap.QualType.NONE:
                         sh.AddData(Text.FMT29, "None");
                         break;
                 case PropertiesMap.QualType.CHEM:
-                        sh.AddData(Text.FMT30, pMap.getChemName());
+                        sh.AddData(Text.FMT30, pMap.ChemName);
                         break;
                 case PropertiesMap.QualType.TRACE:
                         sh.AddData(
                             Text.FMT31,
                             "Trace From Node",
-                            net.getNode(pMap.getTraceNode()).getId());
+                            net.GetNode(pMap.TraceNode).Id);
                         break;
                 case PropertiesMap.QualType.AGE:
                         sh.AddData(Text.FMT32, "Age");
                         break;
                 }
 
-                if(pMap.getQualflag() != PropertiesMap.QualType.NONE && pMap.getDuration() > 0) {
-                    sh.AddData(Text.FMT33, "Time Step", Utilities.getClockTime(pMap.getQstep()));
-                    sh.AddData(Text.FMT34, "Tolerance", fMap.revertUnit(FieldsMap.Type.QUALITY, pMap.getCtol()), fMap.getField(FieldsMap.Type.QUALITY).getUnits());
+                if(pMap.Qualflag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
+                    sh.AddData(Text.FMT33, "Time Step", pMap.Qstep.GetClockTime());
+                    sh.AddData(Text.FMT34, "Tolerance", fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol), fMap.GetField(FieldsMap.FieldType.QUALITY).Units);
                 }
 
-                sh.AddData(Text.FMT36, pMap.getSpGrav());
-                sh.AddData(Text.FMT37a, pMap.getViscos() / org.addition.epanet.Constants.VISCOS);
-                sh.AddData(Text.FMT37b, pMap.getDiffus() / org.addition.epanet.Constants.DIFFUS);
-                sh.AddData(Text.FMT38, pMap.getDmult());
-                sh.AddData(Text.FMT39, fMap.revertUnit(FieldsMap.Type.TIME, pMap.getDuration()), fMap.getField(FieldsMap.Type.TIME).getUnits());
+                sh.AddData(Text.FMT36, pMap.SpGrav);
+                sh.AddData(Text.FMT37a, pMap.Viscos / org.addition.epanet.Constants.VISCOS);
+                sh.AddData(Text.FMT37b, pMap.Diffus / org.addition.epanet.Constants.DIFFUS);
+                sh.AddData(Text.FMT38, pMap.Dmult);
+                sh.AddData(Text.FMT39, fMap.RevertUnit(FieldsMap.FieldType.TIME, pMap.Duration), fMap.GetField(FieldsMap.FieldType.TIME).Units);
 
                 if (msxFile != null && msx != null) {
                     sh.AddData("");
                     sh.AddData("MSX data file", msxFile);
                     sh.AddData("Species");
-                    Species[] spe = msx.getNetwork().Species;
-                    for (int i = 1; i < msx.getNetwork().Species.Length; i++) {
+                    Species[] spe = msx.Network.Species;
+                    for (int i = 1; i < msx.Network.Species.Length; i++) {
                         sh.AddData(spe[i].getId(), spe[i].getUnits());
                     }
                 }

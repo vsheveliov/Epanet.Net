@@ -15,39 +15,29 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System.IO;
-
 namespace org.addition.epanet.network.io.output {
 
-///<summary>Abstract class with factory for INP and XLSX composers.</summary>
-public abstract class OutputComposer {
+    ///<summary>Abstract class with factory for INP and XLSX composers.</summary>
+    public abstract class OutputComposer {
 
-    /**
-     * Composer creation method.
-     * @param type Composer type.
-     * @return Composer reference.
-     */
-    public static OutputComposer create(Network.FileType type){
-        switch (type) {
-            case Network.FileType.INP_FILE:
-                return new InpComposer();
-            case Network.FileType.EXCEL_FILE:
-                return new ExcelComposer();
-            case Network.FileType.XML_FILE:
-                return new XMLComposer(false);
-            case Network.FileType.XML_GZ_FILE:
-                return new XMLComposer(true);
+        ///<summary>Composer creation method.</summary>
+        /// <param name="type">Composer type.</param>
+        /// <returns>Composer reference.</returns>
+        public static OutputComposer Create(Network.FileType type) {
+            switch (type) {
+            case Network.FileType.INP_FILE:       return new InpComposer();
+            case Network.FileType.EXCEL_FILE:     return new ExcelComposer();
+            case Network.FileType.XML_FILE:       return new XMLComposer(false);
+            case Network.FileType.XML_GZ_FILE:    return new XMLComposer(true);
+            }
+            return null;
         }
-        return null;
+
+        ///<summary>Abstract method to implement the output file creation.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        /// <param name="fileName">File name reference.</param>
+        public abstract void Composer(Network net, string fileName);
+
     }
 
-    /**
-     * Abstract method to implement the output file creation.
-     * @param net Hydraulic network reference.
-     * @param f Abstract file reference.
-     * @throws ENException
-     */
-    public abstract void composer(Network net, string fileName);
-
-}
 }

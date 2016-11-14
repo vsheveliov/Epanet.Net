@@ -42,7 +42,7 @@ public class MathExpr {
     class MathExp_sgn : PostfixMathCommand{
         public MathExp_sgn():base(1) {}
         public double operation(double[] @params) {
-            return util.Utilities.getSignal(@params[0]);
+            return util.Utilities.GetSignal(@params[0]);
         }
     }
 

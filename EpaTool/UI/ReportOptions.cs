@@ -116,7 +116,7 @@ namespace EpaTool {
                         break;
                 }
 
-                inpParser.parse(this._netInp, inpFile);
+                inpParser.Parse(this._netInp, inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -135,7 +135,7 @@ namespace EpaTool {
             this._netMSX = new EpanetMSX(this._epanetTk);
 
             try {
-                EnumTypes.ErrorCodeType ret = this._netMSX.load(this._fileMSX);
+                EnumTypes.ErrorCodeType ret = this._netMSX.Load(this._fileMSX);
                 if (ret != 0) {
                     MessageBox.Show("MSX parsing error " + ret, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this._fileMSX = null;
@@ -167,7 +167,7 @@ namespace EpaTool {
 
             if (this._netMSX != null) {
                 try {
-                    this._netMSX.stopRunning();
+                    this._netMSX.StopRunning();
                 }
                 catch (ThreadInterruptedException e1) {
                     Debug.Print(e1.ToString());
@@ -181,22 +181,22 @@ namespace EpaTool {
 
             if (this._netInp != null) {
                 try {
-                    PropertiesMap pMap = this._netInp.getPropertiesMap();
-                    this.unitsBox.SelectedIndex = pMap.getUnitsflag() == PropertiesMap.UnitsType.SI ? 0 : 1;
-                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.getRstep());
-                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.getHstep());
-                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.getQstep());
-                    this.textSimulationDuration.Text = org.addition.epanet.util.Utilities.getClockTime(pMap.getDuration());
-                    this.textReportStart.Text = Utilities.getClockTime(pMap.getRstart());
-                    this.qualityCheckBox.Enabled = pMap.getQualflag() != PropertiesMap.QualType.NONE;
+                    PropertiesMap pMap = this._netInp.PropertiesMap;
+                    this.unitsBox.SelectedIndex = pMap.Unitsflag == PropertiesMap.UnitsType.SI ? 0 : 1;
+                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Rstep);
+                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Hstep);
+                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Qstep);
+                    this.textSimulationDuration.Text = pMap.Duration.GetClockTime();
+                    this.textReportStart.Text = pMap.Rstart.GetClockTime();
+                    this.qualityCheckBox.Enabled = pMap.Qualflag != PropertiesMap.QualType.NONE;
                 }
                 catch (ENException ex) {
                     Debug.Print(ex.ToString());
                 }
             }
 
-            if (this._netMSX != null && this._netMSX.getSpeciesNames().Length > 0) {
-                var speciesNames = Array.ConvertAll(this._netMSX.getSpeciesNames(), x => (object)x);
+            if (this._netMSX != null && this._netMSX.GetSpeciesNames().Length > 0) {
+                var speciesNames = Array.ConvertAll(this._netMSX.GetSpeciesNames(), x => (object)x);
                 this.speciesCheckList.Items.AddRange(speciesNames);
                 //this.speciesCheckList.SelectionMode = SelectionMode.MultiExtended; // TODO: in designer
             }
@@ -236,12 +236,12 @@ namespace EpaTool {
         }
 
         private void textReportStart_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.getHour(this.textReportStart.Text, null);
+            double val = Utilities.GetHour(this.textReportStart.Text, null);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
         private void textSimulationDuration_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.getHour(this.textSimulationDuration.Text, null);
+            double val = Utilities.GetHour(this.textSimulationDuration.Text, null);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
@@ -269,14 +269,14 @@ namespace EpaTool {
             this.hydraulicsCheckBox.Enabled = true;
             this.transposeResultsCheckBox.Enabled = true;
 
-            if (this._netMSX != null && this._netMSX.getSpeciesNames().Length > 0) {
+            if (this._netMSX != null && this._netMSX.GetSpeciesNames().Length > 0) {
                 this.qualityMSXCheckBox.Enabled = true;
                 if (this.qualityMSXCheckBox.Checked) this.speciesCheckList.Enabled = true;
             }
 
             this.hydVariables.Enabled = true;
             try {
-                if (this._netInp.getPropertiesMap().getQualflag() != PropertiesMap.QualType.NONE) {
+                if (this._netInp.PropertiesMap.Qualflag != PropertiesMap.QualType.NONE) {
                     if (this.qualityCheckBox.Checked) {
                         this.qualityVariables.Enabled = true;
                         this.qualityCheckBox.Enabled = true;
@@ -305,7 +305,7 @@ namespace EpaTool {
                 return;
             }
 
-            if (Utilities.getHour(this.textSimulationDuration.Text, "") < 0) {
+            if (Utilities.GetHour(this.textSimulationDuration.Text, "") < 0) {
                 MessageBox.Show(
                     "Invalid time expression for simulation duration",
                     "Error",
@@ -314,7 +314,7 @@ namespace EpaTool {
                 return;
             }
 
-            if (Utilities.getHour(this.textReportStart.Text, "") < 0) {
+            if (Utilities.GetHour(this.textReportStart.Text, "") < 0) {
                 MessageBox.Show(
                     this,
                     "Invalid time expression for report start time",
@@ -376,7 +376,7 @@ namespace EpaTool {
 
             try {
 
-                PropertiesMap pMap = this._netInp.getPropertiesMap();
+                PropertiesMap pMap = this._netInp.PropertiesMap;
 
                 if (this.showHydraulicSolverEventsCheckBox.Checked) {
 
@@ -393,16 +393,16 @@ namespace EpaTool {
                 }
 
                 int reportPeriod = ((TimeStep)this.reportPeriodBox.SelectedItem).Time;
-                int reportStartTime = (int)(Utilities.getHour(this.textReportStart.Text, "") * 3600);
+                int reportStartTime = (int)(Utilities.GetHour(this.textReportStart.Text, "") * 3600);
                 int hydTStep = ((TimeStep)this.hydComboBox.SelectedItem).Time;
                 int qualTStep = ((TimeStep)this.qualComboBox.SelectedItem).Time;
-                int durationTime = (int)(Utilities.getHour(this.textSimulationDuration.Text, "") * 3600);
+                int durationTime = (int)(Utilities.GetHour(this.textSimulationDuration.Text, "") * 3600);
 
-                pMap.setRstart(reportStartTime);
-                pMap.setRstep(reportPeriod);
-                pMap.setHstep(hydTStep);
-                pMap.setDuration(durationTime);
-                pMap.setQstep(qualTStep);
+                pMap.Rstart = reportStartTime;
+                pMap.Rstep = reportPeriod;
+                pMap.Hstep = hydTStep;
+                pMap.Duration = durationTime;
+                pMap.Qstep = qualTStep;
 
                 this.statusLabel.Text = "Simulating hydraulics";
 
@@ -415,7 +415,7 @@ namespace EpaTool {
                         10,
                         30,
                         () => this._hydSim.getHtime(),
-                        () => this._hydSim.getHtime() / (double)pMap.getDuration());
+                        () => this._hydSim.getHtime() / (double)pMap.Duration);
                 }
                 catch (ENException ex) {
                     if (ex.getCodeID() == ErrorCode.Err1000)
@@ -440,28 +440,28 @@ namespace EpaTool {
                     try {
                         // reload MSX
                         this._netMSX = new EpanetMSX(this._epanetTk);
-                        this._netMSX.load(this._fileMSX);
+                        this._netMSX.Load(this._fileMSX);
 
-                        this._netMSX.getNetwork().setRstep(reportPeriod);
-                        this._netMSX.getNetwork().setQstep(qualTStep);
-                        this._netMSX.getNetwork().setRstart(reportStartTime);
-                        this._netMSX.getNetwork().setDur(durationTime);
+                        this._netMSX.Network.Rstep = reportPeriod;
+                        this._netMSX.Network.Qstep = qualTStep;
+                        this._netMSX.Network.Rstart = reportStartTime;
+                        this._netMSX.Network.Dur = durationTime;
 
-                        this._epanetTk.open("hydFile.bin");
+                        this._epanetTk.Open("hydFile.bin");
 
                         this.RunThread(
-                            () => this._netMSX.run("msxFile.bin"),
+                            () => this._netMSX.Run("msxFile.bin"),
                             30,
                             50,
-                            () => this._netMSX.getQTime(),
-                            () => this._netMSX.getQTime() / (double)pMap.getDuration());
+                            () => this._netMSX.QTime,
+                            () => this._netMSX.QTime / (double)pMap.Duration);
                     }
                     catch (IOException) {}
                     catch (ENException) {
                         throw new ThreadInterruptedException();
                     }
                     finally {
-                        this._epanetTk.close();
+                        this._epanetTk.Close();
                     }
 
                     // netMSX.getReport().MSXrpt_write(new "msxFile.bin");
@@ -475,11 +475,11 @@ namespace EpaTool {
                         this.statusLabel.Text = "Simulating Quality";
 
                         this.RunThread(
-                            () => qSim.simulate("hydFile.bin", "qualFile.bin"),
+                            () => qSim.Simulate("hydFile.bin", "qualFile.bin"),
                             30,
                             50,
-                            () => qSim.getQtime(),
-                            () => qSim.getQtime() / (double)pMap.getDuration());
+                            () => qSim.Qtime,
+                            () => qSim.Qtime / (double)pMap.Duration);
 
                     }
                     catch (ENException ex) {
@@ -520,11 +520,11 @@ namespace EpaTool {
                         this.statusLabel.Text = "Writing hydraulic report";
 
                         this.RunThread(
-                            () => this._gen.createHydReport("hydFile.bin", this._netInp, values),
+                            () => this._gen.CreateHydReport("hydFile.bin", this._netInp, values),
                             50,
                             60,
                             () => this._gen.getRtime(),
-                            () => (this._gen.getRtime() - pMap.getRstart()) / (double)pMap.getDuration());
+                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
                     }
 
                     if (this._canselSimulation) return;
@@ -540,7 +540,7 @@ namespace EpaTool {
                             60,
                             70,
                             () => this._gen.getRtime(),
-                            () => (this._gen.getRtime() - pMap.getRstart()) / (double)pMap.getDuration());
+                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
                     }
 
                     if (this._canselSimulation) return;
@@ -569,8 +569,8 @@ namespace EpaTool {
                                     valuesMSX),
                             70,
                             80,
-                            () => this._netMSX.getQTime(),
-                            () => (this._gen.getRtime() - pMap.getRstart()) / (double)pMap.getDuration());
+                            () => this._netMSX.QTime,
+                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
 
                     }
 
@@ -620,7 +620,7 @@ namespace EpaTool {
                 long time = getTime();
                 var value = getProgress();
 
-                if (time != 0) this.statusLabel.Text = string.Format("{0} ({1})", initName, Utilities.getClockTime(time));
+                if (time != 0) this.statusLabel.Text = string.Format("{0} ({1})", initName, time.GetClockTime());
 
                 this.progressBar.Value = (int)(start * (1.0f - value) + end * value);
                 Application.DoEvents();

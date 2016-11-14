@@ -46,31 +46,20 @@ public class SimulationNode {
         index = idx;
     }
 
-    public int getIndex() {
-        return index;
-    }
+    public int Index { get { return this.index; } }
 
-    public Node getNode() {
-        return node;
-    }
+    public Node Node { get { return this.node; } }
 
+    public string Id { get { return this.node.Id; } }
 
-
-
-    public string getId(){
-        return node.getId();
-    }
-
-    //public NodeType getType() {
-    //    return node.getType();
-    //}
+    public Node.NodeType Type { get { return this.node.Type; } }
 
     public double getElevation() {
-        return node.getElevation();
+        return this.node.Elevation;
     }
 
     public List<Demand> getDemand() {
-        return node.getDemand();
+        return this.node.Demand;
     }
 
     //public Source getSource() {
@@ -79,12 +68,12 @@ public class SimulationNode {
 
 
     public double [] getC0() {
-        return node.getC0();
+        return this.node.C0;
     }
 
 
     public double getKe() {
-        return node.getKe();
+        return this.node.Ke;
     }
 
     //public bool getRptFlag() {
@@ -125,7 +114,7 @@ public class SimulationNode {
         foreach (SimulationNode node  in  junctions)
         {
             ls.addNodalInFlow(node, - node.demand);
-            ls.addRHSCoeff(smat.getRow(node.getIndex()),+ls.getNodalInFlow(node));
+            ls.addRHSCoeff(smat.getRow(node.Index),+ls.getNodalInFlow(node));
         }
     }
 
@@ -139,22 +128,22 @@ public class SimulationNode {
                                             List<SimulationNode> junctions,
                                             SparseMatrix smat, LSVariables ls) {
         foreach (SimulationNode node  in  junctions) {
-            if (node.getNode().getKe() == 0.0)
+            if (node.Node.Ke == 0.0)
                 continue;
 
-            double ke = Math.Max(Constants.CSMALL, node.getNode().getKe());
+            double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
             double q = node.emitter;
-            double z = ke * Math.Pow(Math.Abs(q), pMap.getQexp());
-            double p = pMap.getQexp()* z / Math.Abs(q);
+            double z = ke * Math.Pow(Math.Abs(q), pMap.Qexp);
+            double p = pMap.Qexp* z / Math.Abs(q);
 
-            if (p < pMap.getRQtol())
-                p = 1.0 / pMap.getRQtol();
+            if (p < pMap.RQtol)
+                p = 1.0 / pMap.RQtol;
             else
                 p = 1.0 / p;
 
-            double y = Utilities.getSignal(q) * z * p;
-            ls.addAii(smat.getRow(node.getIndex()),+ p);
-            ls.addRHSCoeff(smat.getRow(node.getIndex()), + (y + p * node.getNode().getElevation()));
+            double y = Utilities.GetSignal(q) * z * p;
+            ls.addAii(smat.getRow(node.Index),+ p);
+            ls.addRHSCoeff(smat.getRow(node.Index), + (y + p * node.Node.Elevation));
             ls.addNodalInFlow(node, - q);
         }
     }
@@ -162,12 +151,12 @@ public class SimulationNode {
     // Computes flow change at an emitter node
     public double emitFlowChange(PropertiesMap pMap) {
         double ke = Math.Max(Constants.CSMALL, getKe());
-        double p = pMap.getQexp() * ke * Math.Pow(Math.Abs(emitter), (pMap.getQexp() - 1.0));
-        if (p < pMap.getRQtol())
-            p = 1.0d / pMap.getRQtol();
+        double p = pMap.Qexp * ke * Math.Pow(Math.Abs(emitter), (pMap.Qexp - 1.0));
+        if (p < pMap.RQtol)
+            p = 1.0d / pMap.RQtol;
         else
             p = 1.0d / p;
-        return (emitter / pMap.getQexp() - p * (head-getElevation()));
+        return (emitter / pMap.Qexp - p * (head-getElevation()));
     }
 
 }

@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Epanet.Properties;
 using org.addition.epanet.hydraulic.models;
 using org.addition.epanet.log;
 using org.addition.epanet.network;
@@ -30,16 +31,26 @@ namespace org.addition.epanet.hydraulic.structures {
 public class SimulationLink {
 
 
-    protected SimulationNode first = null;
-    protected SimulationNode second = null;
+    protected readonly SimulationNode first;
+    protected readonly SimulationNode second;
     protected readonly Link link;
     protected readonly int index;
 
-    protected Link.StatType status;         // Epanet 'S[k]', link current status
-    protected double flow;           // Epanet 'Q[k]', link flow value
-    protected double invHeadLoss;    // Epanet 'P[k]', Inverse headloss derivatives
-    protected double flowCorrection; // Epanet 'Y[k]', Flow correction factors
-    protected double setting;        // Epanet 'K[k]', Link setting
+    /// <summary>Epanet 'S[k]', link current status</summary>
+    protected Link.StatType status;  
+
+    /// <summary>Epanet 'Q[k]', link flow value</summary>
+    protected double flow;           
+    
+    /// <summary>Epanet 'P[k]', Inverse headloss derivatives</summary>
+    protected double invHeadLoss;    
+
+    /// <summary>Epanet 'Y[k]', Flow correction factors</summary>
+    protected double flowCorrection; 
+    
+    /// <summary>Epanet 'K[k]', Link setting</summary>
+    protected double setting;        
+
     protected Link.StatType oldStatus;
 
 
@@ -70,13 +81,13 @@ public class SimulationLink {
     public SimulationLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
 
         link = @ref;
-        first = byId[link.getFirst().getId()];
-        second = byId[link.getSecond().getId()];
+        first = byId[this.link.FirstNode.Id];
+        second = byId[this.link.SecondNode.Id];
         this.index = idx;
 
         // Init
-        setting = link.getRoughness();
-        status = link.getStat();
+        setting = this.link.Roughness;
+        status = this.link.Status;
 
     }
 
@@ -84,154 +95,86 @@ public class SimulationLink {
         link = @ref;
 
         foreach (SimulationNode indexedNode  in  indexedNodes) {
-            if (indexedNode.getId() == link.getFirst().getId())
+            if (indexedNode.Id == this.link.FirstNode.Id)
                 first = indexedNode;
-            else if (indexedNode.getId() == link.getSecond().getId())
+            else if (indexedNode.Id == this.link.SecondNode.Id)
                 second = indexedNode;
             if (first != null && second != null) break;
         }
         this.index = idx;
 
         // Init
-        setting = link.getRoughness();
-        status = link.getStat();
+        setting = this.link.Roughness;
+        status = this.link.Status;
     }
 
-    // Indexed link methods
+#region Indexed link methods
+    
+    public SimulationNode First { get { return this.first; } }
 
-    public SimulationNode getFirst() {
-        return first;
-    }
+    public SimulationNode Second { get { return this.second; } }
 
-    public SimulationNode getSecond() {
-        return second;
-    }
+    public Link Link { get { return this.link; } }
 
-    public Link getLink() {
-        return link;
-    }
+    public int Index { get { return this.index; } }
 
-    public int getIndex() {
-        return index;
-    }
+#endregion
+    
+#region Network link Getters
 
-    // Network link Getters
+    public double[] C0 { get { return this.link.C0; } }
 
-    public double[] getC0() {
-        return link.getC0();
-    }
+    public double Diameter { get { return this.link.Diameter; } }
 
-#if COMMENTED1
-    public double[] getParam() { return node.getParam(); }
-#endif
+    public double Roughness { get { return this.link.Roughness; } }
 
-    public double getDiameter() {
-        return link.getDiameter();
-    }
+    public double Km { get { return this.link.Km; } }
 
-#if COMMENTED1
-    public double getLenght() { return node.getLenght(); }
-#endif
+    public double FlowResistance { get { return this.link.FlowResistance; } }
 
-    public double getRoughness() {
-        return link.getRoughness();
-    }
+    public Link.LinkType Type { get { return this.link.Type; } }
 
-    public double getKm() {
-        return link.getKm();
-    }
+#endregion
 
-#if COMMENTED1
-    public double getKb() { return node.getKb(); }
-    public double getKw() { return node.getKw(); }
-#endif
+#region Simulation getters & setters
 
-    public double getFlowResistance() {
-        return link.getFlowResistance();
-    }
+    public Link.StatType SimStatus { get { return this.status; } set { this.status = value; } }
 
-    public Link.LinkType getType() {
-        return link.getType();
-    }
+    public double SimFlow { get { return this.flow; } set { this.flow = value; } }
 
-#if COMMENTED1
-    public Link.StatType getStat() { return node.getStat(); }
-    public bool getRptFlag() { return node.isRptFlag(); }
-#endif
+    public double SimSetting { get { return this.setting; } set { this.setting = value; } }
 
-    // Simulation getters & setters
+    public double SimInvHeadLoss { get { return this.invHeadLoss; } set { this.invHeadLoss = value; } }
 
-    public Link.StatType getSimStatus() {
-        return status;
-    }
+    public double SimFlowCorrection { get { return this.flowCorrection; } set { this.flowCorrection = value; } }
 
-    public void setSimStatus(Link.StatType type) {
-        status = type;
-    }
+    public Link.StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
 
-    public double getSimFlow() {
-        return flow;
-    }
-
-    public void setSimFlow(double flow) {
-        this.flow = flow;
-    }
-
-    public double getSimSetting() {
-        return setting;
-    }
-
-    public void setSimSetting(double value) {
-        setting = value;
-    }
-
-    public double getSimInvHeadLoss() {
-        return invHeadLoss;
-    }
-
-    public void setSimInvHeadLoss(double value) {
-        invHeadLoss = value;
-    }
-
-    public double getSimFlowCorrection() {
-        return flowCorrection;
-    }
-
-    public void setSimFlowCorrection(double value) {
-        flowCorrection = value;
-    }
-
-    public Link.StatType getSimOldStatus() {
-        return oldStatus;
-    }
-
-    public void setSimOldStatus(Link.StatType oldStatus) {
-        this.oldStatus = oldStatus;
-    }
+#endregion
 
     // Simulation Methods
 
-    // Sets link status to OPEN(true) or CLOSED(false)
+    /// <summary>Sets link status to OPEN(true) or CLOSED(false).</summary>
     public void setLinkStatus(bool value) {
         if (value) {
             if (this is SimulationPump)
                 setting = 1.0;
 
-            else if (getType() != Link.LinkType.GPV)
+            else if (Type != Link.LinkType.GPV)
                 setting = Constants.MISSING;
 
             status = Link.StatType.OPEN;
         } else {
             if (this is SimulationPump)
                 setting = 0.0;
-            else if (getType() != Link.LinkType.GPV)
+            else if (Type != Link.LinkType.GPV)
                 setting = Constants.MISSING;
 
             status = Link.StatType.CLOSED;
         }
     }
 
-    // Sets pump speed or valve setting, adjusting link status and flow when necessary
+    /// <summary>Sets pump speed or valve setting, adjusting link status and flow when necessary.</summary>
     public void setLinkSetting(double value) {
         if (this is SimulationPump) {
             setting = value;
@@ -241,7 +184,7 @@ public class SimulationLink {
             if (value == 0 && status > Link.StatType.CLOSED)
                 status = Link.StatType.CLOSED;
 
-        } else if (getType() == Link.LinkType.FCV) {
+        } else if (Type == Link.LinkType.FCV) {
             setting = value;
             status = Link.StatType.ACTIVE;
         } else {
@@ -252,36 +195,37 @@ public class SimulationLink {
         }
     }
 
-    // Sets initial flow in link to QZERO if link is closed, to design flow for a pump,
-    // or to flow at velocity of 1 fps for other links.
+    
+    /// <summary>
+    /// Sets initial flow in link to QZERO if link is closed, to design flow for a pump, 
+    /// or to flow at velocity of 1 fps for other links.
+    /// </summary>
     public void initLinkFlow() {
-        if (getSimStatus() == Link.StatType.CLOSED)
-            flow = Constants.QZERO;
+        if (this.SimStatus == Link.StatType.CLOSED)
+            this.flow = Constants.QZERO;
         else if (this is SimulationPump)
-            flow = getRoughness() * ((SimulationPump) this).getQ0();
+            this.flow = this.Roughness * ((SimulationPump) this).getQ0();
         else
-            flow = Constants.PI * Math.Pow(getDiameter(), 2) / 4.0;
+            this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
     }
 
     public void initLinkFlow(Link.StatType type, double Kc) {
         if (type == Link.StatType.CLOSED)
-            flow = Constants.QZERO;
+            this.flow = Constants.QZERO;
         else if (this is SimulationPump)
-            flow = Kc * ((SimulationPump) this).getQ0();
+            this.flow = Kc * ((SimulationPump) this).getQ0();
         else
-            flow = Constants.PI * Math.Pow(getDiameter(), 2) / 4.0;
+            this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
     }
 
-//    public static long T1 = 0, T2 = 0, T3 = 0; //TODO:REMOVE THIS
-
-    // Compute P, Y and matrix coeffs
+    /// <summary>Compute P, Y and matrix coeffs.</summary>
     private void computeMatrixCoeff(FieldsMap fMap,
                                     PropertiesMap pMap,
                                     PipeHeadModel hlModel,
-                                    Curve[] curves,
+                                    IList<Curve> curves,
                                     SparseMatrix smat, LSVariables ls) {
 
-        switch (getType()) {
+        switch (Type) {
             // Pipes
             case Link.LinkType.CV:
             case Link.LinkType.PIPE:
@@ -307,13 +251,13 @@ public class SimulationLink {
                 return;
         }
 
-        int n1 = first.getIndex();
-        int n2 = second.getIndex();
+        int n1 = this.first.Index;
+        int n2 = this.second.Index;
 
         ls.addNodalInFlow(n1, -flow);
         ls.addNodalInFlow(n2, +flow);
 
-        ls.addAij(smat.getNdx(getIndex()), -invHeadLoss);
+        ls.addAij(smat.getNdx(Index), -invHeadLoss);
 
         if (!(first is SimulationTank)) {
             ls.addAii(smat.getRow(n1), +invHeadLoss);
@@ -339,16 +283,16 @@ public class SimulationLink {
         }
 
         PipeHeadModel.LinkCoeffs coeffs = hlModel.compute(pMap, this);
-        invHeadLoss = coeffs.getInvHeadLoss();
-        flowCorrection = coeffs.getFlowCorrection();
+        invHeadLoss = coeffs.InvHeadLoss;
+        flowCorrection = coeffs.FlowCorrection;
     }
 
 
     // Closes link flowing into full or out of empty tank
     private void tankStatus(PropertiesMap pMap) {
         double q = flow;
-        SimulationNode n1 = getFirst();
-        SimulationNode n2 = getSecond();
+        SimulationNode n1 = First;
+        SimulationNode n2 = Second;
 
         // Make node n1 be the tank
         if (!(n1 is SimulationTank)) {
@@ -370,20 +314,20 @@ public class SimulationLink {
             return;
 
         // If tank full, then prevent flow into it
-        if (tank.getSimHead() >= tank.getHmax() - pMap.getHtol()) {
+        if (tank.getSimHead() >= tank.getHmax() - pMap.Htol) {
             //Case 1: Link is a pump discharging into tank
-            if (getType() == Link.LinkType.PUMP) {
-                if (getSecond() == n1)
+            if (Type == Link.LinkType.PUMP) {
+                if (Second == n1)
                     status = Link.StatType.TEMPCLOSED;
             } else if (cvStatus(pMap, Link.StatType.OPEN, h, q) == Link.StatType.CLOSED) //  Case 2: Downstream head > tank head
                 status = Link.StatType.TEMPCLOSED;
         }
 
         // If tank empty, then prevent flow out of it
-        if (tank.getSimHead() <= tank.getHmin() + pMap.getHtol()) {
+        if (tank.getSimHead() <= tank.getHmin() + pMap.Htol) {
             // Case 1: Link is a pump discharging from tank
-            if (getType() == Link.LinkType.PUMP) {
-                if (getFirst() == n1)
+            if (Type == Link.LinkType.PUMP) {
+                if (First == n1)
                     status = Link.StatType.TEMPCLOSED;
             }
             // Case 2: Tank head > downstream head
@@ -392,24 +336,24 @@ public class SimulationLink {
         }
     }
 
-    // Updates status of a check valve.
+    /// <summary>Updates status of a check valve.</summary>
     private static Link.StatType cvStatus(PropertiesMap pMap, Link.StatType s, double dh, double q) {
-        if (Math.Abs(dh) > pMap.getHtol()) {
-            if (dh < -pMap.getHtol())
+        if (Math.Abs(dh) > pMap.Htol) {
+            if (dh < -pMap.Htol)
                 return (Link.StatType.CLOSED);
-            else if (q < -pMap.getQtol())
+            else if (q < -pMap.Qtol)
                 return (Link.StatType.CLOSED);
             else
                 return (Link.StatType.OPEN);
         } else {
-            if (q < -pMap.getQtol())
+            if (q < -pMap.Qtol)
                 return (Link.StatType.CLOSED);
             else
                 return (s);
         }
     }
 
-    // Determines new status for pumps, CVs, FCVs & pipes to tanks.
+    /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
     private bool linkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log) {
         bool change = false;
 
@@ -420,13 +364,13 @@ public class SimulationLink {
         if (tStatus == Link.StatType.XHEAD || tStatus == Link.StatType.TEMPCLOSED)
             status = Link.StatType.OPEN;
 
-        if (getType() == Link.LinkType.CV)
+        if (Type == Link.LinkType.CV)
             status = cvStatus(pMap, status, dh, flow);
 
         if (this is SimulationPump && status >= Link.StatType.OPEN && setting > 0.0)
             status = ((SimulationPump) this).pumpStatus(pMap, -dh);
 
-        if (getType() == Link.LinkType.FCV && setting != Constants.MISSING)
+        if (Type == Link.LinkType.FCV && setting != Constants.MISSING)
             status = ((SimulationValve) this).fcvStatus(pMap, tStatus);
 
         if (first is SimulationTank || second is SimulationTank)
@@ -434,7 +378,7 @@ public class SimulationLink {
 
         if (tStatus != status) {
             change = true;
-            if (pMap.getStatflag() == PropertiesMap.StatFlag.FULL)
+            if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
                 logStatChange(fMap, log, this, tStatus, status);
         }
 
@@ -445,17 +389,17 @@ public class SimulationLink {
 
         if (s1 == s2) {
 
-            switch (link.getType()) {
+            switch (link.Type) {
                 case Link.LinkType.PRV:
                 case Link.LinkType.PSV:
                 case Link.LinkType.PBV:
-                    link.setting *= fMap.getUnits(FieldsMap.Type.PRESSURE);
+                    link.setting *= fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                     break;
                 case Link.LinkType.FCV:
-                    link.setting *= fMap.getUnits(FieldsMap.Type.FLOW);
+                    link.setting *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
                     break;
             }
-            logger.Verbose(Utilities.getText("FMT56"), link.getType().ParseStr(), link.getLink().getId(), link.setting);
+            logger.Verbose(Text.ResourceManager.GetString("FMT56"), link.Type.ParseStr(), link.Link.Id, link.setting);
             return;
         }
 
@@ -474,12 +418,12 @@ public class SimulationLink {
             j2 = Link.StatType.OPEN;
 
         if (j1 != j2) {
-            logger.Verbose(Utilities.getText("FMT57"), link.getType().ParseStr(), link.getLink().getId(), j1.ReportStr(), j2.ReportStr());
+            logger.Verbose(Text.ResourceManager.GetString("FMT57"), link.Type.ParseStr(), link.Link.Id, j1.ReportStr(), j2.ReportStr());
         }
 
     }
 
-    // Determines new status for pumps, CVs, FCVs & pipes to tanks.
+    /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
     public static bool linkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log, List<SimulationLink> links) {
         bool change = false;
         foreach (SimulationLink link  in  links) {
@@ -489,11 +433,11 @@ public class SimulationLink {
         return change;
     }
 
-    // Computes solution matrix coefficients for links
+    /// <summary>Computes solution matrix coefficients for links.</summary>
     public static void computeMatrixCoeffs(FieldsMap fMap,
                                            PropertiesMap pMap,
                                            PipeHeadModel hlModel,
-                                           List<SimulationLink> links, Curve[] curves,
+                                           List<SimulationLink> links, IList<Curve> curves,
                                            SparseMatrix smat, LSVariables ls) {
 
         foreach (SimulationLink link  in  links) {

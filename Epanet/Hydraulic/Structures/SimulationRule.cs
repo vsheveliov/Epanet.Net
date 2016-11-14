@@ -109,7 +109,7 @@ namespace org.addition.epanet.hydraulic.structures
                         //Node nodeRef = net.getNode(Tok[2]);
                         SimulationNode nodeRef = null;
                         foreach (SimulationNode simNode  in  nodes)
-                        if (simNode.getNode().getId().Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
+                        if (simNode.Node.Id.Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
                             nodeRef = simNode;
 
                         if (nodeRef == null)
@@ -138,7 +138,7 @@ namespace org.addition.epanet.hydraulic.structures
                         //Link linkRef = net.getLink(Tok[2]);
                         SimulationLink linkRef = null;
                         foreach (SimulationLink simLink  in  links)
-                        if (simLink.getLink().getId().Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
+                        if (simLink.Link.Id.Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
                             linkRef = simLink;
 
                         if (linkRef == null)
@@ -187,9 +187,9 @@ namespace org.addition.epanet.hydraulic.structures
                 if (lVar == Rule.Varwords.r_TIME || lVar == Rule.Varwords.r_CLOCKTIME)
                 {
                     if (Tok.Length == 6)
-                        lVal = Utilities.getHour(Tok[4], Tok[5])*3600.0;
+                        lVal = Utilities.GetHour(Tok[4], Tok[5])*3600.0;
                     else
-                        lVal = Utilities.getHour(Tok[4], "")*3600.0;
+                        lVal = Utilities.GetHour(Tok[4], "")*3600.0;
 
                     if (lVal < 0.0)
                         throw new ENException(ErrorCode.Err202);
@@ -291,8 +291,8 @@ namespace org.addition.epanet.hydraulic.structures
                 }
                 else if (this.variable == Rule.Varwords.r_CLOCKTIME)
                 {
-                    t1 = (Time1 + pMap.getTstart())%Constants.SECperDAY;
-                    t2 = (Htime + pMap.getTstart())%Constants.SECperDAY;
+                    t1 = (Time1 + pMap.Tstart)%Constants.SECperDAY;
+                    t2 = (Htime + pMap.Tstart)%Constants.SECperDAY;
                 }
                 else
                     return false;
@@ -343,7 +343,7 @@ namespace org.addition.epanet.hydraulic.structures
                         Rule.Values j;
                         Link.StatType i = (Link.StatType)(-1);
                         if (this.@object is SimulationLink)
-                        i = ((SimulationLink)this.@object).getSimStatus();
+                        i = ((SimulationLink)this.@object).SimStatus;
 
                         if (i != null && i <= Link.StatType.CLOSED)
                             j = Rule.Values.IS_CLOSED;
@@ -377,42 +377,42 @@ namespace org.addition.epanet.hydraulic.structures
                 switch (this.variable) {
                 case Rule.Varwords.r_DEMAND:
                     if ((Rule.Objects)this.@object == Rule.Objects.r_SYSTEM)
-                        x = dsystem * fMap.getUnits(FieldsMap.Type.DEMAND);
+                        x = dsystem * fMap.GetUnits(FieldsMap.FieldType.DEMAND);
                     else
-                        x = node.getSimDemand() * fMap.getUnits(FieldsMap.Type.DEMAND);
+                        x = node.getSimDemand() * fMap.GetUnits(FieldsMap.FieldType.DEMAND);
                     break;
 
                 case Rule.Varwords.r_HEAD:
                 case Rule.Varwords.r_GRADE:
-                    x = node.getSimHead() * fMap.getUnits(FieldsMap.Type.HEAD);
+                    x = node.getSimHead() * fMap.GetUnits(FieldsMap.FieldType.HEAD);
                     break;
 
                 case Rule.Varwords.r_PRESSURE:
-                    x = (node.getSimHead() - node.getElevation()) * fMap.getUnits(FieldsMap.Type.PRESSURE);
+                    x = (node.getSimHead() - node.getElevation()) * fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                     break;
 
                 case Rule.Varwords.r_LEVEL:
-                    x = (node.getSimHead() - node.getElevation()) * fMap.getUnits(FieldsMap.Type.HEAD);
+                    x = (node.getSimHead() - node.getElevation()) * fMap.GetUnits(FieldsMap.FieldType.HEAD);
                     break;
 
                 case Rule.Varwords.r_FLOW:
-                    x = Math.Abs(link.getSimFlow()) * fMap.getUnits(FieldsMap.Type.FLOW);
+                    x = Math.Abs(link.SimFlow) * fMap.GetUnits(FieldsMap.FieldType.FLOW);
                     break;
 
                 case Rule.Varwords.r_SETTING:
 
-                    if (link.getSimSetting() == Constants.MISSING)
+                    if (link.SimSetting == Constants.MISSING)
                         return false;
 
-                    x = link.getSimSetting();
-                    switch (link.getType()) {
+                    x = link.SimSetting;
+                    switch (link.Type) {
                     case Link.LinkType.PRV:
                     case Link.LinkType.PSV:
                     case Link.LinkType.PBV:
-                        x = x * fMap.getUnits(FieldsMap.Type.PRESSURE);
+                        x = x * fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                         break;
                     case Link.LinkType.FCV:
-                        x = x * fMap.getUnits(FieldsMap.Type.FLOW);
+                        x = x * fMap.GetUnits(FieldsMap.FieldType.FLOW);
                         break;
                     }
                     break;
@@ -500,13 +500,13 @@ namespace org.addition.epanet.hydraulic.structures
                 //Link linkRef = net.getLink(tok[2]);
                 SimulationLink linkRef = null;
                 foreach (SimulationLink simLink  in  links)
-                if (simLink.getLink().getId().Equals(tok[2], StringComparison.OrdinalIgnoreCase))
+                if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
                     linkRef = simLink;
 
                 if (linkRef == null)
                     throw new ENException(ErrorCode.Err204);
 
-                if (linkRef.getType() == Link.LinkType.CV)
+                if (linkRef.Type == Link.LinkType.CV)
                     throw new ENException(ErrorCode.Err207);
 
                 s = (Rule.Values)(-1);
@@ -521,10 +521,10 @@ namespace org.addition.epanet.hydraulic.structures
                         throw new ENException(ErrorCode.Err202);
                 }
 
-                if (x != Constants.MISSING && linkRef.getType() == Link.LinkType.GPV)
+                if (x != Constants.MISSING && linkRef.Type == Link.LinkType.GPV)
                     throw new ENException(ErrorCode.Err202);
 
-                if (x != Constants.MISSING && linkRef.getType() == Link.LinkType.PIPE) {
+                if (x != Constants.MISSING && linkRef.Type == Link.LinkType.PIPE) {
                     s = x == 0.0 ? Rule.Values.IS_CLOSED : Rule.Values.IS_OPEN;
                     x = Constants.MISSING;
                 }
@@ -558,8 +558,8 @@ namespace org.addition.epanet.hydraulic.structures
             {
                 bool flag = false;
 
-                Link.StatType s = this.link.getSimStatus();
-                double v = this.link.getSimSetting();
+                Link.StatType s = this.link.SimStatus;
+                double v = this.link.SimSetting;
                 double x = this.setting;
 
                 if (this.status == Rule.Values.IS_OPEN && s <= Link.StatType.CLOSED)
@@ -577,15 +577,15 @@ namespace org.addition.epanet.hydraulic.structures
                 else if (x != Constants.MISSING)
                 {
                     // Change link's setting
-                    switch (this.link.getType())
+                    switch (this.link.Type)
                     {
                         case Link.LinkType.PRV:
                         case Link.LinkType.PSV:
                         case Link.LinkType.PBV:
-                            x = x/fMap.getUnits(FieldsMap.Type.PRESSURE);
+                            x = x/fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                             break;
                         case Link.LinkType.FCV:
-                            x = x/fMap.getUnits(FieldsMap.Type.FLOW);
+                            x = x/fMap.GetUnits(FieldsMap.FieldType.FLOW);
                             break;
                     }
                     if (Math.Abs(x - v) > tol)
@@ -597,7 +597,7 @@ namespace org.addition.epanet.hydraulic.structures
 
                 if (flag)
                 {
-                    if (pMap.getStatflag() != null) // Report rule action
+                    if (pMap.Statflag != null) // Report rule action
                         this.logRuleExecution(log, Htime);
                     return true;
                 }
@@ -607,7 +607,7 @@ namespace org.addition.epanet.hydraulic.structures
 
             public void logRuleExecution(TraceSource log, long Htime)
             {
-                log.Warning(Utilities.getText("FMT63"), Htime.getClockTime(), this.link.getType().ParseStr(), this.link.getLink().getId(), this._label);
+                log.Warning(Epanet.Properties.Text.ResourceManager.GetString("FMT63"), Htime.GetClockTime(), this.link.Type.ParseStr(), this.link.Link.Id, this._label);
             }
         }
 
@@ -776,8 +776,8 @@ namespace org.addition.epanet.hydraulic.structures
                 // Otherwise, time increment equals rule evaluation time step and
                 // first actual increment equals time until next even multiple of
                 // Rulestep occurs.
-                dt = pMap.getRulestep();
-                dt1 = pMap.getRulestep() - (tnow%pMap.getRulestep());
+                dt = pMap.Rulestep;
+                dt1 = pMap.Rulestep - (tnow%pMap.Rulestep);
             }
 
             // Make sure time increment is no larger than current time step
@@ -817,7 +817,7 @@ namespace org.addition.epanet.hydraulic.structures
 
         public SimulationRule(Rule _rule, List<SimulationLink> links, List<SimulationNode> nodes)
         {
-            this.label = _rule.getLabel();
+            this.label = _rule.Label;
             this.Pchain = new List<Premise>();
             this.Tchain = new List<Action>();
             this.Fchain = new List<Action>();
@@ -825,7 +825,7 @@ namespace org.addition.epanet.hydraulic.structures
             double tempPriority = 0.0;
 
             Rule.Rulewords ruleState = Rule.Rulewords.r_RULE;
-            foreach(string _line in _rule.getCode().Split(new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries))
+            foreach(string _line in _rule.Code)
             {
                 string[] tok = _line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 Rule.Rulewords key;

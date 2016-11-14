@@ -15,13 +15,10 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.hydraulic.models
-{
+namespace org.addition.epanet.hydraulic.models {
 
-///<summary>Chezy-Manning model calculator, which is implemented through the Hazen-Williams model.</summary>
+    ///<summary>Chezy-Manning model calculator, which is implemented through the Hazen-Williams model.</summary>
 
-    public class CMModelCalculator:HWModelCalculator
-{
+    public class CMModelCalculator:HWModelCalculator {}
 
-}
 }

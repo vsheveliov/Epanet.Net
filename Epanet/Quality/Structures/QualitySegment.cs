@@ -17,18 +17,18 @@
 
 namespace org.addition.epanet.quality.structures {
 
-///<summary>Discrete water quality segment.</summary>
-public class QualitySegment {
-    ///<summary>Segment concentration.</summary>
-    public double  c;
+    ///<summary>Discrete water quality segment.</summary>
+    public class QualitySegment {
+        ///<summary>Segment concentration.</summary>
+        public double C;
 
-    ///<summary>Segment volume.</summary>
-    public double  v;
+        ///<summary>Segment volume.</summary>
+        public double V;
 
-    public QualitySegment(double v, double c) {
-        this.v = v;
-        this.c = c;
+        public QualitySegment(double v, double c) {
+            this.V = v;
+            this.C = c;
+        }
     }
-}
 
 }

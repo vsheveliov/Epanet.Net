@@ -17,18 +17,28 @@
 
 namespace org.addition.epanet.network.structures {
 
-    ///<summary>Text label</summary>
-    public class Label {
-        public Label() {
-            this.Text = "";
-            this.Position = EnPoint.Invalid;
+    ///<summary>Simple 2d point.</summary>
+
+    public struct EnPoint {
+        public static readonly EnPoint Invalid = new EnPoint(double.NaN, double.NaN);
+        private readonly double _x;
+        private readonly double _y;
+
+        public EnPoint(double x, double y) {
+
+            this._x = x;
+            this._y = y;
         }
 
-        ///<summary>Label position.</summary>
-        public EnPoint Position { get; set; }
+        public bool IsInvalid { get { return double.IsNaN(this._x) || double.IsNaN(this._y); } }
 
-        ///<summary>Label text.</summary>
-        public string Text { get; set; }
+        ///<summary>Absciss coordinate.</summary>
+        public double X { get { return this._x; } }
+
+        ///<summary>Ordinate coordinate.</summary>
+        public double Y { get { return this._y; } }
+
+        public override string ToString() { return "Point{" + "x=" + this._x + ", y=" + this._y + '}'; }
     }
 
 }

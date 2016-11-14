@@ -32,30 +32,30 @@ public abstract class InputParser {
     protected string FileName;
 
     ///<summary>Reference to the error logger.</summary>
-    protected TraceSource log;
+    protected TraceSource Log;
     protected readonly List<ENException> Errors = new List<ENException>();
 
     protected InputParser(TraceSource log) {
-        this.log = log;
+        this.Log = log;
     }
 
-    public static InputParser create(Network.FileType type, TraceSource log) {
+    public static InputParser Create(Network.FileType type, TraceSource log) {
         switch (type) {
             case Network.FileType.INP_FILE:
                 return new InpParser(log);
             case Network.FileType.EXCEL_FILE:
                 return new ExcelParser(log);
             case Network.FileType.XML_FILE:
-                return new XMLParser(log,false);
+                return new XmlParser(log,false);
             case Network.FileType.XML_GZ_FILE:
-                return new XMLParser(log,true);
+                return new XmlParser(log,true);
             case Network.FileType.NULL_FILE:
                 return new NullParser(log);
         }
         return null;
     }
 
-    public abstract Network parse(Network net, string fileName);
+    public abstract Network Parse(Network net, string fileName);
 
 
     /// <summary>
@@ -108,133 +108,117 @@ public abstract class InputParser {
     }
 
    ///<summary>Prepare the hydraulic network for simulation.</summary>
-    protected void convert(Network net) {
-        initTanks(net);
-        initPumps(net);
-        initPatterns(net);
-        checkUnlinked(net);
-        convertUnits(net);
+    protected void Convert(Network net) {
+        this.InitTanks(net);
+        this.InitPumps(net);
+        this.InitPatterns(net);
+        this.CheckUnlinked(net);
+        this.ConvertUnits(net);
     }
 
     ///<summary>Adjust simulation configurations.</summary>
-    public static void adjust(Network net)  {
-        adjustData(net);
-    }
+    protected static void AdjustData(Network net) {
+        PropertiesMap m = net.PropertiesMap;
 
-    ///<summary>Adjust simulation configurations.</summary>
-    private static void adjustData(Network net) {
-        PropertiesMap m = net.getPropertiesMap();
+        if (m.Pstep <= 0) m.Pstep = 3600;
+        if (m.Rstep == 0) m.Rstep = m.Pstep;
+        if (m.Hstep <= 0) m.Hstep = 3600;
+        if (m.Hstep > m.Pstep) m.Hstep = m.Pstep;
+        if (m.Hstep > m.Rstep) m.Hstep = m.Rstep;
+        if (m.Rstart > m.Duration) m.Rstart = 0;
+        if (m.Duration == 0) m.Qualflag = PropertiesMap.QualType.NONE;
+        if (m.Qstep == 0) m.Qstep = m.Hstep / 10;
+        if (m.Rulestep == 0) m.Rulestep = m.Hstep / 10;
 
-        if (m.getPstep() <= 0) m.setPstep(3600);
-        if (m.getRstep() == 0) m.setRstep(m.getPstep());
-        if (m.getHstep() <= 0) m.setHstep(3600);
-        if (m.getHstep() > m.getPstep()) m.setHstep(m.getPstep());
-        if (m.getHstep() > m.getRstep()) m.setHstep(m.getRstep());
-        if (m.getRstart() > m.getDuration()) m.setRstart(0);
-        if (m.getDuration() == 0) m.setQualflag(PropertiesMap.QualType.NONE);
-        if (m.getQstep() == 0) m.setQstep(m.getHstep() / 10);
-        if (m.getRulestep() == 0) m.setRulestep(m.getHstep() / 10);
+        m.Rulestep = Math.Min(m.Rulestep, m.Hstep);
+        m.Qstep = Math.Min(m.Qstep, m.Hstep);
 
-        m.setRulestep(Math.Min(m.getRulestep(), m.getHstep()));
-        m.setQstep(Math.Min(m.getQstep(), m.getHstep()));
-
-        if (m.getCtol() == Constants.MISSING) {
-            if (m.getQualflag() == PropertiesMap.QualType.AGE)
-                m.setCtol(Constants.AGETOL);
-            else
-                m.setCtol(Constants.CHEMTOL);
+        if (m.Ctol == Constants.MISSING) {
+            m.Ctol = m.Qualflag == PropertiesMap.QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
         }
 
-        switch (m.getFlowflag()) {
+        switch (m.Flowflag) {
             case PropertiesMap.FlowUnitsType.LPS:
             case PropertiesMap.FlowUnitsType.LPM:
             case PropertiesMap.FlowUnitsType.MLD:
             case PropertiesMap.FlowUnitsType.CMH:
             case PropertiesMap.FlowUnitsType.CMD:
-                m.setUnitsflag(PropertiesMap.UnitsType.SI);
+                m.Unitsflag = PropertiesMap.UnitsType.SI;
                 break;
             default:
-                m.setUnitsflag(PropertiesMap.UnitsType.US);
+                m.Unitsflag = PropertiesMap.UnitsType.US;
                 break;
         }
 
 
-        if (m.getUnitsflag() != PropertiesMap.UnitsType.SI)
-            m.setPressflag(PropertiesMap.PressUnitsType.PSI);
-        else if (m.getPressflag() == PropertiesMap.PressUnitsType.PSI)
-            m.setPressflag(PropertiesMap.PressUnitsType.METERS);
+        if (m.Unitsflag != PropertiesMap.UnitsType.SI)
+            m.Pressflag = PropertiesMap.PressUnitsType.PSI;
+        else if (m.Pressflag == PropertiesMap.PressUnitsType.PSI)
+            m.Pressflag = PropertiesMap.PressUnitsType.METERS;
 
         var ucf = 1.0;
-        if (m.getUnitsflag() == PropertiesMap.UnitsType.SI)
+        if (m.Unitsflag == PropertiesMap.UnitsType.SI)
             ucf = Math.Pow(Constants.MperFT, 2);
 
-        if (m.getViscos() == Constants.MISSING)
-            m.setViscos(Constants.VISCOS);
-        else if (m.getViscos() > 1e-3)
-            m.setViscos(m.getViscos() * Constants.VISCOS);
+        if (m.Viscos == Constants.MISSING)
+            m.Viscos = Constants.VISCOS;
+        else if (m.Viscos > 1e-3)
+            m.Viscos = m.Viscos * Constants.VISCOS;
         else
-            m.setViscos(m.getViscos() / ucf);
+            m.Viscos = m.Viscos / ucf;
 
-        if (m.getDiffus() == Constants.MISSING)
-            m.setDiffus(Constants.DIFFUS);
-        else if (m.getDiffus() > 1e-4)
-            m.setDiffus(m.getDiffus() * Constants.DIFFUS);
+        if (m.Diffus == Constants.MISSING)
+            m.Diffus = Constants.DIFFUS;
+        else if (m.Diffus > 1e-4)
+            m.Diffus = m.Diffus * Constants.DIFFUS;
         else
-            m.setDiffus(m.getDiffus() / ucf);
+            m.Diffus = m.Diffus / ucf;
 
-        if (m.getFormflag() == PropertiesMap.FormType.HW)
-            m.setHexp(1.852);
-        else
-            m.setHexp(2.0);
+        m.Hexp = m.Formflag == PropertiesMap.FormType.HW ? 1.852 : 2.0;
 
-        double Rfactor = m.getRfactor();
-        PropertiesMap.FormType formFlag = m.getFormflag();
-        double Kbulk = m.getKbulk();
+        double rfactor = m.Rfactor;
+        PropertiesMap.FormType formFlag = m.Formflag;
+        double kbulk = m.Kbulk;
 
-        foreach (Link link  in  net.getLinks()) {
-            if (link.getType() > Link.LinkType.PIPE)
+        foreach (Link link  in  net.Links) {
+            if (link.Type > Link.LinkType.PIPE)
                 continue;
 
-            if (link.getKb() == Constants.MISSING)
-                link.setKb(Kbulk);
+            if (link.Kb == Constants.MISSING)
+                link.Kb = kbulk;
 
-            if (link.getKw() == Constants.MISSING)
+            if (link.Kw == Constants.MISSING)
             {
-                if (Rfactor == 0.0)
-                    link.setKw(m.getKwall());
-                else if ((link.getRoughness() > 0.0) && (link.getDiameter() > 0.0)) {
+                if (rfactor == 0.0)
+                    link.Kw = m.Kwall;
+                else if ((link.Roughness > 0.0) && (link.Diameter > 0.0)) {
                     if (formFlag == PropertiesMap.FormType.HW)
-                        link.setKw(Rfactor / link.getRoughness());
+                        link.Kw = rfactor / link.Roughness;
                     if (formFlag == PropertiesMap.FormType.DW)
-                        link.setKw(Rfactor / Math.Abs(Math.Log(link.getRoughness() / link.getDiameter())));
+                        link.Kw = rfactor / Math.Abs(Math.Log(link.Roughness / link.Diameter));
                     if (formFlag == PropertiesMap.FormType.CM)
-                        link.setKw(Rfactor * link.getRoughness());
+                        link.Kw = rfactor * link.Roughness;
                 }
                 else
-                    link.setKw(0.0);
+                    link.Kw = 0.0;
             }
         }
 
-        foreach (Tank tank  in  net.getTanks())
-            if (tank.getKb() == Constants.MISSING)
-                tank.setKb(Kbulk);
+        foreach (Tank tank  in  net.Tanks)
+            if (tank.Kb == Constants.MISSING)
+                tank.Kb = kbulk;
 
-        Pattern defpat = net.getPattern(m.getDefPatId());
-        if (defpat == null)
-            defpat = net.getPattern("");
+        Pattern defpat = net.GetPattern(m.DefPatId) ?? net.GetPattern("");
 
-        if (defpat == null)
-            defpat = net.getPattern("");
-
-        foreach (Node node  in  net.getNodes()) {
-            foreach (Demand d  in  node.getDemand()) {
-                if (d.getPattern() == null)
-                    d.setPattern(defpat);
+        foreach (Node node  in  net.Nodes) {
+            foreach (Demand d  in  node.Demand) {
+                if (d.Pattern == null)
+                    d.Pattern = defpat;
             }
         }
 
-        if (m.getQualflag() == PropertiesMap.QualType.NONE)
-            net.getFieldsMap().getField(FieldsMap.Type.QUALITY).setEnabled(false);
+        if (m.Qualflag == PropertiesMap.QualType.NONE)
+            net.FieldsMap.GetField(FieldsMap.FieldType.QUALITY).Enabled = false;
 
     }
 
@@ -243,43 +227,39 @@ public abstract class InputParser {
      * @param net Hydraulic network reference.
      * @throws ENException
      */
-    private void initTanks(Network net) {
+    private void InitTanks(Network net) {
         int n = 0;
-        double a;
 
-        foreach (Tank tank  in  net.getTanks()) {
-            if (tank.getArea() == 0.0)
+        foreach (Tank tank  in  net.Tanks) {
+            if (tank.IsReservoir)
                 continue;
 
             int levelerr = 0;
-            if (tank.getH0() > tank.getHmax() ||
-                    tank.getHmin() > tank.getHmax() ||
-                    tank.getH0() < tank.getHmin()
+            if (tank.H0 > tank.Hmax ||
+                    tank.Hmin > tank.Hmax ||
+                    tank.H0 < tank.Hmin
                     ) levelerr = 1;
 
-            Curve curv = tank.getVcurve();
+            Curve curv = tank.Vcurve;
 
             if (curv != null) {
-                n = curv.getNpts() - 1;
-                if (tank.getHmin() < curv.getX()[0] ||
-                        tank.getHmax() > curv.getX()[n])
+                n = curv.Npts - 1;
+                if (tank.Hmin < curv.X[0] ||
+                        tank.Hmax > curv.X[n])
                     levelerr = 1;
             }
 
             if (levelerr != 0) {
-                throw new ENException(ErrorCode.Err225, tank.getId());
+                throw new ENException(ErrorCode.Err225, tank.Id);
             } else if (curv != null) {
 
-                tank.setVmin(Utilities.linearInterpolator(curv.getNpts(), curv.getX(),
-                        curv.getY(), tank.getHmin()));
-                tank.setVmax(Utilities.linearInterpolator(curv.getNpts(), curv.getX(),
-                        curv.getY(), tank.getHmax()));
-                tank.setV0(Utilities.linearInterpolator(curv.getNpts(), curv.getX(),
-                        curv.getY(), tank.getH0()));
+                tank.Vmin = curv.LinearInterpolator(tank.Hmin);
+                tank.Vmax = curv.LinearInterpolator(tank.Hmax);
+                tank.V0 = curv.LinearInterpolator(tank.H0);
 
-                a = (curv.getY()[n] - curv.getY()[0]) /
-                        (curv.getX()[n] - curv.getX()[0]);
-                tank.setArea(Math.Sqrt(4.0 * a / Constants.PI));
+                double a = (curv.Y[n] - curv.Y[0]) /
+                           (curv.X[n] - curv.X[0]);
+                tank.Area = Math.Sqrt(4.0 * a / Math.PI);
             }
         }
     }
@@ -289,129 +269,129 @@ public abstract class InputParser {
      * @param net Hydraulic network reference.
      * @throws ENException
      */
-    private void convertUnits(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ConvertUnits(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        PropertiesMap pMap = net.PropertiesMap;
 
-        foreach (Node node  in  net.getNodes()) {
-            node.setElevation(node.getElevation() / fMap.getUnits(FieldsMap.Type.ELEV));
-            node.setC0(new[]{node.getC0()[0] / fMap.getUnits(FieldsMap.Type.QUALITY)});
+        foreach (Node node  in  net.Nodes) {
+            node.Elevation = node.Elevation / fMap.GetUnits(FieldsMap.FieldType.ELEV);
+            node.C0 = new[]{node.C0[0] / fMap.GetUnits(FieldsMap.FieldType.QUALITY)};
         }
 
 
-        foreach (Node node  in  net.getNodes()) {
+        foreach (Node node  in  net.Nodes) {
             if (node is Tank)
                 continue;
 
-            foreach (Demand d  in  node.getDemand()) {
-                d.setBase(d.getBase() / fMap.getUnits(FieldsMap.Type.DEMAND));
+            foreach (Demand d  in  node.Demand) {
+                d.Base = d.Base / fMap.GetUnits(FieldsMap.FieldType.DEMAND);
             }
         }
 
 
-        double ucf = Math.Pow(fMap.getUnits(FieldsMap.Type.FLOW), pMap.getQexp()) / fMap.getUnits(FieldsMap.Type.PRESSURE);
+        double ucf = Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pMap.Qexp) / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
 
-        foreach (Node node  in  net.getNodes()) {
+        foreach (Node node  in  net.Nodes) {
             if (node is Tank)
                 continue;
 
-            if (node.getKe() > 0.0)
-                node.setKe(ucf / Math.Pow(node.getKe(), pMap.getQexp()));
+            if (node.Ke > 0.0)
+                node.Ke = ucf / Math.Pow(node.Ke, pMap.Qexp);
         }
 
-        foreach (Tank tk  in  net.getTanks()) {
-            tk.setH0(tk.getElevation() + tk.getH0() / fMap.getUnits(FieldsMap.Type.ELEV));
-            tk.setHmin(tk.getElevation() + tk.getHmin() / fMap.getUnits(FieldsMap.Type.ELEV));
-            tk.setHmax(tk.getElevation() + tk.getHmax() / fMap.getUnits(FieldsMap.Type.ELEV));
-            tk.setArea(Constants.PI * Math.Pow(tk.getArea() / fMap.getUnits(FieldsMap.Type.ELEV), 2) / 4.0);
-            tk.setV0(tk.getV0() / fMap.getUnits(FieldsMap.Type.VOLUME));
-            tk.setVmin(tk.getVmin() / fMap.getUnits(FieldsMap.Type.VOLUME));
-            tk.setVmax(tk.getVmax() / fMap.getUnits(FieldsMap.Type.VOLUME));
-            tk.setKb(tk.getKb() / Constants.SECperDAY);
+        foreach (Tank tk  in  net.Tanks) {
+            tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldsMap.FieldType.ELEV);
+            tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldsMap.FieldType.ELEV);
+            tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldsMap.FieldType.ELEV);
+            tk.Area = Math.PI * Math.Pow(tk.Area / fMap.GetUnits(FieldsMap.FieldType.ELEV), 2) / 4.0;
+            tk.V0 = tk.V0 / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
+            tk.Vmin = tk.Vmin / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
+            tk.Vmax = tk.Vmax / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
+            tk.Kb = tk.Kb / Constants.SECperDAY;
             //tk.setVolume(tk.getV0());
-            tk.setConcentration(tk.getC0());
-            tk.setV1max(tk.getV1max() * tk.getVmax());
+            tk.Concentration = tk.C0;
+            tk.V1Max = tk.V1Max * tk.Vmax;
         }
 
 
-        pMap.setClimit(pMap.getClimit() / fMap.getUnits(FieldsMap.Type.QUALITY));
-        pMap.setCtol(pMap.getCtol() / fMap.getUnits(FieldsMap.Type.QUALITY));
+        pMap.Climit = pMap.Climit / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
+        pMap.Ctol = pMap.Ctol / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
 
-        pMap.setKbulk(pMap.getKbulk() / Constants.SECperDAY);
-        pMap.setKwall(pMap.getKwall() / Constants.SECperDAY);
+        pMap.Kbulk = pMap.Kbulk / Constants.SECperDAY;
+        pMap.Kwall = pMap.Kwall / Constants.SECperDAY;
 
 
-        foreach (Link lk  in  net.getLinks()) {
+        foreach (Link lk  in  net.Links) {
 
-            if (lk.getType() <= Link.LinkType.PIPE) {
-                if (pMap.getFormflag() == PropertiesMap.FormType.DW)
-                    lk.setRoughness(lk.getRoughness() / (1000.0 * fMap.getUnits(FieldsMap.Type.ELEV)));
-                lk.setDiameter(lk.getDiameter() / fMap.getUnits(FieldsMap.Type.DIAM));
-                lk.setLenght(lk.getLenght() / fMap.getUnits(FieldsMap.Type.LENGTH));
+            if (lk.Type <= Link.LinkType.PIPE) {
+                if (pMap.Formflag == PropertiesMap.FormType.DW)
+                    lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldsMap.FieldType.ELEV));
+                lk.Diameter = lk.Diameter / fMap.GetUnits(FieldsMap.FieldType.DIAM);
+                lk.Lenght = lk.Lenght / fMap.GetUnits(FieldsMap.FieldType.LENGTH);
 
-                lk.setKm(0.02517 * lk.getKm() / Math.Pow(lk.getDiameter(), 2) / Math.Pow(lk.getDiameter(), 2));
+                lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
 
-                lk.setKb(lk.getKb() / Constants.SECperDAY);
-                lk.setKw(lk.getKw() / Constants.SECperDAY);
+                lk.Kb = lk.Kb / Constants.SECperDAY;
+                lk.Kw = lk.Kw / Constants.SECperDAY;
             } else if (lk is Pump) {
                 Pump pump = (Pump) lk;
 
-                if (pump.getPtype() == Pump.Type.CONST_HP) {
-                    if (pMap.getUnitsflag() == PropertiesMap.UnitsType.SI)
-                        pump.setFlowCoefficient(pump.getFlowCoefficient() / fMap.getUnits(FieldsMap.Type.POWER));
+                if (pump.Ptype == Pump.PumpType.CONST_HP) {
+                    if (pMap.Unitsflag == PropertiesMap.UnitsType.SI)
+                        pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldsMap.FieldType.POWER);
                 } else {
-                    if (pump.getPtype() == Pump.Type.POWER_FUNC) {
-                        pump.setH0(pump.getH0() / fMap.getUnits(FieldsMap.Type.HEAD));
-                        pump.setFlowCoefficient(pump.getFlowCoefficient()*
-                                                (Math.Pow(fMap.getUnits(FieldsMap.Type.FLOW), pump.getN()))/
-                                                fMap.getUnits(FieldsMap.Type.HEAD));
+                    if (pump.Ptype == Pump.PumpType.POWER_FUNC) {
+                        pump.H0 = pump.H0 / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                        pump.FlowCoefficient = pump.FlowCoefficient*
+                                               (Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pump.N))/
+                                               fMap.GetUnits(FieldsMap.FieldType.HEAD);
                     }
 
-                    pump.setQ0(pump.getQ0() / fMap.getUnits(FieldsMap.Type.FLOW));
-                    pump.setQmax(pump.getQmax() / fMap.getUnits(FieldsMap.Type.FLOW));
-                    pump.setHmax(pump.getHmax() / fMap.getUnits(FieldsMap.Type.HEAD));
+                    pump.Q0 = pump.Q0 / fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                    pump.Qmax = pump.Qmax / fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                    pump.Hmax = pump.Hmax / fMap.GetUnits(FieldsMap.FieldType.HEAD);
                 }
             } else {
-                lk.setDiameter(lk.getDiameter() / fMap.getUnits(FieldsMap.Type.DIAM));
-                lk.setKm(0.02517 * lk.getKm() / Math.Pow(lk.getDiameter(), 2) / Math.Pow(lk.getDiameter(), 2));
-                if (lk.getRoughness() != Constants.MISSING)
-                    switch (lk.getType()) {
+                lk.Diameter = lk.Diameter / fMap.GetUnits(FieldsMap.FieldType.DIAM);
+                lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
+                if (lk.Roughness != Constants.MISSING)
+                    switch (lk.Type) {
                         case Link.LinkType.FCV:
-                            lk.setRoughness(lk.getRoughness() / fMap.getUnits(FieldsMap.Type.FLOW));
+                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldsMap.FieldType.FLOW);
                             break;
                         case Link.LinkType.PRV:
                         case Link.LinkType.PSV:
                         case Link.LinkType.PBV:
-                            lk.setRoughness(lk.getRoughness() / fMap.getUnits(FieldsMap.Type.PRESSURE));
+                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                             break;
                     }
             }
 
-            lk.initResistance(net.getPropertiesMap().getFormflag(),net.getPropertiesMap().getHexp());
+            lk.initResistance(net.PropertiesMap.Formflag,net.PropertiesMap.Hexp);
         }
 
-        foreach (Control c_i  in  net.getControls()) {
+        foreach (Control c_i  in  net.Controls) {
 
 
-            if (c_i.getLink() == null) continue;
-            if (c_i.getNode() != null) {
-                Node node = c_i.getNode();
+            if (c_i.Link == null) continue;
+            if (c_i.Node != null) {
+                Node node = c_i.Node;
                 if (node is Tank)
-                    c_i.setGrade(node.getElevation() +
-                            c_i.getGrade() / fMap.getUnits(FieldsMap.Type.ELEV));
+                    c_i.Grade = node.Elevation +
+                                c_i.Grade / fMap.GetUnits(FieldsMap.FieldType.ELEV);
                 else
-                    c_i.setGrade(node.getElevation() + c_i.getGrade() / fMap.getUnits(FieldsMap.Type.PRESSURE));
+                    c_i.Grade = node.Elevation + c_i.Grade / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
             }
 
-            if (c_i.getSetting() != Constants.MISSING)
-                switch (c_i.getLink().getType()) {
+            if (c_i.Setting != Constants.MISSING)
+                switch (c_i.Link.Type) {
                     case Link.LinkType.PRV:
                     case Link.LinkType.PSV:
                     case Link.LinkType.PBV:
-                        c_i.setSetting(c_i.getSetting() / fMap.getUnits(FieldsMap.Type.PRESSURE));
+                        c_i.Setting = c_i.Setting / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                         break;
                     case Link.LinkType.FCV:
-                        c_i.setSetting(c_i.getSetting() / fMap.getUnits(FieldsMap.Type.FLOW));
+                        c_i.Setting = c_i.Setting / fMap.GetUnits(FieldsMap.FieldType.FLOW);
                         break;
                 }
         }
@@ -424,73 +404,73 @@ public abstract class InputParser {
      * @param net Hydraulic network reference.
      * @throws ENException
      */
-    private void initPumps(Network net) {
+    private void InitPumps(Network net) {
         double h0 = 0.0, h1 = 0.0, h2 = 0.0, q1 = 0.0, q2 = 0.0;
 
-        foreach (Pump pump  in  net.getPumps()) {
+        foreach (Pump pump  in  net.Pumps) {
             // Constant Hp pump
-            if (pump.getPtype() == Pump.Type.CONST_HP) {
-                pump.setH0(0.0);
-                pump.setFlowCoefficient(-8.814 * pump.getKm());
-                pump.setN(-1.0);
-                pump.setHmax(Constants.BIG);
-                pump.setQmax(Constants.BIG);
-                pump.setQ0(1.0);
+            if (pump.Ptype == Pump.PumpType.CONST_HP) {
+                pump.H0 = 0.0;
+                pump.FlowCoefficient = -8.814 * pump.Km;
+                pump.N = -1.0;
+                pump.Hmax = Constants.BIG;
+                pump.Qmax = Constants.BIG;
+                pump.Q0 = 1.0;
                 continue;
             }
 
             // Set parameters for pump curves
-            else if (pump.getPtype() == Pump.Type.NOCURVE) {
-                Curve curve = pump.getHcurve();
+            else if (pump.Ptype == Pump.PumpType.NOCURVE) {
+                Curve curve = pump.Hcurve;
                 if (curve == null) {
-                    throw new ENException(ErrorCode.Err226, pump.getId());
+                    throw new ENException(ErrorCode.Err226, pump.Id);
                 }
-                int n = curve.getNpts();
+                int n = curve.Npts;
                 if (n == 1) {
-                    pump.setPtype(Pump.Type.POWER_FUNC);
-                    q1 = curve.getX()[0];
-                    h1 = curve.getY()[0];
+                    pump.Ptype = Pump.PumpType.POWER_FUNC;
+                    q1 = curve.X[0];
+                    h1 = curve.Y[0];
                     h0 = 1.33334 * h1;
                     q2 = 2.0 * q1;
                     h2 = 0.0;
-                } else if (n == 3 && curve.getX()[0] == 0.0) {
-                    pump.setPtype(Pump.Type.POWER_FUNC);
-                    h0 = curve.getY()[0];
-                    q1 = curve.getX()[1];
-                    h1 = curve.getY()[1];
-                    q2 = curve.getX()[2];
-                    h2 = curve.getY()[2];
+                } else if (n == 3 && curve.X[0] == 0.0) {
+                    pump.Ptype = Pump.PumpType.POWER_FUNC;
+                    h0 = curve.Y[0];
+                    q1 = curve.X[1];
+                    h1 = curve.Y[1];
+                    q2 = curve.X[2];
+                    h2 = curve.Y[2];
                 } else
-                    pump.setPtype(Pump.Type.CUSTOM);
+                    pump.Ptype = Pump.PumpType.CUSTOM;
 
                 // Compute shape factors & limits of power function pump curves
-                if (pump.getPtype() == Pump.Type.POWER_FUNC) {
+                if (pump.Ptype == Pump.PumpType.POWER_FUNC) {
                     double a, b, c;
-                    if (!Utilities.getPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                        throw new ENException(ErrorCode.Err227, pump.getId());
+                    if (!Utilities.GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
+                        throw new ENException(ErrorCode.Err227, pump.Id);
 
 
-                    pump.setH0(-a);
-                    pump.setFlowCoefficient(-b);
-                    pump.setN(c);
-                    pump.setQ0(q1);
-                    pump.setQmax(Math.Pow(-a / b, (1.0 / c)));
-                    pump.setHmax(h0);
+                    pump.H0 = -a;
+                    pump.FlowCoefficient = -b;
+                    pump.N = c;
+                    pump.Q0 = q1;
+                    pump.Qmax = Math.Pow(-a / b, (1.0 / c));
+                    pump.Hmax = h0;
                 }
             }
 
             // Assign limits to custom pump curves
-            if (pump.getPtype() == Pump.Type.CUSTOM) {
-                Curve curve = pump.getHcurve();
-                for (int m = 1; m < curve.getNpts(); m++) {
-                    if (curve.getY()[m] >= curve.getY()[m - 1]) // Check for invalid curve
+            if (pump.Ptype == Pump.PumpType.CUSTOM) {
+                Curve curve = pump.Hcurve;
+                for (int m = 1; m < curve.Npts; m++) {
+                    if (curve.Y[m] >= curve.Y[m - 1]) // Check for invalid curve
                     {
-                        throw new ENException(ErrorCode.Err227, pump.getId());
+                        throw new ENException(ErrorCode.Err227, pump.Id);
                     }
                 }
-                pump.setQmax(curve.getX()[curve.getNpts() - 1]);
-                pump.setQ0((curve.getX()[0] + pump.getQmax()) / 2.0);
-                pump.setHmax(curve.getY()[0]);
+                pump.Qmax = curve.X[curve.Npts - 1];
+                pump.Q0 = (curve.X[0] + pump.Qmax) / 2.0;
+                pump.Hmax = curve.Y[0];
             }
         }
 
@@ -501,10 +481,10 @@ public abstract class InputParser {
      * @param net Hydraulic network reference.
      * @throws ENException
      */
-    private void initPatterns(Network net) {
-        foreach (Pattern par  in  net.getPatterns()) {
-            if (par.getFactorsList().Count == 0) {
-                par.getFactorsList().Add(1.0);
+    private void InitPatterns(Network net) {
+        foreach (Pattern par  in  net.Patterns) {
+            if (par.FactorsList.Count == 0) {
+                par.FactorsList.Add(1.0);
             }
         }
     }
@@ -515,23 +495,22 @@ public abstract class InputParser {
      * @param net Hydraulic network reference.
      * @throws ENException
      */
-    private void checkUnlinked(Network net) {
-        int[] marked = new int[net.getNodes().Length + 1];
-        List<Link> links = new List<Link>(net.getLinks());
-        List<Node> nodes = new List<Node>(net.getNodes());
+    private void CheckUnlinked(Network net) {
+        int[] marked = new int[net.Nodes.Count + 1];
+        var nodes = net.Nodes;
 
         int err = 0;
 
-        foreach (Link link  in  links) {
-            marked[nodes.IndexOf(link.getFirst())]++;
-            marked[nodes.IndexOf(link.getSecond())]++;
+        foreach(Link link in net.Links) {
+            marked[nodes.IndexOf(link.FirstNode)]++;
+            marked[nodes.IndexOf(link.SecondNode)]++;
         }
 
         int i = 0;
-        foreach (Node node  in  nodes) {
+        foreach(Node node in nodes) {
             if (marked[i] == 0) {
                 err++;
-                log.Error(new ENException(ErrorCode.Err233, node.getId()));
+                this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
             }
 
             if (err >= Constants.MAXERRS)

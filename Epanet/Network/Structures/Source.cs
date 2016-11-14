@@ -19,8 +19,9 @@ namespace org.addition.epanet.network.structures {
 
     ///<summary>Water quality object, source quality.</summary>
     public class Source {
+
         ///<summary>Source type</summary>
-        public enum Type {
+        public enum SourceType {
             ///<summary>Inflow concentration.</summary>
             CONCEN = 0,
 
@@ -35,37 +36,13 @@ namespace org.addition.epanet.network.structures {
         }
 
         ///<summary>Base concentration.</summary>
-        private double C0;
+        public double C0 { get; set; }
 
         ///<summary>Time pattern reference.</summary>
-        private Pattern pattern;
+        public Pattern Pattern { get; set; }
 
         ///<summary>Source type.</summary>
-        private Type type;
-
-        public double getC0() {
-            return C0;
-        }
-
-        public Pattern getPattern() {
-            return pattern;
-        }
-
-        public Type getType() {
-            return type;
-        }
-
-        public void setC0(double c0) {
-            C0 = c0;
-        }
-
-
-        public void setPattern(Pattern pattern) {
-            this.pattern = pattern;
-        }
-
-        public void setType(Type type) {
-            this.type = type;
-        }
+        public SourceType Type { get; set; }
     }
+
 }

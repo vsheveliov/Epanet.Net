@@ -16,12 +16,11 @@
  */
 
 using System;
-using System.Resources;
 
 namespace org.addition.epanet.util {
 
     ///<summary>Epanet exception codes handler.</summary>
-    public class ENException:System.Exception {
+    public class ENException:Exception {
 
         ///<summary>Array of arguments to be used in the error string creation.</summary>
         private readonly object[] arguments;
@@ -29,72 +28,60 @@ namespace org.addition.epanet.util {
         ///<summary>Epanet error code.</summary>
         private readonly ErrorCode codeID;
 
-        /**
-     * Get error code.
-     * @return Code id.
-     */
+        ///<summary>Get error code.</summary>
+        /// <returns>Code id.</returns>
         public ErrorCode getCodeID() { return codeID; }
 
-        /**
-     * Contructor from error code id.
-     * @param id Error code id.
-     */
+        ///<summary>Contructor from error code id.</summary>
+        ///<param name="id">Error code id.</param>
 
         public ENException(ErrorCode id) {
             arguments = null;
             codeID = id;
         }
 
-        /**
-     * Contructor from error code id and multiple arguments.
-     * @param id Error code id.
-     * @param arg Extra arguments.
-     */
-
+        /// <summary>Contructor from error code id and multiple arguments.</summary>
+        ///  <param name="id">Error code id.</param>
+        /// <param name="arg">Extra arguments.</param>
+        ///  
         public ENException(ErrorCode id, params object[] arg) {
             codeID = id;
             arguments = arg;
         }
 
-        /**
-     * Contructor from other exception and multiple arguments.
-     * @param e
-     * @param arg
-     */
-
+        ///<summary>Contructor from other exception and multiple arguments.</summary>
         public ENException(ENException e, params object[] arg) {
             arguments = arg;
             codeID = e.getCodeID();
         }
 
         ///<summary>Get arguments array.</summary>
-        public object[] getArguments() { return arguments; }
+        public object[] Arguments { get { return this.arguments; } }
 
-        /**
-     * Handles the exception string conversion.
-     * @return Final error string.
-     */
+        ///<summary>Handles the exception string conversion.</summary>
+        /// <returns>Final error string.</returns>
+        public override string Message {
+            get {
+                string str;
+                string name = "ERR" + (int)this.codeID;
 
-        public override string ToString() {
-            string str;
-            string name = "ERR" + (int)this.codeID;
+                try {
+                    str = Epanet.Properties.Error.ResourceManager.GetString(name);
+                }
+                catch (Exception) {
+                    str = null;
+                }
 
-            try {
-                str = Epanet.Properties.Error.ResourceManager.GetString(name);
+
+                if (str == null)
+                    return string.Format("Unknown error message ({0})", codeID);
+
+                if (arguments != null)
+                    return string.Format(str, arguments);
+
+                return str;
             }
-            catch (Exception) {
-                str = null;
-            }
-        
-
-        if(str==null)
-            return string.Format("Unknown error message ({0})",codeID);
-
-        if(arguments!=null)
-            return string.Format(str,arguments);
-
-        return str;
+        }
     }
 
-}
 }

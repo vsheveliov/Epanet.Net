@@ -37,7 +37,7 @@ public class Newton {
         Indx	= new int[n+1];
         F   	= new double[n+1];
         W		= new double[n+1];
-        J       = Utilities.createMatrix(n+1, n+1);
+        J       = Utilities.CreateMatrix(n+1, n+1);
         Nmax = n;
     }
 
@@ -109,16 +109,16 @@ public class Newton {
         {
             // evaluate the Jacobian matrix
 
-            Utilities.jacobian(x, n, F, W, J, jint,op);
+            Utilities.Jacobian(x, n, F, W, J, jint,op);
 
             // factorize the Jacobian
 
-            if ( Utilities.factorize(J, n, W, Indx) ==0 ) return -1;
+            if ( Utilities.Factorize(J, n, W, Indx) ==0 ) return -1;
 
             // solve for the updates to x (returned in F)
 
             for (i=1; i<=n; i++) F[i] = -F[i];
-            Utilities.solve(J, n, Indx, F);
+            Utilities.Solve(J, n, Indx, F);
 
             // update solution x & check for convergence
 

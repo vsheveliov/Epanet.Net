@@ -114,7 +114,7 @@ namespace EpaTool {
             int resrvCount = 0;
             int tanksCount = 0;
 
-            foreach (var tank in this.Net.getTanks()) {
+            foreach (var tank in this.Net.Tanks) {
                 if (tank.IsReservoir)
                     resrvCount++;
                 else
@@ -123,18 +123,18 @@ namespace EpaTool {
 
             this.textReservoirs.Text = resrvCount.ToString(CultureInfo.CurrentCulture);
             this.textTanks.Text = tanksCount.ToString(CultureInfo.CurrentCulture);
-            this.textPipes.Text = this.Net.getLinks().Length.ToString(CultureInfo.CurrentCulture);
-            this.textNodes.Text = this.Net.getNodes().Length.ToString(CultureInfo.CurrentCulture);
+            this.textPipes.Text = this.Net.Links.Count.ToString(CultureInfo.CurrentCulture);
+            this.textNodes.Text = this.Net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
 
             try {
-                var pMap = this.Net.getPropertiesMap();
-                this.textDuration.Text = pMap.getDuration().getClockTime();
-                this.textUnits.Text = pMap.getUnitsflag().ToString();
-                this.textHeadloss.Text = pMap.getFormflag().ToString();
-                this.textQuality.Text = pMap.getQualflag().ToString();
-                this.textDemand.Text = pMap.getDmult().ToString(CultureInfo.CurrentCulture);
-                this.textHydraulic.Text = pMap.getHstep().getClockTime();
-                this.textPattern.Text = pMap.getPstep().getClockTime();
+                var pMap = this.Net.PropertiesMap;
+                this.textDuration.Text = pMap.Duration.GetClockTime();
+                this.textUnits.Text = pMap.Unitsflag.ToString();
+                this.textHeadloss.Text = pMap.Formflag.ToString();
+                this.textQuality.Text = pMap.Qualflag.ToString();
+                this.textDemand.Text = pMap.Dmult.ToString(CultureInfo.CurrentCulture);
+                this.textHydraulic.Text = pMap.Hstep.GetClockTime();
+                this.textPattern.Text = pMap.Pstep.GetClockTime();
             }
             catch (ENException) { }
 
@@ -237,7 +237,7 @@ namespace EpaTool {
             fileName = Path.ChangeExtension(fileName, extension);
 
             try {
-                compose.composer(this.networkPanel.Net, fileName);
+                compose.Composer(this.networkPanel.Net, fileName);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -298,11 +298,11 @@ namespace EpaTool {
                     break;
                 
                 case ".xml":
-                    inpParser = new XMLParser(this._log, false);
+                    inpParser = new XmlParser(this._log, false);
                     break;
 
                 case ".gz":
-                    inpParser = new XMLParser(this._log, true);
+                    inpParser = new XmlParser(this._log, true);
                     break;
                 case ".inp":
                     inpParser = new InpParser(this._log);
@@ -319,7 +319,7 @@ namespace EpaTool {
             var epanetNetwork = new Network();
 
             try {
-                inpParser.parse(epanetNetwork, this._inpFile);
+                inpParser.Parse(epanetNetwork, this._inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(

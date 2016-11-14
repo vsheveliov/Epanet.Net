@@ -19,58 +19,55 @@ using System.IO;
 
 namespace org.addition.epanet.msx {
 
-public class MsxReader {
-    private readonly long nodeBytesPerPeriod;
-    private readonly long linkBytesPerPeriod;
-    private readonly long resultsOffset;
-    private readonly int nNodes;
-    private readonly int nLinks;
+    public class MsxReader {
+        private readonly long nodeBytesPerPeriod;
+        private readonly long linkBytesPerPeriod;
+        private readonly long resultsOffset;
+        private readonly int nNodes;
+        private readonly int nLinks;
 
-    BinaryReader ouputRaf;
+        BinaryReader ouputRaf;
 
-    public MsxReader(int nodes, int links, int species, long resultsOffset) {
-        this.nLinks = links;
-        this.nNodes = nodes;
-        this.resultsOffset = resultsOffset;
-        nodeBytesPerPeriod = nNodes * species * 4;
-        linkBytesPerPeriod = nLinks * species * 4;
+        public MsxReader(int nodes, int links, int species, long resultsOffset) {
+            this.nLinks = links;
+            this.nNodes = nodes;
+            this.resultsOffset = resultsOffset;
+            nodeBytesPerPeriod = nNodes * species * 4;
+            linkBytesPerPeriod = nLinks * species * 4;
+        }
+
+        public void Open(string output) { ouputRaf = new BinaryReader(File.OpenRead(output)); }
+
+        public void Close() { ouputRaf.Close(); }
+
+        public float GetNodeQual(int period, int node, int specie) {
+            float c = 0.0f;
+            long bp = resultsOffset + period * (nodeBytesPerPeriod + linkBytesPerPeriod);
+            bp += ((specie - 1) * nNodes + (node - 1)) * 4;
+
+            try {
+                ouputRaf.BaseStream.Position = bp;
+                c = ouputRaf.ReadSingle();
+            }
+            catch (IOException) {}
+
+            return c;
+        }
+
+        /// <summary>Retrieves a result for a specific link from the MSX binary output file.</summary>
+        public float GetLinkQual(int period, int node, int specie) {
+            float c = 0.0f;
+            long bp = resultsOffset + ((period + 1) * nodeBytesPerPeriod) + (period * linkBytesPerPeriod);
+            bp += ((specie - 1) * nLinks + (node - 1)) * 4;
+
+            try {
+                ouputRaf.BaseStream.Position = bp;
+                c = ouputRaf.ReadSingle();
+            }
+            catch (IOException) {}
+
+            return c;
+        }
     }
 
-    public void open(string output) {
-        ouputRaf = new BinaryReader(File.OpenRead(output));
-
-    }
-
-    public void close() {
-        ouputRaf.Close();
-    }
-    public float getNodeQual(int period, int node, int specie)
-    {
-        float c=0.0f;
-        long bp = resultsOffset + period * (nodeBytesPerPeriod + linkBytesPerPeriod);
-        bp += ((specie-1)*nNodes + (node-1)) * 4;
-
-        try {
-            ouputRaf.BaseStream.Position = bp;
-            c = ouputRaf.ReadSingle();
-        } catch (IOException) {}
-
-        return c;
-    }
-
-    // retrieves a result for a specific link from the MSX binary output file.
-    public float getLinkQual(int period, int node, int specie)
-    {
-        float c=0.0f;
-        long bp = resultsOffset + ((period+1)* nodeBytesPerPeriod) + (period* linkBytesPerPeriod);
-        bp += ((specie-1)*nLinks + (node-1)) * 4;
-
-        try {
-            ouputRaf.BaseStream.Position = bp;
-            c = ouputRaf.ReadSingle();
-        } catch (IOException) {}
-
-        return c;
-    }
-}
 }

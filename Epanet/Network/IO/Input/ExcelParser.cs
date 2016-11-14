@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using Epanet;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using org.addition.epanet.util;
@@ -33,14 +32,14 @@ public class ExcelParser : InpParser {
 
 
     public ExcelParser(TraceSource logger):base(logger) {
-        log = logger;
+        this.Log = logger;
     }
 
-    private string convertCell(ICell cell, Network.SectType section) {
+    private string ConvertCell(ICell cell, Network.SectType section) {
         switch (cell.CellType) {
         case CellType.Numeric:
-            return this.timeStyles.Contains(cell.CellStyle)
-                ? ((long)Math.Round(cell.NumericCellValue * 86400)).getClockTime()
+            return this._timeStyles.Contains(cell.CellStyle)
+                ? ((long)Math.Round(cell.NumericCellValue * 86400)).GetClockTime()
                 : cell.NumericCellValue.ToString(CultureInfo.InvariantCulture);
 
         case CellType.String:
@@ -56,9 +55,9 @@ public class ExcelParser : InpParser {
         }
     }
 
-    readonly List<ICellStyle> timeStyles = new List<ICellStyle>();
+    readonly List<ICellStyle> _timeStyles = new List<ICellStyle>();
 
-    private void findTimeStyle(XSSFWorkbook workbook) {
+    private void FindTimeStyle(XSSFWorkbook workbook) {
         short[] validTimeFormats =
         {
             0x12, // "h:mm AM/PM"
@@ -78,14 +77,14 @@ public class ExcelParser : InpParser {
 
             //if(org.apache.poi.ss.usermodel.DateUtil.isInternalDateFormat(style.getDataFormat()))
             if (Array.IndexOf(validTimeFormats, style.DataFormat, 0) != -1)
-                timeStyles.Add(style);
+                this._timeStyles.Add(style);
             else if (style.GetDataFormatString().ToLower().Contains("[h]:mm") ||
                         style.GetDataFormatString().ToLower().Contains("[hh]:mm"))
-                timeStyles.Add(style);
+                this._timeStyles.Add(style);
         }
     }
 
-    public override Network parse(Network net, string f) {
+    public override Network Parse(Network net, string f) {
         this.FileName = Path.GetFullPath(f);
 
         FileStream stream = null;
@@ -93,7 +92,7 @@ public class ExcelParser : InpParser {
             stream = File.OpenRead(f);
             IWorkbook workbook = new XSSFWorkbook(stream);
 
-            findTimeStyle((XSSFWorkbook)workbook);
+            this.FindTimeStyle((XSSFWorkbook)workbook);
 
             Regex tagPattern = new Regex("\\[.*\\]");
         
@@ -105,7 +104,8 @@ public class ExcelParser : InpParser {
             List<ISheet> sheetTanks = new List<ISheet>();
 
             for (int i = 0; i < workbook.NumberOfSheets; i++) {
-                ISheet sh = (ISheet)workbook.GetSheetAt(i);
+                ISheet sh = workbook.GetSheetAt(i);
+
                 if (sh.SheetName.Equals("Patterns", StringComparison.OrdinalIgnoreCase) ||
                     sh.SheetName.Equals("Curves", StringComparison.OrdinalIgnoreCase)) {
                     sheetPC.Add(sh);
@@ -119,10 +119,10 @@ public class ExcelParser : InpParser {
                     sheetOthers.Add(sh);
 
             }
-            errSum = parseWorksheet(net, sheetPC, tagPattern, errSum); // parse the patterns and curves
-            errSum = parseWorksheet(net, sheetNodes, tagPattern, errSum); // parse the nodes
-            errSum = parseWorksheet(net, sheetTanks, tagPattern, errSum); // parse the nodes
-            errSum = parseWorksheet(net, sheetOthers, tagPattern, errSum); // parse other elements
+            errSum = this.ParseWorksheet(net, sheetPC, tagPattern, errSum); // parse the patterns and curves
+            errSum = this.ParseWorksheet(net, sheetNodes, tagPattern, errSum); // parse the nodes
+            errSum = this.ParseWorksheet(net, sheetTanks, tagPattern, errSum); // parse the nodes
+            errSum = this.ParseWorksheet(net, sheetOthers, tagPattern, errSum); // parse other elements
 
             if (errSum != 0)
                 throw new ENException(ErrorCode.Err200);
@@ -137,20 +137,20 @@ public class ExcelParser : InpParser {
             }
         }
 
-        adjust(net);
-        net.getFieldsMap().prepare(net.getPropertiesMap().getUnitsflag(),
-                net.getPropertiesMap().getFlowflag(),
-                net.getPropertiesMap().getPressflag(),
-                net.getPropertiesMap().getQualflag(),
-                net.getPropertiesMap().getChemUnits(),
-                net.getPropertiesMap().getSpGrav(),
-                net.getPropertiesMap().getHstep());
+        AdjustData(net);
+        net.FieldsMap.Prepare(net.PropertiesMap.Unitsflag,
+                net.PropertiesMap.Flowflag,
+                net.PropertiesMap.Pressflag,
+                net.PropertiesMap.Qualflag,
+                net.PropertiesMap.ChemUnits,
+                net.PropertiesMap.SpGrav,
+                net.PropertiesMap.Hstep);
 
-        convert(net);
+        this.Convert(net);
         return net;
     }
 
-    private int parseWorksheet(Network net, List<ISheet> sheets, Regex tagPattern, int errSum) {
+    private int ParseWorksheet(Network net, List<ISheet> sheets, Regex tagPattern, int errSum) {
         foreach (ISheet sheet  in  sheets) {
 
             bool lastRowNull = true;
@@ -169,7 +169,7 @@ public class ExcelParser : InpParser {
                     for (int cellCount = 0, tCellId = 0; cellCount < row.PhysicalNumberOfCells; tCellId++) {
                         ICell cell = row.GetCell(tCellId);
                         if (cell != null) {
-                            string value = convertCell(cell, lastType);
+                            string value = this.ConvertCell(cell, lastType);
                             if (value.StartsWith(";")) {
                                 comments += value;
                             } else
@@ -192,7 +192,7 @@ public class ExcelParser : InpParser {
                                 //System.out.println("Formating Header : " + tokens.toArray(new string[tokens.size()]));
                             } else {
                                 try {
-                                    parseSect(net, lastType, comments, tokArray);
+                                    this.ParseSect(net, lastType, comments, tokArray);
                                 } catch (ENException e) {
                                     string line = "";
                                     foreach (string tk  in  tokArray)
@@ -218,86 +218,86 @@ public class ExcelParser : InpParser {
         return errSum;
     }
 
-    private void parseSect(Network net, Network.SectType type, string comments, string[] tokens) {
+    private void ParseSect(Network net, Network.SectType type, string comments, string[] tokens) {
         switch (type) {
 
             case Network.SectType.TITLE:
                 break;
             case Network.SectType.JUNCTIONS:
-                parseJunction(net, tokens, comments);
+                this.ParseJunction(net, tokens, comments);
                 break;
             case Network.SectType.RESERVOIRS:
             case Network.SectType.TANKS:
-                parseTank(net, tokens, comments);
+                this.ParseTank(net, tokens, comments);
                 break;
             case Network.SectType.PIPES:
-                parsePipe(net, tokens, comments);
+                this.ParsePipe(net, tokens, comments);
                 break;
             case Network.SectType.PUMPS:
-                parsePump(net, tokens, comments);
+                this.ParsePump(net, tokens, comments);
                 break;
             case Network.SectType.VALVES:
-                parseValve(net, tokens, comments);
+                this.ParseValve(net, tokens, comments);
                 break;
             case Network.SectType.CONTROLS:
-                parseControl(net, tokens);
+                this.ParseControl(net, tokens);
                 break;
             case Network.SectType.RULES: {
                 string line = "";
                 foreach (string t  in  tokens)
                     line += t;
-                parseRule(net, tokens, line);
+                this.ParseRule(net, tokens, line);
                 break;
             }
             case Network.SectType.DEMANDS:
-                parseDemand(net, tokens);
+                this.ParseDemand(net, tokens);
                 break;
             case Network.SectType.SOURCES:
-                parseSource(net, tokens);
+                this.ParseSource(net, tokens);
                 break;
             case Network.SectType.EMITTERS:
-                parseEmitter(net, tokens);
+                this.ParseEmitter(net, tokens);
                 break;
             case Network.SectType.PATTERNS:
-                parsePattern(net, tokens);
+                this.ParsePattern(net, tokens);
                 break;
             case Network.SectType.CURVES:
-                parseCurve(net, tokens);
+                this.ParseCurve(net, tokens);
                 break;
             case Network.SectType.QUALITY:
-                parseQuality(net, tokens);
+                this.ParseQuality(net, tokens);
                 break;
             case Network.SectType.STATUS:
-                parseStatus(net, tokens);
+                this.ParseStatus(net, tokens);
                 break;
             case Network.SectType.ROUGHNESS:
                 break;
             case Network.SectType.ENERGY:
-                parseEnergy(net, tokens);
+                this.ParseEnergy(net, tokens);
                 break;
             case Network.SectType.REACTIONS:
-                parseReact(net, tokens);
+                this.ParseReact(net, tokens);
                 break;
             case Network.SectType.MIXING:
-                parseMixing(net, tokens);
+                this.ParseMixing(net, tokens);
                 break;
             case Network.SectType.REPORT:
-                parseReport(net, tokens);
+                this.ParseReport(net, tokens);
                 break;
             case Network.SectType.TIMES:
-                parseTime(net, tokens);
+                this.ParseTime(net, tokens);
                 break;
             case Network.SectType.OPTIONS:
-                parseOption(net, tokens);
+                this.ParseOption(net, tokens);
                 break;
             case Network.SectType.COORDINATES:
-                parseCoordinate(net, tokens);
+                this.ParseCoordinate(net, tokens);
                 break;
             case Network.SectType.VERTICES:
-                parseVertice(net, tokens);
+                this.ParseVertice(net, tokens);
                 break;
             case Network.SectType.LABELS:
-                parseLabel(net, tokens);
+                this.ParseLabel(net, tokens);
                 break;
             case Network.SectType.BACKDROP:
                 break;

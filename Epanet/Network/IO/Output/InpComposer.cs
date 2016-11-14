@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using org.addition.epanet.network.structures;
 using org.addition.epanet.util;
@@ -44,778 +45,776 @@ public class InpComposer : OutputComposer{
     private const string REACTIONS_SUBTITLE  = ";Type\tPipe/Tank";
     private const string COORDINATES_SUBTITLE = ";Node\tX-Coord\tY-Coord";
 
-    TextWriter buffer;
+    TextWriter _buffer;
 
-    public InpComposer() {
-    }
-
-    public override void composer(Network net, string fileName) {
+    public override void Composer(Network net, string fileName) {
         try {
-            buffer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default); // "ISO-8859-1"
-            composeHeader(net);
-            composeJunctions(net);
-            composeReservoirs(net);
-            composeTanks(net);
-            composePipes(net);
-            composePumps(net);
-            composeValves(net);
-            composeDemands(net);
-            composeEmitters(net);
-            composeStatus(net);
-            composePatterns(net);
-            composeCurves(net);
-            composeControls(net);
-            composeQuality(net);
-            composeSource(net);
-            composeMixing(net);
-            composeReaction(net);
-            composeEnergy(net);
-            composeTimes(net);
-            composeOptions(net);
-            composeExtraOptions(net);
-            composeReport(net);
-            composeLabels(net);
-            composeCoordinates(net);
-            composeVertices(net);
-            composeRules(net);
+            this._buffer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default); // "ISO-8859-1"
+            this.ComposeHeader(net);
+            this.ComposeJunctions(net);
+            this.ComposeReservoirs(net);
+            this.ComposeTanks(net);
+            this.ComposePipes(net);
+            this.ComposePumps(net);
+            this.ComposeValves(net);
+            this.ComposeDemands(net);
+            this.ComposeEmitters(net);
+            this.ComposeStatus(net);
+            this.ComposePatterns(net);
+            this.ComposeCurves(net);
+            this.ComposeControls(net);
+            this.ComposeQuality(net);
+            this.ComposeSource(net);
+            this.ComposeMixing(net);
+            this.ComposeReaction(net);
+            this.ComposeEnergy(net);
+            this.ComposeTimes(net);
+            this.ComposeOptions(net);
+            this.ComposeExtraOptions(net);
+            this.ComposeReport(net);
+            this.ComposeLabels(net);
+            this.ComposeCoordinates(net);
+            this.ComposeVertices(net);
+            this.ComposeRules(net);
 
-            buffer.WriteLine(Network.SectType.END.parseStr());
-            buffer.Close();
+            this._buffer.WriteLine(Network.SectType.END.parseStr());
+            this._buffer.Close();
         }
-        catch (IOException e){return;}
+        catch (IOException){}
     }
 
-    public void composeHeader(Network net) {
-        if(net.getTitleText().Count == 0)
+    private void ComposeHeader(Network net) {
+        if(net.TitleText.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.TITLE.parseStr());
+        this._buffer.WriteLine(Network.SectType.TITLE.parseStr());
         
-        foreach (string str  in  net.getTitleText()){
-            buffer.WriteLine(str);
+        foreach (string str  in  net.TitleText){
+            this._buffer.WriteLine(str);
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
 
-    private void composeJunctions(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        PropertiesMap pMap = net.getPropertiesMap();
-
-        if(net.getJunctions().Length==0)
+    private void ComposeJunctions(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        PropertiesMap pMap = net.PropertiesMap;
+        
+        if(!net.Junctions.Any())
             return;
 
+        this._buffer.WriteLine(Network.SectType.JUNCTIONS.parseStr());
+        this._buffer.WriteLine(JUNCS_SUBTITLE);
 
-        buffer.WriteLine(Network.SectType.JUNCTIONS.parseStr());
-        buffer.WriteLine(JUNCS_SUBTITLE);
-
-        foreach (Node node  in  net.getJunctions()){
-            buffer.Write(" {0}\t{1}",node.getId(),fMap.revertUnit(FieldsMap.Type.ELEV, node.getElevation()));
+        foreach(Node node in net.Junctions) {
+            this._buffer.Write(" {0}\t{1}",node.Id,fMap.RevertUnit(FieldsMap.FieldType.ELEV, node.Elevation));
 
             //if(node.getDemand()!=null && node.getDemand().size()>0 && !node.getDemand()[0].getPattern().getId().equals(""))
             //    buffer.write("\t"+node.getDemand()[0].getPattern().getId());
 
-            if(node.getDemand().Count>0){
-                Demand d = node.getDemand()[0];
-                buffer.Write("\t{0}",fMap.revertUnit(FieldsMap.Type.DEMAND, d.getBase()));
+            if(node.Demand.Count>0){
+                Demand d = node.Demand[0];
+                this._buffer.Write("\t{0}",fMap.RevertUnit(FieldsMap.FieldType.DEMAND, d.Base));
 
-                if (!string.IsNullOrEmpty(d.getPattern().getId()) && !pMap.getDefPatId().Equals(d.getPattern().getId(), StringComparison.OrdinalIgnoreCase))
-                    buffer.Write("\t" + d.getPattern().getId());
+                if (!string.IsNullOrEmpty(d.Pattern.Id) && !pMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
+                    this._buffer.Write("\t" + d.Pattern.Id);
             }
 
-            if(!string.IsNullOrEmpty(node.getComment()))
-                buffer.Write("\t;"+node.getComment());
+            if(!string.IsNullOrEmpty(node.Comment))
+                this._buffer.Write("\t;"+node.Comment);
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
 
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeReservoirs(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        if(net.getTanks().Length==0)
+    private void ComposeReservoirs(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        if(!net.Tanks.Any())
             return;
 
         List<Tank> reservoirs = new List<Tank>();
-        foreach (Tank tank  in  net.getTanks())
-            if(tank.getArea() == 0)
+        foreach(Tank tank in net.Tanks)
+            if (tank.IsReservoir)
                 reservoirs.Add(tank);
 
         if(reservoirs.Count==0)
             return;
 
-        buffer.WriteLine(Network.SectType.RESERVOIRS.parseStr());
-        buffer.WriteLine(RESERVOIRS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.RESERVOIRS.parseStr());
+        this._buffer.WriteLine(RESERVOIRS_SUBTITLE);
 
         foreach (Tank r  in  reservoirs){
-            buffer.Write(" {0}\t{1}",r.getId(),fMap.revertUnit(FieldsMap.Type.ELEV, r.getElevation()));
+            this._buffer.Write(" {0}\t{1}",r.Id,fMap.RevertUnit(FieldsMap.FieldType.ELEV, r.Elevation));
 
 
-            if (r.getPattern()!=null)
-                buffer.Write("\t{0}",r.getPattern().getId());
+            if (r.Pattern!=null)
+                this._buffer.Write("\t{0}",r.Pattern.Id);
 
 
-            if(!string.IsNullOrEmpty(r.getComment()))
-                buffer.Write("\t;"+r.getComment());
+            if(!string.IsNullOrEmpty(r.Comment))
+                this._buffer.Write("\t;"+r.Comment);
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeTanks(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
+    private void ComposeTanks(Network net) {
+        FieldsMap fMap = net.FieldsMap;
 
         List<Tank> tanks = new List<Tank>();
-        foreach (Tank tank  in  net.getTanks())
-            if(tank.getArea()!= 0)
+        foreach (Tank tank  in  net.Tanks)
+            if(!tank.IsReservoir)
                 tanks.Add(tank);
 
         if(tanks.Count ==0)
             return;
 
-        buffer.WriteLine(Network.SectType.TANKS.parseStr());
-        buffer.WriteLine(TANK_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.TANKS.parseStr());
+        this._buffer.WriteLine(TANK_SUBTITLE);
 
         foreach (Tank tank  in  tanks){
-            double Vmin = tank.getVmin();
-            if(Math.Round(Vmin/tank.getArea()) == Math.Round(tank.getHmin()-tank.getElevation()))
-                Vmin = 0;
+            double vmin = tank.Vmin;
+            if(Math.Round(vmin/tank.Area) == Math.Round(tank.Hmin-tank.Elevation))
+                vmin = 0;
 
-            buffer.Write(" {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
-                    tank.getId(),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getH0() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getHmin() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getHmax() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, 2*Math.Sqrt(tank.getArea() / Constants.PI)),
-                    fMap.revertUnit(FieldsMap.Type.VOLUME, Vmin));
+            this._buffer.Write(" {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
+                    tank.Id,
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.H0 - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmin - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmax - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, 2*Math.Sqrt(tank.Area / Math.PI)),
+                    fMap.RevertUnit(FieldsMap.FieldType.VOLUME, vmin));
 
-            if(tank.getVcurve()!=null)
-                buffer.Write(" "+tank.getVcurve().getId());
+            if(tank.Vcurve!=null)
+                this._buffer.Write(" "+tank.Vcurve.Id);
 
-            if(!string.IsNullOrEmpty(tank.getComment()))
-                buffer.Write("\t;"+tank.getComment());
-            buffer.WriteLine();
+            if(!string.IsNullOrEmpty(tank.Comment))
+                this._buffer.Write("\t;"+tank.Comment);
+            this._buffer.WriteLine();
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composePipes(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposePipes(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        PropertiesMap pMap = net.PropertiesMap;
 
-        if(net.getLinks().Length ==0)
+        if(net.Links.Count ==0)
             return;
 
         List<Link> pipes = new List<Link>();
-        foreach (Link link  in  net.getLinks())
-            if(link.getType() == Link.LinkType.PIPE || link.getType() == Link.LinkType.CV)
+        foreach (Link link  in  net.Links)
+            if(link.Type == Link.LinkType.PIPE || link.Type == Link.LinkType.CV)
                 pipes.Add(link);
 
 
-        buffer.WriteLine(Network.SectType.PIPES.parseStr());
-        buffer.WriteLine(PIPES_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.PIPES.parseStr());
+        this._buffer.WriteLine(PIPES_SUBTITLE);
 
         foreach (Link link  in  pipes){
-            double d = link.getDiameter();
-            double kc = link.getRoughness();
-            if (pMap.getFormflag() == PropertiesMap.FormType.DW)
-                kc = fMap.revertUnit(FieldsMap.Type.ELEV, kc*1000.0);
+            double d = link.Diameter;
+            double kc = link.Roughness;
+            if (pMap.Formflag == PropertiesMap.FormType.DW)
+                kc = fMap.RevertUnit(FieldsMap.FieldType.ELEV, kc*1000.0);
 
-            double km = link.getKm()*Math.Pow(d,4.0)/0.02517;
+            double km = link.Km*Math.Pow(d,4.0)/0.02517;
 
-            buffer.Write(" {0}\t{1}\t{2}\t{3}\t{4}",
-                    link.getId(),
-                    link.getFirst().getId(),
-                    link.getSecond().getId(),
-                    fMap.revertUnit(FieldsMap.Type.LENGTH, link.getLenght()),
-                    fMap.revertUnit(FieldsMap.Type.DIAM, d));
+            this._buffer.Write(" {0}\t{1}\t{2}\t{3}\t{4}",
+                    link.Id,
+                    link.FirstNode.Id,
+                    link.SecondNode.Id,
+                    fMap.RevertUnit(FieldsMap.FieldType.LENGTH, link.Lenght),
+                    fMap.RevertUnit(FieldsMap.FieldType.DIAM, d));
 
             //if (pMap.getFormflag() == FormType.DW)
-            buffer.Write(" {0}\t{1}", kc, km);
+            this._buffer.Write(" {0}\t{1}", kc, km);
 
-            if (link.getType() == Link.LinkType.CV)
-                buffer.Write(" CV");
-            else if (link.getStat() == Link.StatType.CLOSED)
-                buffer.Write(" CLOSED");
-            else if (link.getStat() == Link.StatType.OPEN)
-                buffer.Write(" OPEN");
+            if (link.Type == Link.LinkType.CV)
+                this._buffer.Write(" CV");
+            else if (link.Status == Link.StatType.CLOSED)
+                this._buffer.Write(" CLOSED");
+            else if (link.Status == Link.StatType.OPEN)
+                this._buffer.Write(" OPEN");
 
-            if(!string.IsNullOrEmpty(link.getComment()))
-                buffer.Write("\t;" + link.getComment());
+            if(!string.IsNullOrEmpty(link.Comment))
+                this._buffer.Write("\t;" + link.Comment);
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composePumps(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        Pump[] pumps = net.getPumps();
-        if(pumps.Length==0)
+    private void ComposePumps(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+
+        if(!net.Pumps.Any())
             return;
 
-        buffer.WriteLine(Network.SectType.PUMPS.parseStr());
-        buffer.WriteLine(PUMPS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.PUMPS.parseStr());
+        this._buffer.WriteLine(PUMPS_SUBTITLE);
 
-        foreach (Pump pump  in  pumps)
+        foreach(Pump pump in net.Pumps)
         {
-            buffer.Write(" {0}\t{1}\t{2}", pump.getId(),
-                    pump.getFirst().getId(), pump.getSecond().getId());
+            this._buffer.Write(" {0}\t{1}\t{2}", pump.Id,
+                    pump.FirstNode.Id, pump.SecondNode.Id);
 
 
             // Pump has constant power
-            if (pump.getPtype() == Pump.Type.CONST_HP)
-                buffer.Write(" POWER " + pump.getKm());
+            if (pump.Ptype == Pump.PumpType.CONST_HP)
+                this._buffer.Write(" POWER " + pump.Km);
                 // Pump has a head curve
-            else if (pump.getHcurve()!=null)
-                buffer.Write(" HEAD " + pump.getHcurve().getId());
+            else if (pump.Hcurve!=null)
+                this._buffer.Write(" HEAD " + pump.Hcurve.Id);
                 // Old format used for pump curve
             else
             {
-                buffer.Write(" {0}\t{1}\t{2}\t0.0\t{3}",
-                        fMap.revertUnit(FieldsMap.Type.HEAD, -pump.getH0()),
-                        fMap.revertUnit(FieldsMap.Type.HEAD, -pump.getH0() - pump.getFlowCoefficient()*Math.Pow(pump.getQ0(),pump.getN())),
-                        fMap.revertUnit(FieldsMap.Type.FLOW, pump.getQ0()),
-                        fMap.revertUnit(FieldsMap.Type.FLOW, pump.getQmax()));
+                this._buffer.Write(" {0}\t{1}\t{2}\t0.0\t{3}",
+                        fMap.RevertUnit(FieldsMap.FieldType.HEAD, -pump.H0),
+                        fMap.RevertUnit(FieldsMap.FieldType.HEAD, -pump.H0 - pump.FlowCoefficient*Math.Pow(pump.Q0,pump.N)),
+                        fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Q0),
+                        fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Qmax));
 
                 continue;
             }
 
-            if ( pump.getUpat()!=null)
-                buffer.Write(" PATTERN " + pump.getUpat().getId());
+            if ( pump.Upat!=null)
+                this._buffer.Write(" PATTERN " + pump.Upat.Id);
 
 
-            if (pump.getRoughness() != 1.0)
-                buffer.Write(" SPEED {0}", pump.getRoughness());
+            if (pump.Roughness != 1.0)
+                this._buffer.Write(" SPEED {0}", pump.Roughness);
 
-            if(!string.IsNullOrEmpty(pump.getComment()))
-                buffer.Write("\t;"+pump.getComment());
+            if(!string.IsNullOrEmpty(pump.Comment))
+                this._buffer.Write("\t;"+pump.Comment);
             
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeValves(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        var valves = net.getValves();
-        if(valves.size()==0)
+    private void ComposeValves(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        if (!net.Valves.Any())
             return;
 
-        buffer.Write(Network.SectType.VALVES.parseStr());
-        buffer.WriteLine();
-        buffer.Write(VALVES_SUBTITLE);
-        buffer.WriteLine();
+        this._buffer.Write(Network.SectType.VALVES.parseStr());
+        this._buffer.WriteLine();
+        this._buffer.Write(VALVES_SUBTITLE);
+        this._buffer.WriteLine();
 
-        foreach (Valve valve  in  valves)
-        {
-            double d = valve.getDiameter();
-            double kc = valve.getRoughness();
+        foreach (Valve valve in net.Valves) {
+            double d = valve.Diameter;
+            double kc = valve.Roughness;
             if (kc == Constants.MISSING)
                 kc = 0.0;
 
-            switch (valve.getType()) {
+            switch (valve.Type) {
             case Link.LinkType.FCV:
-                kc = fMap.revertUnit(FieldsMap.Type.FLOW, kc);
+                kc = fMap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
                 break;
             case Link.LinkType.PRV:
             case Link.LinkType.PSV:
             case Link.LinkType.PBV:
-                kc = fMap.revertUnit(FieldsMap.Type.PRESSURE, kc);
+                kc = fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
                 break;
             }
 
-            double km = valve.getKm()*Math.Pow(d,4)/0.02517;
+            double km = valve.Km * Math.Pow(d, 4) / 0.02517;
 
-            buffer.Write(" {0}\t{1}\t{2}\t{3}\t%5s",
-                    valve.getId(),
-                    valve.getFirst().getId(),
-                    valve.getSecond().getId(),
-                    fMap.revertUnit(FieldsMap.Type.DIAM, d),
-                    valve.getType().ParseStr());
+            this._buffer.Write(
+                " {0}\t{1}\t{2}\t{3}\t{4}",
+                valve.Id,
+                valve.FirstNode.Id,
+                valve.SecondNode.Id,
+                fMap.RevertUnit(FieldsMap.FieldType.DIAM, d),
+                valve.Type.ParseStr());
 
-            if (valve.getType() == Link.LinkType.GPV && valve.getCurve() != null)
-                buffer.Write(" {0}\t{1}", valve.getCurve().getId(), km);
+            if (valve.Type == Link.LinkType.GPV && valve.Curve != null)
+                this._buffer.Write(" {0}\t{1}", valve.Curve.Id, km);
             else
-                buffer.Write(" {0}\t{1}",kc,km);
+                this._buffer.Write(" {0}\t{1}", kc, km);
 
-            if(!string.IsNullOrEmpty(valve.getComment()))
-                buffer.Write("\t;"+valve.getComment());
+            if (!string.IsNullOrEmpty(valve.Comment))
+                this._buffer.Write("\t;" + valve.Comment);
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeDemands(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-
-        if(net.getJunctions().size()==0)
+    private void ComposeDemands(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        if(!net.Junctions.Any())
             return;
 
-        buffer.WriteLine(Network.SectType.DEMANDS.parseStr());
-        buffer.WriteLine(DEMANDS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.DEMANDS.parseStr());
+        this._buffer.WriteLine(DEMANDS_SUBTITLE);
 
-        double ucf = fMap.getUnits(FieldsMap.Type.DEMAND);
+        double ucf = fMap.GetUnits(FieldsMap.FieldType.DEMAND);
 
-        foreach (Node node  in  net.getJunctions()){
-            if (node.getDemand().Count > 1)
-                for(int i = 0;i<node.getDemand().Count;i++){
-                    Demand demand = node.getDemand()[i];
-                    buffer.Write("{0}\t{1}",node.getId(), ucf * demand.getBase());
+        foreach(Node node in net.Junctions) {
+            if (node.Demand.Count > 1)
+                for(int i = 0;i<node.Demand.Count;i++){
+                    Demand demand = node.Demand[i];
+                    this._buffer.Write("{0}\t{1}",node.Id, ucf * demand.Base);
 
-                    if (demand.getPattern() != null)
-                        buffer.Write("\t"+demand.getPattern().getId());
+                    if (demand.Pattern != null)
+                        this._buffer.Write("\t"+demand.Pattern.Id);
 
-                    buffer.WriteLine();
+                    this._buffer.WriteLine();
                 }
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeEmitters(Network net) {
-        if(net.getNodes().size()==0)
+    private void ComposeEmitters(Network net) {
+       
+        if(net.Nodes.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.EMITTERS.parseStr());
-        buffer.WriteLine(EMITTERS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.EMITTERS.parseStr());
+        this._buffer.WriteLine(EMITTERS_SUBTITLE);
         
-        double uflow = net.getFieldsMap().getUnits(FieldsMap.Type.FLOW);
-        double upressure = net.getFieldsMap().getUnits(FieldsMap.Type.PRESSURE);
-        double Qexp = net.getPropertiesMap().getQexp();
+        double uflow = net.FieldsMap.GetUnits(FieldsMap.FieldType.FLOW);
+        double upressure = net.FieldsMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+        double qexp = net.PropertiesMap.Qexp;
 
-        foreach (Node node  in  net.getJunctions()){
-            if(node.getKe()==0.0) continue;
-            double ke = uflow/Math.Pow(upressure * node.getKe(), (1.0 / Qexp));
-            buffer.WriteLine(" {0}\t{1}",node.getId(),ke);
+        foreach (Node node  in  net.Junctions){
+            if(node.Ke==0.0) continue;
+            double ke = uflow/Math.Pow(upressure * node.Ke, (1.0 / qexp));
+            this._buffer.WriteLine(" {0}\t{1}",node.Id,ke);
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeStatus(Network net) {
+    private void ComposeStatus(Network net) {
 
-        if(net.getLinks().size()==0)
+        if(net.Links.Count==0)
             return;
 
-        buffer.WriteLine(Network.SectType.STATUS.parseStr());
-        buffer.WriteLine(STATUS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.STATUS.parseStr());
+        this._buffer.WriteLine(STATUS_SUBTITLE);
 
-        foreach (Link link  in  net.getLinks())
+        foreach (Link link  in  net.Links)
         {
-            if (link.getType() <= Link.LinkType.PUMP)
+            if (link.Type <= Link.LinkType.PUMP)
             {
-                if (link.getStat() == Link.StatType.CLOSED)
-                    buffer.WriteLine(" {0}\t{1}",link.getId(),Link.StatType.CLOSED.ParseStr());
+                if (link.Status == Link.StatType.CLOSED)
+                    this._buffer.WriteLine(" {0}\t{1}",link.Id,Link.StatType.CLOSED.ParseStr());
 
                     // Write pump speed here for pumps with old-style pump curve input
-                else if (link.getType() == Link.LinkType.PUMP){
+                else if (link.Type == Link.LinkType.PUMP){
                     Pump pump = (Pump)link;
-                    if (pump.getHcurve() == null &&
-                            pump.getPtype() != Pump.Type.CONST_HP &&
-                            pump.getRoughness() != 1.0)
-                        buffer.WriteLine(" {0}\t{1}", link.getId(), link.getRoughness());
+                    if (pump.Hcurve == null &&
+                            pump.Ptype != Pump.PumpType.CONST_HP &&
+                            pump.Roughness != 1.0)
+                        this._buffer.WriteLine(" {0}\t{1}", link.Id, link.Roughness);
                 }
             }
             // Write fixed-status PRVs & PSVs (setting = MISSING)
-            else if (link.getRoughness() == Constants.MISSING)
+            else if (link.Roughness == Constants.MISSING)
             {
-                if (link.getStat() == Link.StatType.OPEN)
-                    buffer.WriteLine(" {0}\t{1}",link.getId(),Link.StatType.OPEN.ParseStr());
+                if (link.Status == Link.StatType.OPEN)
+                    this._buffer.WriteLine(" {0}\t{1}",link.Id,Link.StatType.OPEN.ParseStr());
 
-                if (link.getStat() == Link.StatType.CLOSED)
-                    buffer.WriteLine(" {0}\t{1}", link.getId(), Link.StatType.CLOSED.ParseStr());
+                if (link.Status == Link.StatType.CLOSED)
+                    this._buffer.WriteLine(" {0}\t{1}", link.Id, Link.StatType.CLOSED.ParseStr());
 
             }
 
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composePatterns(Network net) {
+    private void ComposePatterns(Network net) {
 
-        var pats = net.getPatterns();
+        var pats = net.Patterns;
 
-        if(pats.size()<=1)
+        if(pats.Count<=1)
             return;
 
-        buffer.WriteLine(Network.SectType.PATTERNS.parseStr());
-        buffer.WriteLine(PATTERNS_SUBTITLE);
-        
-        for(int i = 1;i<pats.size();i++)
-        {
-            Pattern pat = pats[i];
-            List<double> F = pat.getFactorsList();
-            for (int j=0; j<pats[i].getLength(); j++)
-            {
-                if (j % 6 == 0)
-                    buffer.Write(" {0}",pat.getId());
+        this._buffer.WriteLine(Network.SectType.PATTERNS.parseStr());
+        this._buffer.WriteLine(PATTERNS_SUBTITLE);
 
-                buffer.Write(" {0}",F[j]);
+        for (int i = 1; i < pats.Count; i++) {
+            Pattern pat = pats[i];
+            List<double> f = pat.FactorsList;
+            for (int j = 0; j < pats[i].Length; j++) {
+                if (j % 6 == 0)
+                    this._buffer.Write(" {0}", pat.Id);
+
+                this._buffer.Write(" {0}", f[j]);
 
                 if (j % 6 == 5)
-                    buffer.WriteLine();
+                    this._buffer.WriteLine();
             }
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeCurves(Network net) {
+    private void ComposeCurves(Network net) {
 
-        var curves = net.getCurves();
+        var curves = net.Curves;
 
-        if (curves.size() == 0)
+        if (curves.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.CURVES.parseStr());
-        buffer.WriteLine(CURVE_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.CURVES.parseStr());
+        this._buffer.WriteLine(CURVE_SUBTITLE);
 
         foreach (Curve c  in  curves) {
-            for (int i = 0; i < c.getNpts(); i++) {
-                buffer.WriteLine(" {0}\t{1}\t{2}", c.getId(), c.getX()[i], c.getY()[i]);
+            for (int i = 0; i < c.Npts; i++) {
+                this._buffer.WriteLine(" {0}\t{1}\t{2}", c.Id, c.X[i], c.Y[i]);
             }
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeControls(Network net) {
-        var controls = net.getControls();
-        FieldsMap fmap = net.getFieldsMap();
+    private void ComposeControls(Network net) {
+        var controls = net.Controls;
+        FieldsMap fmap = net.FieldsMap;
 
-        if(controls.Length == 0)
+        if(controls.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.CONTROLS.parseStr());
+        this._buffer.WriteLine(Network.SectType.CONTROLS.parseStr());
 
         foreach (Control control  in  controls)
         {
             // Check that controlled link exists
-            if (control.getLink()==null) continue;
+            if (control.Link==null) continue;
 
             // Get text of control's link status/setting
-            if (control.getSetting() == Constants.MISSING)
-                buffer.Write(" LINK {0} {1} ", control.getLink().getId(), control.getStatus().ParseStr());
+            if (control.Setting == Constants.MISSING)
+                this._buffer.Write(" LINK {0} {1} ", control.Link.Id, control.Status.ParseStr());
             else {
-                double kc = control.getSetting();
-                switch (control.getLink().getType()) {
+                double kc = control.Setting;
+                switch (control.Link.Type) {
                 case Link.LinkType.PRV:
                 case Link.LinkType.PSV:
                 case Link.LinkType.PBV:
-                    kc = fmap.revertUnit(FieldsMap.Type.PRESSURE, kc);
+                    kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
                     break;
                 case Link.LinkType.FCV:
-                    kc = fmap.revertUnit(FieldsMap.Type.FLOW, kc);
+                    kc = fmap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
                     break;
                 }
-                buffer.Write(" LINK {0} {1} ", control.getLink().getId(), kc);
+                this._buffer.Write(" LINK {0} {1} ", control.Link.Id, kc);
             }
 
 
-            switch (control.getType()) {
+            switch (control.Type) {
             // Print level control
             case Control.ControlType.LOWLEVEL:
             case Control.ControlType.HILEVEL:
-                double kc = control.getGrade() - control.getNode().getElevation();
-                if (control.getNode() is Tank)
-                    kc = fmap.revertUnit(FieldsMap.Type.HEAD, kc);
+                double kc = control.Grade - control.Node.Elevation;
+                if (control.Node is Tank)
+                    kc = fmap.RevertUnit(FieldsMap.FieldType.HEAD, kc);
                 else
-                    kc = fmap.revertUnit(FieldsMap.Type.PRESSURE, kc);
+                    kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
 
-                buffer.Write(
+                this._buffer.Write(
                     " IF NODE {0} {1} {2}",
-                    control.getNode().getId(),
-                    control.getType().ParseStr(),
+                    control.Node.Id,
+                    control.Type.ParseStr(),
                     kc);
 
                 break;
 
             // Print timer control
             case Control.ControlType.TIMER:
-                buffer.Write(
+                this._buffer.Write(
                     " AT {0} {1} HOURS",
                     Control.ControlType.TIMER.ParseStr(),
-                    control.getTime() / 3600.0f);
+                    control.Time / 3600.0f);
 
                 break;
 
             // Print time-of-day control
             case Control.ControlType.TIMEOFDAY:
-                buffer.Write(
+                this._buffer.Write(
                     " AT {0} {1}",
                     Control.ControlType.TIMEOFDAY.ParseStr(),
-                    Utilities.getClockTime(control.getTime()));
+                    control.Time.GetClockTime());
 
                 break;
             }
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeQuality(Network net) {
-        var nodes = net.getNodes();
-        FieldsMap fmap = net.getFieldsMap();
-        if(nodes.size() == 0)
+    private void ComposeQuality(Network net) {
+        FieldsMap fmap = net.FieldsMap;
+
+        if(net.Nodes.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.QUALITY.parseStr());
-        buffer.WriteLine(QUALITY_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.QUALITY.parseStr());
+        this._buffer.WriteLine(QUALITY_SUBTITLE);
         
-        foreach (Node node  in  nodes)
+        foreach (Node node  in  net.Nodes)
         {
-            if (node.getC0().Length == 1 ){
-                if(node.getC0()[0] == 0.0 ) continue;
-                buffer.Write(" {0}\t{1}", node.getId(), fmap.revertUnit(FieldsMap.Type.QUALITY, node.getC0()[0]));
+            if (node.C0.Length == 1 ){
+                if(node.C0[0] == 0.0 ) continue;
+                this._buffer.Write(" {0}\t{1}", node.Id, fmap.RevertUnit(FieldsMap.FieldType.QUALITY, node.C0[0]));
             }
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeSource(Network net) {
-        var nodes = net.getNodes();
-
-        if(nodes.size() == 0)
+    private void ComposeSource(Network net) {
+        
+        if(net.Nodes.Count == 0)
             return;
 
-        buffer.WriteLine(Network.SectType.SOURCES.parseStr());
-        buffer.WriteLine(SOURCE_SUBTITLE);
-        
+        this._buffer.WriteLine(Network.SectType.SOURCES.parseStr());
+        this._buffer.WriteLine(SOURCE_SUBTITLE);
 
-        foreach (Node node  in  nodes){
-            Source source = node.getSource();
+
+        foreach(Node node in net.Nodes) {
+            Source source = node.Source;
             if (source == null)
                 continue;
             
-            buffer.Write(" {0}\t{1}\t{2}",
-                    node.getId(),
-                    source.getType().ParseStr(),
-                    source.getC0());
+            this._buffer.Write(" {0}\t{1}\t{2}",
+                    node.Id,
+                    source.Type.ParseStr(),
+                    source.C0);
 
-            if (source.getPattern()!=null)
-                buffer.Write(" " + source.getPattern().getId());
+            if (source.Pattern!=null)
+                this._buffer.Write(" " + source.Pattern.Id);
 
-            buffer.WriteLine();
+            this._buffer.WriteLine();
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
 
-    private void composeMixing(Network net) {
-        if(net.getTanks().size()==0)
+    private void ComposeMixing(Network net) {
+
+        if(!net.Tanks.Any())
             return;
 
-        buffer.WriteLine(Network.SectType.MIXING.parseStr());
-        buffer.WriteLine(MIXING_SUBTITLE);
-        
-        foreach (Tank tank  in  net.getTanks())
-        {
-            if (tank.getArea() == 0.0) continue;
-            buffer.WriteLine(" {0}\t{1}\t{2}",
-                    tank.getId(),tank.getMixModel().ParseStr(),
-                    tank.getV1max() / tank.getVmax());
+        this._buffer.WriteLine(Network.SectType.MIXING.parseStr());
+        this._buffer.WriteLine(MIXING_SUBTITLE);
+
+        foreach(Tank tank in net.Tanks) {
+            if (tank.IsReservoir) continue;
+            this._buffer.WriteLine(
+                " {0}\t{1}\t{2}",
+                tank.Id,
+                tank.MixModel.ParseStr(),
+                tank.V1Max / tank.Vmax);
         }
-        buffer.WriteLine();
+
+        this._buffer.WriteLine();
     }
 
-    private void composeReaction(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeReaction(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
 
-        buffer.WriteLine(Network.SectType.REACTIONS.parseStr());
-        buffer.WriteLine(REACTIONS_SUBTITLE);
+        this._buffer.WriteLine(Network.SectType.REACTIONS.parseStr());
+        this._buffer.WriteLine(REACTIONS_SUBTITLE);
 
-        buffer.WriteLine("ORDER BULK {0}", pMap.getBulkOrder());
-        buffer.WriteLine("ORDER WALL {0}", pMap.getWallOrder());
-        buffer.WriteLine("ORDER TANK {0}", pMap.getTankOrder());
-        buffer.WriteLine("GLOBAL BULK {0}", pMap.getKbulk() * Constants.SECperDAY);
-        buffer.WriteLine("GLOBAL WALL {0}", pMap.getKwall() * Constants.SECperDAY);
+        this._buffer.WriteLine("ORDER BULK {0}", pMap.BulkOrder);
+        this._buffer.WriteLine("ORDER WALL {0}", pMap.WallOrder);
+        this._buffer.WriteLine("ORDER TANK {0}", pMap.TankOrder);
+        this._buffer.WriteLine("GLOBAL BULK {0}", pMap.Kbulk * Constants.SECperDAY);
+        this._buffer.WriteLine("GLOBAL WALL {0}", pMap.Kwall * Constants.SECperDAY);
 
         //if (pMap.getClimit() > 0.0)
-        buffer.WriteLine("LIMITING POTENTIAL {0}", pMap.getClimit());
+        this._buffer.WriteLine("LIMITING POTENTIAL {0}", pMap.Climit);
 
         //if (pMap.getRfactor() != Constants.MISSING && pMap.getRfactor() != 0.0)
-        buffer.WriteLine("ROUGHNESS CORRELATION {0}", pMap.getRfactor());
+        this._buffer.WriteLine("ROUGHNESS CORRELATION {0}", pMap.Rfactor);
 
 
-        foreach (Link link  in  net.getLinks()) {
-            if (link.getType() > Link.LinkType.PIPE)
+        foreach (Link link  in  net.Links) {
+            if (link.Type > Link.LinkType.PIPE)
                 continue;
 
-            if (link.getKb() != pMap.getKbulk())
-                buffer.WriteLine("BULK {0} {1}", link.getId(), link.getKb() * Constants.SECperDAY);
-            if (link.getKw() != pMap.getKwall())
-                buffer.WriteLine("WALL {0} {1}", link.getId(), link.getKw() * Constants.SECperDAY);
+            if (link.Kb != pMap.Kbulk)
+                this._buffer.WriteLine("BULK {0} {1}", link.Id, link.Kb * Constants.SECperDAY);
+            if (link.Kw != pMap.Kwall)
+                this._buffer.WriteLine("WALL {0} {1}", link.Id, link.Kw * Constants.SECperDAY);
         }
 
-        foreach (Tank tank  in  net.getTanks()) {
-            if (tank.getArea() == 0.0) continue;
-            if (tank.getKb() != pMap.getKbulk())
-                buffer.WriteLine("TANK {0} {1}", tank.getId(), tank.getKb() * Constants.SECperDAY);
+        foreach (Tank tank  in  net.Tanks) {
+            if (tank.IsReservoir) continue;
+            if (tank.Kb != pMap.Kbulk)
+                this._buffer.WriteLine("TANK {0} {1}", tank.Id, tank.Kb * Constants.SECperDAY);
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeEnergy(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeEnergy(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
 
-        buffer.WriteLine(Network.SectType.ENERGY.parseStr());
+        this._buffer.WriteLine(Network.SectType.ENERGY.parseStr());
 
-        if (pMap.getEcost() != 0.0)
-            buffer.WriteLine("GLOBAL PRICE {0}", pMap.getEcost());
+        if (pMap.Ecost != 0.0)
+            this._buffer.WriteLine("GLOBAL PRICE {0}", pMap.Ecost);
 
-        if (!pMap.getEpatId().Equals(""))
-            buffer.WriteLine("GLOBAL PATTERN {0}",  pMap.getEpatId());
+        if (!pMap.EpatId.Equals(""))
+            this._buffer.WriteLine("GLOBAL PATTERN {0}",  pMap.EpatId);
 
-        buffer.WriteLine("GLOBAL EFFIC {0}", pMap.getEpump());
-        buffer.WriteLine("DEMAND CHARGE {0}", pMap.getDcost());
+        this._buffer.WriteLine("GLOBAL EFFIC {0}", pMap.Epump);
+        this._buffer.WriteLine("DEMAND CHARGE {0}", pMap.Dcost);
 
-        foreach (Pump p  in  net.getPumps())
+        foreach (Pump p  in  net.Pumps)
         {
-            if (p.getEcost() > 0.0)
-                buffer.WriteLine("PUMP {0} PRICE {1}",p.getId(),p.getEcost());
+            if (p.Ecost > 0.0)
+                this._buffer.WriteLine("PUMP {0} PRICE {1}",p.Id,p.Ecost);
 
-            if (p.getEpat() != null)
-                buffer.WriteLine("PUMP {0} PATTERN {1}", p.getId(), p.getEpat().getId());
+            if (p.Epat != null)
+                this._buffer.WriteLine("PUMP {0} PATTERN {1}", p.Id, p.Epat.Id);
 
-            if (p.getEcurve() !=null)
-                buffer.WriteLine("PUMP {0} EFFIC {1}", p.getId(),p.getEcurve().getId());
+            if (p.Ecurve !=null)
+                this._buffer.WriteLine("PUMP {0} EFFIC {1}", p.Id,p.Ecurve.Id);
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
 
     }
 
-    private void composeTimes(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
-        buffer.WriteLine(Network.SectType.TIMES.parseStr());
-        buffer.WriteLine("DURATION {0}", Utilities.getClockTime(pMap.getDuration()));
-        buffer.WriteLine("HYDRAULIC TIMESTEP {0}", Utilities.getClockTime(pMap.getHstep()));
-        buffer.WriteLine("QUALITY TIMESTEP {0}", Utilities.getClockTime(pMap.getQstep()));
-        buffer.WriteLine("REPORT TIMESTEP {0}", Utilities.getClockTime(pMap.getRstep()));
-        buffer.WriteLine("REPORT START {0}", Utilities.getClockTime(pMap.getRstart()));
-        buffer.WriteLine("PATTERN TIMESTEP {0}", Utilities.getClockTime(pMap.getPstep()));
-        buffer.WriteLine("PATTERN START {0}", Utilities.getClockTime(pMap.getPstart()));
-        buffer.WriteLine("RULE TIMESTEP {0}", Utilities.getClockTime(pMap.getRulestep()));
-        buffer.WriteLine("START CLOCKTIME {0}", Utilities.getClockTime(pMap.getTstart()));
-        buffer.WriteLine("STATISTIC {0}", pMap.getTstatflag().ParseStr());
-        buffer.WriteLine();
+    private void ComposeTimes(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
+        this._buffer.WriteLine(Network.SectType.TIMES.parseStr());
+        this._buffer.WriteLine("DURATION {0}", pMap.Duration.GetClockTime());
+        this._buffer.WriteLine("HYDRAULIC TIMESTEP {0}", pMap.Hstep.GetClockTime());
+        this._buffer.WriteLine("QUALITY TIMESTEP {0}", pMap.Qstep.GetClockTime());
+        this._buffer.WriteLine("REPORT TIMESTEP {0}", pMap.Rstep.GetClockTime());
+        this._buffer.WriteLine("REPORT START {0}", pMap.Rstart.GetClockTime());
+        this._buffer.WriteLine("PATTERN TIMESTEP {0}", pMap.Pstep.GetClockTime());
+        this._buffer.WriteLine("PATTERN START {0}", pMap.Pstart.GetClockTime());
+        this._buffer.WriteLine("RULE TIMESTEP {0}", pMap.Rulestep.GetClockTime());
+        this._buffer.WriteLine("START CLOCKTIME {0}", pMap.Tstart.GetClockTime());
+        this._buffer.WriteLine("STATISTIC {0}", pMap.Tstatflag.ParseStr());
+        this._buffer.WriteLine();
     }
 
-    private void composeOptions(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
-        FieldsMap fMap = net.getFieldsMap();
+    private void ComposeOptions(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
+        FieldsMap fMap = net.FieldsMap;
         
-        buffer.WriteLine(Network.SectType.OPTIONS.parseStr());
-        buffer.WriteLine("UNITS               " + pMap.getFlowflag());
-        buffer.WriteLine("PRESSURE            " + pMap.getPressflag());
-        buffer.WriteLine("HEADLOSS            " + pMap.getFormflag());
+        this._buffer.WriteLine(Network.SectType.OPTIONS.parseStr());
+        this._buffer.WriteLine("UNITS               " + pMap.Flowflag);
+        this._buffer.WriteLine("PRESSURE            " + pMap.Pressflag);
+        this._buffer.WriteLine("HEADLOSS            " + pMap.Formflag);
 
-        if (!string.IsNullOrEmpty(pMap.getDefPatId()))
-        buffer.WriteLine("PATTERN             " + pMap.getDefPatId());
+        if (!string.IsNullOrEmpty(pMap.DefPatId))
+        this._buffer.WriteLine("PATTERN             " + pMap.DefPatId);
         
-        if (pMap.getHydflag() == PropertiesMap.Hydtype.USE)
-        buffer.WriteLine("HYDRAULICS USE      " + pMap.getHydFname());
+        if (pMap.Hydflag == PropertiesMap.Hydtype.USE)
+        this._buffer.WriteLine("HYDRAULICS USE      " + pMap.HydFname);
         
-        if (pMap.getHydflag() == PropertiesMap.Hydtype.SAVE)
-        buffer.WriteLine("HYDRAULICS SAVE     " + pMap.getHydFname());
+        if (pMap.Hydflag == PropertiesMap.Hydtype.SAVE)
+        this._buffer.WriteLine("HYDRAULICS SAVE     " + pMap.HydFname);
         
-        if (pMap.getExtraIter() == -1)
-        buffer.WriteLine("UNBALANCED          STOP");
+        if (pMap.ExtraIter == -1)
+        this._buffer.WriteLine("UNBALANCED          STOP");
 
-        if (pMap.getExtraIter() >= 0)
-        buffer.WriteLine("UNBALANCED          CONTINUE " + pMap.getExtraIter());
+        if (pMap.ExtraIter >= 0)
+        this._buffer.WriteLine("UNBALANCED          CONTINUE " + pMap.ExtraIter);
 
-        switch (pMap.getQualflag()) {
+        switch (pMap.Qualflag) {
         case PropertiesMap.QualType.CHEM:
-            this.buffer.WriteLine("QUALITY             {0} {1}", pMap.getChemName(), pMap.getChemUnits());
+            this._buffer.WriteLine("QUALITY             {0} {1}", pMap.ChemName, pMap.ChemUnits);
             break;
         case PropertiesMap.QualType.TRACE:
-            this.buffer.WriteLine("QUALITY             TRACE " + pMap.getTraceNode());
+            this._buffer.WriteLine("QUALITY             TRACE " + pMap.TraceNode);
             break;
         case PropertiesMap.QualType.AGE:
-            this.buffer.WriteLine("QUALITY             AGE");
+            this._buffer.WriteLine("QUALITY             AGE");
             break;
         case PropertiesMap.QualType.NONE:
-            this.buffer.WriteLine("QUALITY             NONE");
+            this._buffer.WriteLine("QUALITY             NONE");
             break;
         }
 
-        buffer.WriteLine("DEMAND MULTIPLIER {0}", pMap.getDmult());
-        buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0/pMap.getQexp());
-        buffer.WriteLine("VISCOSITY         {0}", pMap.getViscos()/Constants.VISCOS);
-        buffer.WriteLine("DIFFUSIVITY       {0}", pMap.getDiffus()/Constants.DIFFUS);
-        buffer.WriteLine("SPECIFIC GRAVITY  {0}", pMap.getSpGrav());
-        buffer.WriteLine("TRIALS            {0}", pMap.getMaxIter());
-        buffer.WriteLine("ACCURACY          {0}", pMap.getHacc());
-        buffer.WriteLine("TOLERANCE         {0}", fMap.revertUnit(FieldsMap.Type.QUALITY, pMap.getCtol()));
-        buffer.WriteLine("CHECKFREQ         {0}", pMap.getCheckFreq());
-        buffer.WriteLine("MAXCHECK          {0}", pMap.getMaxCheck());
-        buffer.WriteLine("DAMPLIMIT         {0}", pMap.getDampLimit());
-        buffer.WriteLine();
+        this._buffer.WriteLine("DEMAND MULTIPLIER {0}", pMap.Dmult);
+        this._buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0/pMap.Qexp);
+        this._buffer.WriteLine("VISCOSITY         {0}", pMap.Viscos/Constants.VISCOS);
+        this._buffer.WriteLine("DIFFUSIVITY       {0}", pMap.Diffus/Constants.DIFFUS);
+        this._buffer.WriteLine("SPECIFIC GRAVITY  {0}", pMap.SpGrav);
+        this._buffer.WriteLine("TRIALS            {0}", pMap.MaxIter);
+        this._buffer.WriteLine("ACCURACY          {0}", pMap.Hacc);
+        this._buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol));
+        this._buffer.WriteLine("CHECKFREQ         {0}", pMap.CheckFreq);
+        this._buffer.WriteLine("MAXCHECK          {0}", pMap.MaxCheck);
+        this._buffer.WriteLine("DAMPLIMIT         {0}", pMap.DampLimit);
+        this._buffer.WriteLine();
     }
 
-    private void composeExtraOptions(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
-        var otherObjsNames = pMap.getObjectsNames(true);
+    private void ComposeExtraOptions(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
+        var otherObjsNames = pMap.GetObjectsNames(true);
 
         if(otherObjsNames.Count==0)
             return;
 
         foreach (string objName  in  otherObjsNames){
             object objVal = pMap[objName];
-            buffer.WriteLine(objName + " " + objVal);
+            this._buffer.WriteLine(objName + " " + objVal);
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
 
     }
 
-    private void composeReport(Network net) {
+    private void ComposeReport(Network net) {
 
-        buffer.WriteLine(Network.SectType.REPORT.parseStr());
+        this._buffer.WriteLine(Network.SectType.REPORT.parseStr());
         
-        PropertiesMap pMap = net.getPropertiesMap();
-        FieldsMap fMap = net.getFieldsMap();
-        buffer.WriteLine("PAGESIZE       {0}",pMap.getPageSize());
-        buffer.WriteLine("STATUS         " + pMap.getStatflag());
-        buffer.WriteLine("SUMMARY        " + (pMap.getSummaryflag() ? Keywords.w_YES:Keywords.w_NO));
-        buffer.WriteLine("ENERGY         " + (pMap.getEnergyflag() ? Keywords.w_YES:Keywords.w_NO));
+        PropertiesMap pMap = net.PropertiesMap;
+        FieldsMap fMap = net.FieldsMap;
+        this._buffer.WriteLine("PAGESIZE       {0}",pMap.PageSize);
+        this._buffer.WriteLine("STATUS         " + pMap.Statflag);
+        this._buffer.WriteLine("SUMMARY        " + (pMap.Summaryflag ? Keywords.w_YES:Keywords.w_NO));
+        this._buffer.WriteLine("ENERGY         " + (pMap.Energyflag ? Keywords.w_YES:Keywords.w_NO));
 
-        switch (pMap.getNodeflag()){
+        switch (pMap.Nodeflag){
             case PropertiesMap.ReportFlag.FALSE:
-                buffer.WriteLine("NODES NONE");
+                this._buffer.WriteLine("NODES NONE");
                 break;
             case PropertiesMap.ReportFlag.TRUE:
-                buffer.WriteLine("NODES ALL");
+                this._buffer.WriteLine("NODES ALL");
                 break;
             case PropertiesMap.ReportFlag.SOME:
             {
                 int j = 0;
-                foreach (Node node  in  net.getNodes()){
-                    if(node.isRptFlag()){
+                foreach (Node node  in  net.Nodes){
+                    if(node.RptFlag){
                         // if (j % 5 == 0) buffer.WriteLine("NODES "); // BUG: Baseform bug
 
                         if (j % 5 == 0) {
-                            this.buffer.WriteLine();
-                            buffer.Write("NODES ");
+                            this._buffer.WriteLine();
+                            this._buffer.Write("NODES ");
                         }
 
-                        buffer.Write("{0} ", node.getId());
+                        this._buffer.Write("{0} ", node.Id);
                         j++;
                     }
                 }
@@ -823,25 +822,25 @@ public class InpComposer : OutputComposer{
             }
         }
 
-        switch (pMap.getLinkflag()){
+        switch (pMap.Linkflag){
             case PropertiesMap.ReportFlag.FALSE:
-                buffer.WriteLine("LINKS NONE");
+                this._buffer.WriteLine("LINKS NONE");
                 break;
             case PropertiesMap.ReportFlag.TRUE:
-                buffer.WriteLine("LINKS ALL");
+                this._buffer.WriteLine("LINKS ALL");
                 break;
             case PropertiesMap.ReportFlag.SOME:
             {
                 int j = 0;
-                foreach (Link link  in  net.getLinks()){
-                    if(link.isRptFlag()){
+                foreach (Link link  in  net.Links){
+                    if(link.RptFlag){
                         // if (j % 5 == 0) buffer.write("LINKS \n"); // BUG: Baseform bug
                         if (j % 5 == 0) {
-                            this.buffer.WriteLine();
-                            buffer.Write("LINKS ");
+                            this._buffer.WriteLine();
+                            this._buffer.Write("LINKS ");
                         }
 
-                        buffer.Write("{0} ", link.getId());
+                        this._buffer.Write("{0} ", link.Id);
                         j++;
                     }
                 }
@@ -849,85 +848,85 @@ public class InpComposer : OutputComposer{
             }
         }
 
-        for(FieldsMap.Type i = 0;i< FieldsMap.Type.FRICTION;i++) {
-            Field f = fMap.getField(i);
+        for(FieldsMap.FieldType i = 0;i< FieldsMap.FieldType.FRICTION;i++) {
+            Field f = fMap.GetField(i);
 
-            if (!f.isEnabled()) {
-                this.buffer.WriteLine("{0,-19} NO", f.getName());
+            if (!f.Enabled) {
+                this._buffer.WriteLine("{0,-19} NO", f.Name);
                 continue;
             }
 
-            this.buffer.WriteLine("{0,-19} PRECISION {1}", f.getName(), f.getPrecision());
+            this._buffer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
 
-            if (f.getRptLim(Field.RangeType.LOW) < Constants.BIG)
-                this.buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.getName(), f.getRptLim(Field.RangeType.LOW));
+            if (f.GetRptLim(Field.RangeType.LOW) < Constants.BIG)
+                this._buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(Field.RangeType.LOW));
 
-            if (f.getRptLim(Field.RangeType.HI) > -Constants.BIG)
-                this.buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.getName(), f.getRptLim(Field.RangeType.HI));
+            if (f.GetRptLim(Field.RangeType.HI) > -Constants.BIG)
+                this._buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(Field.RangeType.HI));
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeCoordinates(Network net) {
-        buffer.WriteLine(Network.SectType.COORDINATES.parseStr());
-        buffer.WriteLine(COORDINATES_SUBTITLE);
+    private void ComposeCoordinates(Network net) {
+        this._buffer.WriteLine(Network.SectType.COORDINATES.parseStr());
+        this._buffer.WriteLine(COORDINATES_SUBTITLE);
 
-        foreach (Node node  in  net.getNodes()){
-            if(node.getPosition()!=null) {
-                buffer.WriteLine(
+        foreach (Node node  in  net.Nodes){
+            if(!node.Position.IsInvalid) {
+                this._buffer.WriteLine(
                     " {0,-16}\t{1,-12}\t{2,-12}",
-                    node.getId(),
-                    node.getPosition().getX(),
-                    node.getPosition().getY());
+                    node.Id,
+                    node.Position.X,
+                    node.Position.Y);
             }
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
 
-    private void composeLabels(Network net) {
-        buffer.WriteLine(Network.SectType.LABELS.parseStr());
-        buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
+    private void ComposeLabels(Network net) {
+        this._buffer.WriteLine(Network.SectType.LABELS.parseStr());
+        this._buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
 
-        foreach (Label label  in  net.getLabels()) {
-            buffer.WriteLine(
+        foreach (Label label  in  net.Labels) {
+            this._buffer.WriteLine(
                 " {0,-16}\t{1,-16}\t\"{2}\" {3,-16}",
-                label.getPosition().getX(),
-                label.getPosition().getY(),
-                label.getText(),
+                label.Position.X,
+                label.Position.Y,
+                label.Text,
                 // label.AnchorNodeId // TODO: add AnchorNodeId property to label
                 ""
                 );
 
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeVertices(Network net) {
-        buffer.WriteLine(Network.SectType.VERTICES.parseStr());
-        buffer.WriteLine(";Link\tX-Coord\tY-Coord");
+    private void ComposeVertices(Network net) {
+        this._buffer.WriteLine(Network.SectType.VERTICES.parseStr());
+        this._buffer.WriteLine(";Link\tX-Coord\tY-Coord");
 
-        foreach (Link link  in  net.getLinks()){
-            foreach (Point p  in  link.getVertices()){
-                buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}",link.getId(),p.getX(),p.getY());
+        foreach (Link link  in  net.Links){
+            foreach (EnPoint p  in  link.Vertices){
+                this._buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}",link.Id,p.X,p.Y);
             }
         }
 
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 
-    private void composeRules(Network net) {
-        buffer.WriteLine(Network.SectType.RULES.parseStr());
-        buffer.WriteLine();
+    private void ComposeRules(Network net) {
+        this._buffer.WriteLine(Network.SectType.RULES.parseStr());
+        this._buffer.WriteLine();
 
-        foreach (Rule r  in  net.getRules()){
-            buffer.WriteLine("RULE " + r.getLabel());
-            foreach (string s  in  r.getCode().Split('\n'))
-                buffer.WriteLine(s);
-            buffer.WriteLine();
+        foreach (Rule r  in  net.Rules){
+            this._buffer.WriteLine("RULE " + r.Label);
+            foreach (string s  in  r.Code)
+                this._buffer.WriteLine(s);
+            this._buffer.WriteLine();
         }
-        buffer.WriteLine();
+        this._buffer.WriteLine();
     }
 }
 }

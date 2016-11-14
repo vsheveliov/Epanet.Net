@@ -50,15 +50,15 @@ public class SimulationValve : SimulationLink {
         }
 
         // Account for any minor headloss through the valve
-        if (getKm() > 0.0) {
-            p = 2.0 * getKm() * Math.Abs(flow);
-            if (p < pMap.getRQtol())
-                p = pMap.getRQtol();
+        if (Km > 0.0) {
+            p = 2.0 * Km * Math.Abs(flow);
+            if (p < pMap.RQtol)
+                p = pMap.RQtol;
 
             invHeadLoss = 1.0 / p;
             flowCorrection = flow / 2.0;
         } else {
-            invHeadLoss = 1.0 / pMap.getRQtol();
+            invHeadLoss = 1.0 / pMap.RQtol;
             flowCorrection = flow;
         }
     }
@@ -77,13 +77,13 @@ public class SimulationValve : SimulationLink {
         // Account for any minor headloss through the valve
         if (km > 0.0) {
             p = 2.0 * km * Math.Abs(flow);
-            if (p < pMap.getRQtol())
-                p = pMap.getRQtol();
+            if (p < pMap.RQtol)
+                p = pMap.RQtol;
 
             invHeadLoss = 1.0 / p;
             flowCorrection = flow / 2.0;
         } else {
-            invHeadLoss = 1.0 / pMap.getRQtol();
+            invHeadLoss = 1.0 / pMap.RQtol;
             flowCorrection = flow;
         }
     }
@@ -92,7 +92,7 @@ public class SimulationValve : SimulationLink {
     void pbvCoeff(PropertiesMap pMap) {
         if (setting == Constants.MISSING || setting == 0.0)
             valveCoeff(pMap);
-        else if (getKm() * (flow * flow) > setting)
+        else if (Km * (flow * flow) > setting)
             valveCoeff(pMap);
         else {
             invHeadLoss = Constants.CBIG;
@@ -102,23 +102,23 @@ public class SimulationValve : SimulationLink {
 
     // Computes P & Y coeffs. for throttle control valve
     void tcvCoeff(PropertiesMap pMap) {
-        double km = getKm();
+        double km = Km;
 
         if (setting != Constants.MISSING)
-            km = (0.02517 * setting / Math.Pow(getDiameter(), 4));
+            km = (0.02517 * setting / Math.Pow(Diameter, 4));
 
         valveCoeff(pMap, km);
     }
 
     // Computes P & Y coeffs. for general purpose valve
-    void gpvCoeff(FieldsMap fMap, PropertiesMap pMap, Curve[] curves) {
+    void gpvCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
         if (status == Link.StatType.CLOSED)
             valveCoeff(pMap);
         else {
             double q = Math.Max(Math.Abs(flow), Constants.TINY);
             Curve.Coeffs coeffs = curves[(int) Math.Round(setting)].getCoeff(fMap, q);
-            invHeadLoss = 1.0 / Math.Max(coeffs.r, pMap.getRQtol());
-            flowCorrection = invHeadLoss * (coeffs.h0 + coeffs.r * q) * Utilities.getSignal(flow);
+            invHeadLoss = 1.0 / Math.Max(coeffs.r, pMap.RQtol);
+            flowCorrection = invHeadLoss * (coeffs.h0 + coeffs.r * q) * Utilities.GetSignal(flow);
         }
     }
 
@@ -126,8 +126,8 @@ public class SimulationValve : SimulationLink {
     public Link.StatType fcvStatus(PropertiesMap pMap, Link.StatType s) {
         Link.StatType status;
         status = s;
-        if (getFirst().getSimHead() - getSecond().getSimHead() < -pMap.getHtol()) status = Link.StatType.XFCV;
-        else if (flow < -pMap.getQtol()) status = Link.StatType.XFCV;
+        if (First.getSimHead() - Second.getSimHead() < -pMap.Htol) status = Link.StatType.XFCV;
+        else if (flow < -pMap.Qtol) status = Link.StatType.XFCV;
         else if (s == Link.StatType.XFCV && flow >= setting) status = Link.StatType.ACTIVE;
         return (status);
     }
@@ -135,9 +135,9 @@ public class SimulationValve : SimulationLink {
 
     // Computes solution matrix coeffs. for pressure reducing valves
     void prvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
-        int k = getIndex();
-        int i = smat.getRow(first.getIndex());
-        int j = smat.getRow(second.getIndex());
+        int k = Index;
+        int i = smat.getRow(this.first.Index);
+        int j = smat.getRow(this.second.Index);
 
         double hset = second.getElevation() + setting;
 
@@ -164,9 +164,9 @@ public class SimulationValve : SimulationLink {
 
     // Computes solution matrix coeffs. for pressure sustaining valve
     void psvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
-        int k = getIndex();
-        int i = smat.getRow(first.getIndex());
-        int j = smat.getRow(second.getIndex());
+        int k = Index;
+        int i = smat.getRow(this.first.Index);
+        int j = smat.getRow(this.second.Index);
         double hset = first.getElevation() + setting;
 
         if (status == Link.StatType.ACTIVE) {
@@ -188,18 +188,18 @@ public class SimulationValve : SimulationLink {
 
     // computes solution matrix coeffs. for flow control valve
     void fcvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
-        int k = getIndex();
+        int k = Index;
         double q = setting;
-        int i = smat.getRow(first.getIndex());
-        int j = smat.getRow(second.getIndex());
+        int i = smat.getRow(this.first.Index);
+        int j = smat.getRow(this.second.Index);
 
         // If valve active, break network at valve and treat
         // flow setting as external demand at upstream node
         // and external supply at downstream node.
         if (status == Link.StatType.ACTIVE) {
-            ls.addNodalInFlow(first.getIndex(), -q);
+            ls.addNodalInFlow(this.first.Index, -q);
             ls.addRHSCoeff(i, -q);
-            ls.addNodalInFlow(second.getIndex(), +q);
+            ls.addNodalInFlow(this.second.Index, +q);
             ls.addRHSCoeff(j, +q);
             invHeadLoss = 1.0 / Constants.CBIG;
             ls.addAij(smat.getNdx(k), -invHeadLoss);
@@ -223,15 +223,15 @@ public class SimulationValve : SimulationLink {
     // is generated.
     public static bool checkBadValve(PropertiesMap pMap, TraceSource log, List<SimulationValve> valves, long Htime, int n) {
         foreach (SimulationValve link  in  valves) {
-            SimulationNode n1 = link.getFirst();
-            SimulationNode n2 = link.getSecond();
-            if (n == n1.getIndex() || n == n2.getIndex()) {
-                if (link.getType() == Link.LinkType.PRV || link.getType() == Link.LinkType.PSV || link.getType() == Link.LinkType.FCV) {
+            SimulationNode n1 = link.First;
+            SimulationNode n2 = link.Second;
+            if (n == n1.Index || n == n2.Index) {
+                if (link.Type == Link.LinkType.PRV || link.Type == Link.LinkType.PSV || link.Type == Link.LinkType.FCV) {
                     if (link.status == Link.StatType.ACTIVE) {
-                        if (pMap.getStatflag() == PropertiesMap.StatFlag.FULL) {
+                        if (pMap.Statflag == PropertiesMap.StatFlag.FULL) {
                             logBadValve(log, link, Htime);
                         }
-                        if (link.getType() == Link.LinkType.FCV)
+                        if (link.Type == Link.LinkType.FCV)
                             link.status = Link.StatType.XFCV;
                         else
                             link.status = Link.StatType.XPRESSURE;
@@ -246,7 +246,7 @@ public class SimulationValve : SimulationLink {
     }
 
     private static void logBadValve(TraceSource log, SimulationLink link, long Htime) {
-        log.Warning(Utilities.getText("FMT61"), Htime.getClockTime(), link.getLink().getId());
+        log.Warning(Epanet.Properties.Text.ResourceManager.GetString("FMT61"), Htime.GetClockTime(), link.Link.Id);
     }
 
     // Updates status of a pressure reducing valve.
@@ -254,15 +254,15 @@ public class SimulationValve : SimulationLink {
         if (setting == Constants.MISSING)
             return (status);
 
-        double htol = pMap.getHtol();
-        double hml = getKm() * (flow * flow);
+        double htol = pMap.Htol;
+        double hml = Km * (flow * flow);
         double h1 = first.getSimHead();
         double h2 = second.getSimHead();
 
         Link.StatType tStatus = status;
         switch (status) {
             case Link.StatType.ACTIVE:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 else if (h1 - hml < hset - htol)
                     tStatus = Link.StatType.OPEN;
@@ -270,7 +270,7 @@ public class SimulationValve : SimulationLink {
                     tStatus = Link.StatType.ACTIVE;
                 break;
             case Link.StatType.OPEN:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 else if (h2 >= hset + htol)
                     tStatus = Link.StatType.ACTIVE;
@@ -286,7 +286,7 @@ public class SimulationValve : SimulationLink {
                     tStatus = Link.StatType.CLOSED;
                 break;
             case Link.StatType.XPRESSURE:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 break;
         }
@@ -300,12 +300,12 @@ public class SimulationValve : SimulationLink {
 
         double h1 = first.getSimHead();
         double h2 = second.getSimHead();
-        double htol = pMap.getHtol();
-        double hml = getKm() * (flow * flow);
+        double htol = pMap.Htol;
+        double hml = Km * (flow * flow);
         Link.StatType tStatus = status;
         switch (status) {
             case Link.StatType.ACTIVE:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 else if (h2 + hml > hset + htol)
                     tStatus = Link.StatType.OPEN;
@@ -313,7 +313,7 @@ public class SimulationValve : SimulationLink {
                     tStatus = Link.StatType.ACTIVE;
                 break;
             case Link.StatType.OPEN:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 else if (h1 < hset - htol)
                     tStatus = Link.StatType.ACTIVE;
@@ -329,7 +329,7 @@ public class SimulationValve : SimulationLink {
                     tStatus = Link.StatType.CLOSED;
                 break;
             case Link.StatType.XPRESSURE:
-                if (flow < -pMap.getQtol())
+                if (flow < -pMap.Qtol)
                     tStatus = Link.StatType.CLOSED;
                 break;
         }
@@ -337,8 +337,8 @@ public class SimulationValve : SimulationLink {
     }
 
     // Compute P & Y coefficients for PBV,TCV,GPV valves
-    public bool computeValveCoeff(FieldsMap fMap, PropertiesMap pMap, Curve[] curves) {
-        switch (getType()) {
+    public bool computeValveCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
+        switch (Type) {
             case Link.LinkType.PBV:
                 pbvCoeff(pMap);
                 break;
@@ -351,7 +351,7 @@ public class SimulationValve : SimulationLink {
             case Link.LinkType.FCV:
             case Link.LinkType.PRV:
             case Link.LinkType.PSV:
-                if (getSimSetting() == Constants.MISSING)
+                if (this.SimSetting == Constants.MISSING)
                     valveCoeff(pMap);
                 else
                     return false;
@@ -370,7 +370,7 @@ public class SimulationValve : SimulationLink {
 
             Link.StatType s = v.status;
 
-            switch (v.getType()) {
+            switch (v.Type) {
                 case Link.LinkType.PRV: {
                     double hset = v.second.getElevation() + v.setting;
                     v.status = v.prvStatus(pMap, hset);
@@ -387,7 +387,7 @@ public class SimulationValve : SimulationLink {
             }
 
             if (s != v.status) {
-                if (pMap.getStatflag() == PropertiesMap.StatFlag.FULL)
+                if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
                     logStatChange(fMap, log, v, s, v.status);
                 change = true;
             }
@@ -399,10 +399,10 @@ public class SimulationValve : SimulationLink {
     // Computes solution matrix coeffs. for PRVs, PSVs & FCVs whose status is not fixed to OPEN/CLOSED
     public static void computeMatrixCoeffs(PropertiesMap pMap, LSVariables ls, SparseMatrix smat, List<SimulationValve> valves) {
         foreach (SimulationValve valve  in  valves) {
-            if (valve.getSimSetting() == Constants.MISSING)
+            if (valve.SimSetting == Constants.MISSING)
                 continue;
 
-            switch (valve.getType()) {
+            switch (valve.Type) {
                 case Link.LinkType.PRV:
                     valve.prvCoeff(pMap, ls, smat);
                     break;

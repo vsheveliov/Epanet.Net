@@ -20,112 +20,137 @@ using org.addition.epanet.msx.Structures;
 
 namespace org.addition.epanet.msx {
 
-// MSX PROJECT VARIABLES
-public class Network {
-    public string          Title;              // Project title
+    /// <summary>MSX PROJECT VARIABLES</summary>
+    public class Network {
+        ///<summary>Project title</summary>
+        public string Title;
 
-    public int []          Nobjects;           // Numbers of each type of object [MAX_OBJECTS]
-    public EnumTypes.UnitSystemType  Unitsflag;          // Unit system flag
-    public EnumTypes.FlowUnitsType   Flowflag;           // Flow units flag
-    public bool         Rptflag;            // Report results flag
-    public EnumTypes.CouplingType    Coupling;           // Degree of coupling for solving DAE's
-    public EnumTypes.AreaUnitsType   AreaUnits;          // Surface area units
-    public EnumTypes.RateUnitsType   RateUnits;          // Reaction rate time units
-    public EnumTypes.SolverType      Solver;             // Choice of ODE solver
+        ///<summary>Numbers of each type of object [MAX_OBJECTS]</summary>
+        public readonly int[] Nobjects;
+        ///<summary>Unit system flag</summary>
+        public EnumTypes.UnitSystemType Unitsflag;
+        ///<summary>Flow units flag</summary>
+        public EnumTypes.FlowUnitsType Flowflag;
+        ///<summary>Report results flag</summary>
+        public bool Rptflag;
+        ///<summary>Degree of coupling for solving DAE's</summary>
+        public EnumTypes.CouplingType Coupling;
+        ///<summary>Surface area units</summary>
+        public EnumTypes.AreaUnitsType AreaUnits;
+        ///<summary>Reaction rate time units</summary>
+        public EnumTypes.RateUnitsType RateUnits;
+        ///<summary>Choice of ODE solver</summary>
+        public EnumTypes.SolverType Solver;
 
-    public int     PageSize;                   // Lines per page in report
-    public int     Nperiods;                   // Number of reporting periods
-    public int     ErrCode;                    // Error code
+        ///<summary>Lines per page in report</summary>
+        public int PageSize;
+        ///<summary>Number of reporting periods</summary>
+        public int Nperiods;
+        ///<summary>Error code</summary>
+        public int ErrCode;
 
-    public long    Qstep;                      // Quality time step (sec)
-    public long    Pstep;                      // Time pattern time step (sec)
-    public long    Pstart;                     // Starting pattern time (sec)
-    public long    Rstep;                      // Reporting time step (sec)
-    public long    Rstart;                     // Time when reporting starts
-    public long    Rtime;                      // Next reporting time (sec)
-    public long    Htime;                      // Current hydraulic time (sec)
-    public long    Qtime;                      // Current quality time (sec)
+        ///<summary>Quality time step (sec)</summary>
+        public long Qstep;
+        ///<summary>Time pattern time step (sec)</summary>
+        public long Pstep;
+        ///<summary>Starting pattern time (sec)</summary>
+        public long Pstart;
+        ///<summary>Reporting time step (sec)</summary>
+        public long Rstep;
+        ///<summary>Time when reporting starts</summary>
+        public long Rstart;
+        ///<summary>Next reporting time (sec)</summary>
+        public long Rtime;
+        ///<summary>Current hydraulic time (sec)</summary>
+        public long Htime;
+        ///<summary>Current quality time (sec)</summary>
+        public long Qtime;
 
-    public EnumTypes.TstatType   Statflag;               // Reporting statistic flag
-    public long        Dur;                    // Duration of simulation (sec)
+        ///<summary>Reporting statistic flag</summary>
+        public EnumTypes.TstatType Statflag;
+        ///<summary>Duration of simulation (sec)</summary>
+        public long Dur;
 
-    public float []D;                          // Node demands
-    public float []H;                          // Node heads
-    public float []Q;                          // Link flows
+        ///<summary>Node demands</summary>
+        public float[] D;
+        ///<summary>Node heads</summary>
+        public float[] H;
+        ///<summary>Link flows</summary>
+        public float[] Q;
 
-    public double []   Ucf;                    // Unit conversion factors [MAX_UNIT_TYPES]
-    public double []   C0;						// Species initial quality vector
-    public double []   C1;                     // Species concentration vector
+        ///<summary>Unit conversion factors [MAX_UNIT_TYPES]</summary>
+        public readonly double[] Ucf;
+        ///<summary>Species initial quality vector</summary>
+        public double[] C0;
+        ///<summary>Species concentration vector</summary>
+        public double[] C1;
 
-    public double      DefRtol;                // Default relative error tolerance
-    public double      DefAtol;                // Default absolute error tolerance
+        ///<summary>Default relative error tolerance</summary>
+        public double DefRtol;
+        ///<summary>Default absolute error tolerance</summary>
+        public double DefAtol;
 
-    public LinkedList<Pipe>[] Segments;              // First WQ segment in each pipe/tank
+        ///<summary>First WQ segment in each pipe/tank</summary>
+        public LinkedList<Pipe>[] Segments;
+        ///<summary>WQ species data</summary>
+        public Species[] Species;
+        ///<summary>Expression parameters</summary>
+        public Param[] Param;
+        ///<summary>Expression constants</summary>
+        public Const[] Const;
+        ///<summary>Intermediate terms</summary>
+        public Term[] Term;
+        ///<summary>Node data</summary>
+        public Node[] Node;
+        ///<summary>Link data</summary>
+        public Link[] Link;
+        ///<summary>Tank data</summary>
+        public Tank[] Tank;
+        ///<summary>Pattern data</summary>
+        public Pattern[] Pattern;
 
-    public Species []Species;                  // WQ species data
-    public Param   []Param;                    // Expression parameters
-    public Const   []Const;                    // Expression constants
-    public Term    []Term;                     // Intermediate terms
-    public Node    []Node;                     // Node data
-    public Link    []Link;                     // Link data
-    public Tank    []Tank;                     // Tank data
-    public Pattern []Pattern;                  // Pattern data
+        public string RptFilename;
 
-    public string rptFilename;
 
-    public Network(){
-        Nobjects = new int[(int) EnumTypes.ObjectTypes.MAX_OBJECTS];
-        Ucf = new double[(int) EnumTypes.UnitsType.MAX_UNIT_TYPES];
 
+        public Network() {
+            this.Nobjects = new int[(int)EnumTypes.ObjectTypes.MAX_OBJECTS];
+            this.Ucf = new double[(int)EnumTypes.UnitsType.MAX_UNIT_TYPES];
+
+        }
+
+        /// <summary>Assigns default values to project variables.</summary>
+        public void SetDefaults() {
+            this.Title = "";
+            this.Rptflag = false;
+            
+            for (int i = 0; i < (int)EnumTypes.ObjectTypes.MAX_OBJECTS; i++)
+                this.Nobjects[i] = 0;
+
+            this.Unitsflag = EnumTypes.UnitSystemType.US;
+            this.Flowflag = EnumTypes.FlowUnitsType.GPM;
+            this.Statflag = EnumTypes.TstatType.SERIES;
+            this.DefRtol = 0.001;
+            this.DefAtol = 0.01;
+            this.Solver = EnumTypes.SolverType.EUL;
+            this.Coupling = EnumTypes.CouplingType.NO_COUPLING;
+            this.AreaUnits = EnumTypes.AreaUnitsType.FT2;
+            this.RateUnits = EnumTypes.RateUnitsType.DAYS;
+            this.Qstep = 300;
+            this.Rstep = 3600;
+            this.Rstart = 0;
+            this.Dur = 0;
+            this.Node = null;
+            this.Link = null;
+            this.Tank = null;
+            this.D = null;
+            this.Q = null;
+            this.H = null;
+            this.Species = null;
+            this.Term = null;
+            this.Const = null;
+            this.Pattern = null;
+        }
     }
-
-    public Species[] getSpecies() {
-        return Species;
-    }
-
-    public Node [] getNodes(){
-        return Node;
-    }
-
-    public Link [] getLinks(){
-        return Link;
-    }
-
-    public int getNperiods() {
-        return Nperiods;
-    }
-
-    public long getQstep() {
-        return Qstep;
-    }
-
-    public long getQtime() {
-        return Qtime;
-    }
-
-    public long getDuration() {
-        return Dur;
-    }
-
-    public void setQstep(long qstep) {
-        Qstep = qstep;
-    }
-
-    public void setDur(long dur) {
-        Dur = dur;
-    }
-
-    public void setRstep(long rstep) {
-        this.Rstep = rstep;
-    }
-
-    public long getRstart() {
-        return Rstart;
-    }
-
-    public void setRstart(long rstart) {
-        Rstart = rstart;
-    }
-}
 
 }

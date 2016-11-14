@@ -15,340 +15,198 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System;
+
 using System.Collections.Generic;
+using System.Linq;
 using org.addition.epanet.network.structures;
 
 namespace org.addition.epanet.network {
 
 
-///<summary>Hydraulic network structure.</summary>
-public class Network {
+    ///<summary>Hydraulic network structure.</summary>
+    public class Network {
 
-    ///<summary>Available files types.</summary>
-    public enum FileType {
-        EXCEL_FILE,
-        INP_FILE,
-        NULL_FILE,
-        XML_FILE,
-        XML_GZ_FILE,
-    }
+        ///<summary>Available files types.</summary>
+        public enum FileType {
+            EXCEL_FILE,
+            INP_FILE,
+            NULL_FILE,
+            XML_FILE,
+            XML_GZ_FILE,
+        }
 
-    ///<summary>Available section types.</summary>
-    public enum SectType {
-        TITLE = 0,
-        JUNCTIONS = 1,
-        RESERVOIRS = 2,
-        TANKS = 3,
-        PIPES = 4,
-        PUMPS = 5,
-        VALVES = 6,
-        CONTROLS = 7,
-        RULES = 8,
-        DEMANDS = 9,
-        SOURCES = 10,
-        EMITTERS = 11,
-        PATTERNS = 12,
-        CURVES = 13,
-        QUALITY = 14,
-        STATUS = 15,
-        ROUGHNESS = 16,
-        ENERGY = 17,
-        REACTIONS = 18,
-        MIXING = 19,
-        REPORT = 20,
-        TIMES = 21,
-        OPTIONS = 22,
-        COORDINATES = 23,
-        VERTICES = 24,
-        LABELS = 25,
-        BACKDROP = 26,
-        TAGS = 27,
-        END = 28,
-    }
+        ///<summary>Available section types.</summary>
+        public enum SectType {
+            TITLE = 0,
+            JUNCTIONS = 1,
+            RESERVOIRS = 2,
+            TANKS = 3,
+            PIPES = 4,
+            PUMPS = 5,
+            VALVES = 6,
+            CONTROLS = 7,
+            RULES = 8,
+            DEMANDS = 9,
+            SOURCES = 10,
+            EMITTERS = 11,
+            PATTERNS = 12,
+            CURVES = 13,
+            QUALITY = 14,
+            STATUS = 15,
+            ROUGHNESS = 16,
+            ENERGY = 17,
+            REACTIONS = 18,
+            MIXING = 19,
+            REPORT = 20,
+            TIMES = 21,
+            OPTIONS = 22,
+            COORDINATES = 23,
+            VERTICES = 24,
+            LABELS = 25,
+            BACKDROP = 26,
+            TAGS = 27,
+            END = 28,
+        }
 
-    private readonly List<Control> controls;
-    private readonly CurveCollection curves;
-    ///<summary>Fields map with report variables properties and conversion units.</summary>
-    [NonSerialized]
-    private FieldsMap fields;
-    ///<summary>Transient colleciton of junctions.</summary>
-    [NonSerialized]
-    private List<Node> junctions;
-    private readonly List<Label> labels;
-    private readonly LinkCollection links;
-    private readonly NodeCollection nodes;
-    private readonly PatternCollection patterns;
-
-    ///<summary>Properties Map with simulation configuration properties.</summary>
-    private readonly PropertiesMap properties;
-
-    ///<summary>Transient colleciton of pumps.</summary>
-    [NonSerialized]
-    private List<Pump> pumps;
-
-    private RuleCollection rules;
-    ///<summary>Transient collection of tanks(and reservoirs)</summary>
-    [NonSerialized]
-    private List<Tank> tanks;
-    private readonly List<string> titleText;
-    ///<summary>Transient colleciton of valves.</summary>
-    [NonSerialized]
-    private List<Valve> valves;
-
-
-    public Network() {
-        titleText = new List<string>();
-        patterns = new PatternCollection();
-        nodes = new NodeCollection();
-        links = new LinkCollection();
-
-        curves = new CurveCollection();
-        controls = new List<Control>();
-        labels = new List<Label>();
-        rules = new RuleCollection();
-
-        tanks = null;
-        pumps = null;
-        valves = null;
-
-        fields = new FieldsMap();
-
-        properties = new PropertiesMap();
-
-        addPattern("", new Pattern());
-    }
-
-    public void addControl(Control ctr) {
-        controls.Add(ctr);
-    }
-
-
-    public void addCurve(string id, Curve cur) {
-        cur.setId(id);
-        curves.Add(cur);
-    }
-
-    public void addJunction(string id, Node junc) {
-        junc.setId(id);
-        nodes.Add(junc);
-    }
-
-    public void addPattern(string id, Pattern pat) {
-        pat.setId(id);
-        patterns.Add(pat);
-    }
-
-    public void addPipe(string id, Link linkRef) {
-        linkRef.setId(id);
-        links.Add(linkRef);
-    }
-
-    public void addPump(string id, Pump pump) {
-        pump.setId(id);
-        if (pumps == null)
-            pumps = new List<Pump>();
-
-        links.Add(pump);
-        pumps.Add(pump);
+        private readonly List<Control> _controls;
+        private readonly CurveCollection _curves;
         
-    }
+        [System.NonSerialized]
+        private readonly FieldsMap _fields;
+        
+        private readonly List<Label> _labels;
+        private readonly LinkCollection _links;
+        private readonly NodeCollection _nodes;
+        private readonly PatternCollection _patterns;
+        private readonly PropertiesMap _properties;
+        private readonly RuleCollection _rules;
+        private readonly List<string> _titleText;
 
-    public void addRule(Rule r) {
-        rules.Add(r);
-    }
+        public Network() {
+            this._titleText = new List<string>();
+            this._patterns = new PatternCollection();
+            this._nodes = new NodeCollection();
+            this._links = new LinkCollection();
 
+            this._curves = new CurveCollection();
+            this._controls = new List<Control>();
+            this._labels = new List<Label>();
+            this._rules = new RuleCollection();
 
-    public void addTank(string id, Tank tank) {
-        tank.setId(id);
-        if (tanks == null)
-            tanks = new List<Tank>();
-      
-        nodes.Add(tank);
-        tanks.Add(tank);
-    }
+            this._fields = new FieldsMap();
 
-    public void addValve(string id, Valve valve) {
-        valve.setId(id);
-        if (valves == null)
-            valves = new List<Valve>();
+            this._properties = new PropertiesMap();
 
-        links.Add(valve);
-        valves.Add(valve);
+            this._patterns.Add(new Pattern(string.Empty));
+        }
+        
+        public IList<Control> Controls { get { return this._controls; } }
 
-    }
-
-    public Control[] getControls() {
-        return controls.ToArray();
-    }
-
-    public Curve getCurve(string name) {
-        Curve curve;
-        return curves.TryGetValue(name, out curve) ? curve : null;
-    }
-
-    public Curve[] getCurves() {
-        return new List<Curve>(curves).ToArray();
-    }
-
-    public FieldsMap getFieldsMap() {
-        return fields;
-    }
-
-    public Node[] getJunctions() {
-        if (junctions == null) {
-            List<Node> tempJunc = new List<Node>();
-            
-            foreach (Node n  in  nodes) {
-                if (!(n is Tank))
-                    tempJunc.Add(n);
-            }
-
-            if (tempJunc.Count == 0)
-                return new Node[] {};
-            
-            junctions = tempJunc;
+        public Curve GetCurve(string name) {
+            Curve curve;
+            return this._curves.TryGetValue(name, out curve) ? curve : null;
         }
 
-        return junctions.ToArray();
-    }
+        public IList<Curve> Curves { get { return this._curves; } }
 
-    public List<Label> getLabels() {
-        return labels;
-    }
+        ///<summary>Fields map with report variables properties and conversion units.</summary>
+        public FieldsMap FieldsMap { get { return this._fields; } }
 
-    public Link getLink(string name) {
-        Link obj;
-        return this.links.TryGetValue(name, out obj) ? obj : null;
-    }
-
-    public Link[] getLinks() {
-        return new List<Link>(links).ToArray();
-    }
-
-    public Node getNode(string name) {
-        Node obj;
-        return this.nodes.TryGetValue(name, out obj) ? obj : null;
-    }
-
-    public Node[] getNodes() {
-        return new List<Node>(nodes).ToArray();
-    }
-
-    public Pattern getPattern(string name) {
-        Pattern obj;
-        return this.patterns.TryGetValue(name, out obj) ? obj : null;
-    }
-
-    public Pattern[] getPatterns() {
-        return new List<Pattern>(patterns).ToArray();
-    }
-
-    public PropertiesMap getPropertiesMap() {
-        return properties;
-    }
-
-    public Pump[] getPumps() {
-        if (pumps == null) {
-            List<Pump> tempPump = new List<Pump>();
-            foreach (Link l  in  links) {
-                if (l is Pump)
-                    tempPump.Add((Pump) l);
+        ///<summary>Transient colleciton of junctions.</summary>
+        public IEnumerable<Node> Junctions {
+            get {
+                foreach(Node n in this._nodes) {
+                    if(!(n is Tank))
+                        yield return n;
+                }
             }
-
-            if (tempPump.Count == 0)
-                return new Pump[] {};
-            
-            pumps = tempPump;
         }
 
-        return pumps.ToArray();
-    }
+        public IList<Label> Labels { get { return this._labels; } }
 
-    public Rule getRule(string ruleName) {
-        Rule obj;
-        return rules.TryGetValue(ruleName, out obj) ? obj : null;
-
-    }
-
-    public Rule[] getRules() {
-        return new List<Rule>(rules).ToArray();
-    }
-
-    public Tank[] getTanks() {
-        if (tanks == null) {
-            List<Tank> tempTank = new List<Tank>();
-            foreach (Node n  in  nodes) {
-                if (n is Tank)
-                    tempTank.Add((Tank) n);
-            }
-
-            if (tempTank.Count == 0)
-                return new Tank[] {};
-            
-            tanks = tempTank;
+        public Link GetLink(string name) {
+            Link obj;
+            return this._links.TryGetValue(name, out obj) ? obj : null;
         }
 
-        return tanks.ToArray();
-    }
+        public IList<Link> Links { get { return this._links; } }
 
-    public List<string> getTitleText() { return titleText; }
-
-    public Valve[] getValves() {
-        if (valves == null) {
-            List<Valve> tempValve = new List<Valve>();
-            foreach (Link l  in  links) {
-                if (l is Valve)
-                    tempValve.Add((Valve) l);
-            }
-
-            if (tempValve.Count == 0)
-                return new Valve[]{};
-            
-            valves = tempValve;
+        public Node GetNode(string name) {
+            Node obj;
+            return this._nodes.TryGetValue(name, out obj) ? obj : null;
         }
 
-        return valves.ToArray();
+        public IList<Node> Nodes { get { return this._nodes; } }
+
+        public Pattern GetPattern(string name) {
+            Pattern obj;
+            return this._patterns.TryGetValue(name, out obj) ? obj : null;
+        }
+
+        public IList<Pattern> Patterns { get { return this._patterns; } }
+
+        ///<summary>Properties Map with simulation configuration properties.</summary>
+        public PropertiesMap PropertiesMap { get { return this._properties; } }
+
+        ///<summary>Transient colleciton of pumps.</summary>
+        public IEnumerable<Pump> Pumps {
+            get {
+                foreach (Link l in this._links) {
+                    var pump = l as Pump;
+                    if (pump != null)
+                        yield return pump;
+                }
+            }
+        }
+
+        public Rule GetRule(string ruleName) {
+            Rule obj;
+            return this._rules.TryGetValue(ruleName, out obj) ? obj : null;
+
+        }
+
+        public IList<Rule> Rules { get { return this._rules; } }
+
+        ///<summary>Transient collection of tanks(and reservoirs)</summary>
+        public IEnumerable<Tank> Tanks {
+            get {
+                foreach (Node n in this._nodes) {
+                    var tank = n as Tank;
+                    if (tank != null)
+                        yield return tank;
+                }
+            }
+        }
+
+        public List<string> TitleText { get { return this._titleText; } }
+
+        ///<summary>Transient colleciton of valves.</summary>
+        public IEnumerable<Valve> Valves {
+            get {
+                foreach (Link l in this._links) {
+                    var valve = l as Valve;
+                    if (valve != null)
+                        yield return valve;
+                }
+            }
+        }
+
+        public override string ToString() {
+            string res = " Network\n";
+            res += "  Nodes : " + this._nodes.Count + "\n";
+            res += "  Links : " + this._links.Count + "\n";
+            res += "  Pattern : " + this._patterns.Count + "\n";
+            res += "  Curves : " + this._curves.Count + "\n";
+            res += "  Controls : " + this._controls.Count + "\n";
+            res += "  Labels : " + this._labels.Count + "\n";
+            res += "  Rules : " + this._rules.Count + "\n";
+            res += "  Tanks : " + this.Tanks.Count() + "\n";
+            res += "  Pumps : " + this.Pumps.Count() + "\n";
+            res += "  Valves : " + this.Valves.Count() + "\n";
+         
+            return res;
+        }
+
     }
 
-#region serialization
-
-    private object readResolve() {
-        updatedUnitsProperty();
-        return this;
-    }
-
-    public void updatedUnitsProperty() {
-        fields = new FieldsMap();
-        fields.prepare(getPropertiesMap().getUnitsflag(),
-                getPropertiesMap().getFlowflag(),
-                getPropertiesMap().getPressflag(),
-                getPropertiesMap().getQualflag(),
-                getPropertiesMap().getChemUnits(),
-                getPropertiesMap().getSpGrav(),
-                getPropertiesMap().getHstep());
-    }
-
-#endregion
-
-    public override string ToString() {
-        string res = " Network\n";
-        res += "  Nodes : " + nodes.Count + "\n";
-        res += "  Links : " + links.Count + "\n";
-        res += "  Pattern : " + patterns.Count + "\n";
-        res += "  Curves : " + curves.Count + "\n";
-        res += "  Controls : " + controls.Count + "\n";
-        res += "  Labels : " + labels.Count + "\n";
-        res += "  Rules : " + rules.Count + "\n";
-        if (tanks != null) res += "  Tanks : " + tanks.Count + "\n";
-        if (pumps != null) res += "  Pumps : " + pumps.Count + "\n";
-        if (valves != null) res += "  Valves : " + valves.Count + "\n";
-        return res;
-    }
-
-#if COMMENTED
-    public Node getNodeByIndex(int idx) { return nodes[idx]; }
-    public Link getLinkByIndex(int idx) { return links[idx]; }
-#endif
-}
 }

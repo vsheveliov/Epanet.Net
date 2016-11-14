@@ -19,104 +19,43 @@ using org.addition.epanet.network.structures;
 
 namespace org.addition.epanet.quality.structures {
 
-///<summary>Wrapper class for the Node in the water quality simulation.</summary>
-public class QualityNode {
+    ///<summary>Wrapper class for the Node in the water quality simulation.</summary>
+    public class QualityNode {
 
-    ///<summary>Factory method to instantiate the quality node from the hydraulic network node.</summary>
-    public static QualityNode create(Node node) {
-        return node is Tank ? new QualityTank(node) : new QualityNode(node);
+        ///<summary>Factory method to instantiate the quality node from the hydraulic network node.</summary>
+        public static QualityNode Create(Node node) {
+            return node is Tank ? new QualityTank(node) : new QualityNode(node);
+        }
+
+        ///<summary>Hydraulic network node reference.</summary>
+        private readonly Node node;
+
+        ///<summary>Init quality node properties.</summary>
+        protected QualityNode(Node node) {
+            this.node = node;
+            this.Quality = node.C0[0];
+            if (this.node.Source != null)
+                this.MassRate = 0.0;
+        }
+
+        ///<summary>Node demand [Feet^3/Second]</summary>
+        public double Demand { get; set; }
+
+        ///<summary>Total mass inflow to node.</summary>
+        public double MassIn { get; set; }
+
+        public double MassRate { get; set; }
+
+        ///<summary>Get the original hydraulic network node.</summary>
+        public Node Node { get { return this.node; } }
+
+        ///<summary>Species concentration [user units].</summary>
+        public double Quality { get; set; }
+
+        public double SourceContribution { get; set; }
+
+        ///<summary>Total volume inflow to node.</summary>
+        public double VolumeIn { get; set; }
     }
 
-    ///<summary>Node demand [Feet^3/Second]</summary>
-    private double  demand;
-
-    ///<summary>Total mass inflow to node.</summary>
-    private double  massIn;
-
-    /**
-     *
-     */
-    private double  massRate;
-
-    ///<summary>Hydraulic network node reference.</summary>
-    private readonly Node    node;
-
-    ///<summary>Species concentration [user units].</summary>
-    private double  quality;
-
-    /**
-     *
-     */
-    private double  sourceContribution;
-
-    ///<summary>Total volume inflow to node.</summary>
-    private double  volumeIn;
-
-    ///<summary>Init quality node properties.</summary>
-    protected QualityNode(Node node) {
-        this.node = node;
-        quality = node.getC0()[0];
-        if(this.node.getSource()!=null)
-            massRate = 0.0;
-    }
-
-    public double getDemand() {
-        return demand;
-    }
-
-    public double getMassIn() {
-        return massIn;
-    }
-
-    public double getMassRate() {
-        return massRate;
-    }
-
-
-    ///<summary>Get the original hydraulic network node.</summary>
-    public Node getNode() {
-        return node;
-    }
-
-    public double getQuality() {
-        return quality;
-    }
-
-    public double getSourceContribution() {
-        return sourceContribution;
-    }
-
-    public double getVolumeIn() {
-        return volumeIn;
-    }
-
-    public void setDemand(double value)
-    {
-        this.demand = value;
-    }
-
-    public void setMassIn(double value)
-    {
-        this.massIn = value;
-    }
-
-    public void setMassRate(double value)
-    {
-        this.massRate = value;
-    }
-
-    public void setQuality(double value)
-    {
-        this.quality = value;
-    }
-
-    public void setSourceContribution(double sourceConcentration) {
-        this.sourceContribution = sourceConcentration;
-    }
-
-    public void setVolumeIn(double value)
-    {
-        this.volumeIn = value;
-    }
-}
 }

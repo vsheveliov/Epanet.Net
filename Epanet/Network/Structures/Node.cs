@@ -18,179 +18,93 @@
 using System;
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures
-{
+namespace org.addition.epanet.network.structures {
 
-///<summary>Hydraulic node structure  (junction)</summary>
+    ///<summary>Hydraulic node structure  (junction)</summary>
 
-    public class Node : IComparable<Node>
-{
-    ///<summary>Node id string.</summary>
-    private string id;
-    ///<summary>Node elevation(foot).</summary>
-    private double elevation;
+    public class Node:IComparable<Node> {
+        /// <summary>Type of node.</summary>
+        public enum NodeType {
+            /// <summary>junction</summary>
+            JUNC = 0,
+            /// <summary>reservoir</summary>
+            RESERV = 1,
+            /// <summary>tank</summary>
+            TANK = 2
+        }
 
-    ///<summary>Node demand list.</summary>
-    private readonly List<Demand> demand;
-    ///<summary>Water quality source.</summary>
-    private Source source;
-    ///<summary>Initial species concentrations.</summary>
-    private double[] C0;
-    ///<summary>Emitter coefficient.</summary>
-    private double Ke;
-    ///<summary>Node reporting flag.</summary>
-    private bool rptFlag;
-    ///<summary>Node position.</summary>
-    private Point position;
+        private readonly string _id;
+        private readonly List<Demand> _demand = new List<Demand>();
 
-    [NonSerialized] 
-    private double initDemand;
-    ///<summary>Node comment.</summary>
-    private String comment;
+        [NonSerialized]
+        private double initDemand;
+        
+        public Node(string id) {
+            this._id = id;
+            this.C0 = new double[1];
+            this.Comment = "";
+            initDemand = 0;
+            this.Type = NodeType.JUNC;
+            this.Position = EnPoint.Invalid;
+        }
 
-    public String getComment()
-    {
-        return comment;
+        ///<summary>Node comment.</summary>
+        public string Comment { get; set; }
+
+        public double InitDemand { get { return this.initDemand; } set { this.initDemand = value; } }
+
+        public NodeType Type { get; set; }
+
+        ///<summary>Node position.</summary>
+        public EnPoint Position { get; set; }
+
+        ///<summary>Node id string.</summary>
+        public string Id { get { return this._id; } }
+
+        ///<summary>Node elevation(foot).</summary>
+        public double Elevation { get; set; }
+
+        ///<summary>Node demand list.</summary>
+        public List<Demand> Demand { get { return this._demand; } }
+
+        ///<summary>Water quality source.</summary>
+        public Source Source { get; set; }
+
+        ///<summary>Initial species concentrations.</summary>
+        public double[] C0 { get; set; }
+
+        ///<summary>Emitter coefficient.</summary>
+        public double Ke { get; set; }
+
+        ///<summary>Node reporting flag.</summary>
+        public bool RptFlag { get; set; }
+
+        public override int GetHashCode() { return string.IsNullOrEmpty(this._id) ? 0 : this._id.GetHashCode(); }
+
+        public int CompareTo(Node o) {
+            if (o == null) return 1;
+            return string.Compare(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override bool Equals(object obj) {
+            Node o = obj as Node;
+            if (o == null) return false;
+
+            return string.Equals(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
+        }
+
+#if DEBUG // NUCONVERT
+
+        public double GetNuElevation(PropertiesMap.UnitsType units) {
+            return NUConvert.revertDistance(units, this.Elevation);
+        }
+
+        public void SetNuElevation(PropertiesMap.UnitsType units, double elev) {
+            this.Elevation = NUConvert.convertDistance(units, elev);
+        }
+
+#endif
+
     }
 
-    public void setComment(String value)
-    {
-        this.comment = value;
-    }
-
-    public double getInitDemand()
-    {
-        return initDemand;
-    }
-
-    public void setInitDemand(double value)
-    {
-        this.initDemand = value;
-    }
-
-    //public NodeType getType() {
-    //    return type;
-    //}
-    //
-    //public void setType(NodeType type) {
-    //    this.type = type;
-    //}
-
-    public Node()
-    {
-        C0 = new double[1];
-        comment = "";
-        initDemand = 0;
-        //type = NodeType.JUNC;
-        demand = new List<Demand>();
-        position = new Point();
-    }
-
-    public Point getPosition()
-    {
-        return position;
-    }
-
-    public void setPosition(Point value)
-    {
-        this.position = value;
-    }
-
-    public String getId()
-    {
-        return id;
-    }
-
-    public void setId(string value)
-    {
-        this.id = value;
-    }
-
-    public double getElevation()
-    {
-        return elevation;
-    }
-
-    public void setElevation(double value)
-    {
-        this.elevation = value;
-    }
-
-    public List<Demand> getDemand()
-    {
-        return demand;
-    }
-
-    public Source getSource()
-    {
-        return source;
-    }
-
-    public void setSource(Source value)
-    {
-        this.source = value;
-    }
-
-    public double[] getC0()
-    {
-        return C0;
-    }
-
-    public void setC0(double[] c0)
-    {
-        C0 = c0;
-    }
-
-    public double getKe()
-    {
-        return Ke;
-    }
-
-    public void setKe(double ke)
-    {
-        Ke = ke;
-    }
-
-    public bool isRptFlag()
-    {
-        return rptFlag;
-    }
-
-    public void setReportFlag(bool value)
-    {
-        this.rptFlag = value;
-    }
-
-    public double getNUElevation(PropertiesMap.UnitsType units)
-    {
-        return NUConvert.revertDistance(units, elevation);
-    }
-
-    public void setNUElevation(PropertiesMap.UnitsType units, double elev)
-    {
-        elevation = NUConvert.convertDistance(units, elev);
-    }
-
-//    @Override
-//    public bool equals(Object o) {
-//        if (this == o) return true;
-//        if (o == null || getClass() != o.getClass()) return false;
-//
-//        Node node = (Node) o;
-//
-//        if (id != null ? !id.equals(node.id) : node.id != null) return false;
-//
-//        return true;
-//    }
-
-    public override int GetHashCode()
-    {
-        return string.IsNullOrEmpty(id) ? 0 : id.GetHashCode();
-    }
-
-    public int CompareTo(Node o)
-    {
-        return string.Compare(id, o.id, StringComparison.OrdinalIgnoreCase);
-    }
-}
 }

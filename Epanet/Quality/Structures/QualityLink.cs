@@ -22,188 +22,91 @@ using org.addition.epanet.util;
 
 namespace org.addition.epanet.quality.structures {
 
-///<summary>Wrapper class for the Link in the water quality simulation.</summary>
-public class QualityLink {
+    ///<summary>Wrapper class for the Link in the water quality simulation.</summary>
+    public class QualityLink {
 
-    ///<summary>Reference to the first water quality node.</summary>
-    private readonly QualityNode first;
+        ///<summary>Reference to the first water quality node.</summary>
+        private readonly QualityNode first;
 
-    ///<summary>Current water flow[Feet^3/Second].</summary>
-    private double  flow;
+        ///<summary>Reference to the original link.</summary>
+        private readonly Link link;
 
-    ///<summary>Current flow direction.</summary>
-    private bool flowDir;
+        ///<summary>Reference to the second water quality node.</summary>
+        private readonly QualityNode second;
 
-    ///<summary>Current flow resistance[Feet/Second].</summary>
-    private double  flowResistance;
+        ///<summary>Linked list of discrete water parcels.</summary>
+        private readonly LinkedList<QualitySegment> segments;
 
-    ///<summary>Reference to the original link.</summary>
-    private readonly Link link;
+        /// <summary>Initialize a new water quality Link wrapper from the original Link.</summary>
+        public QualityLink(IList<Node> oNodes, List<QualityNode> qNodes, Link link) {
+            int n1 = oNodes.IndexOf(link.FirstNode);
+            int n2 = oNodes.IndexOf(link.SecondNode);
+            first = qNodes[n1];
+            second = qNodes[n2];
+            segments = new LinkedList<QualitySegment>();
+            this.link = link;
+        }
 
-    ///<summary>Reference to the second water quality node.</summary>
-    private readonly QualityNode second;
+        /// <summary>Get first node reference.</summary>
+        /// <value>Reference to the water quality simulation node.</value>
+        public QualityNode FirstNode { get { return this.first; } }
 
-    ///<summary>Linked list of discrete water parcels.</summary>
-    private readonly LinkedList<QualitySegment> segments;
+        /// <summary>Get/set the water flow.</summary>
+        ///<remarks>Current water flow[Feet^3/Second].</remarks>
+        public double Flow { get; set; }
 
-    /**
-     * Initialize a new water quality Link wrapper from the original Link.
-     * @param oNodes
-     * @param qNodes
-     * @param link
-     */
-    public QualityLink(List<Node> oNodes,List<QualityNode> qNodes, Link link)
-    {
-        int n1 = oNodes.IndexOf(link.getFirst());
-        int n2 = oNodes.IndexOf(link.getSecond());
-        first = qNodes[n1];
-        second = qNodes[n2];
-        segments = new LinkedList<QualitySegment>();
-        this.link = link;
-    }
+        /// <summary>Get/set the water flow direction.</summary>
+        public bool FlowDir { get; set; }
 
-    /**
-     * Get first node reference.
-     * @return Reference to the water quality simulation node.
-     */
-    public QualityNode getFirst() {
-        return first;
-    }
+        /// <summary>Get/set the link flow resistance.</summary>
+        /// <value>[Feet/Second]</value>
+        public double FlowResistance { get; set; }
 
-    /**
-     * Get the water flow.
-     * @return
-     */
-    public double getFlow() {
-        return flow;
-    }
+        ///<summary>Get the original link.</summary>
+        ///<return>Reference to the hydraulic network link.</return>
+        public Link Link { get { return this.link; } }
 
-    /**
-     * Get the water flow direction.
-     * @return
-     */
-    public bool getFlowDir() {
-        return flowDir;
-    }
+        ///<summary>Get the second node reference</summary>
+        ///<return>Reference to the water quality simulation node.</return>
+        public QualityNode SecondNode { get { return this.second; } }
 
-    ///**
-    // * Current reaction rate.
-    // */
-    //double  reactionRate;    // Pipe reaction rate
-    //
-    //public double getReactionRate() {
-    //    return reactionRate;
-    //}
-    //
-    //public void setReactionRate(double reactionRate) {
-    //    this.reactionRate = reactionRate;
-    //}
+        /// <summary>Get the water quality segments in this link.</summary>
+        public LinkedList<QualitySegment> Segments { get { return this.segments; } }
 
-    /**
-     * Get the link flow resistance.
-     * @return [Feet/Second]
-     */
-    public double getFlowResistance() {
-        return flowResistance;
-    }
+        ///<summary>Get the upstream node.</summary>
+        public QualityNode UpStreamNode { get { return this.FlowDir ? this.first : this.second; } }
 
-    /**
-     * Get the original link.
-     * @return Reference to the hydraulic network link.
-     */
-    public Link getLink() {
-        return link;
-    }
+        ///<summary>Get the downstream node.</summary>
+        public QualityNode DownStreamNode { get { return this.FlowDir ? this.second : this.first; } }
 
-    /**
-     * Get the second node reference
-     * @return Reference to the water quality simulation node.
-     */
-    public QualityNode getSecond() {
-        return second;
-    }
+        ///<summary>Get link volume.</summary>
+        public double LinkVolume {
+            get { return 0.785398 * this.link.Lenght * (this.link.Diameter * this.link.Diameter); }
+        }
 
-    /**
-     * Get the water quality segments in this link.
-     * @return
-     */
-    public LinkedList<QualitySegment> getSegments() {
-        return segments;
-    }
+        ///<summary>Get link average quality.</summary>
+        public double GetAverageQuality(PropertiesMap pMap) {
+            double vsum = 0.0,
+                   msum = 0.0;
 
-    /**
-     * Set the water flow.
-     * @param hydFlow
-     */
-    public void setFlow(double hydFlow) {
-        this.flow = hydFlow;
-    }
-
-    /**
-     * Set the water flow direction.
-     * @param flowDir
-     */
-    public void setFlowDir(bool value) {
-        this.flowDir = value;
-    }
-
-    /**
-     * Set the link flow resistance.
-     * @param kw [Feet/Second]
-     */
-    public void setFlowResistance(double kw) {
-        flowResistance = kw;
-    }
-
-    /**
-     * Get the upstream node.
-     * @return
-     */
-    public QualityNode getUpStreamNode(){
-        return ((flowDir) ? first : second);
-    }
-
-    /**
-     * Get the downstream node.
-     * @return
-     */
-    public QualityNode getDownStreamNode(){
-        return ((flowDir) ? second : first);
-    }
-
-    /**
-     * Get link volume.
-     * @return
-     */
-    public double getLinkVolume(){
-        return ( 0.785398*link.getLenght()*(link.getDiameter()*link.getDiameter()) );
-    }
-
-    /**
-     * Get link average quality.
-     * @param pMap
-     * @return
-     */
-    public double getAverageQuality(PropertiesMap pMap) {
-         double vsum = 0.0,
-                msum = 0.0;
-
-        try {
-            if (pMap != null && pMap.getQualflag() == PropertiesMap.QualType.NONE)
+            try {
+                if (pMap != null && pMap.Qualflag == PropertiesMap.QualType.NONE)
+                    return 0.0;
+            }
+            catch (ENException) {
                 return 0.0;
-        } catch (ENException) {
-            return 0.0;
-        }
+            }
 
-        foreach (QualitySegment seg  in  getSegments()) {
-            vsum += seg.v;
-            msum += (seg.c) * (seg.v);
-        }
+            foreach (QualitySegment seg  in  this.Segments) {
+                vsum += seg.V;
+                msum += seg.C * seg.V;
+            }
 
-        if (vsum > 0.0)
-            return (msum / vsum);
-        else
-            return ((getFirst().getQuality() + getSecond().getQuality()) / 2.0);
+            if (vsum > 0.0)
+                return msum / vsum;
+            else
+                return (this.FirstNode.Quality + this.SecondNode.Quality) / 2.0;
+        }
     }
-}
+
 }

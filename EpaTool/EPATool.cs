@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using org.addition.epanet.hydraulic;
@@ -33,22 +34,20 @@ namespace org.addition.epanet {
 
     public class EPATool {
 
-        private static void consoleLog(string msg) {
-            Console.WriteLine(msg + " " + DateTime.Now.ToString("HH:mm:ss"));
-        }
+        private static void ConsoleLog(string msg) { Console.WriteLine(msg + " " + DateTime.Now.ToString("HH:mm:ss")); }
 
-        public static string convertToScientifcNotation(
+        private static string ConvertToScientifcNotation(
             double value,
-            double max_threshold,
-            double min_threshold,
+            double maxThreshold,
+            double minThreshold,
             int @decimal) {
-            if (value == null)
+            if (double.IsNaN(value))
                 return null;
 
-            if (value != 0.0 && (Math.Abs(value) > max_threshold || Math.Abs(value) < min_threshold))
-                return string.Format("%." + @decimal + "e", value);
+            if (Math.Abs(value) > double.Epsilon && (Math.Abs(value) > maxThreshold || Math.Abs(value) < minThreshold))
+                return value.ToString("E" + @decimal.ToString(CultureInfo.InvariantCulture));
 
-            return string.Format("%." + @decimal + "f", value);
+            return value.ToString("F" + @decimal.ToString(CultureInfo.InvariantCulture));
         }
 
         private enum NodeVariableType {
@@ -62,30 +61,30 @@ namespace org.addition.epanet {
 
         }
 
-        private static FieldsMap.Type ToFieldType(NodeVariableType value) {
-            return (FieldsMap.Type)((int)value & ~0x1000);
+        private static FieldsMap.FieldType ToFieldType(NodeVariableType value) {
+            return (FieldsMap.FieldType)((int)value & ~0x1000);
         }
 
         private static double GetNodeValue(NodeVariableType type, FieldsMap fmap, AwareStep step, Node node, int index) {
             switch (type) {
             case NodeVariableType.BASEDEMAND: {
                 double dsum = 0;
-                foreach (var demand in node.getDemand()) {
-                    dsum += demand.getBase();
+                foreach (var demand in node.Demand) {
+                    dsum += demand.Base;
                 }
-                return fmap.revertUnit((FieldsMap.Type)type, dsum);
+                return fmap.RevertUnit((FieldsMap.FieldType)type, dsum);
             }
             case NodeVariableType.ELEVATION:
-                return fmap.revertUnit((FieldsMap.Type)type, node.getElevation());
+                return fmap.RevertUnit((FieldsMap.FieldType)type, node.Elevation);
             case NodeVariableType.DEMAND:
                 return step != null ? step.getNodeDemand(index, node, fmap) : 0;
             case NodeVariableType.HEAD:
                 return step != null ? step.getNodeHead(index, node, fmap) : 0;
             case NodeVariableType.INITQUALITY: {
                 double dsum = 0;
-                foreach (double d in node.getC0()) dsum += d;
+                foreach (double d in node.C0) dsum += d;
 
-                return fmap.revertUnit((FieldsMap.Type)type, dsum);
+                return fmap.RevertUnit((FieldsMap.FieldType)type, dsum);
             }
             case NodeVariableType.PRESSURE:
                 return step != null ? step.getNodePressure(index, node, fmap) : 0;
@@ -97,14 +96,14 @@ namespace org.addition.epanet {
         }
 
         private enum LinkVariableType {
-            LENGHT = FieldsMap.Type.LENGTH,
-            DIAMETER = FieldsMap.Type.DIAM,
+            LENGHT = FieldsMap.FieldType.LENGTH,
+            DIAMETER = FieldsMap.FieldType.DIAM,
             ROUGHNESS = -1,
-            FLOW = FieldsMap.Type.FLOW,
-            VELOCITY = FieldsMap.Type.VELOCITY,
-            UNITHEADLOSS = FieldsMap.Type.HEADLOSS,
-            FRICTIONFACTOR = FieldsMap.Type.FRICTION,
-            QUALITY = FieldsMap.Type.QUALITY
+            FLOW = FieldsMap.FieldType.FLOW,
+            VELOCITY = FieldsMap.FieldType.VELOCITY,
+            UNITHEADLOSS = FieldsMap.FieldType.HEADLOSS,
+            FRICTIONFACTOR = FieldsMap.FieldType.FRICTION,
+            QUALITY = FieldsMap.FieldType.QUALITY
         }
 
 
@@ -117,13 +116,13 @@ namespace org.addition.epanet {
             int index) {
             switch (type) {
             case LinkVariableType.LENGHT:
-                return fmap.revertUnit((FieldsMap.Type)type, link.getLenght());
+                return fmap.RevertUnit((FieldsMap.FieldType)type, link.Lenght);
             case LinkVariableType.DIAMETER:
-                return fmap.revertUnit((FieldsMap.Type)type, link.getDiameter());
+                return fmap.RevertUnit((FieldsMap.FieldType)type, link.Diameter);
             case LinkVariableType.ROUGHNESS:
-                return link.getType() == Link.LinkType.PIPE && formType == PropertiesMap.FormType.DW
-                    ? fmap.revertUnit(FieldsMap.Type.DIAM, link.getRoughness())
-                    : link.getRoughness();
+                return link.Type == Link.LinkType.PIPE && formType == PropertiesMap.FormType.DW
+                    ? fmap.RevertUnit(FieldsMap.FieldType.DIAM, link.Roughness)
+                    : link.Roughness;
 
             case LinkVariableType.FLOW:
                 return step != null ? Math.Abs(step.getLinkFlow(index, link, fmap)) : 0;
@@ -134,110 +133,11 @@ namespace org.addition.epanet {
             case LinkVariableType.FRICTIONFACTOR:
                 return step != null ? step.getLinkFriction(index, link, fmap) : 0;
             case LinkVariableType.QUALITY:
-                return step != null ? fmap.revertUnit((FieldsMap.Type)type, step.getLinkAvrQuality(index)) : 0;
+                return step != null ? fmap.RevertUnit((FieldsMap.FieldType)type, step.getLinkAvrQuality(index)) : 0;
             default:
                 return 0.0;
             }
         }
-
-/*
-                                        enum NodeVariableType {
-                                            ELEVATION("ELEVATION", FieldsMap.Type.ELEV),
-                                            PRESSURE("PRESSURE", FieldsMap.Type.PRESSURE),
-                                            HEAD("HEAD", FieldsMap.Type.HEAD),
-                                            QUALITY("QUALITY", FieldsMap.Type.QUALITY),
-                                            INITQUALITY("INITQUALITY", FieldsMap.Type.QUALITY),
-                                            BASEDEMAND("BASEDEMAND", FieldsMap.Type.DEMAND),
-                                            DEMAND("DEMAND", FieldsMap.Type.DEMAND);
-                                    
-                                            public readonly string name;
-                                            public readonly FieldsMap.Type type;
-                                    
-                                            NodeVariableType(string name, FieldsMap.Type type) {
-                                                this.name = name;
-                                                this.type = type;
-                                            }
-                                    
-                                            public double getValue(FieldsMap fmap, AwareStep step, Node node, int index) {
-                                                switch (this) {
-                                                    case BASEDEMAND: {
-                                                        double dsum = 0;
-                                                        foreach (Demand demand  in  node.getDemand()) {
-                                                            dsum += demand.getBase();
-                                                        }
-                                                        return fmap.revertUnit(type, dsum);
-                                                    }
-                                                    case ELEVATION:
-                                                        return fmap.revertUnit(type, node.getElevation());
-                                                    case DEMAND:
-                                                        return step != null ? step.getNodeDemand(index, node, fmap) : 0;
-                                                    case HEAD:
-                                                        return step != null ? step.getNodeHead(index, node, fmap) : 0;
-                                                    case INITQUALITY: {
-                                                        double dsum = 0;
-                                                        foreach (double v  in  node.getC0()) {
-                                                            dsum += v;
-                                                        }
-                                                        return dsum != 0 ? fmap.revertUnit(type, dsum / node.getC0().length) : fmap.revertUnit(type, dsum);
-                                                    }
-                                                    case PRESSURE:
-                                                        return step != null ? step.getNodePressure(index, node, fmap) : 0;
-                                                    case QUALITY:
-                                                        return step != null ? step.getNodeQuality(index) : 0;
-                                                    default:
-                                                        return 0.0;
-                                                }
-                                            }
-                                        }
-                                        */
-
-        /*
-        static enum LinkVariableType {
-            LENGHT("LENGHT", FieldsMap.Type.LENGTH),
-            DIAMETER("DIAMETER", FieldsMap.Type.DIAM),
-            ROUGHNESS("ROUGHNESS", null),
-            FLOW("FLOW", FieldsMap.Type.FLOW),
-            VELOCITY("VELOCITY", FieldsMap.Type.VELOCITY),
-            UNITHEADLOSS("UNITHEADLOSS", FieldsMap.Type.HEADLOSS),
-            FRICTIONFACTOR("FRICTIONFACTOR", FieldsMap.Type.FRICTION),
-            QUALITY("QUALITY", FieldsMap.Type.QUALITY);
-    
-            public readonly string name;
-            public readonly FieldsMap.Type type;
-    
-            LinkVariableType(string name, FieldsMap.Type type) {
-                this.name = name;
-                this.type = type;
-            }
-    
-            public double getValue(PropertiesMap.FormType formType, FieldsMap fmap, AwareStep step, Link link, int index) {
-                switch (this) {
-                    case LENGHT:
-                        return fmap.revertUnit(type, link.getLenght());
-                    case DIAMETER:
-                        return fmap.revertUnit(type, link.getDiameter());
-                    case ROUGHNESS:
-                        if (link.getType() == Link.LinkType.PIPE && formType == PropertiesMap.FormType.DW)
-                            return fmap.revertUnit(FieldsMap.Type.DIAM, link.getRoughness());
-                        else
-                            return link.getRoughness();
-                    case FLOW:
-                        return step != null ? Math.Abs(step.getLinkFlow(index, link, fmap)) : 0;
-                    case VELOCITY:
-                        return step != null ? Math.Abs(step.getLinkVelocity(index, link, fmap)) : 0;
-                    case UNITHEADLOSS:
-                        return step != null ? step.getLinkHeadLoss(index, link, fmap) : 0;
-                    case FRICTIONFACTOR:
-                        return step != null ? step.getLinkFriction(index, link, fmap) : 0;
-                    case QUALITY:
-                        return step != null ? fmap.revertUnit(type, step.getLinkAvrQuality(index)) : 0;
-                    default:
-                        return 0.0;
-                }
-            }
-        }
-        */
-
 
         public static void main(string[] args) {
             TraceSource log = new TraceSource(typeof(EPATool).FullName, SourceLevels.All);
@@ -255,19 +155,19 @@ namespace org.addition.epanet {
             List<string> targetLinks = new List<string>();
 
             int parseMode = 0;
-            for (int i = 0; i < args.Length; i++) {
-                if (args[i].EndsWith(".inp", StringComparison.OrdinalIgnoreCase)) {
+            foreach (string arg in args) {
+                if (arg.EndsWith(".inp", StringComparison.OrdinalIgnoreCase)) {
                     parseMode = 0;
-                    inFile = args[i];
+                    inFile = arg;
                     if (!File.Exists(inFile)) {
-                        consoleLog("END_RUN_ERR");
+                        ConsoleLog("END_RUN_ERR");
                         Console.Error.WriteLine("File not found !");
                         return;
                     }
                     continue;
                 }
 
-                switch (args[i]) {
+                switch (arg) {
                 case "-T":
                 case "-t":
                     parseMode = 1;
@@ -283,56 +183,56 @@ namespace org.addition.epanet {
                 }
 
                 if (parseMode == 1) {
-                    targetTimes.Add((long)(Utilities.getHour(args[i], "") * 3600));
+                    targetTimes.Add((long)(Utilities.GetHour(arg, "") * 3600));
                 }
                 else if (parseMode == 2) {
-                    targetNodes.Add(args[i]);
+                    targetNodes.Add(arg);
                 }
                 else if (parseMode == 3) {
-                    targetLinks.Add(args[i]);
+                    targetLinks.Add(arg);
                 }
             }
 
             try {
-                InputParser parserINP = InputParser.create(Network.FileType.INP_FILE, log);
-                parserINP.parse(net, inFile);
-                PropertiesMap pMap = net.getPropertiesMap();
+                InputParser parserINP = InputParser.Create(Network.FileType.INP_FILE, log);
+                parserINP.Parse(net, inFile);
+                PropertiesMap pMap = net.PropertiesMap;
 
                 if (targetTimes.Count > 0) {
                     foreach (long time  in  targetTimes) {
-                        string epanetTime = Utilities.getClockTime(time);
-                        if (time < pMap.getRstart())
+                        string epanetTime = time.GetClockTime();
+                        if (time < pMap.Rstart)
                             throw new Exception("Target time \"" + epanetTime + "\" smaller than simulation start time");
 
-                        if (time > pMap.getDuration())
+                        if (time > pMap.Duration)
                             throw new Exception("Target time \"" + epanetTime + "\" bigger than simulation duration");
 
-                        if ((time - pMap.getRstart()) % pMap.getRstep() != 0)
+                        if ((time - pMap.Rstart) % pMap.Rstep != 0)
                             throw new Exception("Target time \"" + epanetTime + "\" not found");
                     }
                 }
 
                 foreach (string nodeName  in  targetNodes) {
-                    if (net.getNode(nodeName) == null)
+                    if (net.GetNode(nodeName) == null)
                         throw new Exception("Node \"" + nodeName + "\" not found");
                 }
 
                 foreach (string linkName  in  targetLinks) {
-                    if (net.getLink(linkName) == null)
+                    if (net.GetLink(linkName) == null)
                         throw new Exception("Link \"" + linkName + "\" not found");
                 }
 
                 nodesVariables.Add(NodeVariableType.ELEVATION);
                 nodesVariables.Add(NodeVariableType.BASEDEMAND);
 
-                if (pMap.getQualflag() != PropertiesMap.QualType.NONE)
+                if (pMap.Qualflag != PropertiesMap.QualType.NONE)
                     nodesVariables.Add(NodeVariableType.INITQUALITY);
 
                 nodesVariables.Add(NodeVariableType.PRESSURE);
                 nodesVariables.Add(NodeVariableType.HEAD);
                 nodesVariables.Add(NodeVariableType.DEMAND);
 
-                if (pMap.getQualflag() != (PropertiesMap.QualType.NONE))
+                if (pMap.Qualflag != (PropertiesMap.QualType.NONE))
                     nodesVariables.Add(NodeVariableType.QUALITY);
 
                 linksVariables.Add(LinkVariableType.LENGHT);
@@ -343,22 +243,22 @@ namespace org.addition.epanet {
                 linksVariables.Add(LinkVariableType.UNITHEADLOSS);
                 linksVariables.Add(LinkVariableType.FRICTIONFACTOR);
 
-                if (pMap.getQualflag() != PropertiesMap.QualType.NONE)
+                if (pMap.Qualflag != PropertiesMap.QualType.NONE)
                     linksVariables.Add(LinkVariableType.QUALITY);
 
                 hydFile = Path.GetTempFileName(); // "hydSim.bin"
 
-                consoleLog("START_RUNNING");
+                ConsoleLog("START_RUNNING");
 
                 HydraulicSim hydSim = new HydraulicSim(net, log);
                 hydSim.simulate(hydFile);
 
 
-                if (net.getPropertiesMap().getQualflag() != (PropertiesMap.QualType.NONE)) {
+                if (net.PropertiesMap.Qualflag != (PropertiesMap.QualType.NONE)) {
                     qualFile = Path.GetTempFileName(); // "qualSim.bin"
 
                     QualitySim q = new QualitySim(net, log);
-                    q.simulate(hydFile, qualFile);
+                    q.Simulate(hydFile, qualFile);
                 }
 
 
@@ -367,7 +267,6 @@ namespace org.addition.epanet {
                 StreamWriter nodesTextWriter = null;
                 StreamWriter linksTextWriter = null;
                 string nodesOutputFile = null;
-                string linksOutputFile = null;
 
                 if (targetNodes.Count == 0 && targetLinks.Count == 0 || targetNodes.Count > 0) {
                     nodesOutputFile = Path.GetFullPath(inFile) + ".nodes.out";
@@ -382,14 +281,14 @@ namespace org.addition.epanet {
 
                     foreach (NodeVariableType nodeVar  in  nodesVariables) {
                         nodesTextWriter.Write('\t');
-                        nodesTextWriter.Write(net.getFieldsMap().getField(ToFieldType(nodeVar)).getUnits());
+                        nodesTextWriter.Write(net.FieldsMap.GetField(ToFieldType(nodeVar)).Units);
                     }
                     nodesTextWriter.Write('\n');
                 }
 
 
                 if (targetNodes.Count == 0 && targetLinks.Count == 0 || targetLinks.Count > 0) {
-                    linksOutputFile = Path.GetFullPath(inFile) + ".links.out";
+                    string linksOutputFile = Path.GetFullPath(inFile) + ".links.out";
                     linksTextWriter = new StreamWriter(linksOutputFile, false, Encoding.UTF8);
 
                     linksTextWriter.Write('\t');
@@ -404,13 +303,13 @@ namespace org.addition.epanet {
                         if (linkVar < 0) {
                             continue;
                         }
-                        linksTextWriter.Write(net.getFieldsMap().getField((FieldsMap.Type)linkVar).getUnits());
+                        linksTextWriter.Write(net.FieldsMap.GetField((FieldsMap.FieldType)linkVar).Units);
                     }
                     linksTextWriter.Write('\n');
                 }
 
 
-                for (long time = pMap.getRstart(); time <= pMap.getDuration(); time += pMap.getRstep()) {
+                for (long time = pMap.Rstart; time <= pMap.Duration; time += pMap.Rstep) {
                     AwareStep step = hydReader.getStep((int)time);
 
                     int i = 0;
@@ -419,19 +318,19 @@ namespace org.addition.epanet {
                         continue;
 
                     if (nodesTextWriter != null) {
-                        foreach (Node node  in  net.getNodes()) {
-                            if (targetNodes.Count > 0 && !targetNodes.Contains(node.getId()))
+                        foreach (Node node  in  net.Nodes) {
+                            if (targetNodes.Count > 0 && !targetNodes.Contains(node.Id))
                                 continue;
 
-                            nodesTextWriter.Write(node.getId());
+                            nodesTextWriter.Write(node.Id);
 
                             nodesTextWriter.Write('\t');
-                            nodesTextWriter.Write(Utilities.getClockTime(time));
+                            nodesTextWriter.Write(time.GetClockTime());
 
                             foreach (NodeVariableType nodeVar  in  nodesVariables) {
                                 nodesTextWriter.Write('\t');
-                                double val = GetNodeValue(nodeVar, net.getFieldsMap(), step, node, i);
-                                nodesTextWriter.Write(convertToScientifcNotation(val, 1000, 0.01, 2));
+                                double val = GetNodeValue(nodeVar, net.FieldsMap, step, node, i);
+                                nodesTextWriter.Write(ConvertToScientifcNotation(val, 1000, 0.01, 2));
                             }
 
                             nodesTextWriter.Write('\n');
@@ -443,19 +342,25 @@ namespace org.addition.epanet {
                     i = 0;
 
                     if (linksTextWriter != null) {
-                        foreach (Link link  in  net.getLinks()) {
-                            if (targetLinks.Count > 0 && !targetLinks.Contains(link.getId()))
+                        foreach (Link link  in  net.Links) {
+                            if (targetLinks.Count > 0 && !targetLinks.Contains(link.Id))
                                 continue;
 
-                            linksTextWriter.Write(link.getId());
+                            linksTextWriter.Write(link.Id);
 
                             linksTextWriter.Write('\t');
-                            linksTextWriter.Write(Utilities.getClockTime(time));
+                            linksTextWriter.Write(time.GetClockTime());
 
                             foreach (LinkVariableType linkVar  in  linksVariables) {
                                 linksTextWriter.Write('\t');
-                                double val = GetLinkValue(linkVar, net.getPropertiesMap().getFormflag(), net.getFieldsMap(), step, link, i);
-                                linksTextWriter.Write(convertToScientifcNotation(val, 1000, 0.01, 2));
+                                double val = GetLinkValue(
+                                    linkVar,
+                                    net.PropertiesMap.Formflag,
+                                    net.FieldsMap,
+                                    step,
+                                    link,
+                                    i);
+                                linksTextWriter.Write(ConvertToScientifcNotation(val, 1000, 0.01, 2));
                             }
 
                             linksTextWriter.Write('\n');
@@ -467,26 +372,26 @@ namespace org.addition.epanet {
 
                 if (nodesTextWriter != null) {
                     nodesTextWriter.Close();
-                    consoleLog("NODES FILE \"" + nodesOutputFile + "\"");
+                    ConsoleLog("NODES FILE \"" + nodesOutputFile + "\"");
                 }
 
                 if (linksTextWriter != null) {
                     linksTextWriter.Close();
-                    consoleLog("LINKS FILES \"" + nodesOutputFile + "\"");
+                    ConsoleLog("LINKS FILES \"" + nodesOutputFile + "\"");
                 }
 
-                consoleLog("END_RUN_OK");
+                ConsoleLog("END_RUN_OK");
             }
             catch (ENException e) {
-                consoleLog("END_RUN_ERR");
+                ConsoleLog("END_RUN_ERR");
                 Debug.Print(e.ToString());
             }
             catch (IOException e) {
-                consoleLog("END_RUN_ERR");
+                ConsoleLog("END_RUN_ERR");
                 Debug.Print(e.ToString());
             }
             catch (Exception e) {
-                consoleLog("END_RUN_ERR");
+                ConsoleLog("END_RUN_ERR");
                 Debug.Print(e.ToString());
             }
 

@@ -114,9 +114,9 @@ public class SparseMatrix {
         bool pmark = false;
 
         foreach (SimulationLink link  in  links){
-            int k = link.getIndex() + 1;
-            int i = link.getFirst().getIndex() + 1;
-            int j = link.getSecond().getIndex() + 1;
+            int k = link.Index + 1;
+            int i = link.First.Index + 1;
+            int j = link.Second.Index + 1;
 
             if (paraflag)
                 pmark = paralink(adjlist,i, j, k);
@@ -152,10 +152,8 @@ public class SparseMatrix {
         return false;
     }
 
-    /**
-     * Removes parallel links from nodal adjacency lists.
-     * @param adjlist Nodes adjacency list.
-     */
+    ///<summary>Removes parallel links from nodal adjacency lists.</summary>
+    ///<param name="adjlist">Nodes adjacency list.</param>
     private void xparalinks(List<AdjItem>[] adjlist)
     {
 
@@ -334,10 +332,8 @@ public class SparseMatrix {
         }
     }
 
-    /**
-     * Puts row indexes in ascending order in NZSUB.
-     * @param n Number of junctions.
-     */
+    ///<summary>Puts row indexes in ascending order in NZSUB.</summary>
+    ///<param name="n">Number of junctions.</param>
     private void ordersparse(int n) {
         int i, k;
 

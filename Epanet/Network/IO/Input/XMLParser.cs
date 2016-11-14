@@ -23,24 +23,26 @@ using org.addition.epanet.util;
 
 namespace org.addition.epanet.network.io.input {
 
-public class XMLParser : InputParser {
+    public class XmlParser:InputParser {
 
-    private readonly bool gzipped;
+        private readonly bool _gzipped;
 
-    public XMLParser(TraceSource log, bool gzipped):base(log) {
-        this.gzipped = gzipped;
-    }
+        public XmlParser(TraceSource log, bool gzipped):base(log) { this._gzipped = gzipped; }
 
-    public override Network parse(Network net, string f) {
-        this.FileName = Path.GetFullPath(f);
+        public override Network Parse(Network net, string f) {
+            this.FileName = Path.GetFullPath(f);
 
-        try {
-            Stream @is = this.gzipped ? (Stream)new GZipStream(File.OpenRead(f), CompressionMode.Decompress) : File.OpenRead(f);
-            XmlSerializer x = new XmlSerializer(typeof(Network));
-            return (Network)x.Deserialize(@is);
-        } catch (IOException) {
-            throw new ENException(ErrorCode.Err302);
+            try {
+                Stream @is = this._gzipped
+                    ? (Stream)new GZipStream(File.OpenRead(f), CompressionMode.Decompress)
+                    : File.OpenRead(f);
+                XmlSerializer x = new XmlSerializer(typeof(Network));
+                return (Network)x.Deserialize(@is);
+            }
+            catch (IOException) {
+                throw new ENException(ErrorCode.Err302);
+            }
         }
     }
-}
+
 }

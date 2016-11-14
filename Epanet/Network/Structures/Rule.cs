@@ -15,10 +15,15 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System.Collections.Generic;
+
 namespace org.addition.epanet.network.structures {
 
     ///<summary>Rule source code class.</summary>
     public class Rule {
+
+        #region enums
+
         ///<summary>Rule object types.</summary>
         public enum Objects {
             r_JUNC,
@@ -30,8 +35,6 @@ namespace org.addition.epanet.network.structures {
             r_SYSTEM,
             r_TANK,
             r_VALVE
-
-
         }
 
         ///<summary>Rule operators.</summary>
@@ -58,7 +61,6 @@ namespace org.addition.epanet.network.structures {
             r_PRIORITY,
             r_RULE,
             r_THEN
-
         }
 
         ///<summary>Rule values types.</summary>
@@ -87,30 +89,16 @@ namespace org.addition.epanet.network.structures {
             r_TIME
         }
 
-        private string code;
+        #endregion
 
-        private string label;
+        private readonly string _label;
+        private readonly List<string> _code = new List<string>();
 
-        public Rule() {
-            label = "";
-            code = "";
-        }
+        public Rule(string label) { this._label = label; }
 
-        public string getCode() {
-            return code;
-        }
+        public List<string> Code { get { return this._code; } }
 
-        public string getLabel() {
-            return label;
-        }
-
-        public void setCode(string code) {
-            this.code = code;
-        }
-
-        public void setLabel(string label) {
-            this.label = label;
-        }
-
+        public string Label { get { return this._label; } }
     }
+
 }

@@ -18,8 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NPOI.HSSF.UserModel;
-using NPOI.SS.Formula.Functions;
+using System.Linq;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using org.addition.epanet.network.structures;
@@ -29,54 +28,52 @@ namespace org.addition.epanet.network.io.output {
 
 ///<summary>EXCEL XLSX composer class.</summary>
 public class ExcelComposer : OutputComposer {
+    private class ExcelWriter {
+        private readonly XSSFWorkbook _workbook;
+        private IRow _activeRow;
+        private ISheet _activeSheet;
+        private int _cellCount;
+        private int _rowCount;
 
-
-    class ExcelWriter {
-        private readonly XSSFWorkbook workbook;
-        IRow activeRow;
-        ISheet activeSheet;
-        int cellCount;
-        int rowCount;
-
-        readonly ICellStyle timeStyle;
-        readonly ICellStyle topBold;
+        private readonly ICellStyle _timeStyle;
+        private readonly ICellStyle _topBold;
 
         public ExcelWriter(XSSFWorkbook workbook) {
-            this.workbook = workbook;
-            topBold = workbook.CreateCellStyle();
+            this._workbook = workbook;
+            this._topBold = workbook.CreateCellStyle();
             IFont newFont = workbook.CreateFont();
             newFont.Boldweight = (short)FontBoldWeight.Bold;
-            topBold.SetFont(newFont);
-            timeStyle = workbook.CreateCellStyle();
-            timeStyle.DataFormat = 46;
+            this._topBold.SetFont(newFont);
+            this._timeStyle = workbook.CreateCellStyle();
+            this._timeStyle.DataFormat = 46;
         }
 
-        public void newLine() {
-            activeRow = activeSheet.CreateRow(rowCount++);
-            cellCount = 0;
+        public void NewLine() {
+            this._activeRow = this._activeSheet.CreateRow(this._rowCount++);
+            this._cellCount = 0;
         }
 
-        public void newSpreadsheet(string name) {
-            rowCount = 0;
-            cellCount = 0;
-            activeSheet = workbook.CreateSheet(name);
-            activeRow = null;
+        public void NewSpreadsheet(string name) {
+            this._rowCount = 0;
+            this._cellCount = 0;
+            this._activeSheet = this._workbook.CreateSheet(name);
+            this._activeRow = null;
         }
 
-        public void write(params object[] args) {
-            if (activeRow == null) {
-                activeRow = activeSheet.CreateRow(rowCount++);
-                cellCount = 0;
+        public void Write(params object[] args) {
+            if (this._activeRow == null) {
+                this._activeRow = this._activeSheet.CreateRow(this._rowCount++);
+                this._cellCount = 0;
             }
 
             foreach (object obj  in  args) {
                 if (obj is string && obj.Equals(NEWLINE)) {
-                    activeRow = activeSheet.CreateRow(rowCount++);
-                    cellCount = 0;
+                    this._activeRow = this._activeSheet.CreateRow(this._rowCount++);
+                    this._cellCount = 0;
                     continue;
                 }
 
-                var c = activeRow.CreateCell(cellCount++);
+                var c = this._activeRow.CreateCell(this._cellCount++);
 
                 if(obj==null)
                     c.SetCellType(CellType.Blank);
@@ -84,7 +81,7 @@ public class ExcelComposer : OutputComposer {
                     DateTime epochStart = new DateTime(1970, 01, 01, 0, 0, 0, 0, DateTimeKind.Utc); //Getting UTC DATE since epoch
                     TimeSpan ts = (DateTime)obj - epochStart; //get the current timestamp between now and january 1970
                     c.SetCellValue(ts.TotalSeconds / 86400.0d);
-                    c.CellStyle = timeStyle;
+                    c.CellStyle = this._timeStyle;
                 }
                 else if (obj is bool)
                     c.SetCellValue(((bool) obj));
@@ -95,7 +92,7 @@ public class ExcelComposer : OutputComposer {
             }
         }
 
-        public void writeHeader(string str) {
+        public void WriteHeader(string str) {
             string[] sections = str.Split('\t');
             //for (int i = 0; i < sections.length; i++)
             //    sections[i] = ";" + sections[i];
@@ -103,18 +100,18 @@ public class ExcelComposer : OutputComposer {
             //    sections[0] = ";" + sections[0];
 
             //write(sections);
-            if (activeRow == null) {
-                activeRow = activeSheet.CreateRow(rowCount++);
-                cellCount = 0;
+            if (this._activeRow == null) {
+                this._activeRow = this._activeSheet.CreateRow(this._rowCount++);
+                this._cellCount = 0;
             }
 
             foreach (string obj  in  sections) {
-                ICell c = activeRow.CreateCell(cellCount++);
-                c.CellStyle = topBold;
+                ICell c = this._activeRow.CreateCell(this._cellCount++);
+                c.CellStyle = this._topBold;
                 c.SetCellValue( obj);
             }
 
-            newLine();
+            this.NewLine();
         }
     }
 
@@ -138,576 +135,572 @@ public class ExcelComposer : OutputComposer {
     private const string TITLE_SUBTITLE  = "Text";
     private const string VALVES_SUBTITLE = "ID\tNode1\tNode2\tDiameter\tType\tSetting\tMinorLoss\tComment";
 
-    //private const String TITLE_TAG       = "[TITLE]";
-    //private const String JUNCTIONS_TAG   = "[JUNCTIONS]";
-    //private const String TANKS_TAG       = "[TANKS]";
-    //private const String RESERVOIRS_TAG  = "[RESERVOIRS]";
-    //private const String PIPES_TAG       = "[PIPES]";
-    //private const String PUMPS_TAG       = "[PUMPS]";
-    //private const String VALVES_TAG      = "[VALVES]";
-    //private const String DEMANDS_TAG     = "[DEMANDS]";
-    //private const String EMITTERS_TAG    = "[EMITTERS]";
-    //private const String STATUS_TAG      = "[STATUS]";
-    //private const String PATTERNS_TAG    = "[PATTERNS]";
-    //private const String CURVES_TAG      = "[CURVES]";
-    //private const String CONTROLS_TAG    = "[CONTROLS]";
-    //private const String QUALITY_TAG     = "[QUALITY]";
-    //private const String SOURCE_TAG      = "[SOURCE]";
-    //private const String MIXING_TAG      = "[MIXING]";
-    //private const String REACTIONS_TAG   = "[REACTIONS]";
-    //private const String ENERGY_TAG      = "[ENERGY]";
-    //private const String TIMES_TAG       = "[TIMES]";
-    //private const String OPTIONS_TAG     = "[OPTIONS]";
-    //private const String REPORT_TAG      = "[REPORT]";
-    //private const String COORDINATES_TAG = "[COORDINATES]";
-    //private const String RULES_TAG       = "[RULES]";
-    //private const String VERTICES_TAG    = "[VERTICES]";
-    //private const String LABELS_TAG      = "[LABELS]";
+    //private const string TITLE_TAG       = "[TITLE]";
+    //private const string JUNCTIONS_TAG   = "[JUNCTIONS]";
+    //private const string TANKS_TAG       = "[TANKS]";
+    //private const string RESERVOIRS_TAG  = "[RESERVOIRS]";
+    //private const string PIPES_TAG       = "[PIPES]";
+    //private const string PUMPS_TAG       = "[PUMPS]";
+    //private const string VALVES_TAG      = "[VALVES]";
+    //private const string DEMANDS_TAG     = "[DEMANDS]";
+    //private const string EMITTERS_TAG    = "[EMITTERS]";
+    //private const string STATUS_TAG      = "[STATUS]";
+    //private const string PATTERNS_TAG    = "[PATTERNS]";
+    //private const string CURVES_TAG      = "[CURVES]";
+    //private const string CONTROLS_TAG    = "[CONTROLS]";
+    //private const string QUALITY_TAG     = "[QUALITY]";
+    //private const string SOURCE_TAG      = "[SOURCE]";
+    //private const string MIXING_TAG      = "[MIXING]";
+    //private const string REACTIONS_TAG   = "[REACTIONS]";
+    //private const string ENERGY_TAG      = "[ENERGY]";
+    //private const string TIMES_TAG       = "[TIMES]";
+    //private const string OPTIONS_TAG     = "[OPTIONS]";
+    //private const string REPORT_TAG      = "[REPORT]";
+    //private const string COORDINATES_TAG = "[COORDINATES]";
+    //private const string RULES_TAG       = "[RULES]";
+    //private const string VERTICES_TAG    = "[VERTICES]";
+    //private const string LABELS_TAG      = "[LABELS]";
 
 
     private const string VERTICES_SUBTITLE = "Link\tX-Coord\tY-Coord";
 
-    XSSFWorkbook workbook;
+    private XSSFWorkbook _workbook;
 
-    ExcelWriter writer;
+    private ExcelWriter _writer;
 
-    private void composeControls(Network net) {
-        Control[] controls = net.getControls();
-        FieldsMap fmap = net.getFieldsMap();
+    private void ComposeControls(Network net) {
+        FieldsMap fmap = net.FieldsMap;
 
-        writer.write(Network.SectType.CONTROLS.parseStr(),NEWLINE);
-        writer.writeHeader("Code");
+        this._writer.Write(Network.SectType.CONTROLS.parseStr(),NEWLINE);
+        this._writer.WriteHeader("Code");
 
-        foreach (Control control  in  controls) {
+        foreach(Control control in net.Controls) {
             // Check that controlled link exists
-            if (control.getLink() == null) continue;
+            if (control.Link == null) continue;
 
             // Get text of control's link status/setting
-            if (control.getSetting() == Constants.MISSING)
-                writer.write("LINK", control.getLink().getId(), control.getStatus().ParseStr());
+            if (control.Setting == Constants.MISSING)
+                this._writer.Write("LINK", control.Link.Id, control.Status.ParseStr());
             else {
-                double kc = control.getSetting();
-                switch (control.getLink().getType()) {
+                double kc = control.Setting;
+                switch (control.Link.Type) {
                     case Link.LinkType.PRV:
                     case Link.LinkType.PSV:
                     case Link.LinkType.PBV:
-                        kc = fmap.revertUnit(FieldsMap.Type.PRESSURE, kc);
+                        kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
                         break;
                     case Link.LinkType.FCV:
-                        kc = fmap.revertUnit(FieldsMap.Type.FLOW, kc);
+                        kc = fmap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
                         break;
                 }
-                writer.write("LINK", control.getLink().getId(), kc);
+                this._writer.Write("LINK", control.Link.Id, kc);
             }
 
 
-            switch (control.getType()) {
+            switch (control.Type) {
                 // Print level control
                 case Control.ControlType.LOWLEVEL:
                 case Control.ControlType.HILEVEL:
-                    double kc = control.getGrade() - control.getNode().getElevation();
-                    if (control.getNode() is Tank) kc = fmap.revertUnit(FieldsMap.Type.HEAD, kc);
+                    double kc = control.Grade - control.Node.Elevation;
+                    if (control.Node is Tank) kc = fmap.RevertUnit(FieldsMap.FieldType.HEAD, kc);
                     else
-                        kc = fmap.revertUnit(FieldsMap.Type.PRESSURE, kc);
-                    writer.write("IF", "NODE", control.getNode().getId(), control.getType().ParseStr(), kc);
+                        kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
+                    this._writer.Write("IF", "NODE", control.Node.Id, control.Type.ParseStr(), kc);
                     break;
 
                 // Print timer control
                 case Control.ControlType.TIMER:
-                writer.write("AT", Control.ControlType.TIMER.ParseStr(), control.getTime() / 3600.0f, "HOURS");
+                this._writer.Write("AT", Control.ControlType.TIMER.ParseStr(), control.Time / 3600.0f, "HOURS");
                     break;
 
                 // Print time-of-day control
                 case Control.ControlType.TIMEOFDAY:
-                    writer.write("AT", Control.ControlType.TIMEOFDAY.ParseStr(), Utilities.getClockTime(control.getTime()));
+                    this._writer.Write("AT", Control.ControlType.TIMEOFDAY.ParseStr(), control.Time.GetClockTime());
                     break;
             }
-            writer.newLine();
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeCoordinates(Network net) {
-        writer.write(Network.SectType.COORDINATES.parseStr(),NEWLINE);
-        writer.writeHeader(COORDINATES_SUBTITLE);
+    private void ComposeCoordinates(Network net) {
+        this._writer.Write(Network.SectType.COORDINATES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(COORDINATES_SUBTITLE);
 
-        foreach (Node node  in  net.getNodes()) {
-            if (node.getPosition() != null) {
-                writer.write(node.getId(), node.getPosition().getX(), node.getPosition().getY(), NEWLINE);
+        foreach (Node node  in  net.Nodes) {
+            if (!node.Position.IsInvalid) {
+                this._writer.Write(node.Id, node.Position.X, node.Position.Y, NEWLINE);
             }
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
 
-    private void composeCurves(Network net) {
+    private void ComposeCurves(Network net) {
 
-        List<Curve> curves = new List<Curve>(net.getCurves());
+        List<Curve> curves = new List<Curve>(net.Curves);
 
-        writer.write(Network.SectType.CURVES.parseStr(),NEWLINE);
-        writer.writeHeader(CURVE_SUBTITLE);
+        this._writer.Write(Network.SectType.CURVES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(CURVE_SUBTITLE);
 
         foreach (Curve c  in  curves) {
-            for (int i = 0; i < c.getNpts(); i++) {
-                writer.write(c.getId(), c.getX()[i], c.getY()[i]);
-                writer.newLine();
+            for (int i = 0; i < c.Npts; i++) {
+                this._writer.Write(c.Id, c.X[i], c.Y[i]);
+                this._writer.NewLine();
             }
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeDemands(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
+    private void ComposeDemands(Network net) {
+        FieldsMap fMap = net.FieldsMap;
 
-        writer.write(Network.SectType.DEMANDS.parseStr(),NEWLINE);
-        writer.writeHeader(DEMANDS_SUBTITLE);
+        this._writer.Write(Network.SectType.DEMANDS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(DEMANDS_SUBTITLE);
 
-        double ucf = fMap.getUnits(FieldsMap.Type.DEMAND);
+        double ucf = fMap.GetUnits(FieldsMap.FieldType.DEMAND);
 
-        foreach (Node node  in  net.getJunctions()) {
+        foreach (Node node  in  net.Junctions) {
 
-            if (node.getDemand().Count > 1)
-                for(int i = 1;i<node.getDemand().Count;i++){
-                    Demand demand = node.getDemand()[i];
-                    writer.write(node.getId(), ucf * demand.getBase());
-                    if (demand.getPattern() != null && !string.IsNullOrEmpty(demand.getPattern().getId()))
-                        writer.write(demand.getPattern().getId());
-                    writer.newLine();
+            if (node.Demand.Count > 1)
+                for(int i = 1;i<node.Demand.Count;i++){
+                    Demand demand = node.Demand[i];
+                    this._writer.Write(node.Id, ucf * demand.Base);
+                    if (demand.Pattern != null && !string.IsNullOrEmpty(demand.Pattern.Id))
+                        this._writer.Write(demand.Pattern.Id);
+                    this._writer.NewLine();
                 }
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeEmitters(Network net) {
-        writer.write(Network.SectType.EMITTERS.parseStr(),NEWLINE);
-        writer.writeHeader(EMITTERS_SUBTITLE);
+    private void ComposeEmitters(Network net) {
+        this._writer.Write(Network.SectType.EMITTERS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(EMITTERS_SUBTITLE);
 
-        double uflow = net.getFieldsMap().getUnits(FieldsMap.Type.FLOW);
-        double upressure = net.getFieldsMap().getUnits(FieldsMap.Type.PRESSURE);
-        double Qexp = net.getPropertiesMap().getQexp();
+        double uflow = net.FieldsMap.GetUnits(FieldsMap.FieldType.FLOW);
+        double upressure = net.FieldsMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+        double qexp = net.PropertiesMap.Qexp;
 
-        foreach (Node node  in  net.getJunctions()) {
-            if (node.getKe() == 0.0) continue;
-            double ke = uflow / Math.Pow(upressure * node.getKe(), (1.0 / Qexp));
-            writer.write(node.getId(), ke);
-            writer.newLine();
+        foreach (Node node  in  net.Junctions) {
+            if (node.Ke == 0.0) continue;
+            double ke = uflow / Math.Pow(upressure * node.Ke, (1.0 / qexp));
+            this._writer.Write(node.Id, ke);
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeEnergy(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeEnergy(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
 
-        writer.write(Network.SectType.ENERGY.parseStr(),NEWLINE);
+        this._writer.Write(Network.SectType.ENERGY.parseStr(),NEWLINE);
 
-        if (pMap.getEcost() != 0.0)
-            writer.write("GLOBAL", "PRICE", pMap.getEcost(), NEWLINE);
+        if (pMap.Ecost != 0.0)
+            this._writer.Write("GLOBAL", "PRICE", pMap.Ecost, NEWLINE);
 
-        if (!string.IsNullOrEmpty(pMap.getEpatId()))
-            writer.write("GLOBAL", "PATTERN", pMap.getEpatId(), NEWLINE);
+        if (!string.IsNullOrEmpty(pMap.EpatId))
+            this._writer.Write("GLOBAL", "PATTERN", pMap.EpatId, NEWLINE);
 
-        writer.write("GLOBAL", "EFFIC", pMap.getEpump(), NEWLINE);
-        writer.write("DEMAND", "CHARGE", pMap.getDcost(), NEWLINE);
+        this._writer.Write("GLOBAL", "EFFIC", pMap.Epump, NEWLINE);
+        this._writer.Write("DEMAND", "CHARGE", pMap.Dcost, NEWLINE);
 
-        foreach (Pump p  in  net.getPumps()) {
-            if (p.getEcost() > 0.0)
-                writer.write("PUMP", p.getId(), "PRICE", p.getEcost(), NEWLINE);
-            if (p.getEpat() != null)
-                writer.write("PUMP", p.getId(), "PATTERN", p.getEpat().getId(), NEWLINE);
-            if (p.getEcurve() != null)
-                writer.write("PUMP", p.getId(), "EFFIC", p.getId(), p.getEcurve().getId(), NEWLINE);
+        foreach (Pump p  in  net.Pumps) {
+            if (p.Ecost > 0.0)
+                this._writer.Write("PUMP", p.Id, "PRICE", p.Ecost, NEWLINE);
+            if (p.Epat != null)
+                this._writer.Write("PUMP", p.Id, "PATTERN", p.Epat.Id, NEWLINE);
+            if (p.Ecurve != null)
+                this._writer.Write("PUMP", p.Id, "EFFIC", p.Id, p.Ecurve.Id, NEWLINE);
         }
-        writer.newLine();
+        this._writer.NewLine();
 
     }
 
-    public void composeHeader(Network net) {
-        if (net.getTitleText().Count == 0)
+    public void ComposeHeader(Network net) {
+        if (net.TitleText.Count == 0)
             return;
 
-        writer.write(Network.SectType.TITLE.parseStr(),NEWLINE);
-        writer.writeHeader(TITLE_SUBTITLE);
+        this._writer.Write(Network.SectType.TITLE.parseStr(),NEWLINE);
+        this._writer.WriteHeader(TITLE_SUBTITLE);
 
-        foreach (string str  in  net.getTitleText()) {
-            writer.write(str);
-            writer.newLine();
+        foreach (string str  in  net.TitleText) {
+            this._writer.Write(str);
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeJunctions(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeJunctions(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        PropertiesMap pMap = net.PropertiesMap;
 
-        writer.write(Network.SectType.JUNCTIONS.parseStr(),NEWLINE);
-        writer.writeHeader(JUNCS_SUBTITLE);
+        this._writer.Write(Network.SectType.JUNCTIONS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(JUNCS_SUBTITLE);
 
-        foreach (Node node  in  net.getJunctions()) {
-            writer.write(node.getId(), fMap.revertUnit(FieldsMap.Type.ELEV, node.getElevation()));
+        foreach (Node node  in  net.Junctions) {
+            this._writer.Write(node.Id, fMap.RevertUnit(FieldsMap.FieldType.ELEV, node.Elevation));
 
-            if( node.getDemand().Count>0){
-                Demand d = node.getDemand()[0];
-                writer.write(fMap.revertUnit(FieldsMap.Type.DEMAND, d.getBase()));
+            if( node.Demand.Count>0){
+                Demand d = node.Demand[0];
+                this._writer.Write(fMap.RevertUnit(FieldsMap.FieldType.DEMAND, d.Base));
 
-                if (!string.IsNullOrEmpty(d.getPattern().getId()) 
-                    && !pMap.getDefPatId().Equals(d.getPattern().getId(), StringComparison.OrdinalIgnoreCase))
-                    writer.write(d.getPattern().getId());
+                if (!string.IsNullOrEmpty(d.Pattern.Id) 
+                    && !pMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
+                    this._writer.Write(d.Pattern.Id);
             }
 
-            if (!string.IsNullOrEmpty(node.getComment()))
-                writer.write(";" + node.getComment());
+            if (!string.IsNullOrEmpty(node.Comment))
+                this._writer.Write(";" + node.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeLabels(Network net) {
-        writer.write(Network.SectType.LABELS.parseStr(),NEWLINE);
-        writer.writeHeader(LABELS_SUBTITLE);
+    private void ComposeLabels(Network net) {
+        this._writer.Write(Network.SectType.LABELS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(LABELS_SUBTITLE);
 
-        foreach (Label label  in  net.getLabels()) {
-            writer.write(label.getPosition().getX(), label.getPosition().getY(),label.getText(), NEWLINE);
+        foreach (Label label  in  net.Labels) {
+            this._writer.Write(label.Position.X, label.Position.Y,label.Text, NEWLINE);
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeMixing(Network net) {
-        writer.write(Network.SectType.MIXING.parseStr(),NEWLINE);
-        writer.writeHeader(MIXING_SUBTITLE);
+    private void ComposeMixing(Network net) {
+        this._writer.Write(Network.SectType.MIXING.parseStr(),NEWLINE);
+        this._writer.WriteHeader(MIXING_SUBTITLE);
 
-        foreach (Tank tank  in  net.getTanks()) {
-            if (tank.getArea() == 0.0) continue;
-            writer.write(tank.getId(), tank.getMixModel().ParseStr(),
-                    (tank.getV1max() / tank.getVmax()));
-            writer.newLine();
+        foreach (Tank tank  in  net.Tanks) {
+            if (tank.IsReservoir) continue;
+            this._writer.Write(tank.Id, tank.MixModel.ParseStr(), (tank.V1Max / tank.Vmax));
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeOptions(Network net) {
-        writer.write(Network.SectType.OPTIONS.parseStr(),NEWLINE);
+    private void ComposeOptions(Network net) {
+        this._writer.Write(Network.SectType.OPTIONS.parseStr(),NEWLINE);
 
-        PropertiesMap pMap = net.getPropertiesMap();
-        FieldsMap fMap = net.getFieldsMap();
+        PropertiesMap pMap = net.PropertiesMap;
+        FieldsMap fMap = net.FieldsMap;
 
-        writer.write("UNITS", pMap.getFlowflag().ParseStr(), NEWLINE);
-        writer.write("PRESSURE", pMap.getPressflag().ParseStr(), NEWLINE);
-        writer.write("HEADLOSS", pMap.getFormflag().ParseStr(), NEWLINE);
+        this._writer.Write("UNITS", pMap.Flowflag.ParseStr(), NEWLINE);
+        this._writer.Write("PRESSURE", pMap.Pressflag.ParseStr(), NEWLINE);
+        this._writer.Write("HEADLOSS", pMap.Formflag.ParseStr(), NEWLINE);
 
-        if (!string.IsNullOrEmpty(pMap.getDefPatId()))
-            writer.write("PATTERN", pMap.getDefPatId(), NEWLINE);
+        if (!string.IsNullOrEmpty(pMap.DefPatId))
+            this._writer.Write("PATTERN", pMap.DefPatId, NEWLINE);
 
-        if (pMap.getHydflag() == PropertiesMap.Hydtype.USE)
-            writer.write("HYDRAULICS USE", pMap.getHydFname(), NEWLINE);
+        if (pMap.Hydflag == PropertiesMap.Hydtype.USE)
+            this._writer.Write("HYDRAULICS USE", pMap.HydFname, NEWLINE);
 
-        if (pMap.getHydflag() == PropertiesMap.Hydtype.SAVE)
-            writer.write("HYDRAULICS SAVE", pMap.getHydFname(), NEWLINE);
+        if (pMap.Hydflag == PropertiesMap.Hydtype.SAVE)
+            this._writer.Write("HYDRAULICS SAVE", pMap.HydFname, NEWLINE);
 
-        if (pMap.getExtraIter() == -1)
-            writer.write("UNBALANCED", "STOP", NEWLINE);
+        if (pMap.ExtraIter == -1)
+            this._writer.Write("UNBALANCED", "STOP", NEWLINE);
 
-        if (pMap.getExtraIter() >= 0)
-            writer.write("UNBALANCED", "CONTINUE", pMap.getExtraIter(), NEWLINE);
+        if (pMap.ExtraIter >= 0)
+            this._writer.Write("UNBALANCED", "CONTINUE", pMap.ExtraIter, NEWLINE);
 
-        if (pMap.getQualflag() == PropertiesMap.QualType.CHEM)
-            writer.write("QUALITY", pMap.getChemName(), pMap.getChemUnits(), NEWLINE);
+        if (pMap.Qualflag == PropertiesMap.QualType.CHEM)
+            this._writer.Write("QUALITY", pMap.ChemName, pMap.ChemUnits, NEWLINE);
 
-        if (pMap.getQualflag() == PropertiesMap.QualType.TRACE)
-            writer.write("QUALITY", "TRACE", pMap.getTraceNode(), NEWLINE);
+        if (pMap.Qualflag == PropertiesMap.QualType.TRACE)
+            this._writer.Write("QUALITY", "TRACE", pMap.TraceNode, NEWLINE);
 
-        if (pMap.getQualflag() == PropertiesMap.QualType.AGE)
-            writer.write("QUALITY", "AGE", NEWLINE);
+        if (pMap.Qualflag == PropertiesMap.QualType.AGE)
+            this._writer.Write("QUALITY", "AGE", NEWLINE);
 
-        if (pMap.getQualflag() == PropertiesMap.QualType.NONE)
-            writer.write("QUALITY", "NONE", NEWLINE);
+        if (pMap.Qualflag == PropertiesMap.QualType.NONE)
+            this._writer.Write("QUALITY", "NONE", NEWLINE);
 
-        writer.write("DEMAND", "MULTIPLIER", pMap.getDmult(), NEWLINE);
+        this._writer.Write("DEMAND", "MULTIPLIER", pMap.Dmult, NEWLINE);
 
-        writer.write("EMITTER", "EXPONENT", 1.0 / pMap.getQexp(), NEWLINE);
+        this._writer.Write("EMITTER", "EXPONENT", 1.0 / pMap.Qexp, NEWLINE);
 
-        writer.write("VISCOSITY", pMap.getViscos() / Constants.VISCOS, NEWLINE);
+        this._writer.Write("VISCOSITY", pMap.Viscos / Constants.VISCOS, NEWLINE);
 
-        writer.write("DIFFUSIVITY", pMap.getDiffus() / Constants.DIFFUS, NEWLINE);
+        this._writer.Write("DIFFUSIVITY", pMap.Diffus / Constants.DIFFUS, NEWLINE);
 
-        writer.write("SPECIFIC", "GRAVITY", pMap.getSpGrav(), NEWLINE);
+        this._writer.Write("SPECIFIC", "GRAVITY", pMap.SpGrav, NEWLINE);
 
-        writer.write("TRIALS", pMap.getMaxIter(), NEWLINE);
+        this._writer.Write("TRIALS", pMap.MaxIter, NEWLINE);
 
-        writer.write("ACCURACY", pMap.getHacc(), NEWLINE);
+        this._writer.Write("ACCURACY", pMap.Hacc, NEWLINE);
 
-        writer.write("TOLERANCE", fMap.revertUnit(FieldsMap.Type.QUALITY, pMap.getCtol()), NEWLINE);
+        this._writer.Write("TOLERANCE", fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol), NEWLINE);
 
-        writer.write("CHECKFREQ", pMap.getCheckFreq(), NEWLINE);
+        this._writer.Write("CHECKFREQ", pMap.CheckFreq, NEWLINE);
 
-        writer.write("MAXCHECK", pMap.getMaxCheck(), NEWLINE);
+        this._writer.Write("MAXCHECK", pMap.MaxCheck, NEWLINE);
 
-        writer.write("DAMPLIMIT", pMap.getDampLimit(), NEWLINE);
+        this._writer.Write("DAMPLIMIT", pMap.DampLimit, NEWLINE);
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composePatterns(Network net) {
+    private void ComposePatterns(Network net) {
 
-        List<Pattern> pats = new List<Pattern>(net.getPatterns());
+        List<Pattern> pats = new List<Pattern>(net.Patterns);
 
-        writer.write(Network.SectType.PATTERNS.parseStr(),NEWLINE);
-        writer.writeHeader(PATTERNS_SUBTITLE);
+        this._writer.Write(Network.SectType.PATTERNS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(PATTERNS_SUBTITLE);
 
         for (int i = 1; i < pats.Count; i++) {
             Pattern pat = pats[i];
-            List<double> F = pat.getFactorsList();
-            for (int j = 0; j < pats[i].getLength(); j++) {
+            List<double> f = pat.FactorsList;
+            for (int j = 0; j < pats[i].Length; j++) {
                 if (j % 6 == 0)
-                    writer.write(pat.getId());
-                writer.write(F[j]);
+                    this._writer.Write(pat.Id);
+                this._writer.Write(f[j]);
 
                 if (j % 6 == 5)
-                    writer.newLine();
+                    this._writer.NewLine();
             }
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composePipes(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposePipes(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        PropertiesMap pMap = net.PropertiesMap;
 
         List<Link> pipes = new List<Link>();
-        foreach (Link link  in  net.getLinks())
-            if (link.getType() <= Link.LinkType.PIPE)
+        foreach (Link link  in  net.Links)
+            if (link.Type <= Link.LinkType.PIPE)
                 pipes.Add(link);
 
-        writer.write(Network.SectType.PIPES.parseStr(),NEWLINE);
-        writer.writeHeader(PIPES_SUBTITLE);
+        this._writer.Write(Network.SectType.PIPES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(PIPES_SUBTITLE);
 
         foreach (Link link  in  pipes) {
-            double d = link.getDiameter();
-            double kc = link.getRoughness();
-            if (pMap.getFormflag() == PropertiesMap.FormType.DW)
-                kc = fMap.revertUnit(FieldsMap.Type.ELEV, kc * 1000.0);
+            double d = link.Diameter;
+            double kc = link.Roughness;
+            if (pMap.Formflag == PropertiesMap.FormType.DW)
+                kc = fMap.RevertUnit(FieldsMap.FieldType.ELEV, kc * 1000.0);
 
-            double km = link.getKm() * Math.Pow(d, 4.0) / 0.02517;
+            double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
 
-            writer.write(link.getId(),
-                    link.getFirst().getId(),
-                    link.getSecond().getId(),
-                    fMap.revertUnit(FieldsMap.Type.LENGTH, link.getLenght()),
-                    fMap.revertUnit(FieldsMap.Type.DIAM, d));
+            this._writer.Write(link.Id,
+                    link.FirstNode.Id,
+                    link.SecondNode.Id,
+                    fMap.RevertUnit(FieldsMap.FieldType.LENGTH, link.Lenght),
+                    fMap.RevertUnit(FieldsMap.FieldType.DIAM, d));
 
             //if (pMap.getFormflag() == FormType.DW)
-            writer.write(kc, km);
+            this._writer.Write(kc, km);
 
-            if (link.getType() == Link.LinkType.CV)
-                writer.write("CV");
-            else if (link.getStat() == Link.StatType.CLOSED)
-                writer.write("CLOSED");
-            else if (link.getStat() == Link.StatType.OPEN)
-                writer.write("OPEN");
+            if (link.Type == Link.LinkType.CV)
+                this._writer.Write("CV");
+            else if (link.Status == Link.StatType.CLOSED)
+                this._writer.Write("CLOSED");
+            else if (link.Status == Link.StatType.OPEN)
+                this._writer.Write("OPEN");
 
-            if (!string.IsNullOrEmpty(link.getComment()))
-                writer.write(";" + link.getComment());
+            if (!string.IsNullOrEmpty(link.Comment))
+                this._writer.Write(";" + link.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composePumps(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        List<Pump> pumps = new List<Pump>(net.getPumps());
+    private void ComposePumps(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        this._writer.Write(Network.SectType.PUMPS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(PUMPS_SUBTITLE);
 
-        writer.write(Network.SectType.PUMPS.parseStr(),NEWLINE);
-        writer.writeHeader(PUMPS_SUBTITLE);
-
-        foreach (Pump pump  in  pumps) {
-            writer.write(pump.getId(),
-                    pump.getFirst().getId(), pump.getSecond().getId());
+        foreach(Pump pump in net.Pumps) {
+            this._writer.Write(pump.Id,
+                    pump.FirstNode.Id, pump.SecondNode.Id);
 
 
             // Pump has constant power
-            if (pump.getPtype() == Pump.Type.CONST_HP)
-                writer.write("POWER", pump.getKm());
+            if (pump.Ptype == Pump.PumpType.CONST_HP)
+                this._writer.Write("POWER", pump.Km);
                 // Pump has a head curve
-            else if (pump.getHcurve() != null)
-                writer.write("HEAD", pump.getHcurve().getId());
+            else if (pump.Hcurve != null)
+                this._writer.Write("HEAD", pump.Hcurve.Id);
                 // Old format used for pump curve
             else {
-                writer.write(
-                        fMap.revertUnit(FieldsMap.Type.HEAD, -pump.getH0()),
-                        fMap.revertUnit(FieldsMap.Type.HEAD, -pump.getH0() - pump.getFlowCoefficient() * Math.Pow(pump.getQ0(), pump.getN())),
-                        fMap.revertUnit(FieldsMap.Type.FLOW, pump.getQ0()), 0.0,
-                        fMap.revertUnit(FieldsMap.Type.FLOW, pump.getQmax()
+                this._writer.Write(
+                        fMap.RevertUnit(FieldsMap.FieldType.HEAD, -pump.H0),
+                        fMap.RevertUnit(FieldsMap.FieldType.HEAD, -pump.H0 - pump.FlowCoefficient * Math.Pow(pump.Q0, pump.N)),
+                        fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Q0), 0.0,
+                        fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Qmax
                         ));
                 continue;
             }
 
-            if (pump.getUpat() != null)
-                writer.write("PATTERN", pump.getUpat().getId());
+            if (pump.Upat != null)
+                this._writer.Write("PATTERN", pump.Upat.Id);
 
-            if (pump.getRoughness() != 1.0)
-                writer.write("SPEED", pump.getRoughness());
+            if (pump.Roughness != 1.0)
+                this._writer.Write("SPEED", pump.Roughness);
 
-            if (!string.IsNullOrEmpty(pump.getComment()))
-                writer.write(";" + pump.getComment());
+            if (!string.IsNullOrEmpty(pump.Comment))
+                this._writer.Write(";" + pump.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeQuality(Network net) {
-        Node[] nodes = net.getNodes();
-        FieldsMap fmap = net.getFieldsMap();
+    private void ComposeQuality(Network net) {
+        FieldsMap fmap = net.FieldsMap;
 
-        writer.write(Network.SectType.QUALITY.parseStr(),NEWLINE);
-        writer.writeHeader(QUALITY_SUBTITLE);
+        this._writer.Write(Network.SectType.QUALITY.parseStr(),NEWLINE);
+        this._writer.WriteHeader(QUALITY_SUBTITLE);
 
-        foreach (Node node  in  nodes) {
-            if (node.getC0().Length == 1) {
-                if (node.getC0()[0] == 0.0) continue;
-                writer.write(node.getId(), fmap.revertUnit(FieldsMap.Type.QUALITY, node.getC0()[0]));
+        foreach(Node node in net.Nodes) {
+            if (node.C0.Length == 1) {
+                if (node.C0[0] == 0.0) continue;
+                this._writer.Write(node.Id, fmap.RevertUnit(FieldsMap.FieldType.QUALITY, node.C0[0]));
             }
-            writer.newLine();
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    public override void composer(Network net, string fileName) {
+    public override void Composer(Network net, string fileName) {
 
-        workbook = new XSSFWorkbook();
-        writer = new ExcelWriter(workbook);
+        this._workbook = new XSSFWorkbook();
+        this._writer = new ExcelWriter(this._workbook);
 
         try {
 
 
-            writer.newSpreadsheet("Junctions");
-            composeJunctions(net);
+            this._writer.NewSpreadsheet("Junctions");
+            this.ComposeJunctions(net);
 
-            writer.newSpreadsheet("Tanks");
-            composeReservoirs(net);
-            composeTanks(net);
+            this._writer.NewSpreadsheet("Tanks");
+            this.ComposeReservoirs(net);
+            this.ComposeTanks(net);
 
-            writer.newSpreadsheet("Pipes");
-            composePipes(net);
+            this._writer.NewSpreadsheet("Pipes");
+            this.ComposePipes(net);
 
-            writer.newSpreadsheet("Pumps");
-            composePumps(net);
-            composeEnergy(net);
+            this._writer.NewSpreadsheet("Pumps");
+            this.ComposePumps(net);
+            this.ComposeEnergy(net);
 
-            writer.newSpreadsheet("Valves");
-            composeValves(net);
+            this._writer.NewSpreadsheet("Valves");
+            this.ComposeValves(net);
 
-            writer.newSpreadsheet("Demands");
-            composeDemands(net);
+            this._writer.NewSpreadsheet("Demands");
+            this.ComposeDemands(net);
 
-            writer.newSpreadsheet("Patterns");
-            composePatterns(net);
-            writer.newSpreadsheet("Curves");
-            composeCurves(net);
+            this._writer.NewSpreadsheet("Patterns");
+            this.ComposePatterns(net);
+            this._writer.NewSpreadsheet("Curves");
+            this.ComposeCurves(net);
 
-            writer.newSpreadsheet("Script");
-            composeControls(net);
-            composeRules(net);
+            this._writer.NewSpreadsheet("Script");
+            this.ComposeControls(net);
+            this.ComposeRules(net);
 
-            writer.newSpreadsheet("Quality");
-            composeQuality(net);
-            composeSource(net);
-            composeMixing(net);
-            composeReaction(net);
-
-
-            writer.newSpreadsheet("Config");
-            composeHeader(net);
-            composeTimes(net);
-            composeOptions(net);
-            composeReport(net);
-            composeEmitters(net);
-            composeStatus(net);
-
-            writer.newSpreadsheet("GIS");
-            composeLabels(net);
-            composeCoordinates(net);
-            composeVertices(net);
+            this._writer.NewSpreadsheet("Quality");
+            this.ComposeQuality(net);
+            this.ComposeSource(net);
+            this.ComposeMixing(net);
+            this.ComposeReaction(net);
 
 
+            this._writer.NewSpreadsheet("Config");
+            this.ComposeHeader(net);
+            this.ComposeTimes(net);
+            this.ComposeOptions(net);
+            this.ComposeReport(net);
+            this.ComposeEmitters(net);
+            this.ComposeStatus(net);
 
-            workbook.Write(File.OpenWrite(fileName));
+            this._writer.NewSpreadsheet("GIS");
+            this.ComposeLabels(net);
+            this.ComposeCoordinates(net);
+            this.ComposeVertices(net);
+
+
+
+            this._workbook.Write(File.OpenWrite(fileName));
         } catch (IOException) {
 
         }
     }
 
 
-    private void composeReaction(Network net) {
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeReaction(Network net) {
+        PropertiesMap pMap = net.PropertiesMap;
 
-        writer.write(Network.SectType.REACTIONS.parseStr(),NEWLINE);
-        writer.writeHeader(REACTIONS_SUBTITLE);
+        this._writer.Write(Network.SectType.REACTIONS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(REACTIONS_SUBTITLE);
 
-        writer.write("ORDER", "BULK", pMap.getBulkOrder(), NEWLINE);
-        writer.write("ORDER", "WALL", pMap.getWallOrder(), NEWLINE);
-        writer.write("ORDER", "TANK", pMap.getTankOrder(), NEWLINE);
-        writer.write("GLOBAL", "BULK", pMap.getKbulk() * Constants.SECperDAY, NEWLINE);
-        writer.write("GLOBAL", "WALL", pMap.getKwall() * Constants.SECperDAY, NEWLINE);
+        this._writer.Write("ORDER", "BULK", pMap.BulkOrder, NEWLINE);
+        this._writer.Write("ORDER", "WALL", pMap.WallOrder, NEWLINE);
+        this._writer.Write("ORDER", "TANK", pMap.TankOrder, NEWLINE);
+        this._writer.Write("GLOBAL", "BULK", pMap.Kbulk * Constants.SECperDAY, NEWLINE);
+        this._writer.Write("GLOBAL", "WALL", pMap.Kwall * Constants.SECperDAY, NEWLINE);
         //if (pMap.getClimit() > 0.0)
-        writer.write("LIMITING", "POTENTIAL", pMap.getClimit(), NEWLINE);
+        this._writer.Write("LIMITING", "POTENTIAL", pMap.Climit, NEWLINE);
 
         //if (pMap.getRfactor() != Constants.MISSING && pMap.getRfactor() != 0.0)
-        writer.write("ROUGHNESS", "CORRELATION", pMap.getRfactor(), NEWLINE);
+        this._writer.Write("ROUGHNESS", "CORRELATION", pMap.Rfactor, NEWLINE);
 
 
-        foreach (Link link  in  net.getLinks()) {
-            if (link.getType() > Link.LinkType.PIPE)
+        foreach (Link link  in  net.Links) {
+            if (link.Type > Link.LinkType.PIPE)
                 continue;
 
-            if (link.getKb() != pMap.getKbulk())
-                writer.write("BULK", link.getId(), link.getKb() * Constants.SECperDAY, NEWLINE);
-            if (link.getKw() != pMap.getKwall())
-                writer.write("WALL", link.getId(), link.getKw() * Constants.SECperDAY, NEWLINE);
+            if (link.Kb != pMap.Kbulk)
+                this._writer.Write("BULK", link.Id, link.Kb * Constants.SECperDAY, NEWLINE);
+            if (link.Kw != pMap.Kwall)
+                this._writer.Write("WALL", link.Id, link.Kw * Constants.SECperDAY, NEWLINE);
         }
 
-        foreach (Tank tank  in  net.getTanks()) {
-            if (tank.getArea() == 0.0) continue;
-            if (tank.getKb() != pMap.getKbulk())
-                writer.write("TANK", tank.getId(), tank.getKb() * Constants.SECperDAY, NEWLINE);
+        foreach (Tank tank  in  net.Tanks) {
+            if (tank.IsReservoir) continue;
+            if (tank.Kb != pMap.Kbulk)
+                this._writer.Write("TANK", tank.Id, tank.Kb * Constants.SECperDAY, NEWLINE);
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeReport(Network net) {
-        writer.write(Network.SectType.REPORT.parseStr(),NEWLINE);
+    private void ComposeReport(Network net) {
+        this._writer.Write(Network.SectType.REPORT.parseStr(),NEWLINE);
 
-        PropertiesMap pMap = net.getPropertiesMap();
-        FieldsMap fMap = net.getFieldsMap();
-        writer.write("PAGESIZE", pMap.getPageSize(), NEWLINE);
-        writer.write("STATUS", pMap.getStatflag().ToString(), NEWLINE);
-        writer.write("SUMMARY", pMap.getSummaryflag() ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
-        writer.write("ENERGY", pMap.getEnergyflag() ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
+        PropertiesMap pMap = net.PropertiesMap;
+        FieldsMap fMap = net.FieldsMap;
+        this._writer.Write("PAGESIZE", pMap.PageSize, NEWLINE);
+        this._writer.Write("STATUS", pMap.Statflag.ToString(), NEWLINE);
+        this._writer.Write("SUMMARY", pMap.Summaryflag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
+        this._writer.Write("ENERGY", pMap.Energyflag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
 
-        switch (pMap.getNodeflag()) {
+        switch (pMap.Nodeflag) {
             case PropertiesMap.ReportFlag.FALSE:
-                writer.write("NODES", "NONE", NEWLINE);
+                this._writer.Write("NODES", "NONE", NEWLINE);
                 break;
             case PropertiesMap.ReportFlag.TRUE:
-                writer.write("NODES", "ALL", NEWLINE);
+                this._writer.Write("NODES", "ALL", NEWLINE);
                 break;
             case PropertiesMap.ReportFlag.SOME: {
                 int j = 0;
-                foreach (Node node  in  net.getNodes()) {
-                    if (node.isRptFlag()) {
-                        if (j % 5 == 0) writer.write("NODES", NEWLINE);
-                        writer.write(node.getId());
+                foreach (Node node  in  net.Nodes) {
+                    if (node.RptFlag) {
+                        if (j % 5 == 0) this._writer.Write("NODES", NEWLINE);
+                        this._writer.Write(node.Id);
                         j++;
                     }
                 }
@@ -715,19 +708,19 @@ public class ExcelComposer : OutputComposer {
             }
         }
 
-        switch (pMap.getLinkflag()) {
+        switch (pMap.Linkflag) {
             case PropertiesMap.ReportFlag.FALSE:
-                writer.write("LINKS", "NONE", NEWLINE);
+                this._writer.Write("LINKS", "NONE", NEWLINE);
                 break;
             case PropertiesMap.ReportFlag.TRUE:
-                writer.write("LINKS", "ALL", NEWLINE);
+                this._writer.Write("LINKS", "ALL", NEWLINE);
                 break;
             case PropertiesMap.ReportFlag.SOME: {
                 int j = 0;
-                foreach (Link link  in  net.getLinks()) {
-                    if (link.isRptFlag()) {
-                        if (j % 5 == 0) writer.write("LINKS", NEWLINE);
-                        writer.write(link.getId());
+                foreach (Link link  in  net.Links) {
+                    if (link.RptFlag) {
+                        if (j % 5 == 0) this._writer.Write("LINKS", NEWLINE);
+                        this._writer.Write(link.Id);
                         j++;
                     }
                 }
@@ -735,233 +728,220 @@ public class ExcelComposer : OutputComposer {
             }
         }
 
-        for (FieldsMap.Type i = 0; i < FieldsMap.Type.FRICTION; i++)
+        for (FieldsMap.FieldType i = 0; i < FieldsMap.FieldType.FRICTION; i++)
         {
-            Field f = fMap.getField(i);
-            if (f.isEnabled()) {
-                writer.write(f.getName(), "PRECISION", f.getPrecision(), NEWLINE);
-                if (f.getRptLim(Field.RangeType.LOW) < Constants.BIG)
-                    writer.write(f.getName(), "BELOW", f.getRptLim(Field.RangeType.LOW), NEWLINE);
-                if (f.getRptLim(Field.RangeType.HI) > -Constants.BIG)
-                    writer.write(f.getName(), "ABOVE", f.getRptLim(Field.RangeType.HI), NEWLINE);
+            Field f = fMap.GetField(i);
+            if (f.Enabled) {
+                this._writer.Write(f.Name, "PRECISION", f.Precision, NEWLINE);
+                if (f.GetRptLim(Field.RangeType.LOW) < Constants.BIG)
+                    this._writer.Write(f.Name, "BELOW", f.GetRptLim(Field.RangeType.LOW), NEWLINE);
+                if (f.GetRptLim(Field.RangeType.HI) > -Constants.BIG)
+                    this._writer.Write(f.Name, "ABOVE", f.GetRptLim(Field.RangeType.HI), NEWLINE);
             } else
-                writer.write(f.getName(), "NO", NEWLINE);
+                this._writer.Write(f.Name, "NO", NEWLINE);
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeReservoirs(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        if (net.getTanks().Length == 0)
+    private void ComposeReservoirs(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        if(!net.Tanks.Any())
             return;
 
         List<Tank> reservoirs = new List<Tank>();
-        foreach (Tank tank  in  net.getTanks())
-            if (tank.getArea() == 0)
+        foreach(Tank tank in net.Tanks)
+            if (tank.IsReservoir)
                 reservoirs.Add(tank);
 
-        writer.write(Network.SectType.RESERVOIRS.parseStr(),NEWLINE);
-        writer.writeHeader(RESERVOIRS_SUBTITLE);
+        this._writer.Write(Network.SectType.RESERVOIRS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(RESERVOIRS_SUBTITLE);
 
         foreach (Tank r  in  reservoirs) {
-            writer.write(r.getId(), fMap.revertUnit(FieldsMap.Type.ELEV, r.getElevation()));
+            this._writer.Write(r.Id, fMap.RevertUnit(FieldsMap.FieldType.ELEV, r.Elevation));
 
-            if (r.getPattern()!=null)
-                writer.write(r.getPattern().getId());
+            if (r.Pattern!=null)
+                this._writer.Write(r.Pattern.Id);
 
-            if (!string.IsNullOrEmpty(r.getComment()))
-                writer.write(";" + r.getComment());
+            if (!string.IsNullOrEmpty(r.Comment))
+                this._writer.Write(";" + r.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeRules(Network net) {
-        writer.write(Network.SectType.RULES.parseStr(),NEWLINE);
-        foreach (Rule r  in  net.getRules()) {
-            writer.write("RULE ",r.getLabel(), NEWLINE);
-            foreach (string s  in  r.getCode().Split('\n'))
-                writer.write(s, NEWLINE);
-            writer.newLine();
+    private void ComposeRules(Network net) {
+        this._writer.Write(Network.SectType.RULES.parseStr(),NEWLINE);
+        foreach (Rule r  in  net.Rules) {
+            this._writer.Write("RULE ",r.Label, NEWLINE);
+
+            foreach (string s  in  r.Code)
+                this._writer.Write(s, NEWLINE);
+
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeSource(Network net) {
-        var nodes = net.getNodes();
+    private void ComposeSource(Network net) {
+        this._writer.Write(Network.SectType.SOURCES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(SOURCE_SUBTITLE);
 
-        writer.write(Network.SectType.SOURCES.parseStr(),NEWLINE);
-        writer.writeHeader(SOURCE_SUBTITLE);
-
-        foreach (Node node  in  nodes) {
-            Source source = node.getSource();
+        foreach(Node node in net.Nodes) {
+            Source source = node.Source;
             if (source == null)
                 continue;
-            writer.write(node.getId(),
-                    source.getType().ParseStr(),
-                    source.getC0());
-            if (source.getPattern() != null)
-                writer.write(source.getPattern().getId());
-            writer.newLine();
+            this._writer.Write(node.Id,
+                    source.Type.ParseStr(),
+                    source.C0);
+            if (source.Pattern != null)
+                this._writer.Write(source.Pattern.Id);
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeStatus(Network net) {
+    private void ComposeStatus(Network net) {
 
-        writer.write(Network.SectType.STATUS.parseStr(),NEWLINE);
-        writer.writeHeader(STATUS_SUBTITLE);
+        this._writer.Write(Network.SectType.STATUS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(STATUS_SUBTITLE);
 
-        foreach (Link link  in  net.getLinks()) {
-            if (link.getType() <= Link.LinkType.PUMP) {
-                if (link.getStat() == Link.StatType.CLOSED)
-                    writer.write(link.getId(), Link.StatType.CLOSED.ParseStr());
-                else if (link.getType() == Link.LinkType.PUMP) {  // Write pump speed here for pumps with old-style pump curve input
+        foreach (Link link  in  net.Links) {
+            if (link.Type <= Link.LinkType.PUMP) {
+                if (link.Status == Link.StatType.CLOSED)
+                    this._writer.Write(link.Id, Link.StatType.CLOSED.ParseStr());
+                else if (link.Type == Link.LinkType.PUMP) {  // Write pump speed here for pumps with old-style pump curve input
                     Pump pump = (Pump) link;
-                    if (pump.getHcurve() == null &&
-                            pump.getPtype() != Pump.Type.CONST_HP &&
-                            pump.getRoughness() != 1.0)
-                        writer.write(link.getId(), link.getRoughness());
+                    if (pump.Hcurve == null &&
+                            pump.Ptype != Pump.PumpType.CONST_HP &&
+                            pump.Roughness != 1.0)
+                        this._writer.Write(link.Id, link.Roughness);
                 }
-            } else if (link.getRoughness() == Constants.MISSING)  // Write fixed-status PRVs & PSVs (setting = MISSING)
+            } else if (link.Roughness == Constants.MISSING)  // Write fixed-status PRVs & PSVs (setting = MISSING)
             {
-                if (link.getStat() == Link.StatType.OPEN)
-                    writer.write(link.getId(), Link.StatType.OPEN.ParseStr());
+                if (link.Status == Link.StatType.OPEN)
+                    this._writer.Write(link.Id, Link.StatType.OPEN.ParseStr());
 
-                if (link.getStat() == Link.StatType.CLOSED)
-                    writer.write(link.getId(), Link.StatType.CLOSED.ParseStr());
+                if (link.Status == Link.StatType.CLOSED)
+                    this._writer.Write(link.Id, Link.StatType.CLOSED.ParseStr());
 
             }
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeTanks(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
+    private void ComposeTanks(Network net) {
+        FieldsMap fMap = net.FieldsMap;
 
-        List<Tank> tanks = new List<Tank>();
-        foreach (Tank tank  in  net.getTanks())
-            if (tank.getArea() != 0)
-                tanks.Add(tank);
+        this._writer.Write(Network.SectType.TANKS.parseStr(),NEWLINE);
+        this._writer.WriteHeader(TANK_SUBTITLE);
 
-        writer.write(Network.SectType.TANKS.parseStr(),NEWLINE);
-        writer.writeHeader(TANK_SUBTITLE);
+        foreach(Tank tank in net.Tanks) {
+            if (tank.IsReservoir) continue;
 
-        foreach (Tank tank  in  tanks) {
-            double Vmin = tank.getVmin();
-            if(Math.Abs(Vmin/tank.getArea() - (tank.getHmin()-tank.getElevation()))<0.1)
-                Vmin = 0;
+            double vmin = tank.Vmin;
+            if(Math.Abs(vmin/tank.Area - (tank.Hmin-tank.Elevation))<0.1)
+                vmin = 0;
 
-            writer.write(tank.getId(),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getH0() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getHmin() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, tank.getHmax() - tank.getElevation()),
-                    fMap.revertUnit(FieldsMap.Type.ELEV, 2 * Math.Sqrt(tank.getArea() / Constants.PI)),
-                    fMap.revertUnit(FieldsMap.Type.VOLUME, Vmin));
+            this._writer.Write(tank.Id,
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.H0 - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmin - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmax - tank.Elevation),
+                    fMap.RevertUnit(FieldsMap.FieldType.ELEV, 2 * Math.Sqrt(tank.Area / Math.PI)),
+                    fMap.RevertUnit(FieldsMap.FieldType.VOLUME, vmin));
 
-            if (tank.getVcurve() != null)
-                writer.write(tank.getVcurve().getId());
+            if (tank.Vcurve != null)
+                this._writer.Write(tank.Vcurve.Id);
 
-            if (!string.IsNullOrEmpty(tank.getComment()))
-                writer.write(";" + tank.getComment());
+            if (!string.IsNullOrEmpty(tank.Comment))
+                this._writer.Write(";" + tank.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
 
-    private void composeTimes(Network net) {
-        writer.write(Network.SectType.TIMES.parseStr(),NEWLINE);
-        PropertiesMap pMap = net.getPropertiesMap();
+    private void ComposeTimes(Network net) {
+        this._writer.Write(Network.SectType.TIMES.parseStr(),NEWLINE);
+        PropertiesMap pMap = net.PropertiesMap;
         
-        //writer.write("DURATION", Utilities.getClockTime(pMap.getDuration()), NEWLINE);
-        //writer.write("HYDRAULIC", "TIMESTEP", Utilities.getClockTime(pMap.getHstep()), NEWLINE);
-        //writer.write("QUALITY", "TIMESTEP", Utilities.getClockTime(pMap.getQstep()), NEWLINE);
-        //writer.write("REPORT", "TIMESTEP", Utilities.getClockTime(pMap.getRstep()), NEWLINE);
-        //writer.write("REPORT", "START", Utilities.getClockTime(pMap.getRstart()), NEWLINE);
-        //writer.write("PATTERN", "TIMESTEP", Utilities.getClockTime(pMap.getPstep()), NEWLINE);
-        //writer.write("PATTERN", "START", Utilities.getClockTime(pMap.getPstart()), NEWLINE);
-        //writer.write("RULE", "TIMESTEP", Utilities.getClockTime(pMap.getRulestep()), NEWLINE);
-        //writer.write("START", "CLOCKTIME", Utilities.getClockTime(pMap.getTstart()), NEWLINE);
-
-        writer.write("DURATION", TimeSpan.FromSeconds(pMap.getDuration()), NEWLINE);
-        writer.write("HYDRAULIC", "TIMESTEP", TimeSpan.FromSeconds(pMap.getHstep()), NEWLINE);
-        writer.write("QUALITY", "TIMESTEP", TimeSpan.FromSeconds(pMap.getQstep()), NEWLINE);
-        writer.write("REPORT", "TIMESTEP", TimeSpan.FromSeconds(pMap.getRstep()), NEWLINE);
-        writer.write("REPORT", "START", TimeSpan.FromSeconds(pMap.getRstart()), NEWLINE);
-        writer.write("PATTERN", "TIMESTEP", TimeSpan.FromSeconds(pMap.getPstep()), NEWLINE);
-        writer.write("PATTERN", "START", TimeSpan.FromSeconds(pMap.getPstart()), NEWLINE);
-        writer.write("RULE", "TIMESTEP", TimeSpan.FromSeconds(pMap.getRulestep()), NEWLINE);
-        writer.write("START", "CLOCKTIME", TimeSpan.FromSeconds(pMap.getTstart()), NEWLINE);
-        writer.write("STATISTIC", pMap.getTstatflag().ParseStr(), NEWLINE);
-        writer.newLine();
+        this._writer.Write("DURATION", TimeSpan.FromSeconds(pMap.Duration), NEWLINE);
+        this._writer.Write("HYDRAULIC", "TIMESTEP", TimeSpan.FromSeconds(pMap.Hstep), NEWLINE);
+        this._writer.Write("QUALITY", "TIMESTEP", TimeSpan.FromSeconds(pMap.Qstep), NEWLINE);
+        this._writer.Write("REPORT", "TIMESTEP", TimeSpan.FromSeconds(pMap.Rstep), NEWLINE);
+        this._writer.Write("REPORT", "START", TimeSpan.FromSeconds(pMap.Rstart), NEWLINE);
+        this._writer.Write("PATTERN", "TIMESTEP", TimeSpan.FromSeconds(pMap.Pstep), NEWLINE);
+        this._writer.Write("PATTERN", "START", TimeSpan.FromSeconds(pMap.Pstart), NEWLINE);
+        this._writer.Write("RULE", "TIMESTEP", TimeSpan.FromSeconds(pMap.Rulestep), NEWLINE);
+        this._writer.Write("START", "CLOCKTIME", TimeSpan.FromSeconds(pMap.Tstart), NEWLINE);
+        this._writer.Write("STATISTIC", pMap.Tstatflag.ParseStr(), NEWLINE);
+        this._writer.NewLine();
     }
 
-    private void composeValves(Network net) {
-        FieldsMap fMap = net.getFieldsMap();
-        List<Valve> valves = new List<Valve>(net.getValves());
+    private void ComposeValves(Network net) {
+        FieldsMap fMap = net.FieldsMap;
+        
+        this._writer.Write(Network.SectType.VALVES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(VALVES_SUBTITLE);
 
-        writer.write(Network.SectType.VALVES.parseStr(),NEWLINE);
-        writer.writeHeader(VALVES_SUBTITLE);
-
-        foreach (Valve valve  in  valves) {
-            double d = valve.getDiameter();
-            double kc = valve.getRoughness();
+        foreach(Valve valve in net.Valves) {
+            double d = valve.Diameter;
+            double kc = valve.Roughness;
             if (kc == Constants.MISSING)
                 kc = 0.0;
 
-            switch (valve.getType()) {
+            switch (valve.Type) {
                 case Link.LinkType.FCV:
-                    kc = fMap.revertUnit(FieldsMap.Type.FLOW, kc);
+                    kc = fMap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
                     break;
                 case Link.LinkType.PRV:
                 case Link.LinkType.PSV:
                 case Link.LinkType.PBV:
-                    kc = fMap.revertUnit(FieldsMap.Type.PRESSURE, kc);
+                    kc = fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
                     break;
             }
 
-            double km = valve.getKm() * Math.Pow(d, 4) / 0.02517;
+            double km = valve.Km * Math.Pow(d, 4) / 0.02517;
 
-            writer.write(valve.getId(),
-                    valve.getFirst().getId(),
-                    valve.getSecond().getId(),
-                    fMap.revertUnit(FieldsMap.Type.DIAM, d),
-                    valve.getType().ParseStr());
+            this._writer.Write(valve.Id,
+                    valve.FirstNode.Id,
+                    valve.SecondNode.Id,
+                    fMap.RevertUnit(FieldsMap.FieldType.DIAM, d),
+                    valve.Type.ParseStr());
 
-            if (valve.getType() == Link.LinkType.GPV && valve.getCurve() != null)
-                writer.write(valve.getCurve().getId(), km);
+            if (valve.Type == Link.LinkType.GPV && valve.Curve != null)
+                this._writer.Write(valve.Curve.Id, km);
             else
-                writer.write(kc, km);
+                this._writer.Write(kc, km);
 
-            if (!string.IsNullOrEmpty(valve.getComment()))
-                writer.write(";" + valve.getComment());
+            if (!string.IsNullOrEmpty(valve.Comment))
+                this._writer.Write(";" + valve.Comment);
 
-            writer.newLine();
+            this._writer.NewLine();
         }
-        writer.newLine();
+        this._writer.NewLine();
     }
 
-    private void composeVertices(Network net) {
-        writer.write(Network.SectType.VERTICES.parseStr(),NEWLINE);
-        writer.writeHeader(VERTICES_SUBTITLE);
+    private void ComposeVertices(Network net) {
+        this._writer.Write(Network.SectType.VERTICES.parseStr(),NEWLINE);
+        this._writer.WriteHeader(VERTICES_SUBTITLE);
 
-        foreach (Link link  in  net.getLinks()) {
-            foreach (Point p  in  link.getVertices()) {
-                writer.write(link.getId(), p.getX(), p.getY(), NEWLINE);
+        foreach (Link link  in  net.Links) {
+            foreach (EnPoint p  in  link.Vertices) {
+                this._writer.Write(link.Id, p.X, p.Y, NEWLINE);
             }
         }
 
-        writer.newLine();
+        this._writer.NewLine();
     }
 
 

@@ -16,26 +16,26 @@
  */
 
 using System.Diagnostics;
-using System.IO;
-using org.addition.epanet.log;
 
 namespace org.addition.epanet.network.io.input {
 
-///<summary>Network conversion units only class.</summary>
-public class NullParser : InputParser{
-    public NullParser(TraceSource log):base(log) {}
+    ///<summary>Network conversion units only class.</summary>
+    public class NullParser:InputParser {
+        public NullParser(TraceSource log):base(log) { }
 
-    public override Network parse(Network net, string f) {
-        adjust(net);
-        net.getFieldsMap().prepare(net.getPropertiesMap().getUnitsflag(),
-                net.getPropertiesMap().getFlowflag(),
-                net.getPropertiesMap().getPressflag(),
-                net.getPropertiesMap().getQualflag(),
-                net.getPropertiesMap().getChemUnits(),
-                net.getPropertiesMap().getSpGrav(),
-                net.getPropertiesMap().getHstep());
-        convert(net);
-        return net;
+        public override Network Parse(Network net, string f) {
+            AdjustData(net);
+            net.FieldsMap.Prepare(
+                   net.PropertiesMap.Unitsflag,
+                   net.PropertiesMap.Flowflag,
+                   net.PropertiesMap.Pressflag,
+                   net.PropertiesMap.Qualflag,
+                   net.PropertiesMap.ChemUnits,
+                   net.PropertiesMap.SpGrav,
+                   net.PropertiesMap.Hstep);
+            this.Convert(net);
+            return net;
+        }
     }
-}
+
 }

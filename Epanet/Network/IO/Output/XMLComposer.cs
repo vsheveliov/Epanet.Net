@@ -25,13 +25,13 @@ using org.addition.epanet.util;
 namespace org.addition.epanet.network.io.output {
 
 public class XMLComposer : OutputComposer {
-    private bool gzip;
+    private readonly bool gzip;
 
     public XMLComposer(bool gzip) {
         this.gzip = gzip;
     }
 
-    public override void composer(Network net, string f) {
+    public override void Composer(Network net, string f) {
         try {
 
             var fs = new FileStream(

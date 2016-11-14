@@ -41,7 +41,7 @@ public class ros2 {
         K2    = new double[n1];
         Jindx = new int [n1];
         Ynew  = new double[n1];
-        A = Utilities.createMatrix(n1, n1);
+        A = Utilities.CreateMatrix(n1, n1);
         Nmax = n;
     }
 
@@ -272,7 +272,7 @@ public class ros2 {
 
             if ( isReject == 0 )
             {
-                Utilities.jacobian(y, n, K1, K2, A, jInt,op);
+                Utilities.Jacobian(y, n, K1, K2, A, jInt,op);
                 njac++;
                 nfcn += 2*n;
                 ghinv1 = 0.0;
@@ -286,14 +286,14 @@ public class ros2 {
                 A[j][j] += dghinv;
             }
             ghinv1 = ghinv;
-            if ( Utilities.factorize(A, n, K1, Jindx) ==0) return -1;
+            if ( Utilities.Factorize(A, n, K1, Jindx) ==0) return -1;
 
             // Stage 1 solution
 
             jInt.solve(t, y, n, K1,0,op);
             nfcn += 1;
             for (j=1; j<=n; j++) K1[j] *= ghinv;
-            Utilities.solve(A, n, Jindx, K1);
+            Utilities.Solve(A, n, Jindx, K1);
 
             // Stage 2 solution
 
@@ -307,7 +307,7 @@ public class ros2 {
             {
                 K2[j] = (K2[j] - 2.0*K1[j])*ghinv;
             }
-            Utilities.solve(A, n, Jindx, K2);
+            Utilities.Solve(A, n, Jindx, K2);
 
             // Overall solution
 

@@ -16,172 +16,142 @@
  */
 
 using System;
-using System.IO;
 using System.Threading;
 using org.addition.epanet.msx.Structures;
 using org.addition.epanet.util;
 
 namespace org.addition.epanet.msx {
 
-public class EpanetMSX {
-    InpReader mReader;
-    Project mProject;
-    Network mNetwork;
-    Report mReport;
-    TankMix mTankMix;
+    public class EpanetMSX {
+        private readonly InpReader reader;
+        private readonly Project project;
+        private readonly Network network;
+        private readonly Report report;
+        private readonly TankMix tankMix;
 
-    Chemical mChemical;
-    Quality mQuality;
-    ENToolkit2 mENToolkit;
-    Output mOutput;
-    [NonSerialized]
-    private bool running;
-    [NonSerialized]
-    private Thread runningThread;
+        private readonly Chemical chemical;
+        private readonly Quality quality;
+        private readonly ENToolkit2 toolkit;
+        private readonly Output output;
 
+        [NonSerialized]
+        private bool running;
 
-    public Network getNetwork() {
-        return mNetwork;
-    }
+        [NonSerialized]
+        private Thread runningThread;
 
-    public int getNPeriods() {
-        return mNetwork.getNperiods();
-    }
+        public Network Network { get { return this.network; } }
 
-    public long getResultsOffset() {
-        return mOutput.ResultsOffset;
-    }
+        public int NPeriods { get { return this.network.Nperiods; } }
 
-    public long getQTime() {
-        return mNetwork.getQtime();
-    }
+        public long ResultsOffset { get { return this.output.ResultsOffset; } }
 
-    public string[] getSpeciesNames() {
-        Species[] spe = mNetwork.getSpecies();
-        string[] ret = new string[spe.Length - 1];
-        for (int i = 1; i < spe.Length; i++) {
-            ret[i - 1] = spe[i].getId();
+        public long QTime { get { return this.network.Qtime; } }
+
+        public string[] GetSpeciesNames() {
+            Species[] spe = this.network.Species;
+            string[] ret = new string[spe.Length - 1];
+            for (int i = 1; i < spe.Length; i++) {
+                ret[i - 1] = spe[i].getId();
+            }
+            return ret;
         }
-        return ret;
-    }
+
+        public EpanetMSX(ENToolkit2 toolkit) {
+            this.reader = new InpReader();
+            this.project = new Project();
+            this.network = new Network();
+            this.report = new Report();
+            this.tankMix = new TankMix();
+
+            this.chemical = new Chemical();
+            this.quality = new Quality();
+            this.toolkit = toolkit;
+            this.output = new Output();
+
+            this.reader.LoadDependencies(this);
+            this.project.LoadDependencies(this);
+            this.report.LoadDependencies(this);
+            this.tankMix.LoadDependencies(this);
+
+            this.chemical.LoadDependencies(this);
+            this.quality.LoadDependencies(this);
+            this.output.LoadDependencies(this);
+        }
+
+        public InpReader Reader { get { return this.reader; } }
+
+        public Project Project { get { return this.project; } }
+
+        public Report Report { get { return this.report; } }
+
+        public TankMix TankMix { get { return this.tankMix; } }
+
+        public Chemical Chemical { get { return this.chemical; } }
+
+        public Quality Quality { get { return this.quality; } }
+
+        public ENToolkit2 EnToolkit { get { return this.toolkit; } }
+
+        public Output Output { get { return this.output; } }
+
+        public EnumTypes.ErrorCodeType Load(string msxFile) {
+            EnumTypes.ErrorCodeType err = 0;
+            err = Utilities.Call(err, this.project.MSXproj_open(msxFile));
+            err = Utilities.Call(err, this.quality.MSXqual_open());
+            return err;
+        }
 
 
-    public EpanetMSX(ENToolkit2 toolkit) {
-        mReader = new InpReader();
-        mProject = new Project();
-        mNetwork = new Network();
-        mReport = new Report();
-        mTankMix = new TankMix();
+        public EnumTypes.ErrorCodeType Run(string outFile) {
+            EnumTypes.ErrorCodeType err = 0;
+            bool halted = false;
+            if (running) throw new InvalidOperationException("Already running");
 
-        mChemical = new Chemical();
-        mQuality = new Quality();
-        mENToolkit = toolkit;
-        mOutput = new Output();
+            runningThread = Thread.CurrentThread;
+            running = true;
+            try {
+                this.quality.MSXqual_init();
 
-        mReader.loadDependencies(this);
-        mProject.loadDependencies(this);
-        mReport.loadDependencies(this);
-        mTankMix.loadDependencies(this);
+                this.output.MSXout_open(outFile);
 
-        mChemical.loadDependencies(this);
-        mQuality.loadDependencies(this);
-        mOutput.loadDependencies(this);
-    }
+                long oldHour = -1, newHour = 0;
 
-
-    public InpReader getReader() {
-        return mReader;
-    }
-
-    public Project getProject() {
-        return mProject;
-    }
-
-
-    public Report getReport() {
-        return mReport;
-    }
-
-    public TankMix getTankMix() {
-        return mTankMix;
-    }
-
-    public Chemical getChemical() {
-        return mChemical;
-    }
-
-    public Quality getQuality() {
-        return mQuality;
-    }
-
-    //public Epanet getEpanet() {
-    //    return mEpanet;
-    //}
-
-    public ENToolkit2 getENToolkit() {
-        return mENToolkit;
-    }
-
-    public Output getOutput() {
-        return mOutput;
-    }
-
-    public EnumTypes.ErrorCodeType load(string msxFile) {
-        EnumTypes.ErrorCodeType err = 0;
-        err = Utilities.CALL(err, mProject.MSXproj_open(msxFile));
-        err = Utilities.CALL(err, mQuality.MSXqual_open());
-        return err;
-    }
-
-
-    public EnumTypes.ErrorCodeType run(string outFile) {
-        EnumTypes.ErrorCodeType err = 0;
-        bool halted = false;
-        if (running) throw new InvalidOperationException("Already running");
-
-        runningThread = Thread.CurrentThread;
-        running = true;
-        try {
-            mQuality.MSXqual_init();
-
-            mOutput.MSXout_open(outFile);
-
-            long oldHour = -1, newHour = 0;
-
-            long[] t_temp = new long[1];
-            long[] t_left = new long[1];
-            do {
-                if (oldHour != newHour) {
-                    //writeCon(string.format("\r  o Computing water quality at hour %-4d", newHour));
-                    oldHour = newHour;
+                long[] tTemp = new long[1];
+                long[] tLeft = new long[1];
+                do {
+                    if (oldHour != newHour) {
+                        //writeCon(string.format("\r  o Computing water quality at hour %-4d", newHour));
+                        oldHour = newHour;
+                    }
+                    err = this.quality.MSXqual_step(tTemp, tLeft);
+                    newHour = tTemp[0] / 3600;
+                    if (!running && tLeft[0] > 0)
+                        halted = true;
                 }
-                err = mQuality.MSXqual_step(t_temp, t_left);
-                newHour = t_temp[0] / 3600;
-                if(!running && t_left[0]>0)
-                    halted = true;
-            } while (running && err == 0 && t_left[0] > 0);
+                while (running && err == 0 && tLeft[0] > 0);
 
 
-        } finally {
-            running = false;
-            runningThread = null;
+            }
+            finally {
+                running = false;
+                runningThread = null;
+            }
+
+            if (halted)
+                throw new ENException(ErrorCode.Err1000);
+
+            return err;
         }
 
-        if(halted)
-            throw new ENException(ErrorCode.Err1000);
 
-        return err;
+        private void WriteCon(string str) { Console.Out.Write(str); }
+
+        public void StopRunning() {
+            running = false;
+            if (runningThread != null && runningThread.IsAlive)
+                runningThread.Join(1000);
+        }
     }
 
-
-    private void writeCon(string str) {
-        Console.Out.Write(str);
-    }
-
-    public void stopRunning() {
-        running = false;
-        if (runningThread != null && runningThread.IsAlive)
-            runningThread.Join(1000);
-    }
-}
 }

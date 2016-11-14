@@ -23,8 +23,6 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using org.addition.epanet.network;
 using org.addition.epanet.network.structures;
-using Label = System.Windows.Forms.Label;
-using Point = System.Drawing.Point;
 
 namespace EpaTool {
 
@@ -136,9 +134,9 @@ namespace EpaTool {
             Node nearest = null;
             double distance = double.MaxValue;
             
-            foreach (Node n in this._net.getNodes()) {
-                var pos = n.getPosition();
-                if (pos == null) continue;
+            foreach (Node n in this._net.Nodes) {
+                var pos = n.Position;
+                if (pos.IsInvalid) continue;
                 
                 double distMin = (n is Tank)
                     ? TANK_DIAM / this.Zoom
@@ -148,7 +146,7 @@ namespace EpaTool {
 
 
                 // squared distance
-                double dist = Math.Pow(pos.getX() - pt.X, 2) + Math.Pow(pos.getY() - pt.Y, 2);
+                double dist = Math.Pow(pos.X - pt.X, 2) + Math.Pow(pos.Y - pt.Y, 2);
                 if (dist < distMin && dist < distance) {
                     nearest = n;
                     distance = dist;
@@ -166,8 +164,8 @@ namespace EpaTool {
             this.Refresh();
         }
 
-        private static PointF ToPointF(org.addition.epanet.network.structures.Point that) {
-            return new PointF((float)that.getX(), (float)that.getY());
+        private static PointF ToPointF(EnPoint that) {
+            return new PointF((float)that.X, (float)that.Y);
         }
 
         /// <summary>Calculates bounding rectangle for Network Nodes and Links</summary>
@@ -180,9 +178,9 @@ namespace EpaTool {
 
             bool firstPass = true;
 
-            foreach (Node node in this._net.getNodes()) {
-                if (node.getPosition() != null) {
-                    var rect = new RectangleF(ToPointF(node.getPosition()), SizeF.Empty);
+            foreach (Node node in this._net.Nodes) {
+                if (!node.Position.IsInvalid) {
+                    var rect = new RectangleF(ToPointF(node.Position), SizeF.Empty);
                     if (firstPass) {
                         result = rect;
                         firstPass = false;
@@ -193,8 +191,8 @@ namespace EpaTool {
                 }
             }
 
-            foreach (Link link in this._net.getLinks()) {
-                foreach (var position in link.getVertices()) {
+            foreach (Link link in this._net.Links) {
+                foreach (var position in link.Vertices) {
                     if (!position.IsInvalid) {
                         var rect = new RectangleF(ToPointF(position), SizeF.Empty);
                         if (firstPass) {
@@ -268,16 +266,16 @@ namespace EpaTool {
             using (Pen pen = new Pen(tankPenColor, -1f))
             using (Pen reservoirPen = new Pen(reservoirsColor, -1f))
             using(Pen tankPen = new Pen(tankPenColor, -1f)) {
-                foreach (Tank tank in this._net.getTanks()) {
-                    var pos = tank.getPosition();
-                    if (pos == null)
+                foreach (Tank tank in this._net.Tanks) {
+                    var pos = tank.Position;
+                    if (pos.IsInvalid)
                         continue;
 
 
                     if (tank.IsReservoir) {
                         // Reservoir
 
-                        var rect = new RectangleF((float)pos.getX(), (float)pos.getY(), tankDiam, tankDiam);
+                        var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
                         rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
                         g.FillRectangle(reservoirsBrush, rect);
@@ -287,7 +285,7 @@ namespace EpaTool {
                     }
                     else {
                         // Tank
-                        var rect = new RectangleF((float)pos.getX(), (float)pos.getY(), tankDiam, tankDiam);
+                        var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
                         rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
                         g.FillRectangle(tankBrush, rect);
@@ -295,7 +293,7 @@ namespace EpaTool {
 
                     }
 
-                    var fillRect = new RectangleF((float)pos.getX(), (float)pos.getY(), tankDiam, tankDiam);
+                    var fillRect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
                     fillRect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
                     g.FillRectangle(tankBrush, fillRect);
@@ -310,16 +308,16 @@ namespace EpaTool {
 
         private void _DrawPipes(Graphics g) {
             using (Pen pen = new Pen(pipePenColor, -1f)) {
-                foreach (Link link in this._net.getLinks()) {
-                    PointF[] points = new PointF[link.getVertices().Count + 2];
+                foreach (Link link in this._net.Links) {
+                    PointF[] points = new PointF[link.Vertices.Count + 2];
                     int i = 0;
-                    points[i++] = ToPointF(link.getFirst().getPosition());
+                    points[i++] = ToPointF(link.FirstNode.Position);
 
-                    foreach (var p in link.getVertices()) {
+                    foreach (var p in link.Vertices) {
                         points[i++] = ToPointF(p);
                     }
 
-                    points[i] = ToPointF(link.getSecond().getPosition());
+                    points[i] = ToPointF(link.SecondNode.Position);
 
                     g.DrawLines(pen, points);
                 }
@@ -330,12 +328,12 @@ namespace EpaTool {
             float diam = NODE_DIAM / this.Zoom;
 
             using(Pen pen = new Pen(nodePenColor, -1f)) {
-                foreach (Node node in this._net.getNodes()) {
+                foreach (Node node in this._net.Nodes) {
                     if (node is Tank) continue;
-                    var pos = node.getPosition();
-                    if (pos == null) continue;
+                    var pos = node.Position;
+                    if (pos.IsInvalid) continue;
                     
-                    var nodeRect = new RectangleF((float)pos.getX(), (float)pos.getY(), diam, diam);
+                    var nodeRect = new RectangleF((float)pos.X, (float)pos.Y, diam, diam);
                     nodeRect.Offset(diam * -0.5f, diam * -0.5f);
 
                     g.FillEllipse(nodeBrush, nodeRect);
@@ -354,9 +352,9 @@ namespace EpaTool {
             using(Brush b = new SolidBrush(labelColor)) 
             using (Pen pen = new Pen(SystemColors.Info, -1f))
             {
-                foreach (var l in this._net.getLabels()) {
+                foreach (var l in this._net.Labels) {
 
-                    var pt = l.getPosition();
+                    var pt = l.Position;
                     
 #if false
                     Node anchor = string.IsNullOrEmpty(l.AnchorNodeId)
@@ -371,11 +369,11 @@ namespace EpaTool {
                     }
 #endif
 
-                    if (pt == null) continue;
+                    if (pt.IsInvalid) continue;
 
-                    PointF ptf = new PointF((float)pt.getX(),(float)(-pt.getY()));
+                    PointF ptf = new PointF((float)pt.X,(float)(-pt.Y));
                     
-                    SizeF sz = g.MeasureString(l.getText(), this.Font, ptf, sf);
+                    SizeF sz = g.MeasureString(l.Text, this.Font, ptf, sf);
                     RectangleF rect = new RectangleF(ptf, sz);
                     
                     if (rect.IsEmpty) continue;
@@ -383,7 +381,7 @@ namespace EpaTool {
                     //var pos = l.getPosition();
                     //g.DrawEllipse(Pens.Red, (float)pos.getX(), (float)(-pos.getY()), 10f,10f);
 
-                    g.DrawString(l.getText(), this.Font, b, rect);
+                    g.DrawString(l.Text, this.Font, b, rect);
                    // rect.Inflate(0.5f / this.Zoom, 0.5f / this.Zoom);
                     //rect.Inflate(0.5f, 0.5f);
                     //g.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
@@ -401,14 +399,14 @@ namespace EpaTool {
 
             using (var sf = new StringFormat(StringFormatFlags.NoWrap))
             using (var path = new GraphicsPath()) {
-                foreach (var l in this._net.getLabels()) {
-                    var pos = l.getPosition();
+                foreach (var l in this._net.Labels) {
+                    var pos = l.Position;
                     if (pos.IsInvalid) continue;
 
-                    PointF pt = new PointF((float)pos.getX(), (float)pos.getY() * -1);
+                    PointF pt = new PointF((float)pos.X, (float)pos.Y * -1);
 
-                    path.AddString(l.getText(), this.Font.FontFamily, 0, this.Font.Size * 2, pt, sf);
-                    SizeF sz = g.MeasureString(l.getText(), this.Font, pt, sf);
+                    path.AddString(l.Text, this.Font.FontFamily, 0, this.Font.Size * 2, pt, sf);
+                    SizeF sz = g.MeasureString(l.Text, this.Font, pt, sf);
                     path.AddRectangle(new RectangleF(pt, sz));
 
                     //g.DrawRectangle(Pens.Green, (int)pt.X, (int)pt.Y, 100, -100);
@@ -432,7 +430,7 @@ namespace EpaTool {
         private void _DrawSelection(Graphics g) {
             if (this._selNode == null) return;
 
-            PointF point = ToPointF(this._selNode.getPosition());
+            PointF point = ToPointF(this._selNode.Position);
             float size = (20f / this.Zoom);
             point.X -= size * 0.5f;
             point.Y -= size * 0.5f;
@@ -450,9 +448,9 @@ namespace EpaTool {
 
                 string s = string.Format(
                     "{0}: x={1:f};y={2:f}",
-                    this._selNode.getId(),
-                    this._selNode.getPosition().getX(),
-                    this._selNode.getPosition().getY());
+                    this._selNode.Id,
+                    this._selNode.Position.X,
+                    this._selNode.Position.Y);
 
                 path.AddString(s, this.Font.FontFamily, 0, this.Font.Size * 2 / this.Zoom, pt, sf);
                 matrix.Scale(1f, -1f);

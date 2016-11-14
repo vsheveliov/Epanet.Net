@@ -19,8 +19,7 @@ namespace org.addition.epanet.network.io
 {
 
     ///<summary>Parse and report keywords.</summary>
-    public class Keywords
-    {
+    public static class Keywords {
 // ReSharper disable InconsistentNaming
         public const string s_BACKDROP = "[BACKDROP]";
         public const string s_CONTROLS = "[CONTROLS]";

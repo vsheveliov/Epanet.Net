@@ -20,58 +20,32 @@ using System.Collections.Generic;
 namespace org.addition.epanet.msx.Structures {
 
 // Node object
-public class Node {
-    private List<Source> sources;        // ptr. to WQ source list
-    private double  [] c;                // current species concentrations
-    private double  [] c0;               // initial species concentrations
-    private int     tank;                // tank index
-    private bool    rpt;                 // reporting flag
+    public class Node {
+        ///<summary>ptr. to WQ source list</summary>
+        private readonly List<Source> sources;
 
+        public Node(int species) {
+            sources = new List<Source>();
+            this.Tank = 0;
+            this.Rpt = false;
+            this.C = new double[species];
+            this.C0 = new double[species];
+        }
 
-    public Node(int species) {
-        sources = new List<Source>();
-        tank = 0;
-        rpt = false;
-        c = new double[species];
-        c0 = new double[species];
+        ///<summary>ptr. to WQ source list</summary>
+        public List<Source> Sources { get { return this.sources; } }
+
+        ///<summary>current species concentrations</summary>
+        public double[] C { get; set; }
+
+        ///<summary>initial species concentrations</summary>
+        public double[] C0 { get; set; }
+
+        ///<summary>tank index</summary>
+        public int Tank { get; set; }
+
+        ///<summary>reporting flag</summary>
+        public bool Rpt { get; set; }
     }
 
-    public List<Source> getSources() {
-        return sources;
-    }
-
-    public double[] getC() {
-        return c;
-    }
-
-    public void setC(double[] c) {
-        this.c = c;
-    }
-
-    public double[] getC0() {
-        return c0;
-    }
-
-    public void setC0(double[] c0) {
-        this.c0 = c0;
-    }
-
-    public int getTank() {
-        return tank;
-    }
-
-    public void setTank(int tank) {
-        this.tank = tank;
-    }
-
-    public bool getRpt() {
-        return rpt;
-    }
-
-    public void setRpt(bool rpt) {
-        this.rpt = rpt;
-    }
-
-
-}
 }

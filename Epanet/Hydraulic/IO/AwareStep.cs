@@ -94,8 +94,8 @@ public class AwareStep {
         }
 
         foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.getSimStatus() <= Link.StatType.CLOSED ? 0d : link.getSimFlow()));
-            outStream.Write((double)(link.getFirst().getSimHead() - link.getSecond().getSimHead()));
+            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
             outStream.Write((double)0);
         }
 
@@ -104,8 +104,8 @@ public class AwareStep {
     }
 
     public static void writeHydAndQual(BinaryWriter outStream, HydraulicSim hydraulicSim, QualitySim qualitySim, long step, long time) {
-        List<QualityNode> qNodes = qualitySim != null ? qualitySim.getnNodes() : null;
-        List<QualityLink> qLinks = qualitySim != null ? qualitySim.getnLinks() : null;
+        List<QualityNode> qNodes = qualitySim != null ? qualitySim.NNodes : null;
+        List<QualityLink> qLinks = qualitySim != null ? qualitySim.NLinks : null;
         List<SimulationNode> nodes = hydraulicSim.getnNodes();
         List<SimulationLink> links = hydraulicSim.getnLinks();
 
@@ -118,14 +118,14 @@ public class AwareStep {
         foreach (SimulationNode node  in  nodes) {
             outStream.Write((double)node.getSimDemand());
             outStream.Write((double)node.getSimHead());
-            outStream.Write((double)(qualitySim != null ? qNodes[count++].getQuality() : 0.0));
+            outStream.Write((double)(qualitySim != null ? qNodes[count++].Quality : 0.0));
         }
 
         count = 0;
         foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.getSimStatus() <= Link.StatType.CLOSED ? 0d : link.getSimFlow()));
-            outStream.Write((double)(link.getFirst().getSimHead() - link.getSecond().getSimHead()));
-            outStream.Write((double)(qualitySim != null ? qLinks[count++].getAverageQuality(null) : 0));
+            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
+            outStream.Write((double)(qualitySim != null ? qLinks[count++].GetAverageQuality(null) : 0));
         }
 
         outStream.Write((long)step);
@@ -153,8 +153,8 @@ public class AwareStep {
 
         count = 0;
         foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.getSimStatus() <= Link.StatType.CLOSED ? 0d : link.getSimFlow()));
-            outStream.Write((double)(link.getFirst().getSimHead() - link.getSecond().getSimHead()));
+            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
             outStream.Write((double)qL[count++]);
         }
 
@@ -201,7 +201,7 @@ public class AwareStep {
 
     public double getNodeDemand(int id, Node node, FieldsMap fMap) {
         try {
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.DEMAND, D[id]) : D[id];
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.DEMAND, D[id]) : D[id];
         } catch (ENException) {
             return 0;
         }
@@ -209,7 +209,7 @@ public class AwareStep {
 
     public double getNodeHead(int id, Node node, FieldsMap fMap) {
         try {
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.HEAD, H[id]) : H[id];
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEAD, H[id]) : H[id];
         } catch (ENException e) {
             return 0;
         }
@@ -217,9 +217,9 @@ public class AwareStep {
 
     public double getNodePressure(int id, Node node, FieldsMap fMap) {
         try {
-            double P = (getNodeHead(id, node, null) - node.getElevation());
+            double P = (getNodeHead(id, node, null) - node.Elevation);
 
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.PRESSURE, P) : P;
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, P) : P;
         } catch (ENException e) {
             return 0;
         }
@@ -227,7 +227,7 @@ public class AwareStep {
 
     public double getLinkFlow(int id, Link link, FieldsMap fMap) {
         try {
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.FLOW, Q[id]) : Q[id];
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FLOW, Q[id]) : Q[id];
         } catch (ENException e) {
             return 0;
         }
@@ -237,13 +237,13 @@ public class AwareStep {
     public double getLinkVelocity(int id, Link link, FieldsMap fMap) {
         try {
             double V;
-            double flow = getLinkFlow(id, link, null);
+            double flow = this.getLinkFlow(id, link, null);
             if (link is Pump)
                 V = 0;
             else
-                V = (Math.Abs(flow) / (Constants.PI * Math.Pow(link.getDiameter(), 2) / 4.0));
+                V = (Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0));
 
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.VELOCITY, V) : V;
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.VELOCITY, V) : V;
         } catch (ENException e) {
             return 0;
         }
@@ -258,10 +258,10 @@ public class AwareStep {
                 if (!(link is Pump))
                     h = Math.Abs(h);
 
-                if (link.getType() <= Link.LinkType.PIPE)
-                    return (1000 * h / link.getLenght());
+                if (link.Type <= Link.LinkType.PIPE)
+                    return (1000 * h / link.Lenght);
                 else
-                    return fMap != null ? fMap.revertUnit(FieldsMap.Type.HEADLOSS, h) : h;
+                    return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEADLOSS, h) : h;
             }
         } catch (ENException e) {
             return 0;
@@ -274,16 +274,16 @@ public class AwareStep {
             double F;
 
             double flow = getLinkFlow(id, link, null);
-            if (link.getType() <= Link.LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
+            if (link.Type <= Link.LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
 
 
                 double h = Math.Abs(DH[id]);
-                F = 39.725 * h * Math.Pow(link.getDiameter(), 5) / link.getLenght() /
+                F = 39.725 * h * Math.Pow(link.Diameter, 5) / link.Lenght /
                         (flow * flow);
             } else
                 F = 0;
 
-            return fMap != null ? fMap.revertUnit(FieldsMap.Type.FRICTION, F) : F;
+            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FRICTION, F) : F;
         } catch (ENException e) {
             return 0;
         }

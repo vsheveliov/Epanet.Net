@@ -176,49 +176,49 @@ namespace org.addition.epanet.util {
         }
 
 
-        public static bool TryParse(string text, out FieldsMap.Type result) {
-            if (text.Match(Keywords.t_ELEV)) result = FieldsMap.Type.ELEV;
-            else if (text.Match(Keywords.t_DEMAND)) result = FieldsMap.Type.DEMAND;
-            else if (text.Match(Keywords.t_HEAD)) result = FieldsMap.Type.HEAD;
-            else if (text.Match(Keywords.t_PRESSURE)) result = FieldsMap.Type.PRESSURE;
-            else if (text.Match(Keywords.t_QUALITY)) result = FieldsMap.Type.QUALITY;
-            else if (text.Match(Keywords.t_LENGTH)) result = FieldsMap.Type.LENGTH;
-            else if (text.Match(Keywords.t_DIAM)) result = FieldsMap.Type.DIAM;
-            else if (text.Match(Keywords.t_FLOW)) result = FieldsMap.Type.FLOW;
-            else if (text.Match(Keywords.t_VELOCITY)) result = FieldsMap.Type.VELOCITY;
-            else if (text.Match(Keywords.t_HEADLOSS)) result = FieldsMap.Type.HEADLOSS;
-            else if (text.Match(Keywords.t_LINKQUAL)) result = FieldsMap.Type.LINKQUAL;
-            else if (text.Match(Keywords.t_STATUS)) result = FieldsMap.Type.STATUS;
-            else if (text.Match(Keywords.t_SETTING)) result = FieldsMap.Type.SETTING;
-            else if (text.Match(Keywords.t_REACTRATE)) result = FieldsMap.Type.REACTRATE;
-            else if (text.Match(Keywords.t_FRICTION)) result = FieldsMap.Type.FRICTION;
+        public static bool TryParse(string text, out FieldsMap.FieldType result) {
+            if (text.Match(Keywords.t_ELEV)) result = FieldsMap.FieldType.ELEV;
+            else if (text.Match(Keywords.t_DEMAND)) result = FieldsMap.FieldType.DEMAND;
+            else if (text.Match(Keywords.t_HEAD)) result = FieldsMap.FieldType.HEAD;
+            else if (text.Match(Keywords.t_PRESSURE)) result = FieldsMap.FieldType.PRESSURE;
+            else if (text.Match(Keywords.t_QUALITY)) result = FieldsMap.FieldType.QUALITY;
+            else if (text.Match(Keywords.t_LENGTH)) result = FieldsMap.FieldType.LENGTH;
+            else if (text.Match(Keywords.t_DIAM)) result = FieldsMap.FieldType.DIAM;
+            else if (text.Match(Keywords.t_FLOW)) result = FieldsMap.FieldType.FLOW;
+            else if (text.Match(Keywords.t_VELOCITY)) result = FieldsMap.FieldType.VELOCITY;
+            else if (text.Match(Keywords.t_HEADLOSS)) result = FieldsMap.FieldType.HEADLOSS;
+            else if (text.Match(Keywords.t_LINKQUAL)) result = FieldsMap.FieldType.LINKQUAL;
+            else if (text.Match(Keywords.t_STATUS)) result = FieldsMap.FieldType.STATUS;
+            else if (text.Match(Keywords.t_SETTING)) result = FieldsMap.FieldType.SETTING;
+            else if (text.Match(Keywords.t_REACTRATE)) result = FieldsMap.FieldType.REACTRATE;
+            else if (text.Match(Keywords.t_FRICTION)) result = FieldsMap.FieldType.FRICTION;
             else {
-                result = (FieldsMap.Type)(-1);
+                result = (FieldsMap.FieldType)(-1);
                 return false;
             }
 
             return true;
         }
 
-        public static bool TryParse(string text, out Source.Type result) {
-            if (text.Match(Keywords.w_CONCEN)) result = Source.Type.CONCEN;
-            else if (text.Match(Keywords.w_FLOWPACED)) result = Source.Type.FLOWPACED;
-            else if (text.Match(Keywords.w_MASS)) result = Source.Type.MASS;
-            else if (text.Match(Keywords.w_SETPOINT)) result = Source.Type.SETPOINT;
+        public static bool TryParse(string text, out Source.SourceType result) {
+            if (text.Match(Keywords.w_CONCEN)) result = Source.SourceType.CONCEN;
+            else if (text.Match(Keywords.w_FLOWPACED)) result = Source.SourceType.FLOWPACED;
+            else if (text.Match(Keywords.w_MASS)) result = Source.SourceType.MASS;
+            else if (text.Match(Keywords.w_SETPOINT)) result = Source.SourceType.SETPOINT;
             else {
-                result = (Source.Type)(-1);
+                result = (Source.SourceType)(-1);
                 return false;
             }
 
             return true;
         }
 
-        public static string ParseStr(this Source.Type value) {
+        public static string ParseStr(this Source.SourceType value) {
             switch (value) {
-                case Source.Type.CONCEN:    return Keywords.w_CONCEN;
-                case Source.Type.FLOWPACED: return Keywords.w_FLOWPACED;
-                case Source.Type.MASS:      return Keywords.w_MASS;
-                case Source.Type.SETPOINT:  return Keywords.w_SETPOINT;
+                case Source.SourceType.CONCEN:    return Keywords.w_CONCEN;
+                case Source.SourceType.FLOWPACED: return Keywords.w_FLOWPACED;
+                case Source.SourceType.MASS:      return Keywords.w_MASS;
+                case Source.SourceType.SETPOINT:  return Keywords.w_SETPOINT;
                 default:                    return null;
             }
         }
@@ -265,23 +265,23 @@ namespace org.addition.epanet.util {
             }
         }
 
-        public static string ParseStr(this FieldsMap.Type value) {
+        public static string ParseStr(this FieldsMap.FieldType value) {
             switch (value) {
-                case FieldsMap.Type.ELEV:      return Keywords.t_ELEV;
-                case FieldsMap.Type.DEMAND:    return Keywords.t_DEMAND;
-                case FieldsMap.Type.HEAD:      return Keywords.t_HEAD;
-                case FieldsMap.Type.PRESSURE:  return Keywords.t_PRESSURE;
-                case FieldsMap.Type.QUALITY:   return Keywords.t_QUALITY;
-                case FieldsMap.Type.LENGTH:    return Keywords.t_LENGTH;
-                case FieldsMap.Type.DIAM:      return Keywords.t_DIAM;
-                case FieldsMap.Type.FLOW:      return Keywords.t_FLOW;
-                case FieldsMap.Type.VELOCITY:  return Keywords.t_VELOCITY;
-                case FieldsMap.Type.HEADLOSS:  return Keywords.t_HEADLOSS;
-                case FieldsMap.Type.LINKQUAL:  return Keywords.t_LINKQUAL;
-                case FieldsMap.Type.STATUS:    return Keywords.t_STATUS;
-                case FieldsMap.Type.SETTING:   return Keywords.t_SETTING;
-                case FieldsMap.Type.REACTRATE: return Keywords.t_REACTRATE;
-                case FieldsMap.Type.FRICTION:  return Keywords.t_FRICTION;
+                case FieldsMap.FieldType.ELEV:      return Keywords.t_ELEV;
+                case FieldsMap.FieldType.DEMAND:    return Keywords.t_DEMAND;
+                case FieldsMap.FieldType.HEAD:      return Keywords.t_HEAD;
+                case FieldsMap.FieldType.PRESSURE:  return Keywords.t_PRESSURE;
+                case FieldsMap.FieldType.QUALITY:   return Keywords.t_QUALITY;
+                case FieldsMap.FieldType.LENGTH:    return Keywords.t_LENGTH;
+                case FieldsMap.FieldType.DIAM:      return Keywords.t_DIAM;
+                case FieldsMap.FieldType.FLOW:      return Keywords.t_FLOW;
+                case FieldsMap.FieldType.VELOCITY:  return Keywords.t_VELOCITY;
+                case FieldsMap.FieldType.HEADLOSS:  return Keywords.t_HEADLOSS;
+                case FieldsMap.FieldType.LINKQUAL:  return Keywords.t_LINKQUAL;
+                case FieldsMap.FieldType.STATUS:    return Keywords.t_STATUS;
+                case FieldsMap.FieldType.SETTING:   return Keywords.t_SETTING;
+                case FieldsMap.FieldType.REACTRATE: return Keywords.t_REACTRATE;
+                case FieldsMap.FieldType.FRICTION:  return Keywords.t_FRICTION;
                 default:                       return null;
             }
         }

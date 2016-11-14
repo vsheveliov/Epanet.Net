@@ -20,256 +20,167 @@ using org.addition.epanet.msx.Solvers;
 
 namespace org.addition.epanet.msx {
 
-public class Utilities {
-    public static EnumTypes.ErrorCodeType CALL(EnumTypes.ErrorCodeType err, EnumTypes.ErrorCodeType f){
-        return  err>(EnumTypes.ErrorCodeType)100 ? err : f;
-    }
+    public static class Utilities {
 
-    // performs case insensitive comparison of two strings.
-    public static  bool  MSXutils_strcomp(string s1, string s2)
-    {
-        return s1.Equals(s2, StringComparison.OrdinalIgnoreCase);
-    }
-
-    //=============================================================================
-    // finds a match between a string and an array of keyword strings.
-    public static int  MSXutils_findmatch(string s, string [] keyword)
-    {
-        int i = 0;
-        //while (keyword[i] != NULL)
-        foreach (string key  in  keyword)
-        {
-            if (MSXutils_match(s, key)) return(i);
-            i++;
-        }
-        return(-1);
-    }
-
-    //=============================================================================
-    // sees if a sub-string of characters appears in a string
-    public static bool  MSXutils_match(string a, string b)
-    {
-        a = a.Trim();
-        b = b.Trim();
-
-        // --- fail if substring is empty
-        if (b.Length==0) return(false);
-
-
-        // --- skip leading blanks of str
-        //for (i=0; str[i]; i++)
-        //    if (str[i] != ' ') break;
-
-        // --- check if substr matches remainder of str
-        //for (i=i,j=0; substr[j]; i++,j++)
-        //    if (!str[i] || UCHAR(str[i]) != UCHAR(substr[j]))
-        //        return(false);
-
-        if(a.ToLower().Contains(b.ToLower()))
-            return true;
-
-
-        return(false);
-    }
-
-    //=============================================================================
-    // converts a string in either decimal hours or hr:min:sec
-    //    format to number of seconds.
-    public static bool MSXutils_strToSeconds(string s, long [] seconds)
-    {
-        //int [] hr = new int [1], min = new int [1], sec = new int [1];
-        double hours;
-        seconds[0] = 0;
-        if ( double.TryParse(s, out hours) )
-        {
-            seconds[0] = (long)(3600.0*hours);
-            return true;
-        }
-        //n = sscanf(s, "%d:%d:%d", hr, min, sec);
-        s.Trim();
-        string [] elements = s.Split(':');
-
-        if ( elements.Length == 0 ) return false;
-        seconds[0] = int.Parse(elements[0])*3600 + int.Parse(elements[1])*60 +int.Parse(elements[2]); //3600*hr + 60*min + sec;
-        return true;
-    }
-
-    //=============================================================================
-    // Converts a string to an integer number.
-    public static bool  MSXutils_getInt(string s, out int y)
-    {
-        return int.TryParse(s, out y);
-    }
-
-
-    //=============================================================================
-    // allocates memory for a 2-dimensional array of doubles.
-    public static double [][] createMatrix(int nrows, int ncols)
-    {
-        var result = new double[nrows][];
-        for (int i = 0; i < nrows; i++)
-        {
-            result[i] = new double[ncols];
+        public static EnumTypes.ErrorCodeType Call(EnumTypes.ErrorCodeType err, EnumTypes.ErrorCodeType f) {
+            return err > (EnumTypes.ErrorCodeType)100 ? err : f;
         }
 
-        return result;
-    }
-
-//=============================================================================
-
-    // performs an LU decomposition of a matrix.
-    public static int factorize(double [][]a, int n, double []w, int []indx)
-    {
-        int    i, imax, j, k;
-        double big, dum, sum, temp;
-
-        for (i = 1; i <= n; i++)
-        {
-            //Loop over rows to get the implicit scaling information.
-            big = 0.0;
-            for (j = 1;j <= n;j++)
-                if ((temp = Math.Abs(a[i][j])) > big) big = temp;
-            if (big == 0.0)
-                return 0;  // Warning for singular matrix
-            //No nonzero largest element.
-            w[i] = 1.0/big; //Save the scaling.
-        }
-        for (j = 1;j <= n;j++) //for each column
-        {
-            //This is the loop over columns of Croutís method.
-            for (i = 1; i < j; i++)
-            {
-                //Up from the diagonal
-                sum = a[i][j];
-                for (k = 1;k < i;k++)
-                    sum -= a[i][k]*a[k][j];
-                a[i][j] = sum;
+        /// <summary>Finds a match between a string and an array of keyword strings.</summary>
+        public static int MSXutils_findmatch(string s, string[] keyword) {
+            int i = 0;
+            //while (keyword[i] != NULL)
+            foreach (string key  in  keyword) {
+                if (MSXutils_match(s, key)) return i;
+                i++;
             }
-            big = 0.0; //Initialize for the search for largest pivot element.
-            imax = j;
-            for (i = j; i <= n; i++)
+            return -1;
+        }
+
+        /// <summary>Sees if a sub-string of characters appears in a string.</summary>
+        public static bool MSXutils_match(string a, string b) {
+            a = a.Trim();
+            b = b.Trim();
+
+            // --- fail if substring is empty
+            if (b.Length == 0) return false;
+
+
+            if (a.ToLower().Contains(b.ToLower()))
+                return true;
+
+
+            return false;
+        }
+
+        /// <summary>Allocates memory for a 2-dimensional array of doubles.</summary>
+        public static double[][] CreateMatrix(int nrows, int ncols) {
+            var result = new double[nrows][];
+            for (int i = 0; i < nrows; i++) {
+                result[i] = new double[ncols];
+            }
+
+            return result;
+        }
+
+        /// <summary>Performs an LU decomposition of a matrix.</summary>
+        public static int Factorize(double[][] a, int n, double[] w, int[] indx) {
+            double big, dum, sum, temp;
+
+            for (int i = 1; i <= n; i++) {
+                //Loop over rows to get the implicit scaling information.
+                big = 0.0;
+                for (int j = 1; j <= n; j++)
+                    if ((temp = Math.Abs(a[i][j])) > big) big = temp;
+
+                if (big == 0.0)
+                    return 0; // Warning for singular matrix
+                //No nonzero largest element.
+                w[i] = 1.0 / big; //Save the scaling.
+            }
+            for (int j = 1; j <= n; j++) //for each column
             {
-                sum = a[i][j];
-                for (k = 1; k < j; k++)
-                    sum -= a[i][k]*a[k][j];
-                a[i][j] = sum;
-                if ( (dum = w[i]*Math.Abs(sum)) >= big)
+                //This is the loop over columns of Croutís method.
+
+                for (int i = 1; i < j; i++) {
+                    //Up from the diagonal
+                    sum = a[i][j];
+                    for (int k = 1; k < i; k++) sum -= a[i][k] * a[k][j];
+                    a[i][j] = sum;
+                }
+                big = 0.0; //Initialize for the search for largest pivot element.
+                int imax = j;
+                for (int i = j; i <= n; i++) {
+                    sum = a[i][j];
+                    for (int k = 1; k < j; k++) sum -= a[i][k] * a[k][j];
+                    a[i][j] = sum;
+                    if ((dum = w[i] * Math.Abs(sum)) >= big) {
+                        big = dum;
+                        imax = i;
+                    }
+                }
+                if (j != imax) {
+                    //Do we need to interchange rows?
+                    for (int i = 1; i <= n; i++) {
+                        //Yes,do so...
+                        dum = a[imax][i];
+                        a[imax][i] = a[j][i];
+                        a[j][i] = dum;
+                    }
+                    w[imax] = w[j]; // interchange the scale factor.
+                }
+                indx[j] = imax;
+                if (a[j][j] == 0.0) a[j][j] = Constants.TINY1;
+                if (j != n) // divide by the pivot element.
                 {
-                    big = dum;
-                    imax = i;
+                    dum = 1.0 / a[j][j];
+                    for (int i = j + 1; i <= n; i++) a[i][j] *= dum;
                 }
             }
-            if (j != imax)
-            {
-                //Do we need to interchange rows?
-                for (k = 1; k <= n; k++)
-                {
-                    //Yes,do so...
-                    dum = a[imax][k];
-                    a[imax][k] = a[j][k];
-                    a[j][k] = dum;
+            return 1;
+        }
+
+        /// <summary>Solves linear equations AX = B after LU decomposition of A.</summary>
+        public static void Solve(double[][] a, int n, int[] indx, double[] b) {
+            int ii = 0;
+            int j;
+            double sum;
+
+            //forward substitution
+            for (int i = 1; i <= n; i++) {
+                int ip = indx[i];
+                sum = b[ip];
+                b[ip] = b[i];
+                if (ii != 0)
+                    for (j = ii; j <= i - 1; j++)
+                        sum -= a[i][j] * b[j];
+                else if (sum != 0) ii = i;
+                b[i] = sum;
+            }
+
+            // back substitution
+            for (int i = n; i >= 1; i--) {
+                sum = b[i];
+                for (j = i + 1; j <= n; j++)
+                    sum -= a[i][j] * b[j];
+                b[i] = sum / a[i][i];
+            }
+        }
+
+
+        /// <summary>Computes Jacobian matrix of F(t,X) at given X.</summary>
+        public static void Jacobian(
+            double[] x,
+            int n,
+            double[] f,
+            double[] w,
+            double[][] a,
+            JacobianInterface jint,
+            JacobianInterface.Operation op) {
+            double eps = 1.0e-7;
+
+            for (int j = 1; j <= n; j++) {
+                double temp = x[j];
+                x[j] = temp + eps;
+                jint.solve(0.0, x, n, f, 0, op);
+
+                double eps2;
+
+                if (temp == 0.0) {
+                    x[j] = temp;
+                    eps2 = eps;
                 }
-                w[imax] = w[j];// interchange the scale factor.
-            }
-            indx[j] = imax;
-            if (a[j][j] == 0.0) a[j][j] = Constants.TINY1;
-            if (j != n) // divide by the pivot element.
-            {
-                dum = 1.0/(a[j][j]);
-                for (i = j+1;i <= n;i++) a[i][j] *= dum;
-            }
-        }
-        return 1;
-    }
+                else {
+                    x[j] = temp - eps;
+                    eps2 = 2.0 * eps;
+                }
 
-//=============================================================================
-    // solves linear equations AX = B after LU decomposition of A.
-    public static void solve(double [][]a, int n, int []indx, double[] b)
-    {
-        int i, ii=0, ip, j;
-        double sum=0.0d;
-
-        //forward substitution
-        for (i=1; i<=n; i++)
-        {
-            ip=indx[i];
-            sum=b[ip];
-            b[ip]=b[i];
-            if (ii!=0)
-                for (j=ii; j<=i-1; j++)
-                    sum -= a[i][j]*b[j];
-            else if (sum!=0) ii=i;
-            b[i]=sum;
-        }
-
-       // back substitution
-        for (i=n; i>=1; i--)
-        {
-            sum=b[i];
-            for (j=i+1; j<=n; j++)
-                sum -= a[i][j]*b[j];
-            b[i]=sum/a[i][i];
-        }
-    }
-
-
-    //=============================================================================
-    // computes Jacobian matrix of F(t,X) at given X
-    /*public static void jacobian(double [] x, int n, double [] f, double [] w, double [][]a, JacobianFunction func)
-                  //void (*func)(double, double*, int, double*))
-
-    {
-
-        int    i, j;
-        double temp, eps = 1.0e-7, eps2;
-
-        for (j=1; j<=n; j++)
-        {
-            temp = x[j];
-            x[j] = temp + eps;
-            func.solve(0.0, x, n, f);
-            if ( temp == 0.0 )
-            {
+                jint.solve(0.0, x, n, w, 0, op);
+                for (int i = 1; i <= n; i++) a[i][j] = (f[i] - w[i]) / eps2;
                 x[j] = temp;
-                eps2 = eps;
             }
-            else
-            {
-                x[j] = temp - eps;
-                eps2 = 2.0*eps;
-            }
-            func.solve(0.0, x, n, w);
-            for (i=1; i<=n; i++) a[i][j] = (f[i] - w[i]) / eps2;
-            x[j] = temp;
+
         }
-
-    }*/
-
-    // computes Jacobian matrix of F(t,X) at given X
-    public static void jacobian(double [] x, int n, double [] f, double [] w, double [][]a, JacobianInterface jint, JacobianInterface.Operation op){
-        int    i, j;
-        double temp, eps = 1.0e-7, eps2;
-
-        for (j=1; j<=n; j++)
-        {
-            temp = x[j];
-            x[j] = temp + eps;
-            jint.solve(0.0, x, n, f,0,op);
-            if ( temp == 0.0 )
-            {
-                x[j] = temp;
-                eps2 = eps;
-            }
-            else
-            {
-                x[j] = temp - eps;
-                eps2 = 2.0*eps;
-            }
-            jint.solve(0.0, x, n, w,0,op);
-            for (i=1; i<=n; i++) a[i][j] = (f[i] - w[i]) / eps2;
-            x[j] = temp;
-        }
-
     }
-}
+
 }

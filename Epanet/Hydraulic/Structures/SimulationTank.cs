@@ -28,10 +28,10 @@ public class SimulationTank : SimulationNode {
     private Link.StatType oldStat;
 
     public SimulationTank(Node @ref, int idx) : base(@ref, idx) {
-        volume = ((Tank) node).getV0();
+        volume = ((Tank) this.node).V0;
 
         // Init
-        head = ((Tank) node).getH0();
+        head = ((Tank) this.node).H0;
         demand = (0.0);
         oldStat = Link.StatType.TEMPCLOSED;
     }
@@ -46,60 +46,60 @@ public class SimulationTank : SimulationNode {
 
 
     public double getArea() {
-        return ((Tank) node).getArea();
+        return ((Tank) this.node).Area;
     }
 
     public double getHmin() {
-        return ((Tank) node).getHmin();
+        return ((Tank) this.node).Hmin;
     }
 
     public double getHmax() {
-        return ((Tank) node).getHmax();
+        return ((Tank) this.node).Hmax;
     }
 
     public double getVmin() {
-        return ((Tank) node).getVmin();
+        return ((Tank) this.node).Vmin;
     }
 
     public double getVmax() {
-        return ((Tank) node).getVmax();
+        return ((Tank) this.node).Vmax;
     }
 
     public double getV0() {
-        return ((Tank) node).getV0();
+        return ((Tank) this.node).V0;
     }
 
     public Pattern getPattern() {
-        return ((Tank) node).getPattern();
+        return ((Tank) this.node).Pattern;
     }
 
     public Curve getVcurve() {
-        return ((Tank) node).getVcurve();
+        return ((Tank) this.node).Vcurve;
     }
 
 #if COMMENTED
     public double getH0()
     {
-        return ((Tank)node).getH0();
+        return ((Tank)this.node).H0;
     }
     public double getKb()
     {
-        return ((Tank)node).getKb();
+        return ((Tank)this.node).Kb;
     }
 
     public double[] getConcentration()
     {
-        return ((Tank)node).getConcentration();
+        return ((Tank)this.node).Concentration;
     }
 
     public Tank.MixType getMixModel()
     {
-        return ((Tank)node).getMixModel();
+        return ((Tank)this.node).MixModel;
     }
 
     public double getV1max()
     {
-        return ((Tank)node).getV1max();
+        return ((Tank)this.node).V1Max;
     }
 
 #endif
@@ -111,7 +111,7 @@ public class SimulationTank : SimulationNode {
     }
 
     public bool isReservoir() {
-        return ((Tank) node).getArea() == 0;
+        return ((Tank) this.node).Area == 0;
     }
 
     public Link.StatType getOldStat() {
@@ -132,8 +132,10 @@ public class SimulationTank : SimulationNode {
         if (curve == null)
             return (getVmin() + (h - getHmin()) * getArea());
         else {
-            return (Utilities.linearInterpolator(curve.getNpts(), curve.getX(), curve.getY(),
-                    (h - getElevation()) * fMap.getUnits(FieldsMap.Type.HEAD) / fMap.getUnits(FieldsMap.Type.VOLUME)));
+            return
+            curve.LinearInterpolator(
+                (h - this.getElevation()) * fMap.GetUnits(FieldsMap.FieldType.HEAD)
+                / fMap.GetUnits(FieldsMap.FieldType.VOLUME));
         }
 
     }
@@ -163,8 +165,7 @@ public class SimulationTank : SimulationNode {
         if (curve == null)
             return (getHmin() + (volume - getVmin()) / getArea());
         else
-            return (getElevation() + Utilities.linearInterpolator(curve.getNpts(), curve.getY(), curve.getX(),
-                    volume * fMap.getUnits(FieldsMap.Type.VOLUME)) / fMap.getUnits(FieldsMap.Type.HEAD));
+            return this.getElevation() + curve.LinearInterpolator(this.volume * fMap.GetUnits(FieldsMap.FieldType.VOLUME)) / fMap.GetUnits(FieldsMap.FieldType.HEAD);
     }
 
     // Get the required time step based to fill or drain a tank

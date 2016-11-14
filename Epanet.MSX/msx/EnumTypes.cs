@@ -17,7 +17,7 @@
 
 namespace org.addition.epanet.msx
 {
-    public class EnumTypes
+    public static class EnumTypes
     {
         /// <summary>Pipe surface area units</summary>
         public enum AreaUnitsType

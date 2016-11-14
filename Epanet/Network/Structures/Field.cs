@@ -15,8 +15,6 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System;
-
 namespace org.addition.epanet.network.structures {
 
     ///<summary>Report field properties.</summary>
@@ -33,72 +31,38 @@ namespace org.addition.epanet.network.structures {
             PREC = 2
         }
 
-        ///<summary>Enabled if in table.</summary>
-        private bool enabled;
-
-        ///<summary>Name of reported variable.</summary>
-        private string name;
-
         ///<summary>Number of decimal places.</summary>
         private int precision;
 
         ///<summary>Lower/upper report limits.</summary>
-        private double[] rptLim = {0d, 0d, 0d};
+        private readonly double[] rptLim = {0d, 0d, 0d};
+
+        ///<summary>Init field name, precision, report limit and state.</summary>
+        /// <param name="name">Field name.</param>
+        public Field(string name) {
+            this.Name = name;
+            this.Enabled = false;
+            precision = 2;
+            this.SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
+            this.SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
+        }
+
+        ///<summary>Name of reported variable.</summary>
+        public string Name { get; private set; }
+
+        public int Precision { get { return this.precision; } }
+
+        public double GetRptLim(RangeType type) { return rptLim[(int)type]; }
 
         ///<summary>Units of reported variable.</summary>
-        private String units;
+        public string Units { get; set; }
 
-        /**
-     * Init field name, precision, report limit and state.
-     * @param name Field name.
-     */
+        ///<summary>Enabled if in table.</summary>
+        public bool Enabled { get; set; }
 
-        public Field(String name) {
-            this.name = name;
-            enabled = false;
-            precision = 2;
-            setRptLim(RangeType.LOW, Constants.BIG*Constants.BIG);
-            setRptLim(RangeType.HI, -Constants.BIG*Constants.BIG);
-        }
+        public void SetPrecision(int value) { this.precision = value; }
 
-        public String getName() {
-            return name;
-        }
-
-        public int getPrecision() {
-            return precision;
-        }
-
-        public double getRptLim(RangeType type) {
-            return rptLim[(int)type];
-        }
-
-        public String getUnits() {
-            return units;
-        }
-
-        public bool isEnabled() {
-            return this.enabled;
-        }
-
-        public void setEnabled(bool enabled) {
-            this.enabled = enabled;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public void setPrecision(int precision) {
-            this.precision = precision;
-        }
-
-        public void setRptLim(RangeType type, double rptLim) {
-            this.rptLim[(int)type] = rptLim;
-        }
-
-        public void setUnits(String units) {
-            this.units = units;
-        }
+        public void SetRptLim(RangeType type, double value) { this.rptLim[(int)type] = value; }
     }
+
 }

@@ -19,936 +19,903 @@ using System;
 using org.addition.epanet.msx.Solvers;
 using org.addition.epanet.msx.Structures;
 
-namespace org.addition.epanet.msx
-{
+namespace org.addition.epanet.msx {
 
-    public class Chemical : JacobianInterface, ExprVariable
-{
+    public class Chemical:JacobianInterface, ExprVariable {
 
-    public void loadDependencies(EpanetMSX epa)
-    {
-        this.MSX = epa.getNetwork();
-    }
+        public void LoadDependencies(EpanetMSX epa) { this.msx = epa.Network; }
 
-    private Network MSX;
-    private rk5 rk5_solver;
-    private ros2 ros2_solver;
-    private Newton newton;
+        private Network msx;
+        private rk5 rk5Solver;
+        private ros2 ros2Solver;
+        private Newton newton;
 
-    //  Constants
-    private const int MAXIT = 20; // Max. number of iterations used in nonlinear equation solver
-    private const int NUMSIG = 3; // Number of significant digits in nonlinear equation solver error
+        //  Constants
+        ///<summary>Max. number of iterations used in nonlinear equation solver</summary>
+        private const int MAXIT = 20;
+        ///<summary>Number of significant digits in nonlinear equation solver error</summary>
+        private const int NUMSIG = 3;
 
-    private Pipe TheSeg; // Current water quality segment
-    private int TheLink; // Index of current link
-    private int TheNode; // Index of current node
-    private int NumSpecies; // Total number of species
-    private int NumPipeRateSpecies; // Number of species with pipe rates
-    private int NumTankRateSpecies; // Number of species with tank rates
-    private int NumPipeFormulaSpecies; // Number of species with pipe formulas
-    private int NumTankFormulaSpecies; // Number of species with tank formulas
-    private int NumPipeEquilSpecies; // Number of species with pipe equilibria
-    private int NumTankEquilSpecies; // Number of species with tank equilibria
-    private int[] PipeRateSpecies; // Species governed by pipe reactions
-    private int[] TankRateSpecies; // Species governed by tank reactions
-    private int[] PipeEquilSpecies; // Species governed by pipe equilibria
-    private int[] TankEquilSpecies; // Species governed by tank equilibria
-    private int[] LastIndex; // Last index of given type of variable
-    private double[] Atol; // Absolute concentration tolerances
-    private double[] Rtol; // Relative concentration tolerances
-    private double[] Yrate; // Rate species concentrations
-    private double[] Yequil; // Equilibrium species concentrations
-    private double[] HydVar; // Values of hydraulic variables
+        ///<summary>Current water quality segment</summary>
+        private Pipe theSeg;
+        ///<summary>Index of current link</summary>
+        private int theLink;
+        ///<summary>Index of current node</summary>
+        private int theNode;
+        ///<summary>Total number of species</summary>
+        private int numSpecies;
+        ///<summary>Number of species with pipe rates</summary>
+        private int numPipeRateSpecies;
+        ///<summary>Number of species with tank rates</summary>
+        private int numTankRateSpecies;
+        ///<summary>Number of species with pipe formulas</summary>
+        private int numPipeFormulaSpecies;
+        ///<summary>Number of species with tank formulas</summary>
+        private int numTankFormulaSpecies;
+        ///<summary>Number of species with pipe equilibria</summary>
+        private int numPipeEquilSpecies;
+        ///<summary>Number of species with tank equilibria</summary>
+        private int numTankEquilSpecies;
+        ///<summary>Species governed by pipe reactions</summary>
+        private int[] pipeRateSpecies;
+        ///<summary>Species governed by tank reactions</summary>
+        private int[] tankRateSpecies;
+        ///<summary>Species governed by pipe equilibria</summary>
+        private int[] pipeEquilSpecies;
+        ///<summary>Species governed by tank equilibria</summary>
+        private int[] tankEquilSpecies;
+        ///<summary>Last index of given type of variable</summary>
+        private int[] lastIndex;
+        ///<summary>Absolute concentration tolerances</summary>
+        private double[] atol;
+        ///<summary>Relative concentration tolerances</summary>
+        private double[] rtol;
+        ///<summary>Rate species concentrations</summary>
+        private double[] yrate;
+        ///<summary>Equilibrium species concentrations</summary>
+        private double[] yequil;
+        ///<summary>Values of hydraulic variables</summary>
+        private double[] hydVar;
 
 
-    ///<summary>opens the multi-species chemistry system.</summary>
-    public EnumTypes.ErrorCodeType MSXchem_open()
-    {
-        int m;
-        int numWallSpecies;
-        int numBulkSpecies;
-        int numTankExpr;
-        int numPipeExpr;
+        ///<summary>opens the multi-species chemistry system.</summary>
+        public EnumTypes.ErrorCodeType MSXchem_open() {
+            int m;
+            int numWallSpecies;
+            int numBulkSpecies;
+            int numTankExpr;
+            int numPipeExpr;
 
-        this.HydVar = new double[(int) EnumTypes.HydVarType.MAX_HYD_VARS];
-        this.LastIndex = new int[(int) EnumTypes.ObjectTypes.MAX_OBJECTS];
+            this.hydVar = new double[(int)EnumTypes.HydVarType.MAX_HYD_VARS];
+            this.lastIndex = new int[(int)EnumTypes.ObjectTypes.MAX_OBJECTS];
 
-        this.PipeRateSpecies = null;
-        this.TankRateSpecies = null;
-        this.PipeEquilSpecies = null;
-        this.TankEquilSpecies = null;
-        this.Atol = null;
-        this.Rtol = null;
-        this.Yrate = null;
-        this.Yequil = null;
-        this.NumSpecies = this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.SPECIES];
-        m = this.NumSpecies + 1;
-        this.PipeRateSpecies = new int[m];
-        this.TankRateSpecies = new int[m];
-        this.PipeEquilSpecies = new int[m];
-        this.TankEquilSpecies = new int[m];
-        this.Atol = new double[m];
-        this.Rtol = new double[m];
-        this.Yrate = new double[m];
-        this.Yequil = new double[m];
+            this.pipeRateSpecies = null;
+            this.tankRateSpecies = null;
+            this.pipeEquilSpecies = null;
+            this.tankEquilSpecies = null;
+            this.atol = null;
+            this.rtol = null;
+            this.yrate = null;
+            this.yequil = null;
+            this.numSpecies = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES];
+            m = this.numSpecies + 1;
+            this.pipeRateSpecies = new int[m];
+            this.tankRateSpecies = new int[m];
+            this.pipeEquilSpecies = new int[m];
+            this.tankEquilSpecies = new int[m];
+            this.atol = new double[m];
+            this.rtol = new double[m];
+            this.yrate = new double[m];
+            this.yequil = new double[m];
 
-        // Assign species to each type of chemical expression
-        this.setSpeciesChemistry();
-        numPipeExpr = this.NumPipeRateSpecies + this.NumPipeFormulaSpecies + this.NumPipeEquilSpecies;
-        numTankExpr = this.NumTankRateSpecies + this.NumTankFormulaSpecies + this.NumTankEquilSpecies;
+            // Assign species to each type of chemical expression
+            this.SetSpeciesChemistry();
+            numPipeExpr = this.numPipeRateSpecies + this.numPipeFormulaSpecies + this.numPipeEquilSpecies;
+            numTankExpr = this.numTankRateSpecies + this.numTankFormulaSpecies + this.numTankEquilSpecies;
 
-        // Use pipe chemistry for tanks if latter was not supplied
-        if (numTankExpr == 0)
-        {
-            this.setTankChemistry();
-            numTankExpr = numPipeExpr;
+            // Use pipe chemistry for tanks if latter was not supplied
+            if (numTankExpr == 0) {
+                this.SetTankChemistry();
+                numTankExpr = numPipeExpr;
+            }
+
+            // Check if enough equations were specified
+            numWallSpecies = 0;
+            numBulkSpecies = 0;
+            for (m = 1; m <= this.numSpecies; m++) {
+                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.WALL) numWallSpecies++;
+                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK) numBulkSpecies++;
+            }
+            if (numPipeExpr != this.numSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_PIPE_EXPR;
+            if (numTankExpr != numBulkSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_TANK_EXPR;
+
+            // Open the ODE solver;
+            // arguments are max. number of ODE's,
+            // max. number of steps to be taken,
+            // 1 if automatic step sizing used (or 0 if not used)
+
+            if (this.msx.Solver == EnumTypes.SolverType.RK5) {
+                this.rk5Solver = new rk5();
+                this.rk5Solver.rk5_open(this.numSpecies, 1000, 1);
+            }
+            if (this.msx.Solver == EnumTypes.SolverType.ROS2) {
+                this.ros2Solver = new ros2();
+                this.ros2Solver.ros2_open(this.numSpecies, 1);
+            }
+
+            // Open the algebraic eqn. solver
+            m = Math.Max(this.numPipeEquilSpecies, this.numTankEquilSpecies);
+            this.newton = new Newton();
+            this.newton.newton_open(m);
+
+            // Assign entries to LastIndex array
+            this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES] = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES];
+            this.lastIndex[(int)EnumTypes.ObjectTypes.TERM] = this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]
+                                                              + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM];
+            this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER] = this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]
+                                                                   + this.msx.Nobjects[
+                                                                             (int)EnumTypes.ObjectTypes.PARAMETER];
+            this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT] = this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]
+                                                                  + this.msx.Nobjects[
+                                                                            (int)EnumTypes.ObjectTypes.CONSTANT];
+
+            return 0;
         }
 
-        // Check if enough equations were specified
-        numWallSpecies = 0;
-        numBulkSpecies = 0;
-        for (m = 1; m <= this.NumSpecies; m++)
-        {
-            if (this.MSX.Species[m].getType() == EnumTypes.SpeciesType.WALL) numWallSpecies++;
-            if (this.MSX.Species[m].getType() == EnumTypes.SpeciesType.BULK) numBulkSpecies++;
-        }
-        if (numPipeExpr != this.NumSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_PIPE_EXPR;
-        if (numTankExpr != numBulkSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_TANK_EXPR;
+        ///<summary>computes reactions in all pipes and tanks.</summary>
+        public EnumTypes.ErrorCodeType MSXchem_react(long dt) {
 
-        // Open the ODE solver;
-        // arguments are max. number of ODE's,
-        // max. number of steps to be taken,
-        // 1 if automatic step sizing used (or 0 if not used)
+            EnumTypes.ErrorCodeType errcode = 0;
 
-        if (this.MSX.Solver == EnumTypes.SolverType.RK5)
-        {
-            this.rk5_solver = new rk5();
-            this.rk5_solver.rk5_open(this.NumSpecies, 1000, 1);
-        }
-        if (this.MSX.Solver == EnumTypes.SolverType.ROS2)
-        {
-            this.ros2_solver = new ros2();
-            this.ros2_solver.ros2_open(this.NumSpecies, 1);
-        }
+            // Save tolerances of pipe rate species
+            for (int i = 1; i <= this.numPipeRateSpecies; i++) {
+                int j = this.pipeRateSpecies[i];
+                this.atol[i] = this.msx.Species[j].getaTol();
+                this.rtol[i] = this.msx.Species[j].getrTol();
+            }
 
-        // Open the algebraic eqn. solver
-        m = Math.Max(this.NumPipeEquilSpecies, this.NumTankEquilSpecies);
-        this.newton = new Newton();
-        this.newton.newton_open(m);
+            // Examine each link
+            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
+                // Skip non-pipe links
+                if (this.msx.Link[i].getLen() == 0.0) continue;
 
-        // Assign entries to LastIndex array
-        this.LastIndex[(int) EnumTypes.ObjectTypes.SPECIES] = this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.SPECIES];
-        this.LastIndex[(int) EnumTypes.ObjectTypes.TERM] = this.LastIndex[(int) EnumTypes.ObjectTypes.SPECIES] + this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.TERM];
-        this.LastIndex[(int) EnumTypes.ObjectTypes.PARAMETER] = this.LastIndex[(int) EnumTypes.ObjectTypes.TERM] + this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.PARAMETER];
-        this.LastIndex[(int) EnumTypes.ObjectTypes.CONSTANT] = this.LastIndex[(int) EnumTypes.ObjectTypes.PARAMETER] + this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.CONSTANT];
+                // Evaluate hydraulic variables
+                this.EvalHydVariables(i);
 
-        return 0;
-    }
+                // Compute pipe reactions
+                errcode = this.EvalPipeReactions(i, dt);
+                if (errcode != 0) return errcode;
+            }
 
-    ///<summary>computes reactions in all pipes and tanks.</summary>
-    public EnumTypes.ErrorCodeType MSXchem_react(long dt)
-    {
-        int k, m;
-        EnumTypes.ErrorCodeType errcode = 0;
+            // Save tolerances of tank rate species
+            for (int i = 1; i <= this.numTankRateSpecies; i++) {
+                int j = this.tankRateSpecies[i];
+                this.atol[i] = this.msx.Species[j].getaTol();
+                this.rtol[i] = this.msx.Species[j].getrTol();
+            }
 
-        // Save tolerances of pipe rate species
-        for (k = 1; k <= this.NumPipeRateSpecies; k++)
-        {
-            m = this.PipeRateSpecies[k];
-            this.Atol[k] = this.MSX.Species[m].getaTol();
-            this.Rtol[k] = this.MSX.Species[m].getrTol();
+            // Examine each tank
+            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TANK]; i++) {
+                // Skip reservoirs
+                if (this.msx.Tank[i].A == 0.0) continue;
+
+                // Compute tank reactions
+                errcode = this.EvalTankReactions(i, dt);
+                if (errcode != 0) return errcode;
+            }
+            return errcode;
         }
 
-        // Examine each link
-        for (k = 1; k <= this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.LINK]; k++)
-        {
-            // Skip non-pipe links
-            if (this.MSX.Link[k].getLen() == 0.0) continue;
 
-            // Evaluate hydraulic variables
-            this.evalHydVariables(k);
-
-            // Compute pipe reactions
-            errcode = this.evalPipeReactions(k, dt);
-            if (errcode != 0) return errcode;
+        /// <summary>Computes equilibrium concentrations for a set of chemical species.</summary>
+        public EnumTypes.ErrorCodeType MSXchem_equil(EnumTypes.ObjectTypes zone, double[] c) {
+            EnumTypes.ErrorCodeType errcode = 0;
+            if (zone == EnumTypes.ObjectTypes.LINK) {
+                if (this.numPipeEquilSpecies > 0) errcode = this.EvalPipeEquil(c);
+                this.EvalPipeFormulas(c);
+            }
+            if (zone == EnumTypes.ObjectTypes.NODE) {
+                if (this.numTankEquilSpecies > 0) errcode = this.EvalTankEquil(c);
+                this.EvalTankFormulas(c);
+            }
+            return errcode;
         }
 
-        // Save tolerances of tank rate species
-        for (k = 1; k <= this.NumTankRateSpecies; k++)
-        {
-            m = this.TankRateSpecies[k];
-            this.Atol[k] = this.MSX.Species[m].getaTol();
-            this.Rtol[k] = this.MSX.Species[m].getrTol();
-        }
-
-        // Examine each tank
-        for (k = 1; k <= this.MSX.Nobjects[(int) EnumTypes.ObjectTypes.TANK]; k++)
-        {
-            // Skip reservoirs
-            if (this.MSX.Tank[k].getA() == 0.0) continue;
-
-            // Compute tank reactions
-            errcode = this.evalTankReactions(k, dt);
-            if (errcode != 0) return errcode;
-        }
-        return errcode;
-    }
-
-
-    // Computes equilibrium concentrations for a set of chemical species.
-        public EnumTypes.ErrorCodeType MSXchem_equil(EnumTypes.ObjectTypes zone, double[] c)
-    {
-        EnumTypes.ErrorCodeType errcode = 0;
-        if (zone == EnumTypes.ObjectTypes.LINK)
-        {
-            if (this.NumPipeEquilSpecies > 0) errcode = this.evalPipeEquil(c);
-            this.evalPipeFormulas(c);
-        }
-        if (zone == EnumTypes.ObjectTypes.NODE)
-        {
-            if (this.NumTankEquilSpecies > 0) errcode = this.evalTankEquil(c);
-            this.evalTankFormulas(c);
-        }
-        return errcode;
-    }
-
-    ///<summary>Determines which species are described by reaction rate expressions, equilibrium expressions, or simple formulas.</summary>
-
-    private void setSpeciesChemistry()
-    {
-        this.NumPipeRateSpecies = 0;
-        this.NumPipeFormulaSpecies = 0;
-        this.NumPipeEquilSpecies = 0;
-        this.NumTankRateSpecies = 0;
-        this.NumTankFormulaSpecies = 0;
-        this.NumTankEquilSpecies = 0;
-        for (int m = 1; m <= this.NumSpecies; m++)
-        {
-            switch (this.MSX.Species[m].getPipeExprType())
-            {
+        ///<summary>Determines which species are described by reaction rate expressions, equilibrium expressions, or simple formulas.</summary>
+        private void SetSpeciesChemistry() {
+            this.numPipeRateSpecies = 0;
+            this.numPipeFormulaSpecies = 0;
+            this.numPipeEquilSpecies = 0;
+            this.numTankRateSpecies = 0;
+            this.numTankFormulaSpecies = 0;
+            this.numTankEquilSpecies = 0;
+            for (int i = 1; i <= this.numSpecies; i++) {
+                switch (this.msx.Species[i].getPipeExprType()) {
                 case EnumTypes.ExpressionType.RATE:
-                this.NumPipeRateSpecies++;
-                this.PipeRateSpecies[this.NumPipeRateSpecies] = m;
+                    this.numPipeRateSpecies++;
+                    this.pipeRateSpecies[this.numPipeRateSpecies] = i;
                     break;
 
                 case EnumTypes.ExpressionType.FORMULA:
-                this.NumPipeFormulaSpecies++;
+                    this.numPipeFormulaSpecies++;
                     break;
 
                 case EnumTypes.ExpressionType.EQUIL:
-                this.NumPipeEquilSpecies++;
-                this.PipeEquilSpecies[this.NumPipeEquilSpecies] = m;
+                    this.numPipeEquilSpecies++;
+                    this.pipeEquilSpecies[this.numPipeEquilSpecies] = i;
                     break;
-            }
-            switch (this.MSX.Species[m].getTankExprType())
-            {
-                case EnumTypes.ExpressionType.RATE:
-                this.NumTankRateSpecies++;
-                this.TankRateSpecies[this.NumTankRateSpecies] = m;
-                    break;
-
-                case EnumTypes.ExpressionType.FORMULA:
-                this.NumTankFormulaSpecies++;
-                    break;
-
-                case EnumTypes.ExpressionType.EQUIL:
-                this.NumTankEquilSpecies++;
-                this.TankEquilSpecies[this.NumTankEquilSpecies] = m;
-                    break;
-            }
-        }
-    }
-
-
-    ///<summary>Assigns pipe chemistry expressions to tank chemistry for each chemical species.</summary>
-
-    private void setTankChemistry()
-    {
-        int m;
-        for (m = 1; m <= this.NumSpecies; m++)
-        {
-            this.MSX.Species[m].setTankExpr(this.MSX.Species[m].getPipeExpr());
-            this.MSX.Species[m].setTankExprType(this.MSX.Species[m].getPipeExprType());
-        }
-        this.NumTankRateSpecies = this.NumPipeRateSpecies;
-        for (m = 1; m <= this.NumTankRateSpecies; m++)
-        {
-            this.TankRateSpecies[m] = this.PipeRateSpecies[m];
-        }
-        this.NumTankFormulaSpecies = this.NumPipeFormulaSpecies;
-        this.NumTankEquilSpecies = this.NumPipeEquilSpecies;
-        for (m = 1; m <= this.NumTankEquilSpecies; m++)
-        {
-            this.TankEquilSpecies[m] = this.PipeEquilSpecies[m];
-        }
-    }
-
-    ///<summary>Retrieves current values of hydraulic variables for the current link being analyzed.</summary>
-
-    private void evalHydVariables(int k)
-    {
-        double dh; // headloss in ft
-        double diam = this.MSX.Link[k].getDiam(); // diameter in ft
-        double av; // area per unit volume
-
-        //  pipe diameter in user's units (ft or m)
-        this.HydVar[(int)EnumTypes.HydVarType.DIAMETER] = diam* this.MSX.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
-
-        //  flow rate in user's units
-        this.HydVar[(int)EnumTypes.HydVarType.FLOW] = Math.Abs(this.MSX.Q[k])* this.MSX.Ucf[(int)EnumTypes.UnitsType.FLOW_UNITS];
-
-        //  flow velocity in ft/sec
-        if (diam == 0.0) this.HydVar[(int)EnumTypes.HydVarType.VELOCITY] = 0.0;
-        else this.HydVar[(int)EnumTypes.HydVarType.VELOCITY] = Math.Abs(this.MSX.Q[k])*4.0/Constants.PI/(diam*diam);
-
-        //  Reynolds number
-        this.HydVar[(int)EnumTypes.HydVarType.REYNOLDS] = this.HydVar[(int) EnumTypes.HydVarType.VELOCITY]*diam/Constants.VISCOS;
-
-        //  flow velocity in user's units (ft/sec or m/sec)
-        this.HydVar[(int)EnumTypes.HydVarType.VELOCITY] *= this.MSX.Ucf[(int) EnumTypes.UnitsType.LENGTH_UNITS];
-
-        //  Darcy Weisbach friction factor
-        if (this.MSX.Link[k].getLen() == 0.0) this.HydVar[(int) EnumTypes.HydVarType.FRICTION] = 0.0;
-        else
-        {
-            dh = Math.Abs(this.MSX.H[this.MSX.Link[k].getN1()] - this.MSX.H[this.MSX.Link[k].getN2()]);
-            this.HydVar[(int)EnumTypes.HydVarType.FRICTION] = 39.725*dh*Math.Pow(diam, 5)/ this.MSX.Link[k].getLen()/(this.MSX.Q[k]* this.MSX.Q[k]);
-        }
-
-        // Shear velocity in user's units (ft/sec or m/sec)
-        this.HydVar[(int)EnumTypes.HydVarType.SHEAR] = this.HydVar[(int)EnumTypes.HydVarType.VELOCITY]*
-                                                Math.Sqrt(this.HydVar[(int)EnumTypes.HydVarType.FRICTION]/8.0);
-
-        // Pipe surface area / volume in area_units/L
-        this.HydVar[(int)EnumTypes.HydVarType.AREAVOL] = 1.0;
-        if (diam > 0.0)
-        {
-            av = 4.0/diam; // ft2/ft3
-            av *= this.MSX.Ucf[(int)EnumTypes.UnitsType.AREA_UNITS]; // area_units/ft3
-            av /= Constants.LperFT3; // area_units/L
-            this.HydVar[(int)EnumTypes.HydVarType.AREAVOL] = av;
-        }
-
-        this.HydVar[(int)EnumTypes.HydVarType.ROUGHNESS] = this.MSX.Link[k].getRoughness(); //Feng Shang, Bug ID 8,  01/29/2008
-    }
-
-
-    ///<summary>Updates species concentrations in each WQ segment of a pipe after reactions occur over time step dt.</summary>
-
-    private EnumTypes.ErrorCodeType evalPipeReactions(int k, long dt)
-    {
-        int i, m;
-        EnumTypes.ErrorCodeType errcode = 0;
-        int ierr;
-        double tstep = (double) dt/ this.MSX.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
-        double c, dc;
-        double[] dh = new double[1];
-        // Start with the most downstream pipe segment
-
-        this.TheLink = k;
-        foreach (Pipe seg  in  this.MSX.Segments[this.TheLink])
-        {
-            this.TheSeg = seg;
-            // Store all segment species concentrations in MSX.C1
-
-            for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = this.TheSeg.getC()[m];
-            ierr = 0;
-
-            // React each reacting species over the time step
-
-            if (dt > 0.0)
-            {
-                // Euler integrator
-
-                if (this.MSX.Solver == EnumTypes.SolverType.EUL)
-                {
-                    for (i = 1; i <= this.NumPipeRateSpecies; i++)
-                    {
-                        m = this.PipeRateSpecies[i];
-
-                        //dc = mathexpr_eval(MSX.Species[m].getPipeExpr(),
-                        //        getPipeVariableValue) * tstep;
-                        dc = this.MSX.Species[m].getPipeExpr().evaluatePipeExp(this)*tstep;
-                        //dc = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
-                        //    public double getValue(int id) {return getPipeVariableValue(id);}
-                        //    public int getIndex(string id) {return 0;}
-                        //})* tstep;
-
-                        c = this.TheSeg.getC()[m] + dc;
-                        this.TheSeg.getC()[m] = Math.Max(c, 0.0);
-                    }
                 }
+                switch (this.msx.Species[i].getTankExprType()) {
+                case EnumTypes.ExpressionType.RATE:
+                    this.numTankRateSpecies++;
+                    this.tankRateSpecies[this.numTankRateSpecies] = i;
+                    break;
+
+                case EnumTypes.ExpressionType.FORMULA:
+                    this.numTankFormulaSpecies++;
+                    break;
+
+                case EnumTypes.ExpressionType.EQUIL:
+                    this.numTankEquilSpecies++;
+                    this.tankEquilSpecies[this.numTankEquilSpecies] = i;
+                    break;
+                }
+            }
+        }
+
+
+        ///<summary>Assigns pipe chemistry expressions to tank chemistry for each chemical species.</summary>
+        private void SetTankChemistry() {
+            for (int i = 1; i <= this.numSpecies; i++) {
+                this.msx.Species[i].setTankExpr(this.msx.Species[i].getPipeExpr());
+                this.msx.Species[i].setTankExprType(this.msx.Species[i].getPipeExprType());
+            }
+
+            this.numTankRateSpecies = this.numPipeRateSpecies;
+
+            for (int i = 1; i <= this.numTankRateSpecies; i++) {
+                this.tankRateSpecies[i] = this.pipeRateSpecies[i];
+            }
+
+            this.numTankFormulaSpecies = this.numPipeFormulaSpecies;
+            this.numTankEquilSpecies = this.numPipeEquilSpecies;
+
+            for (int i = 1; i <= this.numTankEquilSpecies; i++) {
+                this.tankEquilSpecies[i] = this.pipeEquilSpecies[i];
+            }
+        }
+
+        ///<summary>Retrieves current values of hydraulic variables for the current link being analyzed.</summary>
+        private void EvalHydVariables(int k) {
+            double dh; // headloss in ft
+            double diam = this.msx.Link[k].getDiam(); // diameter in ft
+            double av; // area per unit volume
+
+            //  pipe diameter in user's units (ft or m)
+            this.hydVar[(int)EnumTypes.HydVarType.DIAMETER] = diam * this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
+
+            //  flow rate in user's units
+            this.hydVar[(int)EnumTypes.HydVarType.FLOW] = Math.Abs(this.msx.Q[k])
+                                                          * this.msx.Ucf[(int)EnumTypes.UnitsType.FLOW_UNITS];
+
+            //  flow velocity in ft/sec
+            if (diam == 0.0) this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] = 0.0;
+            else
+                this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] = Math.Abs(this.msx.Q[k]) * 4.0 / Constants.PI
+                                                                  / (diam * diam);
+
+            //  Reynolds number
+            this.hydVar[(int)EnumTypes.HydVarType.REYNOLDS] = this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] * diam
+                                                              / Constants.VISCOS;
+
+            //  flow velocity in user's units (ft/sec or m/sec)
+            this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] *= this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
+
+            //  Darcy Weisbach friction factor
+            if (this.msx.Link[k].getLen() == 0.0) this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 0.0;
+            else {
+                dh = Math.Abs(this.msx.H[this.msx.Link[k].getN1()] - this.msx.H[this.msx.Link[k].getN2()]);
+                this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 39.725 * dh * Math.Pow(diam, 5)
+                                                                  / this.msx.Link[k].getLen()
+                                                                  / (this.msx.Q[k] * this.msx.Q[k]);
+            }
+
+            // Shear velocity in user's units (ft/sec or m/sec)
+            this.hydVar[(int)EnumTypes.HydVarType.SHEAR] = this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] *
+                                                           Math.Sqrt(
+                                                               this.hydVar[(int)EnumTypes.HydVarType.FRICTION] / 8.0);
+
+            // Pipe surface area / volume in area_units/L
+            this.hydVar[(int)EnumTypes.HydVarType.AREAVOL] = 1.0;
+            if (diam > 0.0) {
+                av = 4.0 / diam; // ft2/ft3
+                av *= this.msx.Ucf[(int)EnumTypes.UnitsType.AREA_UNITS]; // area_units/ft3
+                av /= Constants.LperFT3; // area_units/L
+                this.hydVar[(int)EnumTypes.HydVarType.AREAVOL] = av;
+            }
+
+            this.hydVar[(int)EnumTypes.HydVarType.ROUGHNESS] = this.msx.Link[k].getRoughness();
+                //Feng Shang, Bug ID 8,  01/29/2008
+        }
+
+
+        ///<summary>Updates species concentrations in each WQ segment of a pipe after reactions occur over time step dt.</summary>
+        private EnumTypes.ErrorCodeType EvalPipeReactions(int k, long dt) {
+            EnumTypes.ErrorCodeType errcode = 0;
+            int ierr;
+            double tstep = (double)dt / this.msx.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
+            double c, dc;
+            double[] dh = new double[1];
+            // Start with the most downstream pipe segment
+
+            this.theLink = k;
+            foreach (Pipe seg  in  this.msx.Segments[this.theLink]) {
+                this.theSeg = seg;
+                // Store all segment species concentrations in MSX.C1
+
+                for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = this.theSeg.getC()[i];
+                ierr = 0;
+
+                // React each reacting species over the time step
+
+                if (dt > 0.0) {
+                    // Euler integrator
+                    if (this.msx.Solver == EnumTypes.SolverType.EUL) {
+                        for (int i = 1; i <= this.numPipeRateSpecies; i++) {
+                            int m = this.pipeRateSpecies[i];
+
+                            //dc = mathexpr_eval(MSX.Species[m].getPipeExpr(),
+                            //        getPipeVariableValue) * tstep;
+                            dc = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this) * tstep;
+                            //dc = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
+                            //    public double getValue(int id) {return getPipeVariableValue(id);}
+                            //    public int getIndex(string id) {return 0;}
+                            //})* tstep;
+
+                            c = this.theSeg.getC()[m] + dc;
+                            this.theSeg.getC()[m] = Math.Max(c, 0.0);
+                        }
+                    }
 
                     // Other integrators
-                else
-                {
-                    // Place current concentrations of species that react in vector Yrate
+                    else {
+                        // Place current concentrations of species that react in vector Yrate
 
-                    for (i = 1; i <= this.NumPipeRateSpecies; i++)
-                    {
-                        m = this.PipeRateSpecies[i];
-                        this.Yrate[i] = this.TheSeg.getC()[m];
+                        for (int i = 1; i <= this.numPipeRateSpecies; i++) {
+                            int m = this.pipeRateSpecies[i];
+                            this.yrate[i] = this.theSeg.getC()[m];
+                        }
+                        dh[0] = this.theSeg.getHstep();
+
+                        // integrate the set of rate equations
+
+                        // Runge-Kutta integrator
+                        if (this.msx.Solver == EnumTypes.SolverType.RK5)
+                            ierr = this.rk5Solver.rk5_integrate(
+                                           this.yrate,
+                                           this.numPipeRateSpecies,
+                                           0,
+                                           tstep,
+                                           dh,
+                                           this.atol,
+                                           this.rtol,
+                                           this,
+                                           Operation.PIPES_DC_DT_CONCENTRATIONS);
+                        //new JacobianFunction(){
+                        //    public void solve(double t, double[] y, int n, double[] f){getPipeDcDt(t,y,n,f);}
+                        //    public void solve(double t, double[] y, int n, double[] f, int off) {getPipeDcDt(t,y,n,f,off);}
+                        //});
+
+                        // Rosenbrock integrator
+                        if (this.msx.Solver == EnumTypes.SolverType.ROS2)
+                            ierr = this.ros2Solver.ros2_integrate(
+                                           this.yrate,
+                                           this.numPipeRateSpecies,
+                                           0,
+                                           tstep,
+                                           dh,
+                                           this.atol,
+                                           this.rtol,
+                                           this,
+                                           Operation.PIPES_DC_DT_CONCENTRATIONS);
+                        //new JacobianFunction() {
+                        //    public void solve(double t, double[] y, int n, double[] f) {getPipeDcDt(t, y, n, f);}
+                        //    public void solve(double t, double[] y, int n, double[] f, int off) {getPipeDcDt(t,y,n,f,off);}
+                        //});
+
+                        // save new concentration values of the species that reacted
+
+                        for (int i = 1; i <= this.numSpecies; i++)
+                            this.theSeg.getC()[i] = this.msx.C1[i];
+
+                        for (int i = 1; i <= this.numPipeRateSpecies; i++) {
+                            int m = this.pipeRateSpecies[i];
+                            this.theSeg.getC()[m] = Math.Max(this.yrate[i], 0.0);
+                        }
+                        this.theSeg.setHstep(dh[0]);
                     }
-                    dh[0] = this.TheSeg.getHstep();
-
-                    // integrate the set of rate equations
-
-                    // Runge-Kutta integrator
-                    if (this.MSX.Solver == EnumTypes.SolverType.RK5)
-                        ierr = this.rk5_solver.rk5_integrate(this.Yrate, this.NumPipeRateSpecies, 0, tstep,
-                            dh, this.Atol, this.Rtol, this, Operation.PIPES_DC_DT_CONCENTRATIONS);
-                    //new JacobianFunction(){
-                    //    public void solve(double t, double[] y, int n, double[] f){getPipeDcDt(t,y,n,f);}
-                    //    public void solve(double t, double[] y, int n, double[] f, int off) {getPipeDcDt(t,y,n,f,off);}
-                    //});
-
-                    // Rosenbrock integrator
-                    if (this.MSX.Solver == EnumTypes.SolverType.ROS2)
-                        ierr = this.ros2_solver.ros2_integrate(this.Yrate, this.NumPipeRateSpecies, 0, tstep,
-                            dh, this.Atol, this.Rtol, this, Operation.PIPES_DC_DT_CONCENTRATIONS);
-                    //new JacobianFunction() {
-                    //    public void solve(double t, double[] y, int n, double[] f) {getPipeDcDt(t, y, n, f);}
-                    //    public void solve(double t, double[] y, int n, double[] f, int off) {getPipeDcDt(t,y,n,f,off);}
-                    //});
-
-                    // save new concentration values of the species that reacted
-
-                    for (m = 1; m <= this.NumSpecies; m++) this.TheSeg.getC()[m] = this.MSX.C1[m];
-                    for (i = 1; i <= this.NumPipeRateSpecies; i++)
-                    {
-                        m = this.PipeRateSpecies[i];
-                        this.TheSeg.getC()[m] = Math.Max(this.Yrate[i], 0.0);
-                    }
-                    this.TheSeg.setHstep(dh[0]);
-                }
-                if (ierr < 0)
-                    return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
-            }
-
-            // Compute new equilibrium concentrations within segment
-
-            errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.TheSeg.getC());
-
-            if (errcode != 0)
-                return errcode;
-
-            // Move to the segment upstream of the current one
-
-            //TheSeg = TheSeg->prev;
-        }
-        return errcode;
-    }
-
-    ///<summary>Updates species concentrations in a given storage tank after reactions occur over time step dt.</summary>
-
-    private EnumTypes.ErrorCodeType evalTankReactions(int k, long dt)
-    {
-        int i, m;
-        EnumTypes.ErrorCodeType errcode = 0;
-        int ierr;
-        double tstep = ((double) dt)/ this.MSX.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
-        double c, dc;
-        double[] dh = new double[1];
-
-        // evaluate each volume segment in the tank
-
-        this.TheNode = this.MSX.Tank[k].getNode();
-        i = this.MSX.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + k;
-        //TheSeg = MSX.Segments[i];
-        //while ( TheSeg )
-        foreach (Pipe seg  in  this.MSX.Segments[i])
-        {
-            this.TheSeg = seg;
-
-            // store all segment species concentrations in MSX.C1
-            for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = this.TheSeg.getC()[m];
-            ierr = 0;
-
-            // react each reacting species over the time step
-            if (dt > 0.0)
-            {
-                if (this.MSX.Solver == EnumTypes.SolverType.EUL)
-                {
-                    for (i = 1; i <= this.NumTankRateSpecies; i++)
-                    {
-                        m = this.TankRateSpecies[i];
-                        //dc = tstep * mathexpr_eval(MSX.Species[m].getTankExpr(),
-                        //        getTankVariableValue);
-                        dc = tstep* this.MSX.Species[m].getTankExpr().evaluateTankExp(this);
-                        //dc = tstep * MSX.Species[m].getTankExpr().evaluate(
-                        //        new VariableInterface(){
-                        //            public double getValue(int id) {return getTankVariableValue(id);}
-                        //            public int getIndex(string id) {return 0;}
-                        //        });
-                        c = this.TheSeg.getC()[m] + dc;
-                        this.TheSeg.getC()[m] = Math.Max(c, 0.0);
-                    }
+                    if (ierr < 0)
+                        return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
                 }
 
-                else
-                {
-                    for (i = 1; i <= this.NumTankRateSpecies; i++)
-                    {
-                        m = this.TankRateSpecies[i];
-                        this.Yrate[i] = this.MSX.Tank[k].getC()[m];
+                // Compute new equilibrium concentrations within segment
+
+                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.theSeg.getC());
+
+                if (errcode != 0)
+                    return errcode;
+
+                // Move to the segment upstream of the current one
+
+                //TheSeg = TheSeg->prev;
+            }
+            return errcode;
+        }
+
+        ///<summary>Updates species concentrations in a given storage tank after reactions occur over time step dt.</summary>
+        private EnumTypes.ErrorCodeType EvalTankReactions(int k, long dt) {
+            EnumTypes.ErrorCodeType errcode = 0;
+            double tstep = ((double)dt) / this.msx.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
+            double c, dc;
+            double[] dh = new double[1];
+
+            // evaluate each volume segment in the tank
+
+            this.theNode = this.msx.Tank[k].Node;
+            int i = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + k;
+            //TheSeg = MSX.Segments[i];
+            //while ( TheSeg )
+            foreach (Pipe seg  in  this.msx.Segments[i]) {
+                this.theSeg = seg;
+
+                // store all segment species concentrations in MSX.C1
+
+                for (int j = 1; j <= this.numSpecies; j++) this.msx.C1[j] = this.theSeg.getC()[j];
+                var ierr = 0;
+
+                // react each reacting species over the time step
+                if (dt > 0.0) {
+                    if (this.msx.Solver == EnumTypes.SolverType.EUL) {
+                        for (i = 1; i <= this.numTankRateSpecies; i++) {
+                            int j = this.tankRateSpecies[i];
+                            //dc = tstep * mathexpr_eval(MSX.Species[m].getTankExpr(),
+                            //        getTankVariableValue);
+                            dc = tstep * this.msx.Species[j].getTankExpr().evaluateTankExp(this);
+                            //dc = tstep * MSX.Species[m].getTankExpr().evaluate(
+                            //        new VariableInterface(){
+                            //            public double getValue(int id) {return getTankVariableValue(id);}
+                            //            public int getIndex(string id) {return 0;}
+                            //        });
+                            c = this.theSeg.getC()[j] + dc;
+                            this.theSeg.getC()[j] = Math.Max(c, 0.0);
+                        }
                     }
-                    dh[0] = this.MSX.Tank[k].getHstep();
 
-                    if (this.MSX.Solver == EnumTypes.SolverType.RK5)
-                        ierr = this.rk5_solver.rk5_integrate(this.Yrate, this.NumTankRateSpecies, 0, tstep,
-                            dh, this.Atol, this.Rtol, this, Operation.TANKS_DC_DT_CONCENTRATIONS);
-                    //new JacobianFunction() {
-                    //    public void solve(double t, double[] y, int n, double[] f) {getTankDcDt(t,y,n,f);}
-                    //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
-                    //} );
+                    else {
+                        for (i = 1; i <= this.numTankRateSpecies; i++) {
+                            int j = this.tankRateSpecies[i];
+                            this.yrate[i] = this.msx.Tank[k].C[j];
+                        }
+                        dh[0] = this.msx.Tank[k].Hstep;
 
-                    if (this.MSX.Solver == EnumTypes.SolverType.ROS2)
-                        ierr = this.ros2_solver.ros2_integrate(this.Yrate, this.NumTankRateSpecies, 0, tstep,
-                            dh, this.Atol, this.Rtol, this, Operation.TANKS_DC_DT_CONCENTRATIONS);
-                    //new JacobianFunction() {
-                    //    public void solve(double t, double[] y, int n, double[] f) {getTankDcDt(t,y,n,f);}
-                    //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
-                    //} );
+                        if (this.msx.Solver == EnumTypes.SolverType.RK5)
+                            ierr = this.rk5Solver.rk5_integrate(
+                                           this.yrate,
+                                           this.numTankRateSpecies,
+                                           0,
+                                           tstep,
+                                           dh,
+                                           this.atol,
+                                           this.rtol,
+                                           this,
+                                           Operation.TANKS_DC_DT_CONCENTRATIONS);
+                        //new JacobianFunction() {
+                        //    public void solve(double t, double[] y, int n, double[] f) {getTankDcDt(t,y,n,f);}
+                        //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
+                        //} );
 
-                    for (m = 1; m <= this.NumSpecies; m++) this.TheSeg.getC()[m] = this.MSX.C1[m];
-                    for (i = 1; i <= this.NumTankRateSpecies; i++)
-                    {
-                        m = this.TankRateSpecies[i];
-                        this.TheSeg.getC()[m] = Math.Max(this.Yrate[i], 0.0);
+                        if (this.msx.Solver == EnumTypes.SolverType.ROS2)
+                            ierr = this.ros2Solver.ros2_integrate(
+                                           this.yrate,
+                                           this.numTankRateSpecies,
+                                           0,
+                                           tstep,
+                                           dh,
+                                           this.atol,
+                                           this.rtol,
+                                           this,
+                                           Operation.TANKS_DC_DT_CONCENTRATIONS);
+                        //new JacobianFunction() {
+                        //    public void solve(double t, double[] y, int n, double[] f) {getTankDcDt(t,y,n,f);}
+                        //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
+                        //} );
+
+                        for (int j = 1; j <= this.numSpecies; j++) this.theSeg.getC()[j] = this.msx.C1[j];
+                        for (i = 1; i <= this.numTankRateSpecies; i++) {
+                            int j = this.tankRateSpecies[i];
+                            this.theSeg.getC()[j] = Math.Max(this.yrate[i], 0.0);
+                        }
+                        this.theSeg.setHstep(dh[0]);
                     }
-                    this.TheSeg.setHstep(dh[0]);
+                    if (ierr < 0)
+                        return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
                 }
-                if (ierr < 0)
-                    return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
+
+                // compute new equilibrium concentrations within segment
+                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.theSeg.getC());
+
+                if (errcode != 0)
+                    return errcode;
+            }
+            return errcode;
+        }
+
+        ///<summary>computes equilibrium concentrations for water in a pipe segment.</summary>
+        private EnumTypes.ErrorCodeType EvalPipeEquil(double[] c) {
+            for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
+
+            for (int i = 1; i <= this.numPipeEquilSpecies; i++) {
+                int j = this.pipeEquilSpecies[i];
+                this.yequil[i] = c[j];
             }
 
-            // compute new equilibrium concentrations within segment
-            errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.TheSeg.getC());
+            int errcode = this.newton.newton_solve(
+                                  this.yequil,
+                                  this.numPipeEquilSpecies,
+                                  MAXIT,
+                                  NUMSIG,
+                                  this,
+                                  Operation.PIPES_EQUIL);
 
-            if (errcode != 0)
-                return errcode;
-        }
-        return errcode;
-    }
-
-    ///<summary>computes equilibrium concentrations for water in a pipe segment.</summary>
-
-    private EnumTypes.ErrorCodeType evalPipeEquil(double[] c)
-    {
-        int i, m;
-        int errcode;
-        for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = c[m];
-        for (i = 1; i <= this.NumPipeEquilSpecies; i++)
-        {
-            m = this.PipeEquilSpecies[i];
-            this.Yequil[i] = c[m];
-        }
-        errcode = this.newton.newton_solve(this.Yequil, this.NumPipeEquilSpecies, MAXIT, NUMSIG,
-            this, Operation.PIPES_EQUIL);
-        //new JacobianFunction() {
-        //    public void solve(double t, double[] y, int n, double[] f) {
-        //        getPipeEquil(t,y,n,f);
-        //    }
-        //
-        //    public void solve(double t, double[] y, int n, double[] f, int off) {
-        //        System.out.println("Jacobian Unused");
-        //    }
-        //});
-        if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
-        for (i = 1; i <= this.NumPipeEquilSpecies; i++)
-        {
-            m = this.PipeEquilSpecies[i];
-            c[m] = this.Yequil[i];
-            this.MSX.C1[m] = c[m];
-        }
-        return 0;
-    }
-
-
-    ///<summary>computes equilibrium concentrations for water in a tank.</summary>
-
-    private EnumTypes.ErrorCodeType evalTankEquil(double[] c)
-    {
-        int i, m;
-        int errcode;
-        for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = c[m];
-        for (i = 1; i <= this.NumTankEquilSpecies; i++)
-        {
-            m = this.TankEquilSpecies[i];
-            this.Yequil[i] = c[m];
-        }
-        errcode = this.newton.newton_solve(this.Yequil, this.NumTankEquilSpecies, MAXIT, NUMSIG,
-            this, Operation.TANKS_EQUIL);
-        //new JacobianFunction() {
-        //    public void solve(double t, double[] y, int n, double[] f) {getTankEquil(t,y,n,f);}
-        //    public void solve(double t, double[] y, int n, double[] f, int off) {
-        //        System.out.println("Jacobian Unused");}
-        //});
-        if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
-        for (i = 1; i <= this.NumTankEquilSpecies; i++)
-        {
-            m = this.TankEquilSpecies[i];
-            c[m] = this.Yequil[i];
-            this.MSX.C1[m] = c[m];
-        }
-        return 0;
-    }
-
-    /**
-     * Evaluates species concentrations in a pipe segment that are simple
-     * formulas involving other known species concentrations.
-      */
-
-    private void evalPipeFormulas(double[] c)
-    {
-        int m;
-        for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = c[m];
-        for (m = 1; m <= this.NumSpecies; m++)
-        {
-            if (this.MSX.Species[m].getPipeExprType() == EnumTypes.ExpressionType.FORMULA)
-            {
-                c[m] = this.MSX.Species[m].getPipeExpr().evaluatePipeExp(this);
-                //c[m] = MSX.Species[m].getPipeExpr().evaluate( new VariableInterface(){
-                //    public double getValue(int id){return getPipeVariableValue(id);}
-                //    public int getIndex(string id){return 0;}
-                //});
+            if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
+            for (int i = 1; i <= this.numPipeEquilSpecies; i++) {
+                int j = this.pipeEquilSpecies[i];
+                c[j] = this.yequil[i];
+                this.msx.C1[j] = c[j];
             }
+            return 0;
         }
-    }
 
-    /**
-     * Evaluates species concentrations in a tank that are simple
-     * formulas involving other known species concentrations.
-      */
 
-    private void evalTankFormulas(double[] c)
-    {
-        int m;
-        for (m = 1; m <= this.NumSpecies; m++) this.MSX.C1[m] = c[m];
-        for (m = 1; m <= this.NumSpecies; m++)
-        {
-            if (this.MSX.Species[m].getTankExprType() == EnumTypes.ExpressionType.FORMULA)
-            {
-                c[m] = this.MSX.Species[m].getPipeExpr().evaluateTankExp(this);
-                //c[m] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
-                //    public double getValue(int id){return getTankVariableValue(id);}
-                //    public int getIndex(string id){return 0;}
-                //});
+        ///<summary>computes equilibrium concentrations for water in a tank.</summary>
+        private EnumTypes.ErrorCodeType EvalTankEquil(double[] c) {
+
+            for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
+            for (int i = 1; i <= this.numTankEquilSpecies; i++) {
+                int j = this.tankEquilSpecies[i];
+                this.yequil[i] = c[j];
             }
-        }
-    }
-
-    ///<summary>Finds the value of a species, a parameter, or a constant for the pipe link being analyzed.</summary>
-
-    public double getPipeVariableValue(int i)
-    {
-        // WQ species have index i between 1 & # of species
-        // and their current values are stored in vector MSX.C1
-        if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.SPECIES])
-        {
-            // If species represented by a formula then evaluate it
-            if (this.MSX.Species[i].getPipeExprType() == EnumTypes.ExpressionType.FORMULA)
-            {
-                return this.MSX.Species[i].getPipeExpr().evaluatePipeExp(this);
-                //return MSX.Species[i].getPipeExpr().evaluate(new VariableInterface(){
-                //    public double getValue(int id){return getPipeVariableValue(id);}
-                //    public int getIndex(string id){return 0;}
-                //});
-            }
-            else // otherwise return the current concentration
-                return this.MSX.C1[i];
-        }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.TERM]) // intermediate term expressions come next
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
-            return this.MSX.Term[i].getExpr().evaluatePipeExp(this);
-            //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
-            //    public double getValue(int id){return getPipeVariableValue(id);}
-            //    public int getIndex(string id){return 0;}
+            int errcode = this.newton.newton_solve(
+                                  this.yequil,
+                                  this.numTankEquilSpecies,
+                                  MAXIT,
+                                  NUMSIG,
+                                  this,
+                                  Operation.TANKS_EQUIL);
+            //new JacobianFunction() {
+            //    public void solve(double t, double[] y, int n, double[] f) {getTankEquil(t,y,n,f);}
+            //    public void solve(double t, double[] y, int n, double[] f, int off) {
+            //        System.out.println("Jacobian Unused");}
             //});
-        }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]) // reaction parameter indexes come after that
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
-            return this.MSX.Link[this.TheLink].getParam()[i];
-        }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // followed by constants
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
-            return this.MSX.Const[i].getValue();
-        }
-        else // and finally by hydraulic variables
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.CONSTANT];
-            if (i < (int)EnumTypes.HydVarType.MAX_HYD_VARS) return this.HydVar[i];
-            else return 0.0;
-        }
-    }
 
-    ///<summary>Finds the value of a species, a parameter, or a constant for the current node being analyzed.</summary>
+            if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
 
-    public double getTankVariableValue(int i)
-    {
-        int j;
-        // WQ species have index i between 1 & # of species and their current values are stored in vector MSX.C1
-        if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.SPECIES])
-        {
-            // If species represented by a formula then evaluate it
-            if (this.MSX.Species[i].getTankExprType() == EnumTypes.ExpressionType.FORMULA)
+            for (int i = 1; i <= this.numTankEquilSpecies; i++) {
+                int j = this.tankEquilSpecies[i];
+                c[j] = this.yequil[i];
+                this.msx.C1[j] = c[j];
+            }
+            return 0;
+        }
+
+        ///<summary>
+        /// Evaluates species concentrations in a pipe segment that are simple
+        /// formulas involving other known species concentrations.
+        /// </summary>
+        private void EvalPipeFormulas(double[] c) {
+            int m;
+            for (m = 1; m <= this.numSpecies; m++) this.msx.C1[m] = c[m];
+            for (m = 1; m <= this.numSpecies; m++) {
+                if (this.msx.Species[m].getPipeExprType() == EnumTypes.ExpressionType.FORMULA) {
+                    c[m] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                    //c[m] = MSX.Species[m].getPipeExpr().evaluate( new VariableInterface(){
+                    //    public double getValue(int id){return getPipeVariableValue(id);}
+                    //    public int getIndex(string id){return 0;}
+                    //});
+                }
+            }
+        }
+
+        ///<summary>
+        /// Evaluates species concentrations in a tank that are simple
+        /// formulas involving other known species concentrations. 
+        /// </summary>
+        private void EvalTankFormulas(double[] c) {
+
+            for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
+
+            for (int i = 1; i <= this.numSpecies; i++) {
+                if (this.msx.Species[i].getTankExprType() == EnumTypes.ExpressionType.FORMULA) {
+                    c[i] = this.msx.Species[i].getPipeExpr().evaluateTankExp(this);
+                    //c[m] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
+                    //    public double getValue(int id){return getTankVariableValue(id);}
+                    //    public int getIndex(string id){return 0;}
+                    //});
+                }
+            }
+        }
+
+        ///<summary>Finds the value of a species, a parameter, or a constant for the pipe link being analyzed.</summary>
+        public double getPipeVariableValue(int i) {
+            // WQ species have index i between 1 & # of species
+            // and their current values are stored in vector MSX.C1
+            if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
+                // If species represented by a formula then evaluate it
+                if (this.msx.Species[i].getPipeExprType() == EnumTypes.ExpressionType.FORMULA) {
+                    return this.msx.Species[i].getPipeExpr().evaluatePipeExp(this);
+                    //return MSX.Species[i].getPipeExpr().evaluate(new VariableInterface(){
+                    //    public double getValue(int id){return getPipeVariableValue(id);}
+                    //    public int getIndex(string id){return 0;}
+                    //});
+                }
+                else // otherwise return the current concentration
+                    return this.msx.C1[i];
+            }
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // intermediate term expressions come next
             {
-                return this.MSX.Species[i].getTankExpr().evaluateTankExp(this);
-                //return MSX.Species[i].getTankExpr().evaluate(new VariableInterface() {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
+                return this.msx.Term[i].getExpr().evaluatePipeExp(this);
+                //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
+                //    public double getValue(int id){return getPipeVariableValue(id);}
+                //    public int getIndex(string id){return 0;}
+                //});
+            }
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]) // reaction parameter indexes come after that
+            {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
+                return this.msx.Link[this.theLink].getParam()[i];
+            }
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // followed by constants
+            {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
+                return this.msx.Const[i].getValue();
+            }
+            else // and finally by hydraulic variables
+            {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT];
+                if (i < (int)EnumTypes.HydVarType.MAX_HYD_VARS) return this.hydVar[i];
+                else return 0.0;
+            }
+        }
+
+        ///<summary>Finds the value of a species, a parameter, or a constant for the current node being analyzed.</summary>
+        public double getTankVariableValue(int i) {
+            // WQ species have index i between 1 & # of species and their current values are stored in vector MSX.C1
+            if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
+                // If species represented by a formula then evaluate it
+                if (this.msx.Species[i].getTankExprType() == EnumTypes.ExpressionType.FORMULA) {
+                    return this.msx.Species[i].getTankExpr().evaluateTankExp(this);
+                    //return MSX.Species[i].getTankExpr().evaluate(new VariableInterface() {
+                    //    public double getValue(int id) {return getTankVariableValue(id);}
+                    //    public int getIndex(string id) {return 0;}});
+                }
+                else // Otherwise return the current concentration
+                    return this.msx.C1[i];
+            }
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // Intermediate term expressions come next
+            {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
+                return this.msx.Term[i].getExpr().evaluateTankExp(this);
+                //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id) {return getTankVariableValue(id);}
-                //    public int getIndex(string id) {return 0;}});
+                //    public int getIndex(string id) {return 0;}
+                //});
             }
-            else // Otherwise return the current concentration
-                return this.MSX.C1[i];
-        }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.TERM]) // Intermediate term expressions come next
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
-            return this.MSX.Term[i].getExpr().evaluateTankExp(this);
-            //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
-            //    public double getValue(int id) {return getTankVariableValue(id);}
-            //    public int getIndex(string id) {return 0;}
-            //});
-        }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.PARAMETER])
-            // Next come reaction parameters associated with Tank nodes
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
-            j = this.MSX.Node[this.TheNode].getTank();
-            if (j > 0)
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER])
+                // Next come reaction parameters associated with Tank nodes
             {
-                return this.MSX.Tank[j].getParam()[i];
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
+                int j = this.msx.Node[this.theNode].Tank;
+                if (j > 0) {
+                    return this.msx.Tank[j].Param[i];
+                }
+                else
+                    return 0.0;
+            }
+            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // and then come constants
+            {
+                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
+                return this.msx.Const[i].getValue();
             }
             else
                 return 0.0;
         }
-        else if (i <= this.LastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // and then come constants
-        {
-            i -= this.LastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
-            return this.MSX.Const[i].getValue();
+
+
+        ///<summary>finds reaction rate (dC/dt) for each reacting species in a pipe.</summary>
+        private void GetPipeDcDt(double t, double[] y, int n, double[] deriv) {
+
+
+            // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeRateSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
+
+            // Update equilibrium species if full coupling in use
+            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
+                {
+                    for (int i = 1; i <= n; i++) deriv[i] = 0.0;
+                    return;
+                }
+            }
+
+            // Evaluate each pipe reaction expression
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeRateSpecies[i];
+                //deriv[i] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
+                deriv[i] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                //deriv[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
+                //    public double getValue(int id) {return getPipeVariableValue(id);}
+                //    public int getIndex(string id) {return 0;}
+                //});
+            }
         }
-        else
-            return 0.0;
-    }
 
 
-    ///<summary>finds reaction rate (dC/dt) for each reacting species in a pipe.</summary>
+        private void GetPipeDcDt(double t, double[] y, int n, double[] deriv, int off) {
 
-    private void getPipeDcDt(double t, double[] y, int n, double[] deriv)
-{
-    int i, m;
+            // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeRateSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
 
-    // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeRateSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
+            // Update equilibrium species if full coupling in use
 
-    // Update equilibrium species if full coupling in use
-    if (this.MSX.Coupling == EnumTypes.CouplingType.FULL_COUPLING)
-    {
-        if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.MSX.C1) > 0) // check for error condition
-        {
-            for (i = 1; i <= n; i++) deriv[i] = 0.0;
-            return;
+            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
+                {
+                    for (int i = 1; i <= n; i++) deriv[i + off] = 0.0;
+                    return;
+                }
+            }
+
+            // evaluate each pipe reaction expression
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeRateSpecies[i];
+                //deriv[i+off] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
+                deriv[i + off] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                //deriv[i+off] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
+                //    public double getValue(int id) {return getPipeVariableValue(id);}
+                //    public int getIndex(string id) {return 0;}
+                //});
+            }
         }
-    }
-
-    // Evaluate each pipe reaction expression
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeRateSpecies[i];
-        //deriv[i] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
-        deriv[i] = this.MSX.Species[m].getPipeExpr().evaluatePipeExp(this);
-        //deriv[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
-        //    public double getValue(int id) {return getPipeVariableValue(id);}
-        //    public int getIndex(string id) {return 0;}
-        //});
-    }
-}
 
 
-    private void getPipeDcDt(double t, double[] y, int n, double[] deriv, int off)
-{
-    int i, m;
+        ///<summary>finds reaction rate (dC/dt) for each reacting species in a tank.</summary>
+        private void GetTankDcDt(double t, double[] y, int n, double[] deriv) {
 
-    // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeRateSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
+            // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankRateSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
 
-    // Update equilibrium species if full coupling in use
+            // Update equilibrium species if full coupling in use
+            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
+                {
+                    for (int i = 1; i <= n; i++) deriv[i] = 0.0;
+                    return;
+                }
+            }
 
-    if (this.MSX.Coupling == EnumTypes.CouplingType.FULL_COUPLING)
-    {
-        if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.MSX.C1) > 0) // check for error condition
-        {
-            for (i = 1; i <= n; i++) deriv[i + off] = 0.0;
-            return;
+            // Evaluate each tank reaction expression
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankRateSpecies[i];
+                deriv[i] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                //deriv[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
+                //    public double getValue(int id) {return getTankVariableValue(id); }
+                //    public int getIndex(string id) {return 0;}
+                //}); //mathexpr_eval(MSX.Species[m].getTankExpr(), getTankVariableValue);
+            }
         }
-    }
 
-    // evaluate each pipe reaction expression
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeRateSpecies[i];
-        //deriv[i+off] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
-        deriv[i + off] = this.MSX.Species[m].getPipeExpr().evaluatePipeExp(this);
-        //deriv[i+off] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
-        //    public double getValue(int id) {return getPipeVariableValue(id);}
-        //    public int getIndex(string id) {return 0;}
-        //});
-    }
-}
+        private void GetTankDcDt(double t, double[] y, int n, double[] deriv, int off) {
 
 
-    ///<summary>finds reaction rate (dC/dt) for each reacting species in a tank.</summary>
-    private void getTankDcDt(double t, double[] y, int n, double[] deriv)
-{
-    int i, m;
+            // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
 
-    // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankRateSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankRateSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
 
-    // Update equilibrium species if full coupling in use
-    if (this.MSX.Coupling == EnumTypes.CouplingType.FULL_COUPLING)
-    {
-        if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.MSX.C1) > 0) // check for error condition
-        {
-            for (i = 1; i <= n; i++) deriv[i] = 0.0;
-            return;
+            // Update equilibrium species if full coupling in use
+            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
+                {
+                    for (int i = 1; i <= n; i++) deriv[i + off] = 0.0;
+                    return;
+                }
+            }
+
+            // Evaluate each tank reaction expression
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankRateSpecies[i];
+                //deriv[i+off] = mathexpr_eval(MSX.Species[m].getTankExpr(), getTankVariableValue);
+                deriv[i + off] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                //deriv[i+off] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
+                //    public double getValue(int id) {return getTankVariableValue(id); }
+                //    public int getIndex(string id) {return 0;}
+                //});
+            }
         }
-    }
 
-    // Evaluate each tank reaction expression
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankRateSpecies[i];
-        deriv[i] = this.MSX.Species[m].getTankExpr().evaluateTankExp(this);
-        //deriv[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
-        //    public double getValue(int id) {return getTankVariableValue(id); }
-        //    public int getIndex(string id) {return 0;}
-        //}); //mathexpr_eval(MSX.Species[m].getTankExpr(), getTankVariableValue);
-    }
-}
 
-    private void getTankDcDt(double t, double[] y, int n, double[] deriv, int off)
-{
-    int i, m;
+        ///<summary>Evaluates equilibrium expressions for pipe chemistry.</summary>
+        private void GetPipeEquil(double t, double[] y, int n, double[] f) {
+            // Assign species concentrations to their proper positions in the global
+            // concentration vector MSX.C1
 
-    // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeEquilSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
 
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankRateSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
+            // Evaluate each pipe equilibrium expression
 
-    // Update equilibrium species if full coupling in use
-    if (this.MSX.Coupling == EnumTypes.CouplingType.FULL_COUPLING)
-    {
-        if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.MSX.C1) > 0) // check for error condition
-        {
-            for (i = 1; i <= n; i++) deriv[i + off] = 0.0;
-            return;
+            for (int i = 1; i <= n; i++) {
+                int m = this.pipeEquilSpecies[i];
+                f[i] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                //f[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
+                //    public double getValue(int id){return getPipeVariableValue(id);}
+                //    public int getIndex(string id){return 0;}
+                //});
+            }
         }
-    }
-
-    // Evaluate each tank reaction expression
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankRateSpecies[i];
-        //deriv[i+off] = mathexpr_eval(MSX.Species[m].getTankExpr(), getTankVariableValue);
-        deriv[i + off] = this.MSX.Species[m].getTankExpr().evaluateTankExp(this);
-        //deriv[i+off] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
-        //    public double getValue(int id) {return getTankVariableValue(id); }
-        //    public int getIndex(string id) {return 0;}
-        //});
-    }
-}
 
 
-    ///<summary>Evaluates equilibrium expressions for pipe chemistry.</summary>
-    private void getPipeEquil(double t, double[] y, int n, double[] f)
-{
-    int i, m;
+        ///<summary>Evaluates equilibrium expressions for tank chemistry.</summary>
+        private void GetTankEquil(double t, double[] y, int n, double[] f) {
+            // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankEquilSpecies[i];
+                this.msx.C1[m] = y[i];
+            }
 
-    // Assign species concentrations to their proper positions in the global
-    // concentration vector MSX.C1
-
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeEquilSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
-
-    // Evaluate each pipe equilibrium expression
-
-    for (i = 1; i <= n; i++)
-    {
-        m = this.PipeEquilSpecies[i];
-        f[i] = this.MSX.Species[m].getPipeExpr().evaluatePipeExp(this);
-        //f[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
-        //    public double getValue(int id){return getPipeVariableValue(id);}
-        //    public int getIndex(string id){return 0;}
-        //});
-    }
-}
+            // Evaluate each tank equilibrium expression
+            for (int i = 1; i <= n; i++) {
+                int m = this.tankEquilSpecies[i];
+                f[i] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                //f[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
+                //    public double getValue(int id) {return getTankVariableValue(id);}
+                //    public int getIndex(string id) {return 0;}
+                //});
+            }
+        }
 
 
-    ///<summary>Evaluates equilibrium expressions for tank chemistry.</summary>
-    private void getTankEquil(double t, double[] y, int n, double[] f)
-{
-    int i, m;
-
-    // Assign species concentrations to their proper positions in the global concentration vector MSX.C1
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankEquilSpecies[i];
-        this.MSX.C1[m] = y[i];
-    }
-
-    // Evaluate each tank equilibrium expression
-    for (i = 1; i <= n; i++)
-    {
-        m = this.TankEquilSpecies[i];
-        f[i] = this.MSX.Species[m].getTankExpr().evaluateTankExp(this);
-        //f[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
-        //    public double getValue(int id) {return getTankVariableValue(id);}
-        //    public int getIndex(string id) {return 0;}
-        //});
-    }
-}
-
-
-    public override void solve(double t, double[] y, int n, double[] f, int off, Operation op)
-    {
-        switch (op)
-        {
+        public override void solve(double t, double[] y, int n, double[] f, int off, Operation op) {
+            switch (op) {
 
             case Operation.PIPES_DC_DT_CONCENTRATIONS:
-            this.getPipeDcDt(t, y, n, f, off);
+                this.GetPipeDcDt(t, y, n, f, off);
                 break;
             case Operation.TANKS_DC_DT_CONCENTRATIONS:
-            this.getTankDcDt(t, y, n, f, off);
+                this.GetTankDcDt(t, y, n, f, off);
                 break;
             case Operation.PIPES_EQUIL:
-            this.getPipeEquil(t, y, n, f);
+                this.GetPipeEquil(t, y, n, f);
                 break;
             case Operation.TANKS_EQUIL:
-            this.getTankDcDt(t, y, n, f);
+                this.GetTankDcDt(t, y, n, f);
                 break;
+            }
         }
     }
-}
+
 }
