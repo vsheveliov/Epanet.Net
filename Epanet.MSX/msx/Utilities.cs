@@ -46,25 +46,15 @@ namespace Epanet.MSX {
             return b.Length != 0 && a.ToLower().Contains(b.ToLower());
         }
 
-        /// <summary>Allocates memory for a 2-dimensional array of doubles.</summary>
-        public static double[,] CreateMatrix(int nrows, int ncols) {
-            double[,] result = new double[nrows,ncols];
-            for (int i = 0; i < nrows; i++) {
-                result[i] = new double[ncols];
-            }
-
-            return result;
-        }
-
         /// <summary>Performs an LU decomposition of a matrix.</summary>
-        public static int Factorize(double[][] a, int n, double[] w, int[] indx) {
+        public static int Factorize(double[,] a, int n, double[] w, int[] indx) {
             double big, dum, sum, temp;
 
             for (int i = 1; i <= n; i++) {
                 //Loop over rows to get the implicit scaling information.
                 big = 0.0;
                 for (int j = 1; j <= n; j++)
-                    if ((temp = Math.Abs(a[i][j])) > big) big = temp;
+                    if ((temp = Math.Abs(a[i, j])) > big) big = temp;
 
                 if (big == 0.0)
                     return 0; // Warning for singular matrix
@@ -77,16 +67,16 @@ namespace Epanet.MSX {
 
                 for (int i = 1; i < j; i++) {
                     //Up from the diagonal
-                    sum = a[i][j];
-                    for (int k = 1; k < i; k++) sum -= a[i][k] * a[k][j];
-                    a[i][j] = sum;
+                    sum = a[i, j];
+                    for (int k = 1; k < i; k++) sum -= a[i,k] * a[k,j];
+                    a[i,j] = sum;
                 }
                 big = 0.0; //Initialize for the search for largest pivot element.
                 int imax = j;
                 for (int i = j; i <= n; i++) {
-                    sum = a[i][j];
-                    for (int k = 1; k < j; k++) sum -= a[i][k] * a[k][j];
-                    a[i][j] = sum;
+                    sum = a[i,j];
+                    for (int k = 1; k < j; k++) sum -= a[i,k] * a[k,j];
+                    a[i,j] = sum;
                     if ((dum = w[i] * Math.Abs(sum)) >= big) {
                         big = dum;
                         imax = i;
@@ -96,25 +86,25 @@ namespace Epanet.MSX {
                     //Do we need to interchange rows?
                     for (int i = 1; i <= n; i++) {
                         //Yes,do so...
-                        dum = a[imax][i];
-                        a[imax][i] = a[j][i];
-                        a[j][i] = dum;
+                        dum = a[imax,i];
+                        a[imax,i] = a[j,i];
+                        a[j,i] = dum;
                     }
                     w[imax] = w[j]; // interchange the scale factor.
                 }
                 indx[j] = imax;
-                if (a[j][j] == 0.0) a[j][j] = Constants.TINY1;
+                if (a[j, j] == 0.0) a[j, j] = Constants.TINY1;
                 if (j != n) // divide by the pivot element.
                 {
-                    dum = 1.0 / a[j][j];
-                    for (int i = j + 1; i <= n; i++) a[i][j] *= dum;
+                    dum = 1.0 / a[j, j];
+                    for (int i = j + 1; i <= n; i++) a[i, j] *= dum;
                 }
             }
             return 1;
         }
 
         /// <summary>Solves linear equations AX = B after LU decomposition of A.</summary>
-        public static void Solve(double[][] a, int n, int[] indx, double[] b) {
+        public static void Solve(double[,] a, int n, int[] indx, double[] b) {
             int ii = 0;
             int j;
             double sum;
@@ -126,7 +116,7 @@ namespace Epanet.MSX {
                 b[ip] = b[i];
                 if (ii != 0)
                     for (j = ii; j <= i - 1; j++)
-                        sum -= a[i][j] * b[j];
+                        sum -= a[i, j] * b[j];
                 else if (sum != 0) ii = i;
                 b[i] = sum;
             }
@@ -135,8 +125,8 @@ namespace Epanet.MSX {
             for (int i = n; i >= 1; i--) {
                 sum = b[i];
                 for (j = i + 1; j <= n; j++)
-                    sum -= a[i][j] * b[j];
-                b[i] = sum / a[i][i];
+                    sum -= a[i, j] * b[j];
+                b[i] = sum / a[i, i];
             }
         }
 
@@ -147,7 +137,7 @@ namespace Epanet.MSX {
             int n,
             double[] f,
             double[] w,
-            double[][] a,
+            double[,] a,
             JacobianInterface jint,
             JacobianInterface.Operation op) {
             double eps = 1.0e-7;
@@ -169,7 +159,7 @@ namespace Epanet.MSX {
                 }
 
                 jint.solve(0.0, x, n, w, 0, op);
-                for (int i = 1; i <= n; i++) a[i][j] = (f[i] - w[i]) / eps2;
+                for (int i = 1; i <= n; i++) a[i, j] = (f[i] - w[i]) / eps2;
                 x[j] = temp;
             }
 

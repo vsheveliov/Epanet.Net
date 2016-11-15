@@ -34,7 +34,7 @@ namespace Epanet.MSX.Solvers {
         double[] W;
 
         ///<summary>Jacobian matrix</summary>
-        double[][] J;
+        double[,] J;
 
 
         ///<summary>opens the algebraic solver to handle a system of n equations.</summary>
@@ -46,7 +46,7 @@ namespace Epanet.MSX.Solvers {
             this.Indx = new int[n + 1];
             this.F = new double[n + 1];
             this.W = new double[n + 1];
-            this.J = Utilities.CreateMatrix(n + 1, n + 1);
+            this.J = new double[n + 1,n + 1];
             this.Nmax = n;
         }
 

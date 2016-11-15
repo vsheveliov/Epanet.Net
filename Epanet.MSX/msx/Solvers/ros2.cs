@@ -22,7 +22,7 @@ namespace Epanet.MSX.Solvers {
     public class ros2 {
 
         ///<summary>Jacobian matrix</summary>
-        double[][] A;
+        double[,] A;
 
         ///<summary>Intermediate solutions</summary>
         double[] K1;
@@ -52,7 +52,7 @@ namespace Epanet.MSX.Solvers {
             this.K2 = new double[n1];
             this.Jindx = new int[n1];
             this.Ynew = new double[n1];
-            this.A = Utilities.CreateMatrix(n1, n1);
+            this.A = new double[n1,n1];
             this.Nmax = n;
         }
 
@@ -129,7 +129,7 @@ namespace Epanet.MSX.Solvers {
                 ghinv = -1.0 / (g * h);
                 dghinv = ghinv - ghinv1;
                 for (int i = 1; i <= n; i++) {
-                    this.A[i][i] += dghinv;
+                    this.A[i, i] += dghinv;
                 }
                 ghinv1 = ghinv;
                 if (Utilities.Factorize(this.A, n, this.K1, this.Jindx) == 0) return -1;

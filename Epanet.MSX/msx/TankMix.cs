@@ -244,7 +244,7 @@ namespace Epanet.MSX {
 
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
                 if (vSum > 0.0) this.msx.Tank[i].C[j] = this.msx.C1[j] / vSum;
-                else this.msx.Tank[i].C[j] = this.msx.Segments[k].First.Value.C[j]; //MSX.Segments[k][0].getC()[m];
+                else this.msx.Tank[i].C[j] = this.msx.Segments[k].First.Value.C[j]; 
             }
 
             // Add new last segment for new flow entering tank
