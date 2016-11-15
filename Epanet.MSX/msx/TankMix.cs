@@ -16,9 +16,9 @@
  */
 
 using System;
-using org.addition.epanet.msx.Structures;
+using Epanet.MSX.Structures;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class TankMix {
 
@@ -27,9 +27,9 @@ namespace org.addition.epanet.msx {
         private Quality quality;
 
         public void LoadDependencies(EpanetMSX epa) {
-            chemical = epa.Chemical;
+            this.chemical = epa.Chemical;
             this.msx = epa.Network;
-            quality = epa.Quality;
+            this.quality = epa.Quality;
         }
 
         ///<summary>
@@ -43,10 +43,10 @@ namespace org.addition.epanet.msx {
             Pipe seg = this.msx.Segments[k].First.Value;
 
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                if (this.msx.Species[j].getType() != EnumTypes.SpeciesType.BULK)
+                if (this.msx.Species[j].Type != EnumTypes.SpeciesType.BULK)
                     continue;
 
-                double c = seg.getC()[j];
+                double c = seg.C[j];
 
                 if (this.msx.Tank[i].V > 0.0)
                     c += (cIn[j] - c) * vIn / this.msx.Tank[i].V;
@@ -54,67 +54,59 @@ namespace org.addition.epanet.msx {
                     c = cIn[j];
 
                 c = Math.Max(0.0, c);
-                seg.getC()[j] = c;
+                seg.C[j] = c;
                 this.msx.Tank[i].C[j] = c;
             }
 
             // update species equilibrium
             if (vIn > 0.0)
-                chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Tank[i].C);
+                this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Tank[i].C);
         }
 
 
         ///<summary>2-compartment tank model</summary>
         public void MSXtank_mix2(int i, double vIn, double[] cIn, long dt) {
-            long tstep,
-                 // Actual time step taken
+            long tstep, // Actual time step taken
                  tstar; // Time to fill or drain a zone
-            double qIn,
-                   // Inflow rate
-                   qOut,
-                   // Outflow rate
-                   qNet; // Net flow rate
+        
             double c, c1, c2; // Species concentrations
-            Pipe seg1,
-                 // Mixing zone segment
-                 seg2; // Ambient zone segment
 
             // Find inflows & outflows
             int n = this.msx.Tank[i].Node;
-            qNet = this.msx.D[n];
-            qIn = vIn / dt;
-            qOut = qIn - qNet;
+            double qNet = this.msx.D[n]; // Net flow rate
+            double qIn = vIn / dt; // Inflow rate
+            double qOut = qIn - qNet; // Outflow rate
 
             // Get segments for each zone
             int k = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + i;
-            seg1 = this.msx.Segments[k].First.Value; //get(0);
-            seg2 = this.msx.Segments[k].Last.Value; //get(MSX.Segments[k].size()-1);
+            Pipe seg1 = this.msx.Segments[k].First.Value; // Mixing zone segment
+            Pipe seg2 = this.msx.Segments[k].Last.Value; // Ambient zone segment
 
             // Case of no net volume change
             if (Math.Abs(qNet) < Constants.TINY)
                 return;
 
             // Case of net filling (qNet > 0)
-            else if (qNet > 0.0) {
+            if (qNet > 0.0) {
                 // Case where ambient zone empty & mixing zone filling
-                if (seg2.getV() <= 0.0) {
+                if (seg2.V <= 0.0) {
                     // Time to fill mixing zone
-                    tstar = (long)((this.msx.Tank[i].VMix - (seg1.getV())) / qNet);
+                    tstar = (long)((this.msx.Tank[i].VMix - (seg1.V)) / qNet);
                     tstep = Math.Min(dt, tstar);
 
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                        if (this.msx.Species[j].getType() != EnumTypes.SpeciesType.BULK) continue;
+                        if (this.msx.Species[j].Type != EnumTypes.SpeciesType.BULK) continue;
 
                         // --- new quality in mixing zone
-                        c = seg1.getC()[j];
-                        if (seg1.getV() > 0.0) seg1.getC()[j] += qIn * tstep * (cIn[j] - c) / (seg1.getV());
-                        else seg1.getC()[j] = cIn[j];
-                        seg1.getC()[j] = Math.Max(0.0, seg1.getC()[j]);
-                        seg2.getC()[j] = 0.0;
+                        c = seg1.C[j];
+                        if (seg1.V > 0.0) seg1.C[j] += qIn * tstep * (cIn[j] - c) / (seg1.V);
+                        else seg1.C[j] = cIn[j];
+                        seg1.C[j] = Math.Max(0.0, seg1.C[j]);
+                        seg2.C[j] = 0.0;
                     }
 
                     // New volume of mixing zone
-                    seg1.setV(seg1.getV() + qNet * tstep);
+                    seg1.V = seg1.V + qNet * tstep;
 
                     // Time during which ambient zone fills
                     dt -= tstep;
@@ -123,52 +115,52 @@ namespace org.addition.epanet.msx {
                 // Case where mixing zone full & ambient zone filling
                 if (dt > 1) {
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                        if (this.msx.Species[j].getType() != EnumTypes.SpeciesType.BULK) continue;
+                        if (this.msx.Species[j].Type != EnumTypes.SpeciesType.BULK) continue;
 
                         // --- new quality in mixing zone
-                        c1 = seg1.getC()[j];
-                        seg1.getC()[j] += qIn * dt * (cIn[j] - c1) / (seg1.getV());
-                        seg1.getC()[j] = Math.Max(0.0, seg1.getC()[j]);
+                        c1 = seg1.C[j];
+                        seg1.C[j] += qIn * dt * (cIn[j] - c1) / (seg1.V);
+                        seg1.C[j] = Math.Max(0.0, seg1.C[j]);
 
                         // --- new quality in ambient zone
-                        c2 = seg2.getC()[j];
-                        if (seg2.getV() <= 0.0)
-                            seg2.getC()[j] = seg1.getC()[j];
+                        c2 = seg2.C[j];
+                        if (seg2.V <= 0.0)
+                            seg2.C[j] = seg1.C[j];
                         else
-                            seg2.getC()[j] += qNet * dt * ((seg1.getC()[j]) - c2) / (seg2.getV());
-                        seg2.getC()[j] = Math.Max(0.0, seg2.getC()[j]);
+                            seg2.C[j] += qNet * dt * ((seg1.C[j]) - c2) / (seg2.V);
+                        seg2.C[j] = Math.Max(0.0, seg2.C[j]);
                     }
 
                     // New volume of ambient zone
-                    seg2.setV(seg2.getV() + qNet * dt);
+                    seg2.V = seg2.V + qNet * dt;
                 }
-                if (seg1.getV() > 0.0) chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg1.getC());
-                if (seg2.getV() > 0.0) chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg2.getC());
+                if (seg1.V > 0.0) this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg1.C);
+                if (seg2.V > 0.0) this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg2.C);
             }
 
             // Case of net emptying (qnet < 0)
-            else if (qNet < 0.0 && seg1.getV() > 0.0) {
+            else if (qNet < 0.0 && seg1.V > 0.0) {
                 // Case where mixing zone full & ambient zone draining
-                if ((seg2.getV()) > 0.0) {
+                if ((seg2.V) > 0.0) {
 
                     // Time to drain ambient zone
-                    tstar = (long)(seg2.getV() / -qNet);
+                    tstar = (long)(seg2.V / -qNet);
                     tstep = Math.Min(dt, tstar);
 
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                        if (this.msx.Species[j].getType() != EnumTypes.SpeciesType.BULK) continue;
-                        c1 = seg1.getC()[j];
-                        c2 = seg2.getC()[j];
+                        if (this.msx.Species[j].Type != EnumTypes.SpeciesType.BULK) continue;
+                        c1 = seg1.C[j];
+                        c2 = seg2.C[j];
 
                         // New mizing zone quality (affected by both external inflow
                         // and drainage from the ambient zone
-                        seg1.getC()[j] += (qIn * cIn[j] - qNet * c2 - qOut * c1) * tstep / (seg1.getV());
-                        seg1.getC()[j] = Math.Max(0.0, seg1.getC()[j]);
+                        seg1.C[j] += (qIn * cIn[j] - qNet * c2 - qOut * c1) * tstep / (seg1.V);
+                        seg1.C[j] = Math.Max(0.0, seg1.C[j]);
                     }
 
                     // New ambient zone volume
-                    seg2.setV(seg2.getV() + qNet * tstep);
-                    seg2.setV(Math.Max(0.0, seg2.getV()));
+                    seg2.V = seg2.V + qNet * tstep;
+                    seg2.V = Math.Max(0.0, seg2.V);
 
                     // Time during which mixing zone empties
                     dt -= tstep;
@@ -177,26 +169,26 @@ namespace org.addition.epanet.msx {
                 // Case where ambient zone empty & mixing zone draining
                 if (dt > 1) {
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                        if (this.msx.Species[j].getType() != EnumTypes.SpeciesType.BULK) continue;
+                        if (this.msx.Species[j].Type != EnumTypes.SpeciesType.BULK) continue;
 
                         // New mixing zone quality (affected by external inflow only)
-                        c = seg1.getC()[j];
-                        seg1.getC()[j] += qIn * dt * (cIn[j] - c) / (seg1.getV());
-                        seg1.getC()[j] = Math.Max(0.0, seg1.getC()[j]);
-                        seg2.getC()[j] = 0.0;
+                        c = seg1.C[j];
+                        seg1.C[j] += qIn * dt * (cIn[j] - c) / (seg1.V);
+                        seg1.C[j] = Math.Max(0.0, seg1.C[j]);
+                        seg2.C[j] = 0.0;
                     }
 
                     // New volume of mixing zone
-                    seg1.setV(seg1.getV() + qNet * dt);
-                    seg1.setV(Math.Max(0.0, seg1.getV()));
+                    seg1.V = seg1.V + qNet * dt;
+                    seg1.V = Math.Max(0.0, seg1.V);
                 }
-                if (seg1.getV() > 0.0) chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg1.getC());
+                if (seg1.V > 0.0) this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, seg1.C);
             }
 
             // Use quality of mixed compartment (seg1) to represent quality
             // of tank since this is where outflow begins to flow from
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++)
-                this.msx.Tank[i].C[j] = seg1.getC()[j];
+                this.msx.Tank[i].C[j] = seg1.C[j];
         }
 
         ///<summary>
@@ -204,19 +196,17 @@ namespace org.addition.epanet.msx {
         /// first-in-first-out (FIFO) tank model.
         /// </summary>
         public void MSXtank_mix3(int i, double vIn, double[] cIn, long dt) {
-            double vNet, vOut, vSeg, vSum;
-            Pipe seg;
-
+            
             // Find inflows & outflows
 
             int k = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + i;
             int n = this.msx.Tank[i].Node;
-            vNet = this.msx.D[n] * dt;
-            vOut = vIn - vNet;
+            double vNet = this.msx.D[n] * dt;
+            double vOut = vIn - vNet;
 
             // Initialize outflow volume & concentration
 
-            vSum = 0.0;
+            var vSum = 0.0;
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) this.msx.C1[j] = 0.0;
 
             // Withdraw flow from first segment
@@ -224,9 +214,9 @@ namespace org.addition.epanet.msx {
                 if (this.msx.Segments[k].Count == 0) break;
 
                 // --- get volume of current first segment
-                seg = this.msx.Segments[k].First.Value; //[0];
+                Pipe seg = this.msx.Segments[k].First.Value;
 
-                vSeg = seg.getV();
+                double vSeg = seg.V;
                 vSeg = Math.Min(vSeg, vOut);
                 if (seg == this.msx.Segments[k].Last.Value)
                     vSeg = vOut; //[MSX.Segments[k].size()-1]       //TODO pode ser simplificado para getSize()==1
@@ -234,19 +224,19 @@ namespace org.addition.epanet.msx {
                 // --- update mass & volume removed
                 vSum += vSeg;
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                    this.msx.C1[j] += (seg.getC()[j]) * vSeg;
+                    this.msx.C1[j] += (seg.C[j]) * vSeg;
                 }
 
                 // --- decrease vOut by volume of first segment
                 vOut -= vSeg;
 
                 // --- remove segment if all its volume is consumed
-                if (vOut >= 0.0 && vSeg >= seg.getV()) {
+                if (vOut >= 0.0 && vSeg >= seg.V) {
                     this.msx.Segments[k].RemoveFirst(); //.remove(0);
                 }
 
                 // --- otherwise just adjust volume of first segment
-                else seg.setV(seg.getV() - vSeg);
+                else seg.V = seg.V - vSeg;
             }
 
             // Use quality from first segment to represent overall
@@ -254,22 +244,22 @@ namespace org.addition.epanet.msx {
 
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
                 if (vSum > 0.0) this.msx.Tank[i].C[j] = this.msx.C1[j] / vSum;
-                else this.msx.Tank[i].C[j] = this.msx.Segments[k].First.Value.getC()[j]; //MSX.Segments[k][0].getC()[m];
+                else this.msx.Tank[i].C[j] = this.msx.Segments[k].First.Value.C[j]; //MSX.Segments[k][0].getC()[m];
             }
 
             // Add new last segment for new flow entering tank
             if (vIn > 0.0) {
                 // Quality is the same, so just add flow volume to last seg
                 k = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + i;
-                seg = null;
+                Pipe seg = null;
                 if (this.msx.Segments[k].Count > 0)
                     seg = this.msx.Segments[k].Last.Value; //get(MSX.Segments[k].size()-1);
 
-                if (seg != null && quality.MSXqual_isSame(seg.getC(), cIn)) seg.setV(seg.getV() + vIn);
+                if (seg != null && this.quality.MSXqual_isSame(seg.C, cIn)) seg.V = seg.V + vIn;
 
                 // Otherwise add a new seg to tank
                 else {
-                    seg = quality.CreateSeg(vIn, cIn);
+                    seg = this.quality.CreateSeg(vIn, cIn);
                     //quality.MSXqual_addSeg(k, seg);
                     this.msx.Segments[k].AddLast(seg);
                 }
@@ -278,36 +268,34 @@ namespace org.addition.epanet.msx {
 
         ///<summary>Last In-First Out (LIFO) tank model</summary>
         public void MSXtank_mix4(int i, double vIn, double[] cIn, long dt) {
-            double vOut, vNet, vSum, vSeg;
-            Pipe seg;
+            
 
             // Find inflows & outflows
 
             int k = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + i;
             int n = this.msx.Tank[i].Node;
-            vNet = this.msx.D[n] * dt;
-            vOut = vIn - vNet;
+            double vNet = this.msx.D[n] * dt;
+            double vOut = vIn - vNet;
 
             // keep track of total volume & mass removed from tank
 
-            vSum = 0.0;
+            var vSum = 0.0;
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) this.msx.C1[j] = 0.0;
 
             // if tank filling, then create a new last segment
             if (vNet > 0.0) {
 
                 // inflow quality = last segment quality so just expand last segment
-
-                seg = null;
+                Pipe seg = null;
                 if (this.msx.Segments[k].Count > 0)
                     seg = this.msx.Segments[k].Last.Value; //[MSX.Segments[k].size()-1];
 
-                if (seg != null && quality.MSXqual_isSame(seg.getC(), cIn)) seg.setV(seg.getV() + vNet);
+                if (seg != null && this.quality.MSXqual_isSame(seg.C, cIn)) seg.V = seg.V + vNet;
 
                 // otherwise add a new last segment to tank
 
                 else {
-                    seg = quality.CreateSeg(vNet, cIn);
+                    seg = this.quality.CreateSeg(vNet, cIn);
                     this.msx.Segments[k].AddLast(seg);
                 }
 
@@ -325,28 +313,27 @@ namespace org.addition.epanet.msx {
                 // keep removing volume from last segments until vNet is removed
                 vNet = -vNet;
                 while (vNet > 0.0) {
-
                     // --- get volume of current last segment
-                    seg = null;
+                    Pipe seg = null;
                     if (this.msx.Segments[k].Count > 0)
                         seg = this.msx.Segments[k].Last.Value; //get(MSX.Segments[k].size()-1);
 
                     if (seg == null) break;
 
-                    vSeg = seg.getV();
+                    double vSeg = seg.V;
                     vSeg = Math.Min(vSeg, vNet);
                     if (seg == this.msx.Segments[k].First.Value) vSeg = vNet;
 
                     // update mass & volume removed
                     vSum += vSeg;
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++)
-                        this.msx.C1[j] += (seg.getC()[j]) * vSeg;
+                        this.msx.C1[j] += (seg.C[j]) * vSeg;
 
                     // reduce vNet by volume of last segment
                     vNet -= vSeg;
 
                     // remove segment if all its volume is used up
-                    if (vNet >= 0.0 && vSeg >= seg.getV()) {
+                    if (vNet >= 0.0 && vSeg >= seg.V) {
                         this.msx.Segments[k].RemoveLast(); //remove(MSX.Segments[k].size()-1);
                         //MSX.LastSeg[k] = seg->prev;
                         //if ( MSX.LastSeg[k] == NULL ) MSX.Segments[k] = NULL;
@@ -355,7 +342,7 @@ namespace org.addition.epanet.msx {
 
                     // otherwise just reduce volume of last segment
                     else {
-                        seg.setV(seg.getV() - vSeg);
+                        seg.V = seg.V - vSeg;
                     }
                 }
 

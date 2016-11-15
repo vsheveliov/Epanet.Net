@@ -21,17 +21,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using org.addition.epanet;
-using org.addition.epanet.hydraulic;
-using org.addition.epanet.log;
-using org.addition.epanet.msx;
-using org.addition.epanet.network;
-using org.addition.epanet.network.io.input;
-using org.addition.epanet.quality;
-using org.addition.epanet.ui;
-using org.addition.epanet.util;
-using Network = org.addition.epanet.network.Network;
-using Utilities = org.addition.epanet.util.Utilities;
+using Epanet;
+using Epanet.Hydraulic;
+using Epanet.Log;
+using Epanet.MSX;
+using Epanet.Network;
+using Epanet.Network.IO.Input;
+using Epanet.Quality;
+using Epanet.UI;
+using Epanet.Util;
+using Network = Epanet.Network.Network;
+using Utilities = Epanet.Util.Utilities;
 
 namespace EpaTool {
 
@@ -39,24 +39,24 @@ namespace EpaTool {
     public sealed partial class ReportOptions : Form {
 
         /// <summary>Epanet toolkit for the MSX.</summary>
-        private readonly org.addition.epanet.msx.ENToolkit2 _epanetTk;
+        private readonly ENToolkit2 epanetTk;
 
         /// <summary>Epanet network config file.</summary>
-        private readonly string _fileInp;
+        private readonly string fileInp;
 
         /// <summary>MSX config file.</summary>
-        private readonly string _fileMSX;
+        private readonly string fileMsx;
 
-        private readonly TraceSource _log;
+        private readonly TraceSource log;
 
         /// <summary>Loaded INP network.</summary>
-        private readonly Network _netInp;
+        private readonly Network netInp;
 
         /// <summary>Hydraulic simulator.</summary>
-        private HydraulicSim _hydSim;
+        private HydraulicSim hydSim;
 
         /// <summary>Loaded MSX simulation.</summary>
-        private EpanetMSX _netMSX;
+        private EpanetMSX netMsx;
 
         private ReportOptions() {
             this.InitializeComponent();
@@ -83,12 +83,12 @@ namespace EpaTool {
 
         /// <summary>Report options dialog constructor.</summary>
         public ReportOptions(string inpFile, string msxFile, TraceSource log) : this() {
-            this._log = log;
+            this.log = log;
 
             if (inpFile == null) return;
 
-            this._fileInp = inpFile;
-            this._netInp = new Network();
+            this.fileInp = inpFile;
+            this.netInp = new Network();
 
             try {
                 InputParser inpParser;
@@ -116,7 +116,7 @@ namespace EpaTool {
                         break;
                 }
 
-                inpParser.Parse(this._netInp, inpFile);
+                inpParser.Parse(this.netInp, inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -130,17 +130,17 @@ namespace EpaTool {
 
             if (msxFile == null) return;
 
-            this._fileMSX = msxFile;
-            this._epanetTk = new ENToolkit2(this._netInp);
-            this._netMSX = new EpanetMSX(this._epanetTk);
+            this.fileMsx = msxFile;
+            this.epanetTk = new ENToolkit2(this.netInp);
+            this.netMsx = new EpanetMSX(this.epanetTk);
 
             try {
-                EnumTypes.ErrorCodeType ret = this._netMSX.Load(this._fileMSX);
+                EnumTypes.ErrorCodeType ret = this.netMsx.Load(this.fileMsx);
                 if (ret != 0) {
                     MessageBox.Show("MSX parsing error " + ret, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    this._fileMSX = null;
-                    this._netMSX = null;
-                    this._epanetTk = null;
+                    this.fileMsx = null;
+                    this.netMsx = null;
+                    this.epanetTk = null;
                 }
             }
             catch (IOException) {
@@ -149,25 +149,25 @@ namespace EpaTool {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this._fileMSX = null;
-                this._netMSX = null;
-                this._epanetTk = null;
+                this.fileMsx = null;
+                this.netMsx = null;
+                this.epanetTk = null;
             }
         }
 
         private void ReportOptions_Closing(object sender, FormClosingEventArgs e) {
-            if (this._hydSim != null) {
+            if (this.hydSim != null) {
                 try {
-                    this._hydSim.stopRunning();
+                    this.hydSim.StopRunning();
                 }
                 catch (ThreadInterruptedException e1) {
                     Debug.Print(e1.ToString());
                 }
             }
 
-            if (this._netMSX != null) {
+            if (this.netMsx != null) {
                 try {
-                    this._netMSX.StopRunning();
+                    this.netMsx.StopRunning();
                 }
                 catch (ThreadInterruptedException e1) {
                     Debug.Print(e1.ToString());
@@ -179,9 +179,9 @@ namespace EpaTool {
         private void ReportOptions_Load(object sender, EventArgs e) {
             // Adjust widgets before showing the window.
 
-            if (this._netInp != null) {
+            if (this.netInp != null) {
                 try {
-                    PropertiesMap pMap = this._netInp.PropertiesMap;
+                    PropertiesMap pMap = this.netInp.PropertiesMap;
                     this.unitsBox.SelectedIndex = pMap.Unitsflag == PropertiesMap.UnitsType.SI ? 0 : 1;
                     this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Rstep);
                     this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Hstep);
@@ -195,8 +195,8 @@ namespace EpaTool {
                 }
             }
 
-            if (this._netMSX != null && this._netMSX.GetSpeciesNames().Length > 0) {
-                var speciesNames = Array.ConvertAll(this._netMSX.GetSpeciesNames(), x => (object)x);
+            if (this.netMsx != null && this.netMsx.GetSpeciesNames().Length > 0) {
+                var speciesNames = Array.ConvertAll(this.netMsx.GetSpeciesNames(), x => (object)x);
                 this.speciesCheckList.Items.AddRange(speciesNames);
                 //this.speciesCheckList.SelectionMode = SelectionMode.MultiExtended; // TODO: in designer
             }
@@ -269,14 +269,14 @@ namespace EpaTool {
             this.hydraulicsCheckBox.Enabled = true;
             this.transposeResultsCheckBox.Enabled = true;
 
-            if (this._netMSX != null && this._netMSX.GetSpeciesNames().Length > 0) {
+            if (this.netMsx != null && this.netMsx.GetSpeciesNames().Length > 0) {
                 this.qualityMSXCheckBox.Enabled = true;
                 if (this.qualityMSXCheckBox.Checked) this.speciesCheckList.Enabled = true;
             }
 
             this.hydVariables.Enabled = true;
             try {
-                if (this._netInp.PropertiesMap.Qualflag != PropertiesMap.QualType.NONE) {
+                if (this.netInp.PropertiesMap.Qualflag != PropertiesMap.QualType.NONE) {
                     if (this.qualityCheckBox.Checked) {
                         this.qualityVariables.Enabled = true;
                         this.qualityCheckBox.Enabled = true;
@@ -327,7 +327,7 @@ namespace EpaTool {
             var fdialog = new SaveFileDialog {
                 Title = "Save xlsx file",
                 Filter = "Excel 2007 file (xlsx)|*.xlsx",
-                FileName = "report_" + Path.GetFileNameWithoutExtension(this._fileInp)
+                FileName = "report_" + Path.GetFileNameWithoutExtension(this.fileInp)
             };
 
             if (fdialog.ShowDialog() != DialogResult.OK) return;
@@ -376,7 +376,7 @@ namespace EpaTool {
 
             try {
 
-                PropertiesMap pMap = this._netInp.PropertiesMap;
+                PropertiesMap pMap = this.netInp.PropertiesMap;
 
                 if (this.showHydraulicSolverEventsCheckBox.Checked) {
 
@@ -385,10 +385,10 @@ namespace EpaTool {
                     try {
                         simHandler = new EpanetTraceListener(logFile, false, logFile);
                         simHandler.TraceOutputOptions &= ~TraceOptions.DateTime;
-                        this._log.Listeners.Add(simHandler);
+                        this.log.Listeners.Add(simHandler);
                     }
                     catch (IOException ex) {
-                        this._log.Error(ex);
+                        this.log.Error(ex);
                     }
                 }
 
@@ -408,14 +408,14 @@ namespace EpaTool {
 
                 try {
 
-                    this._hydSim = new HydraulicSim(this._netInp, this._log);
+                    this.hydSim = new HydraulicSim(this.netInp, this.log);
 
                     this.RunThread(
-                        () => this._hydSim.simulate("hydFile.bin"),
+                        () => this.hydSim.Simulate("hydFile.bin"),
                         10,
                         30,
-                        () => this._hydSim.getHtime(),
-                        () => this._hydSim.getHtime() / (double)pMap.Duration);
+                        () => this.hydSim.Htime,
+                        () => this.hydSim.Htime / (double)pMap.Duration);
                 }
                 catch (ENException ex) {
                     if (ex.getCodeID() == ErrorCode.Err1000)
@@ -433,35 +433,35 @@ namespace EpaTool {
                 if (this._canselSimulation) return;
 
 
-                if (this._fileMSX != null && this.qualityMSXCheckBox.Checked) {
+                if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
 
                     this.statusLabel.Text = "Simulating MSX";
 
                     try {
                         // reload MSX
-                        this._netMSX = new EpanetMSX(this._epanetTk);
-                        this._netMSX.Load(this._fileMSX);
+                        this.netMsx = new EpanetMSX(this.epanetTk);
+                        this.netMsx.Load(this.fileMsx);
 
-                        this._netMSX.Network.Rstep = reportPeriod;
-                        this._netMSX.Network.Qstep = qualTStep;
-                        this._netMSX.Network.Rstart = reportStartTime;
-                        this._netMSX.Network.Dur = durationTime;
+                        this.netMsx.Network.Rstep = reportPeriod;
+                        this.netMsx.Network.Qstep = qualTStep;
+                        this.netMsx.Network.Rstart = reportStartTime;
+                        this.netMsx.Network.Dur = durationTime;
 
-                        this._epanetTk.Open("hydFile.bin");
+                        this.epanetTk.Open("hydFile.bin");
 
                         this.RunThread(
-                            () => this._netMSX.Run("msxFile.bin"),
+                            () => this.netMsx.Run("msxFile.bin"),
                             30,
                             50,
-                            () => this._netMSX.QTime,
-                            () => this._netMSX.QTime / (double)pMap.Duration);
+                            () => this.netMsx.QTime,
+                            () => this.netMsx.QTime / (double)pMap.Duration);
                     }
                     catch (IOException) {}
                     catch (ENException) {
                         throw new ThreadInterruptedException();
                     }
                     finally {
-                        this._epanetTk.Close();
+                        this.epanetTk.Close();
                     }
 
                     // netMSX.getReport().MSXrpt_write(new "msxFile.bin");
@@ -471,7 +471,7 @@ namespace EpaTool {
 
                 if (this.qualityCheckBox.Checked) {
                     try {
-                        QualitySim qSim = new QualitySim(this._netInp, this._log);
+                        QualitySim qSim = new QualitySim(this.netInp, this.log);
                         this.statusLabel.Text = "Simulating Quality";
 
                         this.RunThread(
@@ -503,8 +503,8 @@ namespace EpaTool {
 
                 //log
                 try {
-                    this._log.Information("Starting xlsx write");
-                    if (this.showSummaryCheckBox.Checked) this._gen.writeSummary(this._fileInp, this._netInp, this._fileMSX, this._netMSX);
+                    this.log.Information("Starting xlsx write");
+                    if (this.showSummaryCheckBox.Checked) this._gen.writeSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
 
                     if (this._canselSimulation) return;
 
@@ -520,7 +520,7 @@ namespace EpaTool {
                         this.statusLabel.Text = "Writing hydraulic report";
 
                         this.RunThread(
-                            () => this._gen.CreateHydReport("hydFile.bin", this._netInp, values),
+                            () => this._gen.CreateHydReport("hydFile.bin", this.netInp, values),
                             50,
                             60,
                             () => this._gen.getRtime(),
@@ -536,7 +536,7 @@ namespace EpaTool {
                         bool links = this.qualityVariables.GetItemChecked(1);
 
                         this.RunThread(
-                            () => this._gen.createQualReport("qualFile.bin", this._netInp, nodes, links),
+                            () => this._gen.createQualReport("qualFile.bin", this.netInp, nodes, links),
                             60,
                             70,
                             () => this._gen.getRtime(),
@@ -546,7 +546,7 @@ namespace EpaTool {
                     if (this._canselSimulation) return;
 
                     // Write MSX quality spreadsheets
-                    if (this._fileMSX != null && this.qualityMSXCheckBox.Checked) {
+                    if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
                         bool[] valuesMSX = new bool[this.speciesCheckList.Items.Count];
                         for (int i = 0; i < this.speciesCheckList.Items.Count; i++) {
                             valuesMSX[i] = this.speciesCheckList.GetItemChecked(i);
@@ -554,22 +554,22 @@ namespace EpaTool {
 
                         this._gen.createMSXReport(
                             "msxFile.bin",
-                            this._netInp,
-                            this._netMSX,
-                            this._epanetTk,
+                            this.netInp,
+                            this.netMsx,
+                            this.epanetTk,
                             valuesMSX);
 
                         this.RunThread(
                             () =>
                                 this._gen.createMSXReport(
                                     "msxFile.bin",
-                                    this._netInp,
-                                    this._netMSX,
-                                    this._epanetTk,
+                                    this.netInp,
+                                    this.netMsx,
+                                    this.epanetTk,
                                     valuesMSX),
                             70,
                             80,
-                            () => this._netMSX.QTime,
+                            () => this.netMsx.QTime,
                             () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
 
                     }
@@ -578,7 +578,7 @@ namespace EpaTool {
 
                     this.statusLabel.Text = "Writing workbook";
                     this._gen.writeWorksheet();
-                    this._log.Information("Ending xlsx write");
+                    this.log.Information("Ending xlsx write");
                 }
                 catch (IOException ex) {
                     Debug.Print(ex.ToString());
@@ -588,11 +588,11 @@ namespace EpaTool {
                 }
             }
             catch (ThreadInterruptedException) {
-                this._log.Warning(0, "Simulation aborted!");
+                this.log.Warning(0, "Simulation aborted!");
             }
             finally {
                 if (simHandler != null) {
-                    this._log.Listeners.Remove(simHandler);
+                    this.log.Listeners.Remove(simHandler);
                     simHandler.Close();
                 }
 

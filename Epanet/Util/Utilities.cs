@@ -18,9 +18,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using org.addition.epanet.network.io;
+using Epanet.Network.IO;
 
-namespace org.addition.epanet.util {
+namespace Epanet.Util {
 
     ///<summary>Epanet utilities methods.</summary>
     public static class Utilities {

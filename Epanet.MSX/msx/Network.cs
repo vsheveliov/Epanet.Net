@@ -16,9 +16,9 @@
  */
 
 using System.Collections.Generic;
-using org.addition.epanet.msx.Structures;
+using Epanet.MSX.Structures;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     /// <summary>MSX PROJECT VARIABLES</summary>
     public class Network {

@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
 
     public class Tank {
         public Tank(int @params, int species) {

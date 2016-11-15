@@ -19,10 +19,10 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Xml.Serialization;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.network.io.output {
+namespace Epanet.Network.IO.Output {
 
 public class XMLComposer : OutputComposer {
     private readonly bool gzip;

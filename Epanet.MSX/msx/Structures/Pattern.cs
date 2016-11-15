@@ -17,62 +17,31 @@
 
 using System.Collections.Generic;
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
 
-// Time Pattern object
-public class Pattern {
-    private string          id;             // pattern ID
-    private long            interval;       // current time interval
-    private int             current;        // current multiplier
-    private List<double>    multipliers;    // list of multipliers
+    /// <summary>Time Pattern object.</summary>
+    public class Pattern {
+        private readonly List<double> multipliers;
+        public int Length { get { return this.Multipliers.Count; } }
 
-    public int getLength(){
-        return multipliers.Count;
+        ///<summary>pattern ID</summary>
+        public string Id { set; get; }
+
+        ///<summary>list of multipliers</summary>
+        public List<double> Multipliers { get { return this.multipliers; } }
+
+        ///<summary>current time interval</summary>
+        public long Interval { get; set; }
+
+        ///<summary>current multiplier</summary>
+        public int Current { get; set; }
+
+        public Pattern() {
+            this.multipliers = new List<double>();
+            this.Id = "";
+            this.Current = 0;
+            this.Interval = 0;
+        }
     }
 
-    public void setId(string text){
-        id = text;
-    }
-
-    public string getId() {
-        return id;
-    }
-
-    public List<double> getMultipliers(){
-        return multipliers;
-    }
-
-    public long getInterval() {
-        return interval;
-    }
-
-    public void setInterval(long interval_) {
-        this.interval = interval_;
-    }
-
-    public int getCurrent() {
-        return current;
-    }
-
-    public void setCurrent(int current) {
-        this.current = current;
-    }
-
-    public Pattern() {
-        this.id = "";
-        multipliers = new List<double>();
-        current = 0;
-        interval = 0;
-    }
-
-    public Pattern clone(){
-        return new Pattern
-        {
-            id = id,
-            current = current,
-            multipliers = new List<double>(multipliers),
-            interval = interval
-        };
-    }
-}
 }

@@ -19,15 +19,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.quality.structures;
-using org.addition.epanet.util;
+using Epanet.Hydraulic.IO;
+using Epanet.Hydraulic.Structures;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Quality.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.quality {
+namespace Epanet.Quality {
 
     ///<summary>Single species water quality simulation class.</summary>
     public class QualitySim {
@@ -39,7 +38,7 @@ namespace org.addition.epanet.quality {
 
         private readonly List<QualityNode> juncs;
         private readonly List<QualityLink> links;
-        private readonly Network net;
+        private readonly Network.Network net;
         private readonly List<QualityNode> nodes;
         ///<summary>Number of reported periods.</summary>
         private int nperiods;
@@ -76,7 +75,7 @@ namespace org.addition.epanet.quality {
 
         ///<summary>Initializes WQ solver system</summary>
 
-        public QualitySim(Network net, TraceSource ignored) {
+        public QualitySim(Network.Network net, TraceSource ignored) {
 //        this.log = log;
             this.net = net;
             this.fMap = net.FieldsMap;
@@ -270,7 +269,7 @@ namespace org.addition.epanet.quality {
             AwareStep step = hydSeek.getStep((int)this.htime);
             this.LoadHydValues(step);
 
-            this.htime += step.getStep();
+            this.htime += step.Step;
 
             if (this.htime >= this.rtime) {
                 this.SaveOutput(outStream);
@@ -379,12 +378,12 @@ namespace org.addition.epanet.quality {
         private void LoadHydValues(AwareStep step) {
             int count = 0;
             foreach (QualityNode qN  in  this.nodes) {
-                qN.Demand = step.getNodeDemand(count++, qN.Node, null);
+                qN.Demand = step.GetNodeDemand(count++, qN.Node, null);
             }
 
             count = 0;
             foreach (QualityLink qL  in  this.links) {
-                qL.Flow = step.getLinkFlow(count++, qL.Link, null);
+                qL.Flow = step.GetLinkFlow(count++, qL.Link, null);
             }
         }
 
@@ -600,7 +599,7 @@ namespace org.addition.epanet.quality {
         public bool SimulateSingleStep(List<SimulationNode> hydNodes, List<SimulationLink> hydLinks, long hydStep) {
             int count = 0;
             foreach (QualityNode qN  in  this.nodes) {
-                qN.Demand = hydNodes[count++].getSimDemand();
+                qN.Demand = hydNodes[count++].SimDemand;
             }
 
             count = 0;

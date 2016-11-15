@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.network.io.output {
+namespace Epanet.Network.IO.Output {
 
     ///<summary>Abstract class with factory for INP and XLSX composers.</summary>
     public abstract class OutputComposer {

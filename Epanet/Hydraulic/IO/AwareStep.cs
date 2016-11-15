@@ -18,293 +18,309 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.quality;
-using org.addition.epanet.quality.structures;
-using org.addition.epanet.util;
+using Epanet.Hydraulic.Structures;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Quality;
+using Epanet.Quality.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic.io {
-
-
-
-///<summary>Aware compatible hydraulic step snapshot</summary>
-public class AwareStep {
-    private double[] QN;
-    private double[] QL;
-    private double[] D;
-    private double[] H;
-    private double[] Q;
-    private double[] DH;
-    private long hydTime;
-    private long hydStep;
+namespace Epanet.Hydraulic.IO {
 
 
-    public const int FORMAT_VERSION = 1;
 
-    public class HeaderInfo {
-        public int version;
-        public int nodes;
-        public int links;
-        public long rstart;
-        public long rstep;
-        public long duration;
-    }
+    ///<summary>Aware compatible hydraulic step snapshot</summary>
+    public class AwareStep {
+        private readonly double[] qn;
+        private readonly double[] ql;
+        private readonly double[] d;
+        private readonly double[] h;
+        private readonly double[] q;
+        private readonly double[] dh;
+        private readonly long hydTime;
+        private readonly long hydStep;
 
-    public static void writeHeader(BinaryWriter outStream, HydraulicSim hydraulicSim, long rstart, long rstep, long duration) {
-        outStream.Write((int)FORMAT_VERSION);
-        outStream.Write((int)hydraulicSim.getnNodes().Count);
-        outStream.Write((int)hydraulicSim.getnLinks().Count);
-        outStream.Write((long)rstart);
-        outStream.Write((long)rstep);
-        outStream.Write((long)duration);
-    }
+        private const int FORMAT_VERSION = 1;
 
-    public static HeaderInfo readHeader(BinaryReader @in)  {
-        var headerInfo = new HeaderInfo
-        {
-            version = @in.ReadInt32(),
-            nodes = @in.ReadInt32(),
-            links = @in.ReadInt32(),
-            rstart = @in.ReadInt64(),
-            rstep = @in.ReadInt64(),
-            duration = @in.ReadInt64()
-        };
-        return headerInfo;
-    }
-
-
-    public static void write(BinaryWriter outStream, HydraulicSim hydraulicSim, long hydStep) {
-
-        List<SimulationNode> nodes = hydraulicSim.getnNodes();
-        List<SimulationLink> links = hydraulicSim.getnLinks();
-        long hydTime = hydraulicSim.getHtime();
-
-        int nNodes = nodes.Count;
-        int nLinks = links.Count;
-
-        // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double)  + sizeof(long) * 2;
-        
-
-        foreach (SimulationNode node  in  nodes) {
-            outStream.Write((double)node.getSimDemand());
-            outStream.Write((double)node.getSimHead());
-            outStream.Write((double)0);
+        public class HeaderInfo {
+            public int Version;
+            public int Nodes;
+            public int Links;
+            public long Rstart;
+            public long Rstep;
+            public long Duration;
         }
 
-        foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
-            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
-            outStream.Write((double)0);
+        // ReSharper disable RedundantCast
+
+        public static void WriteHeader(
+            BinaryWriter outStream,
+            HydraulicSim hydraulicSim,
+            long rstart,
+            long rstep,
+            long duration) {
+            outStream.Write((int)FORMAT_VERSION);
+            outStream.Write((int)hydraulicSim.Nodes.Count);
+            outStream.Write((int)hydraulicSim.Links.Count);
+            outStream.Write((long)rstart);
+            outStream.Write((long)rstep);
+            outStream.Write((long)duration);
         }
 
-        outStream.Write((long)hydStep);
-        outStream.Write((long)hydTime);
-    }
 
-    public static void writeHydAndQual(BinaryWriter outStream, HydraulicSim hydraulicSim, QualitySim qualitySim, long step, long time) {
-        List<QualityNode> qNodes = qualitySim != null ? qualitySim.NNodes : null;
-        List<QualityLink> qLinks = qualitySim != null ? qualitySim.NLinks : null;
-        List<SimulationNode> nodes = hydraulicSim.getnNodes();
-        List<SimulationLink> links = hydraulicSim.getnLinks();
 
-        int nNodes = nodes.Count;
-        int nLinks = links.Count;
-
-        // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
-        
-        int count = 0;
-        foreach (SimulationNode node  in  nodes) {
-            outStream.Write((double)node.getSimDemand());
-            outStream.Write((double)node.getSimHead());
-            outStream.Write((double)(qualitySim != null ? qNodes[count++].Quality : 0.0));
+        public static HeaderInfo ReadHeader(BinaryReader @in) {
+            var headerInfo = new HeaderInfo {
+                Version = @in.ReadInt32(),
+                Nodes = @in.ReadInt32(),
+                Links = @in.ReadInt32(),
+                Rstart = @in.ReadInt64(),
+                Rstep = @in.ReadInt64(),
+                Duration = @in.ReadInt64()
+            };
+            return headerInfo;
         }
 
-        count = 0;
-        foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
-            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
-            outStream.Write((double)(qualitySim != null ? qLinks[count++].GetAverageQuality(null) : 0));
+
+        public static void Write(BinaryWriter outStream, HydraulicSim hydraulicSim, long hydStep) {
+
+            List<SimulationNode> nodes = hydraulicSim.Nodes;
+            List<SimulationLink> links = hydraulicSim.Links;
+            long hydTime = hydraulicSim.Htime;
+
+            // int nNodes = nodes.Count;
+            // int nLinks = links.Count;
+            // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double)  + sizeof(long) * 2;
+
+            foreach (SimulationNode node  in  nodes) {
+                outStream.Write((double)node.SimDemand);
+                outStream.Write((double)node.SimHead);
+                outStream.Write((double)0);
+            }
+
+            foreach (SimulationLink link  in  links) {
+                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
+                outStream.Write((double)0.0);
+            }
+
+            outStream.Write((long)hydStep);
+            outStream.Write((long)hydTime);
         }
 
-        outStream.Write((long)step);
-        outStream.Write((long)time);
+        public static void WriteHydAndQual(
+            BinaryWriter outStream,
+            HydraulicSim hydraulicSim,
+            QualitySim qualitySim,
+            long step,
+            long time) {
+            List<QualityNode> qNodes = qualitySim != null ? qualitySim.NNodes : null;
+            List<QualityLink> qLinks = qualitySim != null ? qualitySim.NLinks : null;
+            List<SimulationNode> nodes = hydraulicSim.Nodes;
+            List<SimulationLink> links = hydraulicSim.Links;
 
-    }
+            // int nNodes = nodes.Count;
+            // int nLinks = links.Count;
+            // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
+
+            int count = 0;
+            foreach (SimulationNode node  in  nodes) {
+                outStream.Write((double)node.SimDemand);
+                outStream.Write((double)node.SimHead);
+                outStream.Write((double)(qualitySim != null ? qNodes[count++].Quality : 0.0));
+            }
+
+            count = 0;
+            foreach (SimulationLink link  in  links) {
+                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
+                outStream.Write((double)(qualitySim != null ? qLinks[count++].GetAverageQuality(null) : 0));
+            }
+
+            outStream.Write((long)step);
+            outStream.Write((long)time);
+
+        }
 
 #if COMMENTED
-     public static void writeHybrid(BinaryWriter outStream,HydraulicSim hydraulicSim, double [] qN, double [] qL , long step, long time) {
+        public static void WriteHybrid(
+            BinaryWriter outStream,
+            HydraulicSim hydraulicSim,
+            double[] qN,
+            double[] qL,
+            long step,
+            long time) {
 
-        List<SimulationNode> nodes = hydraulicSim.getnNodes();
-        List<SimulationLink> links = hydraulicSim.getnLinks();
+            List<SimulationNode> nodes = hydraulicSim.Nodes;
+            List<SimulationLink> links = hydraulicSim.Links;
 
-        int nNodes = nodes.Count;
-        int nLinks = links.Count;
+            // int nNodes = nodes.Count;
+            // int nLinks = links.Count;
+            // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
 
-        // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
-        
-        int count= 0;
-        foreach (SimulationNode node  in  nodes) {
-            outStream.Write((double)node.getSimDemand());
-            outStream.Write((double)node.getSimHead());
-            outStream.Write((double)qN[count++]);
+            int count = 0;
+            foreach (SimulationNode node  in  nodes) {
+                outStream.Write((double)node.SimDemand);
+                outStream.Write((double)node.SimHead);
+                outStream.Write((double)qN[count++]);
+            }
+
+            count = 0;
+            foreach (SimulationLink link  in  links) {
+                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
+                outStream.Write((double)qL[count++]);
+            }
+
+            outStream.Write((long)step);
+            outStream.Write((long)time);
+
         }
-
-        count = 0;
-        foreach (SimulationLink link  in  links) {
-            outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
-            outStream.Write((double)(link.First.getSimHead() - link.Second.getSimHead()));
-            outStream.Write((double)qL[count++]);
-        }
-
-        outStream.Write((long)step);
-        outStream.Write((long)time);
-
-    } 
 
 #endif
 
-    public AwareStep(BinaryReader inStream, HeaderInfo headerInfo) {
-        int nNodes = headerInfo.nodes;
-        int nLinks = headerInfo.links;
+        // ReSharper restore RedundantCast
 
-        D = new double[nNodes];
-        H = new double[nNodes];
-        Q = new double[nLinks];
-        DH = new double[nLinks];
+        public AwareStep(BinaryReader inStream, HeaderInfo headerInfo) {
+            int nNodes = headerInfo.Nodes;
+            int nLinks = headerInfo.Links;
 
-        QN = new double[nNodes];
-        QL = new double[nLinks];
+            this.d = new double[nNodes];
+            this.h = new double[nNodes];
+            this.q = new double[nLinks];
+            this.dh = new double[nLinks];
 
-        //int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
-        //byte[] ba = new byte[baSize];
-        //inStream.readFully(ba);
-        //ByteBuffer buf = ByteBuffer.wrap(ba);
+            this.qn = new double[nNodes];
+            this.ql = new double[nLinks];
 
-        for (int i = 0; i < nNodes; i++) {
-            D[i] = inStream.ReadDouble();
-            H[i] = inStream.ReadDouble();
-            QN[i] = inStream.ReadDouble();
-        }
+            //int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
+            //byte[] ba = new byte[baSize];
+            //inStream.readFully(ba);
+            //ByteBuffer buf = ByteBuffer.wrap(ba);
 
-        for (int i = 0; i < nLinks; i++) {
-            Q[i] = inStream.ReadDouble();
-            DH[i] = inStream.ReadDouble();
-            QL[i] = inStream.ReadDouble();
-        }
-
-        hydStep = inStream.ReadInt64();
-        hydTime = inStream.ReadInt64();
-    }
-
-
-    public double getNodeDemand(int id, Node node, FieldsMap fMap) {
-        try {
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.DEMAND, D[id]) : D[id];
-        } catch (ENException) {
-            return 0;
-        }
-    }
-
-    public double getNodeHead(int id, Node node, FieldsMap fMap) {
-        try {
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEAD, H[id]) : H[id];
-        } catch (ENException e) {
-            return 0;
-        }
-    }
-
-    public double getNodePressure(int id, Node node, FieldsMap fMap) {
-        try {
-            double P = (getNodeHead(id, node, null) - node.Elevation);
-
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, P) : P;
-        } catch (ENException e) {
-            return 0;
-        }
-    }
-
-    public double getLinkFlow(int id, Link link, FieldsMap fMap) {
-        try {
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FLOW, Q[id]) : Q[id];
-        } catch (ENException e) {
-            return 0;
-        }
-    }
-
-
-    public double getLinkVelocity(int id, Link link, FieldsMap fMap) {
-        try {
-            double V;
-            double flow = this.getLinkFlow(id, link, null);
-            if (link is Pump)
-                V = 0;
-            else
-                V = (Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0));
-
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.VELOCITY, V) : V;
-        } catch (ENException e) {
-            return 0;
-        }
-    }
-
-    public double getLinkHeadLoss(int id, Link link, FieldsMap fMap) {
-        try {
-            if (getLinkFlow(id, link, null) == 0) {
-                return 0.0;
-            } else {
-                double h = DH[id];
-                if (!(link is Pump))
-                    h = Math.Abs(h);
-
-                if (link.Type <= Link.LinkType.PIPE)
-                    return (1000 * h / link.Lenght);
-                else
-                    return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEADLOSS, h) : h;
+            for (int i = 0; i < nNodes; i++) {
+                this.d[i] = inStream.ReadDouble();
+                this.h[i] = inStream.ReadDouble();
+                this.qn[i] = inStream.ReadDouble();
             }
-        } catch (ENException e) {
-            return 0;
+
+            for (int i = 0; i < nLinks; i++) {
+                this.q[i] = inStream.ReadDouble();
+                this.dh[i] = inStream.ReadDouble();
+                this.ql[i] = inStream.ReadDouble();
+            }
+
+            this.hydStep = inStream.ReadInt64();
+            this.hydTime = inStream.ReadInt64();
         }
-    }
 
 
-    public double getLinkFriction(int id, Link link, FieldsMap fMap) {
-        try {
-            double F;
+        public double GetNodeDemand(int id, Node node, FieldsMap fMap) {
+            try {
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.DEMAND, this.d[id]) : this.d[id];
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
 
-            double flow = getLinkFlow(id, link, null);
-            if (link.Type <= Link.LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
+        public double GetNodeHead(int id, Node node, FieldsMap fMap) {
+            try {
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEAD, this.h[id]) : this.h[id];
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
+
+        public double GetNodePressure(int id, Node node, FieldsMap fMap) {
+            try {
+                double p = (this.GetNodeHead(id, node, null) - node.Elevation);
+
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, p) : p;
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
+
+        public double GetLinkFlow(int id, Link link, FieldsMap fMap) {
+            try {
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FLOW, this.q[id]) : this.q[id];
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
 
 
-                double h = Math.Abs(DH[id]);
-                F = 39.725 * h * Math.Pow(link.Diameter, 5) / link.Lenght /
+        public double GetLinkVelocity(int id, Link link, FieldsMap fMap) {
+            try {
+                double v;
+                double flow = this.GetLinkFlow(id, link, null);
+                if (link is Pump)
+                    v = 0;
+                else
+                    v = (Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0));
+
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.VELOCITY, v) : v;
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
+
+        public double GetLinkHeadLoss(int id, Link link, FieldsMap fMap) {
+            try {
+                if (this.GetLinkFlow(id, link, null) == 0) {
+                    return 0.0;
+                }
+                else {
+                    double hh = this.dh[id];
+                    if (!(link is Pump))
+                        hh = Math.Abs(hh);
+
+                    if (link.Type <= Link.LinkType.PIPE)
+                        return (1000 * hh / link.Lenght);
+                    else
+                        return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEADLOSS, hh) : hh;
+                }
+            }
+            catch (ENException) {
+                return 0;
+            }
+        }
+
+
+        public double GetLinkFriction(int id, Link link, FieldsMap fMap) {
+            try {
+                double f;
+
+                double flow = this.GetLinkFlow(id, link, null);
+                if (link.Type <= Link.LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
+
+
+                    double hh = Math.Abs(this.dh[id]);
+                    f = 39.725 * hh * Math.Pow(link.Diameter, 5) / link.Lenght /
                         (flow * flow);
-            } else
-                F = 0;
+                }
+                else
+                    f = 0;
 
-            return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FRICTION, F) : F;
-        } catch (ENException e) {
-            return 0;
+                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FRICTION, f) : f;
+            }
+            catch (ENException) {
+                return 0;
+            }
         }
+
+        public double GetLinkAvrQuality(int id) { return this.ql[id]; }
+
+        public double GetNodeQuality(int id) { return this.qn[id]; }
+
+        public long Step { get { return this.hydStep; } }
+
+        public long Time { get { return this.hydTime; } }
     }
 
-    public double getLinkAvrQuality(int id) {
-        return QL[id];
-    }
-
-    public double getNodeQuality(int id) {
-        return QN[id];
-    }
-
-    public long getStep() {
-        return hydStep;
-    }
-
-    public long getTime() {
-        return hydTime;
-    }
-
-
-}
 }

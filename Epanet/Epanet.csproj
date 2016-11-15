@@ -51,10 +51,10 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="ErrorCode.cs" />
-    <Compile Include="log\EpanetTraceListener.cs" />
-    <Compile Include="log\InvariantStreamWriter.cs" />
-    <Compile Include="log\RollingFileStream.cs" />
-    <Compile Include="log\TraceExtensions.cs" />
+    <Compile Include="Log\EpanetTraceListener.cs" />
+    <Compile Include="Log\InvariantStreamWriter.cs" />
+    <Compile Include="Log\RollingFileStream.cs" />
+    <Compile Include="Log\TraceExtensions.cs" />
     <Compile Include="Network\Collections.cs" />
     <Compile Include="Network\IO\Input\ParseException.cs" />
     <Compile Include="Hydraulic\HydraulicSim.cs" />

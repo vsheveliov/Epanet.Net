@@ -17,7 +17,7 @@
 
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Rule source code class.</summary>
     public class Rule {

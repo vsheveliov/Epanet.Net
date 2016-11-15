@@ -8,7 +8,7 @@
     <ProjectGuid>{1A86BDE7-F2B6-438F-818C-80C5823FFF20}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Epanet.MSX</RootNamespace>
+    <RootNamespace>Epanet</RootNamespace>
     <AssemblyName>Epanet.MSX</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -46,43 +46,42 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="msx\Chemical.cs" />
-    <Compile Include="msx\Constants.cs" />
-    <Compile Include="msx\ENToolkit2.cs" />
-    <Compile Include="msx\EnumTypes.cs" />
-    <Compile Include="msx\EpanetMSX.cs" />
-    <Compile Include="msx\InpReader.cs" />
-    <Compile Include="msx\MsxReader.cs" />
-    <Compile Include="msx\Network.cs" />
-    <Compile Include="msx\Output.cs" />
-    <Compile Include="msx\Project.cs" />
-    <Compile Include="msx\Quality.cs" />
-    <Compile Include="msx\Report.cs" />
-    <Compile Include="msx\Solvers\JacobianInterface.cs" />
-    <Compile Include="msx\Solvers\Newton.cs" />
-    <Compile Include="msx\Solvers\rk5.cs" />
-    <Compile Include="msx\Solvers\ros2.cs" />
-    <Compile Include="msx\Structures\Const.cs" />
-    <Compile Include="msx\Structures\ExprVariable.cs" />
-    <Compile Include="msx\Structures\Link.cs" />
-    <Compile Include="msx\Structures\MathExpr.cs" />
-    <Compile Include="msx\Structures\Node.cs" />
-    <Compile Include="msx\Structures\Param.cs" />
-    <Compile Include="msx\Structures\Pattern.cs" />
-    <Compile Include="msx\Structures\Pipe.cs" />
-    <Compile Include="msx\Structures\Source.cs" />
-    <Compile Include="msx\Structures\Species.cs" />
-    <Compile Include="msx\Structures\Tank.cs" />
-    <Compile Include="msx\Structures\Term.cs" />
-    <Compile Include="msx\TankMix.cs" />
-    <Compile Include="msx\Utilities.cs" />
-    <Compile Include="msx\VariableInterface.cs" />
+    <Compile Include="MSX\Chemical.cs" />
+    <Compile Include="MSX\Constants.cs" />
+    <Compile Include="MSX\ENToolkit2.cs" />
+    <Compile Include="MSX\EnumTypes.cs" />
+    <Compile Include="MSX\EpanetMSX.cs" />
+    <Compile Include="MSX\InpReader.cs" />
+    <Compile Include="MSX\MsxReader.cs" />
+    <Compile Include="MSX\Network.cs" />
+    <Compile Include="MSX\Output.cs" />
+    <Compile Include="MSX\Project.cs" />
+    <Compile Include="MSX\Quality.cs" />
+    <Compile Include="MSX\Report.cs" />
+    <Compile Include="MSX\Solvers\JacobianInterface.cs" />
+    <Compile Include="MSX\Solvers\Newton.cs" />
+    <Compile Include="MSX\Solvers\rk5.cs" />
+    <Compile Include="MSX\Solvers\ros2.cs" />
+    <Compile Include="MSX\Structures\Const.cs" />
+    <Compile Include="MSX\Structures\ExprVariable.cs" />
+    <Compile Include="MSX\Structures\Link.cs" />
+    <Compile Include="MSX\Structures\MathExpr.cs" />
+    <Compile Include="MSX\Structures\Node.cs" />
+    <Compile Include="MSX\Structures\Param.cs" />
+    <Compile Include="MSX\Structures\Pattern.cs" />
+    <Compile Include="MSX\Structures\Pipe.cs" />
+    <Compile Include="MSX\Structures\Source.cs" />
+    <Compile Include="MSX\Structures\Species.cs" />
+    <Compile Include="MSX\Structures\Tank.cs" />
+    <Compile Include="MSX\Structures\Term.cs" />
+    <Compile Include="MSX\TankMix.cs" />
+    <Compile Include="MSX\Utilities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="msx\package.html" />
-    <Content Include="msx\Solvers\package.html" />
-    <Content Include="msx\Structures\package.html" />
+    <Content Include="MSX\package.html" />
+    <Content Include="MSX\Solvers\package.html" />
+    <Content Include="MSX\Structures\package.html" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Epanet\Epanet.csproj">

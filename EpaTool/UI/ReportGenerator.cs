@@ -19,18 +19,18 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Epanet.Hydraulic.IO;
+using Epanet.MSX;
+using Epanet.MSX.Structures;
+using Epanet.Network;
 using Epanet.Properties;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.msx;
-using org.addition.epanet.msx.Structures;
-using org.addition.epanet.network;
-using org.addition.epanet.quality;
-using org.addition.epanet.util;
-using Link = org.addition.epanet.network.structures.Link;
-using Network = org.addition.epanet.network.Network;
-using Node = org.addition.epanet.network.structures.Node;
+using Epanet.Quality;
+using Epanet.Report;
+using Epanet.Util;
+using Link = Epanet.Network.Structures.Link;
+using Node = Epanet.Network.Structures.Node;
 
-namespace org.addition.epanet.ui {
+namespace Epanet.UI {
 
     ///<summary>
     ///  This class handles the XLSX generation from the binary files created by Epanet and MSX simulations, the reported
@@ -133,7 +133,7 @@ namespace org.addition.epanet.ui {
         ///  <param name="hydBinFile">Name of the hydraulic simulation output file.</param>
         /// <param name="net">Hydraulic network.</param>
         /// <param name="values">Variables report flag.</param>
-        public void CreateHydReport(string hydBinFile, Network net, bool[] values) {
+        public void CreateHydReport(string hydBinFile, Network.Network net, bool[] values) {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydBinFile)));
 
@@ -166,7 +166,7 @@ namespace org.addition.epanet.ui {
             for (int i = 0; i < resultSheets.Length; i++) {
                 if (values != null && !values[i]) continue;
                 resultSheets[i] = this.sheet.NewSpreadsheet(HydVariable.Values[i].Name);
-                resultSheets[i].addRow(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
+                resultSheets[i].AddData(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
             }
 
             object[] nodeRow = new object[dseek.Nodes + 1];
@@ -184,57 +184,57 @@ namespace org.addition.epanet.ui {
                     // NODES HEADS
                     if (resultSheets[(int)HydVariable.Type.Head] != null) {
                         for (int i = 0; i < netNodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodeHead(i, netNodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodeHead(i, netNodes[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Head].addRow(nodeRow);
+                        resultSheets[(int)HydVariable.Type.Head].AddData(nodeRow);
                     }
 
                     // NODES DEMANDS
                     if (resultSheets[(int)HydVariable.Type.Demands] != null) {
                         for (int i = 0; i < netNodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodeDemand(i, netNodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodeDemand(i, netNodes[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Demands].addRow(nodeRow);
+                        resultSheets[(int)HydVariable.Type.Demands].AddData(nodeRow);
                     }
 
                     // NODES PRESSURE
                     if (resultSheets[(int)HydVariable.Type.Pressure] != null) {
                         for (int i = 0; i < netNodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodePressure(i, netNodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodePressure(i, netNodes[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Pressure].addRow(nodeRow);
+                        resultSheets[(int)HydVariable.Type.Pressure].AddData(nodeRow);
                     }
 
                     // LINK FLOW
                     if (resultSheets[(int)HydVariable.Type.Flows] != null) {
                         for (int i = 0; i < netLinks.Count; i++) {
-                            linkRow[i + 1] = step.getLinkFlow(i, netLinks[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkFlow(i, netLinks[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Flows].addRow(linkRow);
+                        resultSheets[(int)HydVariable.Type.Flows].AddData(linkRow);
                     }
 
                     // LINK VELOCITY
                     if (resultSheets[(int)HydVariable.Type.Velocity] != null) {
                         for (int i = 0; i < netLinks.Count; i++) {
-                            linkRow[i + 1] = step.getLinkVelocity(i, netLinks[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkVelocity(i, netLinks[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Velocity].addRow(linkRow);
+                        resultSheets[(int)HydVariable.Type.Velocity].AddData(linkRow);
                     }
 
                     // LINK HEADLOSS
                     if (resultSheets[(int)HydVariable.Type.Headloss] != null) {
                         for (int i = 0; i < netLinks.Count; i++) {
-                            linkRow[i + 1] = step.getLinkHeadLoss(i, netLinks[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkHeadLoss(i, netLinks[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Headloss].addRow(linkRow);
+                        resultSheets[(int)HydVariable.Type.Headloss].AddData(linkRow);
                     }
 
                     // LINK FRICTION
                     if (resultSheets[(int)HydVariable.Type.Friction] != null) {
                         for (int i = 0; i < netLinks.Count; i++) {
-                            linkRow[i + 1] = step.getLinkFriction(i, netLinks[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkFriction(i, netLinks[i], net.FieldsMap);
                         }
-                        resultSheets[(int)HydVariable.Type.Friction].addRow(linkRow);
+                        resultSheets[(int)HydVariable.Type.Friction].AddData(linkRow);
                     }
                 }
                 this.Rtime = time;
@@ -248,7 +248,7 @@ namespace org.addition.epanet.ui {
         /// <param name="net">Hydraulic network.</param>
         /// <param name="nodes">Show nodes quality flag.</param>
         /// <param name="links">Show links quality flag.</param>
-        public void createQualReport(string qualFile, Network net, bool nodes, bool links) {
+        public void createQualReport(string qualFile, Network.Network net, bool nodes, bool links) {
             this.Rtime = 0;
 
             int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.Rstart) / net.PropertiesMap.Rstep)
@@ -275,7 +275,7 @@ namespace org.addition.epanet.ui {
                         continue;
 
                     resultSheets[var] = this.sheet.NewSpreadsheet(QualVariableName[var]);
-                    resultSheets[var].addRow(QualVariableIsNode[var] ? nodesHead : linksHead);
+                    resultSheets[var].AddData(QualVariableIsNode[var] ? nodesHead : linksHead);
                 }
 
                 object[] nodeRow = new object[dseek.Nodes + 1];
@@ -296,13 +296,13 @@ namespace org.addition.epanet.ui {
                             if (resultSheets[(int)QualVariable.Type.Nodes] != null) {
                                 for (int i = 0; i < dseek.Nodes; i++)
                                     nodeRow[i + 1] = (double)step.GetNodeQuality(i);
-                                resultSheets[(int)HydVariable.Type.Head].addRow(nodeRow);
+                                resultSheets[(int)HydVariable.Type.Head].AddData(nodeRow);
                             }
 
                             if (resultSheets[(int)QualVariable.Type.Links] != null) {
                                 for (int i = 0; i < dseek.Links; i++)
                                     linkRow[i + 1] = (double)step.GetLinkQuality(i);
-                                resultSheets[(int)HydVariable.Type.Demands].addRow(linkRow);
+                                resultSheets[(int)HydVariable.Type.Demands].AddData(linkRow);
                             }
                             this.Rtime = time;
                         }
@@ -316,10 +316,10 @@ namespace org.addition.epanet.ui {
         /// <param name="netMSX">MSX network.</param>
         /// <param name="tk2">Hydraulic network - MSX bridge.</param>
         /// <param name="values">Species report flag.</param>
-        public void createMSXReport(string msxBin, Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
+        public void createMSXReport(string msxBin, Network.Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
             this.Rtime = 0;
-            msx.Structures.Node[] nodes = netMSX.Network.Node;
-            msx.Structures.Link[] links = netMSX.Network.Link;
+            MSX.Structures.Node[] nodes = netMSX.Network.Node;
+            MSX.Structures.Link[] links = netMSX.Network.Link;
             string[] nSpecies = netMSX.GetSpeciesNames();
 
             int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.Rstart) / net.PropertiesMap.Rstep)
@@ -357,7 +357,7 @@ namespace org.addition.epanet.ui {
             for (int i = 1; i < nodes.Length; i++) {
                 if (nodes[i].Rpt) {
                     var spr = this.sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
-                    spr.addRow(nodesHead);
+                    spr.AddData(nodesHead);
 
                     for (long time = net.PropertiesMap.Rstart, period = 0;
                          time <= net.PropertiesMap.Duration;
@@ -369,17 +369,17 @@ namespace org.addition.epanet.ui {
                                 nodeRow[ji++ + 1] = reader.GetNodeQual((int)period, i, j + 1);
                         }
 
-                        spr.addRow(nodeRow);
+                        spr.AddData(nodeRow);
                     }
                 }
             }
 
             object[] linkRow = new object[totalSpecies + 1];
             for (int i = 1; i < links.Length; i++) {
-                if (links[i].getRpt()) {
+                if (links[i].Rpt) {
                     XLSXWriter.Spreadsheet spr =
                         this.sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
-                    spr.addRow(linksHead);
+                    spr.AddData(linksHead);
 
                     for (long time = net.PropertiesMap.Rstart, period = 0;
                          time <= net.PropertiesMap.Duration;
@@ -391,7 +391,7 @@ namespace org.addition.epanet.ui {
                                 linkRow[ji++ + 1] = reader.GetLinkQual((int)period, i, j + 1);
                         }
 
-                        spr.addRow(linkRow);
+                        spr.AddData(linkRow);
                     }
                 }
             }
@@ -409,7 +409,7 @@ namespace org.addition.epanet.ui {
         /// <param name="net">Hydraulic network.</param>
         /// <param name="msxFile">MSX file.</param>
         /// <param name="msx">MSX solver.</param>
-        public void writeSummary(string inpFile, Network net, string msxFile, EpanetMSX msx) {
+        public void writeSummary(string inpFile, Network.Network net, string msxFile, EpanetMSX msx) {
             XLSXWriter.Spreadsheet sh = this.sheet.NewSpreadsheet("Summary");
 
             try {
@@ -420,12 +420,12 @@ namespace org.addition.epanet.ui {
                     for (int i = 0; i < net.TitleText.Count && i < 3; i++) {
                         if (net.TitleText[i].Length > 0) {
                             if (net.TitleText[i].Length <= 70)
-                                sh.addRow(net.TitleText[i]);
+                                sh.AddData(net.TitleText[i]);
                         }
                     }
-                sh.addRow("\n");
-                sh.addRow(Text.ResourceManager.GetString("FMT19"), inpFile);
-                sh.addRow(Text.ResourceManager.GetString("FMT20"), net.Junctions.Count());
+                sh.AddData("\n");
+                sh.AddData(Text.ResourceManager.GetString("FMT19"), inpFile);
+                sh.AddData(Text.ResourceManager.GetString("FMT20"), net.Junctions.Count());
 
                 int nReservoirs = 0;
                 int nTanks = 0;
@@ -439,57 +439,57 @@ namespace org.addition.epanet.ui {
                 int nPumps = net.Pumps.Count();
                 int nPipes = net.Links.Count - nPumps - nValves;
 
-                sh.addRow(Text.ResourceManager.GetString("FMT21a"), nReservoirs);
-                sh.addRow(Text.ResourceManager.GetString("FMT21b"), nTanks);
-                sh.addRow(Text.ResourceManager.GetString("FMT22"), nPipes);
-                sh.addRow(Text.ResourceManager.GetString("FMT23"), nPumps);
-                sh.addRow(Text.ResourceManager.GetString("FMT24"), nValves);
-                sh.addRow(Text.ResourceManager.GetString("FMT25"), pMap.Formflag.ParseStr());
+                sh.AddData(Text.ResourceManager.GetString("FMT21a"), nReservoirs);
+                sh.AddData(Text.ResourceManager.GetString("FMT21b"), nTanks);
+                sh.AddData(Text.ResourceManager.GetString("FMT22"), nPipes);
+                sh.AddData(Text.ResourceManager.GetString("FMT23"), nPumps);
+                sh.AddData(Text.ResourceManager.GetString("FMT24"), nValves);
+                sh.AddData(Text.ResourceManager.GetString("FMT25"), pMap.Formflag.ParseStr());
 
-                sh.addRow(Text.ResourceManager.GetString("FMT26"), pMap.Hstep.GetClockTime());
-                sh.addRow(Text.ResourceManager.GetString("FMT27"), pMap.Hacc);
-                sh.addRow(Text.ResourceManager.GetString("FMT27a"), pMap.CheckFreq);
-                sh.addRow(Text.ResourceManager.GetString("FMT27b"), pMap.MaxCheck);
-                sh.addRow(Text.ResourceManager.GetString("FMT27c"), pMap.DampLimit);
-                sh.addRow(Text.ResourceManager.GetString("FMT28"), pMap.MaxIter);
+                sh.AddData(Text.ResourceManager.GetString("FMT26"), pMap.Hstep.GetClockTime());
+                sh.AddData(Text.ResourceManager.GetString("FMT27"), pMap.Hacc);
+                sh.AddData(Text.ResourceManager.GetString("FMT27a"), pMap.CheckFreq);
+                sh.AddData(Text.ResourceManager.GetString("FMT27b"), pMap.MaxCheck);
+                sh.AddData(Text.ResourceManager.GetString("FMT27c"), pMap.DampLimit);
+                sh.AddData(Text.ResourceManager.GetString("FMT28"), pMap.MaxIter);
 
                 if (pMap.Qualflag == PropertiesMap.QualType.NONE || pMap.Duration == 0.0)
-                    sh.addRow(Text.ResourceManager.GetString("FMT29"), "None");
+                    sh.AddData(Text.ResourceManager.GetString("FMT29"), "None");
                 else if (pMap.Qualflag == PropertiesMap.QualType.CHEM)
-                    sh.addRow(Text.ResourceManager.GetString("FMT30"), pMap.ChemName);
+                    sh.AddData(Text.ResourceManager.GetString("FMT30"), pMap.ChemName);
                 else if (pMap.Qualflag == PropertiesMap.QualType.TRACE)
-                    sh.addRow(
+                    sh.AddData(
                         Text.ResourceManager.GetString("FMT31"),
                         "Trace From Node",
                         net.GetNode(pMap.TraceNode).Id);
                 else if (pMap.Qualflag == PropertiesMap.QualType.AGE)
-                    sh.addRow(Text.ResourceManager.GetString("FMT32"), "Age");
+                    sh.AddData(Text.ResourceManager.GetString("FMT32"), "Age");
 
                 if (pMap.Qualflag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
-                    sh.addRow(Text.ResourceManager.GetString("FMT33"), "Time Step", pMap.Qstep.GetClockTime());
-                    sh.addRow(
+                    sh.AddData(Text.ResourceManager.GetString("FMT33"), "Time Step", pMap.Qstep.GetClockTime());
+                    sh.AddData(
                         Text.ResourceManager.GetString("FMT34"),
                         "Tolerance",
                         fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol),
                         fMap.GetField(FieldsMap.FieldType.QUALITY).Units);
                 }
 
-                sh.addRow(Text.ResourceManager.GetString("FMT36"), pMap.SpGrav);
-                sh.addRow(Text.ResourceManager.GetString("FMT37a"), pMap.Viscos / Constants.VISCOS);
-                sh.addRow(Text.ResourceManager.GetString("FMT37b"), pMap.Diffus / Constants.DIFFUS);
-                sh.addRow(Text.ResourceManager.GetString("FMT38"), pMap.Dmult);
-                sh.addRow(
+                sh.AddData(Text.ResourceManager.GetString("FMT36"), pMap.SpGrav);
+                sh.AddData(Text.ResourceManager.GetString("FMT37a"), pMap.Viscos / Constants.VISCOS);
+                sh.AddData(Text.ResourceManager.GetString("FMT37b"), pMap.Diffus / Constants.DIFFUS);
+                sh.AddData(Text.ResourceManager.GetString("FMT38"), pMap.Dmult);
+                sh.AddData(
                     Text.ResourceManager.GetString("FMT39"),
                     fMap.RevertUnit(FieldsMap.FieldType.TIME, pMap.Duration),
                     fMap.GetField(FieldsMap.FieldType.TIME).Units);
 
                 if (msxFile != null && msx != null) {
-                    sh.addRow("");
-                    sh.addRow("MSX data file", msxFile);
-                    sh.addRow("Species");
+                    sh.AddData("");
+                    sh.AddData("MSX data file", msxFile);
+                    sh.AddData("Species");
                     Species[] spe = msx.Network.Species;
                     for (int i = 1; i < msx.Network.Species.Length; i++)
-                        sh.addRow(spe[i].getId(), spe[i].getUnits());
+                        sh.AddData(spe[i].Id, spe[i].Units);
                 }
             }
             catch (IOException) {}

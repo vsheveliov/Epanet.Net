@@ -18,14 +18,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Epanet.Log;
+using Epanet.Network;
+using Epanet.Network.IO;
+using Epanet.Network.Structures;
 using Epanet.Properties;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.io;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic.structures {
+namespace Epanet.Hydraulic.Structures {
 
     public class SimulationControl {
         private readonly Control _control;
@@ -81,8 +81,8 @@ namespace org.addition.epanet.hydraulic.structures {
                 if (!(this.Node is SimulationTank)) // Check if node is a tank
                     return tstep;
 
-                double h = this._node.getSimHead(); // Current tank grade
-                double q = this._node.getSimDemand(); // Flow into tank
+                double h = this._node.SimHead; // Current tank grade
+                double q = this._node.SimDemand; // Flow into tank
 
                 if (Math.Abs(q) <= Constants.QZERO)
                     return tstep;
@@ -92,7 +92,7 @@ namespace org.addition.epanet.hydraulic.structures {
                     // Tank above low level & emptying
                 {
                     SimulationTank tank = ((SimulationTank)this.Node);
-                    double v = tank.findVolume(fMap, this.Grade) - tank.getSimVolume();
+                    double v = tank.FindVolume(fMap, this.Grade) - tank.SimVolume;
                     t = (long)Math.Round(v / q); // Time to reach level
                 }
             }
@@ -117,7 +117,7 @@ namespace org.addition.epanet.hydraulic.structures {
 
                 // Check if rule actually changes link status or setting
                 if (link != null
-                    && (link.Type > network.structures.Link.LinkType.PIPE && link.SimSetting != this.Setting)
+                    && (link.Type > Network.Structures.Link.LinkType.PIPE && link.SimSetting != this.Setting)
                     || (link.SimStatus != this.Status))
                     tstep = t;
             }
@@ -159,13 +159,13 @@ namespace org.addition.epanet.hydraulic.structures {
                 // Link is controlled by tank level
                 if (control.Node != null && control.Node is SimulationTank) {
 
-                    double h = control.Node.getSimHead();
-                    double vplus = Math.Abs(control.Node.getSimDemand());
+                    double h = control.Node.SimHead;
+                    double vplus = Math.Abs(control.Node.SimDemand);
 
                     SimulationTank tank = (SimulationTank)control.Node;
 
-                    double v1 = tank.findVolume(fMap, h);
-                    double v2 = tank.findVolume(fMap, control.Grade);
+                    double v1 = tank.FindVolume(fMap, h);
+                    double v2 = tank.FindVolume(fMap, control.Grade);
 
                     if (control.Type == Control.ControlType.LOWLEVEL && v1 <= v2 + vplus)
                         reset = true;
@@ -190,17 +190,17 @@ namespace org.addition.epanet.hydraulic.structures {
                     Link.StatType s1, s2;
                     SimulationLink link = control.Link;
 
-                    if (link.SimStatus <= network.structures.Link.StatType.CLOSED)
-                        s1 = network.structures.Link.StatType.CLOSED;
+                    if (link.SimStatus <= Network.Structures.Link.StatType.CLOSED)
+                        s1 = Network.Structures.Link.StatType.CLOSED;
                     else
-                        s1 = network.structures.Link.StatType.OPEN;
+                        s1 = Network.Structures.Link.StatType.OPEN;
 
                     s2 = control.Status;
 
                     double k1 = link.SimSetting;
                     double k2 = k1;
 
-                    if (control.Link.Type > network.structures.Link.LinkType.PIPE)
+                    if (control.Link.Type > Network.Structures.Link.LinkType.PIPE)
                         k2 = control.Setting;
 
                     if (s1 != s2 || k1 != k2) {
@@ -235,11 +235,11 @@ namespace org.addition.epanet.hydraulic.structures {
 
                     // Determine if control conditions are satisfied
                     if (control.Type == Control.ControlType.LOWLEVEL
-                        && control.Node.getSimHead() <= control.Grade + pMap.Htol)
+                        && control.Node.SimHead <= control.Grade + pMap.Htol)
                         reset = true;
 
                     if (control.Type == Control.ControlType.HILEVEL
-                        && control.Node.getSimHead() >= control.Grade - pMap.Htol)
+                        && control.Node.SimHead >= control.Grade - pMap.Htol)
                         reset = true;
                 }
 
@@ -251,15 +251,15 @@ namespace org.addition.epanet.hydraulic.structures {
 
                     Link.StatType s = link.SimStatus;
 
-                    if (link.Type == network.structures.Link.LinkType.PIPE) {
+                    if (link.Type == Network.Structures.Link.LinkType.PIPE) {
                         if (s != control.Status) change = true;
                     }
 
-                    if (link.Type == network.structures.Link.LinkType.PUMP) {
+                    if (link.Type == Network.Structures.Link.LinkType.PUMP) {
                         if (link.SimSetting != control.Setting) change = true;
                     }
 
-                    if (link.Type >= network.structures.Link.LinkType.PRV) {
+                    if (link.Type >= Network.Structures.Link.LinkType.PRV) {
                         if (link.SimSetting != control.Setting)
                             change = true;
                         else if (link.SimSetting == Constants.MISSING &&
@@ -269,7 +269,7 @@ namespace org.addition.epanet.hydraulic.structures {
                     // If a change occurs, update status & setting
                     if (change) {
                         link.SimStatus = control.Status;
-                        if (link.Type > network.structures.Link.LinkType.PIPE)
+                        if (link.Type > Network.Structures.Link.LinkType.PIPE)
                             link.SimSetting = control.Setting;
                         if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
                             LogStatChange(log, fMap, link, s);
@@ -291,7 +291,7 @@ namespace org.addition.epanet.hydraulic.structures {
             case Control.ControlType.HILEVEL: {
                 string type = Keywords.w_JUNC; //  NodeType type= NodeType.JUNC;
                 if (n is SimulationTank) {
-                    type = ((SimulationTank)n).isReservoir() ? Keywords.w_RESERV : Keywords.w_TANK;
+                    type = ((SimulationTank)n).IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
                 }
                 msg = string.Format(
                     Text.ResourceManager.GetString("FMT54"),
@@ -323,12 +323,12 @@ namespace org.addition.epanet.hydraulic.structures {
                 if (s2 == s1) {
                     double setting = link.SimSetting;
                     switch (link.Type) {
-                    case network.structures.Link.LinkType.PRV:
-                    case network.structures.Link.LinkType.PSV:
-                    case network.structures.Link.LinkType.PBV:
+                    case Network.Structures.Link.LinkType.PRV:
+                    case Network.Structures.Link.LinkType.PSV:
+                    case Network.Structures.Link.LinkType.PBV:
                         setting *= fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                         break;
-                    case network.structures.Link.LinkType.FCV:
+                    case Network.Structures.Link.LinkType.FCV:
                         setting *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
                         break;
                     }
@@ -344,17 +344,17 @@ namespace org.addition.epanet.hydraulic.structures {
 
                 Link.StatType j1, j2;
 
-                if (s1 == network.structures.Link.StatType.ACTIVE)
-                    j1 = network.structures.Link.StatType.ACTIVE;
-                else if (s1 <= network.structures.Link.StatType.CLOSED)
-                    j1 = network.structures.Link.StatType.CLOSED;
+                if (s1 == Network.Structures.Link.StatType.ACTIVE)
+                    j1 = Network.Structures.Link.StatType.ACTIVE;
+                else if (s1 <= Network.Structures.Link.StatType.CLOSED)
+                    j1 = Network.Structures.Link.StatType.CLOSED;
                 else
-                    j1 = network.structures.Link.StatType.OPEN;
-                if (s2 == network.structures.Link.StatType.ACTIVE) j2 = network.structures.Link.StatType.ACTIVE;
-                else if (s2 <= network.structures.Link.StatType.CLOSED)
-                    j2 = network.structures.Link.StatType.CLOSED;
+                    j1 = Network.Structures.Link.StatType.OPEN;
+                if (s2 == Network.Structures.Link.StatType.ACTIVE) j2 = Network.Structures.Link.StatType.ACTIVE;
+                else if (s2 <= Network.Structures.Link.StatType.CLOSED)
+                    j2 = Network.Structures.Link.StatType.CLOSED;
                 else
-                    j2 = network.structures.Link.StatType.OPEN;
+                    j2 = Network.Structures.Link.StatType.OPEN;
 
                 if (j1 != j2) {
                     log.Warning(

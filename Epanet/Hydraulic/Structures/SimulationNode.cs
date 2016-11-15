@@ -17,147 +17,104 @@
 
 using System;
 using System.Collections.Generic;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic.structures {
-
-
-public class SimulationNode {
-    protected readonly int index;
-    protected readonly Node node;
-
-    protected double head;   // Epanet 'H[n]' variable, node head.
-    protected double demand; // Epanet 'D[n]' variable, node demand.
-    protected double emitter;// Epanet 'E[n]' variable, emitter flows
-
-    public static SimulationNode createIndexedNode(Node _node, int idx){
-        SimulationNode ret;
-        if(_node is Tank)
-            ret = new SimulationTank(_node,idx);
-        else
-            ret = new SimulationNode(_node,idx);
-
-        return ret;
-    }
-    public SimulationNode(Node @ref, int idx) {
-        this.node =@ref;
-        index = idx;
-    }
-
-    public int Index { get { return this.index; } }
-
-    public Node Node { get { return this.node; } }
-
-    public string Id { get { return this.node.Id; } }
-
-    public Node.NodeType Type { get { return this.node.Type; } }
-
-    public double getElevation() {
-        return this.node.Elevation;
-    }
-
-    public List<Demand> getDemand() {
-        return this.node.Demand;
-    }
-
-    //public Source getSource() {
-    //    return node.getSource();
-    //}
+namespace Epanet.Hydraulic.Structures {
 
 
-    public double [] getC0() {
-        return this.node.C0;
-    }
+    public class SimulationNode {
+        protected readonly int index;
+        protected readonly Node node;
 
+        protected double head; // Epanet 'H[n]' variable, node head.
+        protected double demand; // Epanet 'D[n]' variable, node demand.
+        protected double emitter; // Epanet 'E[n]' variable, emitter flows
 
-    public double getKe() {
-        return this.node.Ke;
-    }
-
-    //public bool getRptFlag() {
-    //    return node.isRptFlag();
-    //}
-
-    ////
-
-    public double getSimHead() {
-        return head;
-    }
-
-    public void setSimHead(double value)
-    {
-        this.head = value;
-    }
-
-    public double getSimDemand(){
-        return demand;
-    }
-
-    public void setSimDemand(double value){
-        demand = value;
-    }
-
-    public double getSimEmitter(){
-        return emitter;
-    }
-
-    public void setSimEmitter(double value){
-        emitter = value;
-    }
-
-    ////
-
-    // Completes calculation of nodal flow imbalance (X) flow correction (F) arrays
-    public static void computeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LSVariables ls){
-        foreach (SimulationNode node  in  junctions)
-        {
-            ls.addNodalInFlow(node, - node.demand);
-            ls.addRHSCoeff(smat.getRow(node.Index),+ls.getNodalInFlow(node));
+        public static SimulationNode CreateIndexedNode(Node _node, int idx) {
+            return _node is Tank
+                ? new SimulationTank(_node, idx)
+                : new SimulationNode(_node, idx);
         }
-    }
 
-    // computes matrix coeffs. for emitters
-    // Emitters consist of a fictitious pipe connected to
-    // a fictitious reservoir whose elevation equals that
-    // of the junction. The headloss through this pipe is
-    // Ke*(Flow)^Qexp, where Ke = emitter headloss coeff.
-
-    public static void computeEmitterCoeffs(PropertiesMap pMap,
-                                            List<SimulationNode> junctions,
-                                            SparseMatrix smat, LSVariables ls) {
-        foreach (SimulationNode node  in  junctions) {
-            if (node.Node.Ke == 0.0)
-                continue;
-
-            double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
-            double q = node.emitter;
-            double z = ke * Math.Pow(Math.Abs(q), pMap.Qexp);
-            double p = pMap.Qexp* z / Math.Abs(q);
-
-            if (p < pMap.RQtol)
-                p = 1.0 / pMap.RQtol;
-            else
-                p = 1.0 / p;
-
-            double y = Utilities.GetSignal(q) * z * p;
-            ls.addAii(smat.getRow(node.Index),+ p);
-            ls.addRHSCoeff(smat.getRow(node.Index), + (y + p * node.Node.Elevation));
-            ls.addNodalInFlow(node, - q);
+        public SimulationNode(Node @ref, int idx) {
+            this.node = @ref;
+            this.index = idx;
         }
+
+        public int Index { get { return this.index; } }
+
+        public Node Node { get { return this.node; } }
+
+        public string Id { get { return this.node.Id; } }
+
+        public Node.NodeType Type { get { return this.node.Type; } }
+
+        public double Elevation { get { return this.node.Elevation; } }
+
+        public List<Demand> Demand { get { return this.node.Demand; } }
+
+        public Source Source { get { return this.node.Source; } }
+
+        public double[] C0 { get { return this.node.C0; } }
+
+        public double Ke { get { return this.node.Ke; } }
+
+        public double SimHead { get { return this.head; } set { this.head = value; } }
+
+        public double SimDemand { get { return this.demand; } set { this.demand = value; } }
+
+        public double SimEmitter { get { return this.emitter; } set { this.emitter = value; } }
+
+
+
+        /// <summary>Completes calculation of nodal flow imbalance (X) flow correction (F) arrays.</summary>
+        public static void ComputeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LSVariables ls) {
+            foreach (SimulationNode node  in  junctions) {
+                ls.addNodalInFlow(node, -node.demand);
+                ls.addRHSCoeff(smat.getRow(node.Index), +ls.getNodalInFlow(node));
+            }
+        }
+
+        /// <summary>Computes matrix coeffs. for emitters.</summary>
+        /// <remarks>
+        /// Emitters consist of a fictitious pipe connected to
+        /// a fictitious reservoir whose elevation equals that
+        /// of the junction. The headloss through this pipe is
+        /// Ke*(Flow)^Qexp, where Ke = emitter headloss coeff.
+        /// </remarks>
+        public static void ComputeEmitterCoeffs(
+            PropertiesMap pMap,
+            List<SimulationNode> junctions,
+            SparseMatrix smat,
+            LSVariables ls) {
+            foreach (SimulationNode node  in  junctions) {
+                if (node.Node.Ke == 0.0)
+                    continue;
+
+                double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
+                double q = node.emitter;
+                double z = ke * Math.Pow(Math.Abs(q), pMap.Qexp);
+                double p = pMap.Qexp * z / Math.Abs(q);
+
+                p = p < pMap.RQtol ? 1.0 / pMap.RQtol : 1.0 / p;
+
+                double y = Utilities.GetSignal(q) * z * p;
+                ls.addAii(smat.getRow(node.Index), +p);
+                ls.addRHSCoeff(smat.getRow(node.Index), +(y + p * node.Node.Elevation));
+                ls.addNodalInFlow(node, -q);
+            }
+        }
+
+        /// <summary>Computes flow change at an emitter node.</summary>
+        public double EmitFlowChange(PropertiesMap pMap) {
+            double ke = Math.Max(Constants.CSMALL, this.Ke);
+            double p = pMap.Qexp * ke * Math.Pow(Math.Abs(this.emitter), (pMap.Qexp - 1.0));
+            p = p < pMap.RQtol ? 1.0d / pMap.RQtol : 1.0d / p;
+            return (this.emitter / pMap.Qexp - p * (this.head - this.Elevation));
+        }
+
     }
 
-    // Computes flow change at an emitter node
-    public double emitFlowChange(PropertiesMap pMap) {
-        double ke = Math.Max(Constants.CSMALL, getKe());
-        double p = pMap.Qexp * ke * Math.Pow(Math.Abs(emitter), (pMap.Qexp - 1.0));
-        if (p < pMap.RQtol)
-            p = 1.0d / pMap.RQtol;
-        else
-            p = 1.0d / p;
-        return (emitter / pMap.Qexp - p * (head-getElevation()));
-    }
-
-}
 }

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
-namespace org.addition.epanet.hydraulic.io {
+namespace Epanet.Hydraulic.IO {
 
 
     ///<summary>Hydraulic binary file reader class.</summary>
@@ -38,7 +38,7 @@ namespace org.addition.epanet.hydraulic.io {
 
         public HydraulicReader(BinaryReader inputStream) {
             this._inputStream = inputStream;
-            this._headerInfo = AwareStep.readHeader(inputStream);
+            this._headerInfo = AwareStep.ReadHeader(inputStream);
         }
 
         public HydraulicReader(string hydFile)
@@ -52,11 +52,11 @@ namespace org.addition.epanet.hydraulic.io {
         /// <returns>Reference to step snapshot.</returns>
         public AwareStep getStep(long time) {
             if (this._curStep != null) {
-                if (this._curStep.getTime() == time) return this._curStep;
+                if (this._curStep.Time == time) return this._curStep;
             }
-            while (this._curStep == null || this._curStep.getTime() < time)
+            while (this._curStep == null || this._curStep.Time < time)
                 this._curStep = new AwareStep(this._inputStream, this._headerInfo);
-            return this._curStep.getTime() >= time ? this._curStep : null;
+            return this._curStep.Time >= time ? this._curStep : null;
 
         }
 
@@ -70,21 +70,21 @@ namespace org.addition.epanet.hydraulic.io {
 
         /// <summary>Get the epanet hydraulic file version.</summary>
         /// <value>Version number.</value>
-        public int Version { get { return this._headerInfo.version; } }
+        public int Version { get { return this._headerInfo.Version; } }
 
         /// <summary>Get the number of nodes in the file.</summary>
         /// <value>Number of nodes.</value>
-        public int Nodes { get { return this._headerInfo.nodes; } }
+        public int Nodes { get { return this._headerInfo.Nodes; } }
 
         /// <summary>Get the number of links in the file.</summary>
         /// <value>Number of links.</value>
-        public int Links { get { return this._headerInfo.links; } }
+        public int Links { get { return this._headerInfo.Links; } }
 
-        public long ReportStart { get { return this._headerInfo.rstart; } }
+        public long ReportStart { get { return this._headerInfo.Rstart; } }
 
-        public long ReportStep { get { return this._headerInfo.rstep; } }
+        public long ReportStep { get { return this._headerInfo.Rstep; } }
 
-        public long Duration { get { return this._headerInfo.duration; } }
+        public long Duration { get { return this._headerInfo.Duration; } }
 
         ///<summary>Get step snapshot iterator.</summary>
         /// <returns>StepSnapshot iterator.</returns>
@@ -115,7 +115,7 @@ namespace org.addition.epanet.hydraulic.io {
                         yield return stp;
 
                     }
-                    while (stp.getStep() != 0);
+                    while (stp.Step != 0);
                 }
             }
         }

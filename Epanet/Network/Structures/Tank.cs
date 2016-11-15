@@ -17,7 +17,7 @@
 
 using System;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic tank structure.</summary>
     public class Tank:Node {

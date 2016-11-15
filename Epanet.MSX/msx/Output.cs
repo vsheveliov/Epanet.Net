@@ -17,13 +17,13 @@
 
 using System.IO;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class Output {
 
         public void LoadDependencies(EpanetMSX epa) {
             this.msx = epa.Network;
-            quality = epa.Quality;
+            this.quality = epa.Quality;
         }
 
         ///<summary>MSX project data</summary>
@@ -44,11 +44,11 @@ namespace org.addition.epanet.msx {
         /// <summary>Opens an MSX binary output file.</summary>
         public int MSXout_open(string output) {
             var stream = File.OpenWrite(output);
-            outStream = new BinaryWriter(stream);
+            this.outStream = new BinaryWriter(stream);
 
             // write initial results to file
             this.msx.Nperiods = 0;
-            MSXout_saveInitialResults(stream);
+            this.MSXout_saveInitialResults(stream);
             return 0;
         }
 
@@ -82,8 +82,8 @@ namespace org.addition.epanet.msx {
             //}
 
             //outStream.close();
-            ResultsOffset = 0; // output.length();
-            outStream = new BinaryWriter(output);
+            this.ResultsOffset = 0; // output.length();
+            this.outStream = new BinaryWriter(output);
 
 
             this.nodeBytesPerPeriod = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]
@@ -109,7 +109,7 @@ namespace org.addition.epanet.msx {
             //DataOutputStream dout = (DataOutputStream)MSX.TmpOutFile.getFileIO();
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++) {
-                    x = quality.MSXqual_getNodeQual(j, i);
+                    x = this.quality.MSXqual_getNodeQual(j, i);
                     //if(j==462){
                     //    System.out.println("462 : " + x);
                     //}
@@ -117,16 +117,16 @@ namespace org.addition.epanet.msx {
                     //    System.out.println("79 : " + x);
                     //}
                     try {
-                        outStream.Write((float)x); //fwrite(&x, sizeof(REAL4), 1, MSX.TmpOutFile.file);
+                        this.outStream.Write((float)x); //fwrite(&x, sizeof(REAL4), 1, MSX.TmpOutFile.file);
                     }
                     catch (IOException) {}
                 }
             }
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) {
-                    x = quality.MSXqual_getLinkQual(j, i);
+                    x = this.quality.MSXqual_getLinkQual(j, i);
                     try {
-                        outStream.Write((float)x); //fwrite(&x, sizeof(REAL4), 1, MSX.TmpOutFile.file);
+                        this.outStream.Write((float)x); //fwrite(&x, sizeof(REAL4), 1, MSX.TmpOutFile.file);
                     }
                     catch (IOException) {}
                 }
@@ -156,10 +156,10 @@ namespace org.addition.epanet.msx {
 
             // Write closing records to the file
             try {
-                outStream.Write((int)ResultsOffset);
-                outStream.Write((int)this.msx.Nperiods);
-                outStream.Write((int)this.msx.ErrCode);
-                outStream.Write((int)magic);
+                this.outStream.Write((int)this.ResultsOffset);
+                this.outStream.Write((int)this.msx.Nperiods);
+                this.outStream.Write((int)this.msx.ErrCode);
+                this.outStream.Write((int)magic);
             }
             catch (IOException) {}
             return 0;
@@ -168,7 +168,7 @@ namespace org.addition.epanet.msx {
         /// <summary>Retrieves a result for a specific node from the MSX binary output file.</summary>
         public float MSXout_getNodeQual(BinaryReader raf, int k, int j, int m) {
             float c = 0.0f;
-            long bp = ResultsOffset + k * (this.nodeBytesPerPeriod + _linkBytesPerPeriod);
+            long bp = this.ResultsOffset + k * (this.nodeBytesPerPeriod + _linkBytesPerPeriod);
             bp += ((m - 1) * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE] + (j - 1)) * 4;
 
             try {
@@ -183,7 +183,7 @@ namespace org.addition.epanet.msx {
         /// <summary>Retrieves a result for a specific link from the MSX binary output file.</summary>
         public float MSXout_getLinkQual(BinaryReader raf, int k, int j, int m) {
             float c = 0.0f;
-            long bp = ResultsOffset + ((k + 1) * this.nodeBytesPerPeriod) + (k * _linkBytesPerPeriod);
+            long bp = this.ResultsOffset + ((k + 1) * this.nodeBytesPerPeriod) + (k * _linkBytesPerPeriod);
             bp += ((m - 1) * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + (j - 1)) * 4;
 
             try {

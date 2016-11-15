@@ -16,11 +16,11 @@
  */
 
 using System;
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
+using Epanet.Hydraulic.Structures;
+using Epanet.Network;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.hydraulic.models {
+namespace Epanet.Hydraulic.Models {
 
     ///<summary>Darcy-Weishbach model calculator.</summary>
     public class DwModelCalculator:PipeHeadModel {

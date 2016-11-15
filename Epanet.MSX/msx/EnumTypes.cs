@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx
+namespace Epanet.MSX
 {
     public static class EnumTypes
     {

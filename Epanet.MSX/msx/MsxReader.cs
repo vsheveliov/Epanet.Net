@@ -17,7 +17,7 @@
 
 using System.IO;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class MsxReader {
         private readonly long nodeBytesPerPeriod;
@@ -32,22 +32,22 @@ namespace org.addition.epanet.msx {
             this.nLinks = links;
             this.nNodes = nodes;
             this.resultsOffset = resultsOffset;
-            nodeBytesPerPeriod = nNodes * species * 4;
-            linkBytesPerPeriod = nLinks * species * 4;
+            this.nodeBytesPerPeriod = this.nNodes * species * 4;
+            this.linkBytesPerPeriod = this.nLinks * species * 4;
         }
 
-        public void Open(string output) { ouputRaf = new BinaryReader(File.OpenRead(output)); }
+        public void Open(string output) { this.ouputRaf = new BinaryReader(File.OpenRead(output)); }
 
-        public void Close() { ouputRaf.Close(); }
+        public void Close() { this.ouputRaf.Close(); }
 
         public float GetNodeQual(int period, int node, int specie) {
             float c = 0.0f;
-            long bp = resultsOffset + period * (nodeBytesPerPeriod + linkBytesPerPeriod);
-            bp += ((specie - 1) * nNodes + (node - 1)) * 4;
+            long bp = this.resultsOffset + period * (this.nodeBytesPerPeriod + this.linkBytesPerPeriod);
+            bp += ((specie - 1) * this.nNodes + (node - 1)) * 4;
 
             try {
-                ouputRaf.BaseStream.Position = bp;
-                c = ouputRaf.ReadSingle();
+                this.ouputRaf.BaseStream.Position = bp;
+                c = this.ouputRaf.ReadSingle();
             }
             catch (IOException) {}
 
@@ -57,12 +57,12 @@ namespace org.addition.epanet.msx {
         /// <summary>Retrieves a result for a specific link from the MSX binary output file.</summary>
         public float GetLinkQual(int period, int node, int specie) {
             float c = 0.0f;
-            long bp = resultsOffset + ((period + 1) * nodeBytesPerPeriod) + (period * linkBytesPerPeriod);
-            bp += ((specie - 1) * nLinks + (node - 1)) * 4;
+            long bp = this.resultsOffset + ((period + 1) * this.nodeBytesPerPeriod) + (period * this.linkBytesPerPeriod);
+            bp += ((specie - 1) * this.nLinks + (node - 1)) * 4;
 
             try {
-                ouputRaf.BaseStream.Position = bp;
-                c = ouputRaf.ReadSingle();
+                this.ouputRaf.BaseStream.Position = bp;
+                c = this.ouputRaf.ReadSingle();
             }
             catch (IOException) {}
 

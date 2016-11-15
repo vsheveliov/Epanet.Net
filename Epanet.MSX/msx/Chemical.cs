@@ -16,12 +16,12 @@
  */
 
 using System;
-using org.addition.epanet.msx.Solvers;
-using org.addition.epanet.msx.Structures;
+using Epanet.MSX.Solvers;
+using Epanet.MSX.Structures;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
-    public class Chemical:JacobianInterface, ExprVariable {
+    public class Chemical:JacobianInterface, IExprVariable {
 
         public void LoadDependencies(EpanetMSX epa) { this.msx = epa.Network; }
 
@@ -80,7 +80,6 @@ namespace org.addition.epanet.msx {
 
         ///<summary>opens the multi-species chemistry system.</summary>
         public EnumTypes.ErrorCodeType MSXchem_open() {
-            int m;
             int numWallSpecies;
             int numBulkSpecies;
             int numTankExpr;
@@ -98,15 +97,15 @@ namespace org.addition.epanet.msx {
             this.yrate = null;
             this.yequil = null;
             this.numSpecies = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES];
-            m = this.numSpecies + 1;
-            this.pipeRateSpecies = new int[m];
-            this.tankRateSpecies = new int[m];
-            this.pipeEquilSpecies = new int[m];
-            this.tankEquilSpecies = new int[m];
-            this.atol = new double[m];
-            this.rtol = new double[m];
-            this.yrate = new double[m];
-            this.yequil = new double[m];
+            int size = this.numSpecies + 1;
+            this.pipeRateSpecies = new int[size];
+            this.tankRateSpecies = new int[size];
+            this.pipeEquilSpecies = new int[size];
+            this.tankEquilSpecies = new int[size];
+            this.atol = new double[size];
+            this.rtol = new double[size];
+            this.yrate = new double[size];
+            this.yequil = new double[size];
 
             // Assign species to each type of chemical expression
             this.SetSpeciesChemistry();
@@ -122,9 +121,9 @@ namespace org.addition.epanet.msx {
             // Check if enough equations were specified
             numWallSpecies = 0;
             numBulkSpecies = 0;
-            for (m = 1; m <= this.numSpecies; m++) {
-                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.WALL) numWallSpecies++;
-                if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK) numBulkSpecies++;
+            for (int i = 1; i <= this.numSpecies; i++) {
+                if (this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL) numWallSpecies++;
+                if (this.msx.Species[i].Type == EnumTypes.SpeciesType.BULK) numBulkSpecies++;
             }
             if (numPipeExpr != this.numSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_PIPE_EXPR;
             if (numTankExpr != numBulkSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_TANK_EXPR;
@@ -134,17 +133,19 @@ namespace org.addition.epanet.msx {
             // max. number of steps to be taken,
             // 1 if automatic step sizing used (or 0 if not used)
 
-            if (this.msx.Solver == EnumTypes.SolverType.RK5) {
+            switch (this.msx.Solver) {
+            case EnumTypes.SolverType.RK5:
                 this.rk5Solver = new rk5();
                 this.rk5Solver.rk5_open(this.numSpecies, 1000, 1);
-            }
-            if (this.msx.Solver == EnumTypes.SolverType.ROS2) {
+                break;
+            case EnumTypes.SolverType.ROS2:
                 this.ros2Solver = new ros2();
                 this.ros2Solver.ros2_open(this.numSpecies, 1);
+                break;
             }
 
             // Open the algebraic eqn. solver
-            m = Math.Max(this.numPipeEquilSpecies, this.numTankEquilSpecies);
+            int m = Math.Max(this.numPipeEquilSpecies, this.numTankEquilSpecies);
             this.newton = new Newton();
             this.newton.newton_open(m);
 
@@ -170,14 +171,14 @@ namespace org.addition.epanet.msx {
             // Save tolerances of pipe rate species
             for (int i = 1; i <= this.numPipeRateSpecies; i++) {
                 int j = this.pipeRateSpecies[i];
-                this.atol[i] = this.msx.Species[j].getaTol();
-                this.rtol[i] = this.msx.Species[j].getrTol();
+                this.atol[i] = this.msx.Species[j].ATol;
+                this.rtol[i] = this.msx.Species[j].RTol;
             }
 
             // Examine each link
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
                 // Skip non-pipe links
-                if (this.msx.Link[i].getLen() == 0.0) continue;
+                if (this.msx.Link[i].Len == 0.0) continue;
 
                 // Evaluate hydraulic variables
                 this.EvalHydVariables(i);
@@ -190,8 +191,8 @@ namespace org.addition.epanet.msx {
             // Save tolerances of tank rate species
             for (int i = 1; i <= this.numTankRateSpecies; i++) {
                 int j = this.tankRateSpecies[i];
-                this.atol[i] = this.msx.Species[j].getaTol();
-                this.rtol[i] = this.msx.Species[j].getrTol();
+                this.atol[i] = this.msx.Species[j].ATol;
+                this.rtol[i] = this.msx.Species[j].RTol;
             }
 
             // Examine each tank
@@ -230,7 +231,7 @@ namespace org.addition.epanet.msx {
             this.numTankFormulaSpecies = 0;
             this.numTankEquilSpecies = 0;
             for (int i = 1; i <= this.numSpecies; i++) {
-                switch (this.msx.Species[i].getPipeExprType()) {
+                switch (this.msx.Species[i].PipeExprType) {
                 case EnumTypes.ExpressionType.RATE:
                     this.numPipeRateSpecies++;
                     this.pipeRateSpecies[this.numPipeRateSpecies] = i;
@@ -245,7 +246,7 @@ namespace org.addition.epanet.msx {
                     this.pipeEquilSpecies[this.numPipeEquilSpecies] = i;
                     break;
                 }
-                switch (this.msx.Species[i].getTankExprType()) {
+                switch (this.msx.Species[i].TankExprType) {
                 case EnumTypes.ExpressionType.RATE:
                     this.numTankRateSpecies++;
                     this.tankRateSpecies[this.numTankRateSpecies] = i;
@@ -267,8 +268,8 @@ namespace org.addition.epanet.msx {
         ///<summary>Assigns pipe chemistry expressions to tank chemistry for each chemical species.</summary>
         private void SetTankChemistry() {
             for (int i = 1; i <= this.numSpecies; i++) {
-                this.msx.Species[i].setTankExpr(this.msx.Species[i].getPipeExpr());
-                this.msx.Species[i].setTankExprType(this.msx.Species[i].getPipeExprType());
+                this.msx.Species[i].TankExpr = this.msx.Species[i].PipeExpr;
+                this.msx.Species[i].TankExprType = this.msx.Species[i].PipeExprType;
             }
 
             this.numTankRateSpecies = this.numPipeRateSpecies;
@@ -288,7 +289,7 @@ namespace org.addition.epanet.msx {
         ///<summary>Retrieves current values of hydraulic variables for the current link being analyzed.</summary>
         private void EvalHydVariables(int k) {
             double dh; // headloss in ft
-            double diam = this.msx.Link[k].getDiam(); // diameter in ft
+            double diam = this.msx.Link[k].Diam; // diameter in ft
             double av; // area per unit volume
 
             //  pipe diameter in user's units (ft or m)
@@ -312,11 +313,11 @@ namespace org.addition.epanet.msx {
             this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] *= this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
 
             //  Darcy Weisbach friction factor
-            if (this.msx.Link[k].getLen() == 0.0) this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 0.0;
+            if (this.msx.Link[k].Len == 0.0) this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 0.0;
             else {
-                dh = Math.Abs(this.msx.H[this.msx.Link[k].getN1()] - this.msx.H[this.msx.Link[k].getN2()]);
+                dh = Math.Abs(this.msx.H[this.msx.Link[k].N1] - this.msx.H[this.msx.Link[k].N2]);
                 this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 39.725 * dh * Math.Pow(diam, 5)
-                                                                  / this.msx.Link[k].getLen()
+                                                                  / this.msx.Link[k].Len
                                                                   / (this.msx.Q[k] * this.msx.Q[k]);
             }
 
@@ -334,7 +335,7 @@ namespace org.addition.epanet.msx {
                 this.hydVar[(int)EnumTypes.HydVarType.AREAVOL] = av;
             }
 
-            this.hydVar[(int)EnumTypes.HydVarType.ROUGHNESS] = this.msx.Link[k].getRoughness();
+            this.hydVar[(int)EnumTypes.HydVarType.ROUGHNESS] = this.msx.Link[k].Roughness;
                 //Feng Shang, Bug ID 8,  01/29/2008
         }
 
@@ -353,7 +354,7 @@ namespace org.addition.epanet.msx {
                 this.theSeg = seg;
                 // Store all segment species concentrations in MSX.C1
 
-                for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = this.theSeg.getC()[i];
+                for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = this.theSeg.C[i];
                 ierr = 0;
 
                 // React each reacting species over the time step
@@ -366,14 +367,14 @@ namespace org.addition.epanet.msx {
 
                             //dc = mathexpr_eval(MSX.Species[m].getPipeExpr(),
                             //        getPipeVariableValue) * tstep;
-                            dc = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this) * tstep;
+                            dc = this.msx.Species[m].PipeExpr.EvaluatePipeExp(this) * tstep;
                             //dc = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
                             //    public double getValue(int id) {return getPipeVariableValue(id);}
                             //    public int getIndex(string id) {return 0;}
                             //})* tstep;
 
-                            c = this.theSeg.getC()[m] + dc;
-                            this.theSeg.getC()[m] = Math.Max(c, 0.0);
+                            c = this.theSeg.C[m] + dc;
+                            this.theSeg.C[m] = Math.Max(c, 0.0);
                         }
                     }
 
@@ -383,9 +384,9 @@ namespace org.addition.epanet.msx {
 
                         for (int i = 1; i <= this.numPipeRateSpecies; i++) {
                             int m = this.pipeRateSpecies[i];
-                            this.yrate[i] = this.theSeg.getC()[m];
+                            this.yrate[i] = this.theSeg.C[m];
                         }
-                        dh[0] = this.theSeg.getHstep();
+                        dh[0] = this.theSeg.Hstep;
 
                         // integrate the set of rate equations
 
@@ -426,13 +427,13 @@ namespace org.addition.epanet.msx {
                         // save new concentration values of the species that reacted
 
                         for (int i = 1; i <= this.numSpecies; i++)
-                            this.theSeg.getC()[i] = this.msx.C1[i];
+                            this.theSeg.C[i] = this.msx.C1[i];
 
                         for (int i = 1; i <= this.numPipeRateSpecies; i++) {
                             int m = this.pipeRateSpecies[i];
-                            this.theSeg.getC()[m] = Math.Max(this.yrate[i], 0.0);
+                            this.theSeg.C[m] = Math.Max(this.yrate[i], 0.0);
                         }
-                        this.theSeg.setHstep(dh[0]);
+                        this.theSeg.Hstep = dh[0];
                     }
                     if (ierr < 0)
                         return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
@@ -440,7 +441,7 @@ namespace org.addition.epanet.msx {
 
                 // Compute new equilibrium concentrations within segment
 
-                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.theSeg.getC());
+                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.theSeg.C);
 
                 if (errcode != 0)
                     return errcode;
@@ -470,7 +471,7 @@ namespace org.addition.epanet.msx {
 
                 // store all segment species concentrations in MSX.C1
 
-                for (int j = 1; j <= this.numSpecies; j++) this.msx.C1[j] = this.theSeg.getC()[j];
+                for (int j = 1; j <= this.numSpecies; j++) this.msx.C1[j] = this.theSeg.C[j];
                 var ierr = 0;
 
                 // react each reacting species over the time step
@@ -480,14 +481,14 @@ namespace org.addition.epanet.msx {
                             int j = this.tankRateSpecies[i];
                             //dc = tstep * mathexpr_eval(MSX.Species[m].getTankExpr(),
                             //        getTankVariableValue);
-                            dc = tstep * this.msx.Species[j].getTankExpr().evaluateTankExp(this);
+                            dc = tstep * this.msx.Species[j].TankExpr.EvaluateTankExp(this);
                             //dc = tstep * MSX.Species[m].getTankExpr().evaluate(
                             //        new VariableInterface(){
                             //            public double getValue(int id) {return getTankVariableValue(id);}
                             //            public int getIndex(string id) {return 0;}
                             //        });
-                            c = this.theSeg.getC()[j] + dc;
-                            this.theSeg.getC()[j] = Math.Max(c, 0.0);
+                            c = this.theSeg.C[j] + dc;
+                            this.theSeg.C[j] = Math.Max(c, 0.0);
                         }
                     }
 
@@ -530,19 +531,19 @@ namespace org.addition.epanet.msx {
                         //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
                         //} );
 
-                        for (int j = 1; j <= this.numSpecies; j++) this.theSeg.getC()[j] = this.msx.C1[j];
+                        for (int j = 1; j <= this.numSpecies; j++) this.theSeg.C[j] = this.msx.C1[j];
                         for (i = 1; i <= this.numTankRateSpecies; i++) {
                             int j = this.tankRateSpecies[i];
-                            this.theSeg.getC()[j] = Math.Max(this.yrate[i], 0.0);
+                            this.theSeg.C[j] = Math.Max(this.yrate[i], 0.0);
                         }
-                        this.theSeg.setHstep(dh[0]);
+                        this.theSeg.Hstep = dh[0];
                     }
                     if (ierr < 0)
                         return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
                 }
 
                 // compute new equilibrium concentrations within segment
-                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.theSeg.getC());
+                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.theSeg.C);
 
                 if (errcode != 0)
                     return errcode;
@@ -613,11 +614,11 @@ namespace org.addition.epanet.msx {
         /// formulas involving other known species concentrations.
         /// </summary>
         private void EvalPipeFormulas(double[] c) {
-            int m;
-            for (m = 1; m <= this.numSpecies; m++) this.msx.C1[m] = c[m];
-            for (m = 1; m <= this.numSpecies; m++) {
-                if (this.msx.Species[m].getPipeExprType() == EnumTypes.ExpressionType.FORMULA) {
-                    c[m] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+            for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
+
+            for (int i = 1; i <= this.numSpecies; i++) {
+                if (this.msx.Species[i].PipeExprType == EnumTypes.ExpressionType.FORMULA) {
+                    c[i] = this.msx.Species[i].PipeExpr.EvaluatePipeExp(this);
                     //c[m] = MSX.Species[m].getPipeExpr().evaluate( new VariableInterface(){
                     //    public double getValue(int id){return getPipeVariableValue(id);}
                     //    public int getIndex(string id){return 0;}
@@ -635,8 +636,8 @@ namespace org.addition.epanet.msx {
             for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
 
             for (int i = 1; i <= this.numSpecies; i++) {
-                if (this.msx.Species[i].getTankExprType() == EnumTypes.ExpressionType.FORMULA) {
-                    c[i] = this.msx.Species[i].getPipeExpr().evaluateTankExp(this);
+                if (this.msx.Species[i].TankExprType == EnumTypes.ExpressionType.FORMULA) {
+                    c[i] = this.msx.Species[i].PipeExpr.EvaluateTankExp(this);
                     //c[m] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
                     //    public double getValue(int id){return getTankVariableValue(id);}
                     //    public int getIndex(string id){return 0;}
@@ -646,13 +647,13 @@ namespace org.addition.epanet.msx {
         }
 
         ///<summary>Finds the value of a species, a parameter, or a constant for the pipe link being analyzed.</summary>
-        public double getPipeVariableValue(int i) {
+        public double GetPipeVariableValue(int i) {
             // WQ species have index i between 1 & # of species
             // and their current values are stored in vector MSX.C1
             if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
                 // If species represented by a formula then evaluate it
-                if (this.msx.Species[i].getPipeExprType() == EnumTypes.ExpressionType.FORMULA) {
-                    return this.msx.Species[i].getPipeExpr().evaluatePipeExp(this);
+                if (this.msx.Species[i].PipeExprType == EnumTypes.ExpressionType.FORMULA) {
+                    return this.msx.Species[i].PipeExpr.EvaluatePipeExp(this);
                     //return MSX.Species[i].getPipeExpr().evaluate(new VariableInterface(){
                     //    public double getValue(int id){return getPipeVariableValue(id);}
                     //    public int getIndex(string id){return 0;}
@@ -664,7 +665,7 @@ namespace org.addition.epanet.msx {
             else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // intermediate term expressions come next
             {
                 i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
-                return this.msx.Term[i].getExpr().evaluatePipeExp(this);
+                return this.msx.Term[i].Expr.EvaluatePipeExp(this);
                 //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id){return getPipeVariableValue(id);}
                 //    public int getIndex(string id){return 0;}
@@ -673,12 +674,12 @@ namespace org.addition.epanet.msx {
             else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]) // reaction parameter indexes come after that
             {
                 i -= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
-                return this.msx.Link[this.theLink].getParam()[i];
+                return this.msx.Link[this.theLink].Param[i];
             }
             else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // followed by constants
             {
                 i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
-                return this.msx.Const[i].getValue();
+                return this.msx.Const[i].Value;
             }
             else // and finally by hydraulic variables
             {
@@ -689,12 +690,12 @@ namespace org.addition.epanet.msx {
         }
 
         ///<summary>Finds the value of a species, a parameter, or a constant for the current node being analyzed.</summary>
-        public double getTankVariableValue(int i) {
+        public double GetTankVariableValue(int i) {
             // WQ species have index i between 1 & # of species and their current values are stored in vector MSX.C1
             if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
                 // If species represented by a formula then evaluate it
-                if (this.msx.Species[i].getTankExprType() == EnumTypes.ExpressionType.FORMULA) {
-                    return this.msx.Species[i].getTankExpr().evaluateTankExp(this);
+                if (this.msx.Species[i].TankExprType == EnumTypes.ExpressionType.FORMULA) {
+                    return this.msx.Species[i].TankExpr.EvaluateTankExp(this);
                     //return MSX.Species[i].getTankExpr().evaluate(new VariableInterface() {
                     //    public double getValue(int id) {return getTankVariableValue(id);}
                     //    public int getIndex(string id) {return 0;}});
@@ -705,7 +706,7 @@ namespace org.addition.epanet.msx {
             else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // Intermediate term expressions come next
             {
                 i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
-                return this.msx.Term[i].getExpr().evaluateTankExp(this);
+                return this.msx.Term[i].Expr.EvaluateTankExp(this);
                 //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id) {return getTankVariableValue(id);}
                 //    public int getIndex(string id) {return 0;}
@@ -725,7 +726,7 @@ namespace org.addition.epanet.msx {
             else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // and then come constants
             {
                 i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
-                return this.msx.Const[i].getValue();
+                return this.msx.Const[i].Value;
             }
             else
                 return 0.0;
@@ -755,7 +756,7 @@ namespace org.addition.epanet.msx {
             for (int i = 1; i <= n; i++) {
                 int m = this.pipeRateSpecies[i];
                 //deriv[i] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
-                deriv[i] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                deriv[i] = this.msx.Species[m].PipeExpr.EvaluatePipeExp(this);
                 //deriv[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id) {return getPipeVariableValue(id);}
                 //    public int getIndex(string id) {return 0;}
@@ -786,7 +787,7 @@ namespace org.addition.epanet.msx {
             for (int i = 1; i <= n; i++) {
                 int m = this.pipeRateSpecies[i];
                 //deriv[i+off] = mathexpr_eval(MSX.Species[m].getPipeExpr(), getPipeVariableValue);
-                deriv[i + off] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                deriv[i + off] = this.msx.Species[m].PipeExpr.EvaluatePipeExp(this);
                 //deriv[i+off] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id) {return getPipeVariableValue(id);}
                 //    public int getIndex(string id) {return 0;}
@@ -816,7 +817,7 @@ namespace org.addition.epanet.msx {
             // Evaluate each tank reaction expression
             for (int i = 1; i <= n; i++) {
                 int m = this.tankRateSpecies[i];
-                deriv[i] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                deriv[i] = this.msx.Species[m].TankExpr.EvaluateTankExp(this);
                 //deriv[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
                 //    public double getValue(int id) {return getTankVariableValue(id); }
                 //    public int getIndex(string id) {return 0;}
@@ -847,7 +848,7 @@ namespace org.addition.epanet.msx {
             for (int i = 1; i <= n; i++) {
                 int m = this.tankRateSpecies[i];
                 //deriv[i+off] = mathexpr_eval(MSX.Species[m].getTankExpr(), getTankVariableValue);
-                deriv[i + off] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                deriv[i + off] = this.msx.Species[m].TankExpr.EvaluateTankExp(this);
                 //deriv[i+off] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
                 //    public double getValue(int id) {return getTankVariableValue(id); }
                 //    public int getIndex(string id) {return 0;}
@@ -870,7 +871,7 @@ namespace org.addition.epanet.msx {
 
             for (int i = 1; i <= n; i++) {
                 int m = this.pipeEquilSpecies[i];
-                f[i] = this.msx.Species[m].getPipeExpr().evaluatePipeExp(this);
+                f[i] = this.msx.Species[m].PipeExpr.EvaluatePipeExp(this);
                 //f[i] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface() {
                 //    public double getValue(int id){return getPipeVariableValue(id);}
                 //    public int getIndex(string id){return 0;}
@@ -890,7 +891,7 @@ namespace org.addition.epanet.msx {
             // Evaluate each tank equilibrium expression
             for (int i = 1; i <= n; i++) {
                 int m = this.tankEquilSpecies[i];
-                f[i] = this.msx.Species[m].getTankExpr().evaluateTankExp(this);
+                f[i] = this.msx.Species[m].TankExpr.EvaluateTankExp(this);
                 //f[i] = MSX.Species[m].getTankExpr().evaluate(new VariableInterface() {
                 //    public double getValue(int id) {return getTankVariableValue(id);}
                 //    public int getIndex(string id) {return 0;}

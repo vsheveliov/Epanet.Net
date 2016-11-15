@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Solvers {
+namespace Epanet.MSX.Solvers {
 
 
     public abstract class JacobianInterface {
@@ -28,4 +28,5 @@ namespace org.addition.epanet.msx.Solvers {
 
         public abstract void solve(double t, double[] y, int n, double[] f, int off, Operation op);
     }
+
 }

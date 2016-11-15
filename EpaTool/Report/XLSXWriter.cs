@@ -22,13 +22,13 @@ using System.IO;
 using System.IO.Packaging;
 using System.Xml;
 
-namespace EpaTool.Report {
+namespace Epanet.Report {
     /// <summary>
     /// See also http://msdn.microsoft.com/en-us/library/documentformat.openxml.spreadsheet(v=office.14).aspx
     /// </summary>
     internal sealed class XLSXWriter : IDisposable {
         private const string SCHEMA_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-        
+
         private const string RELATIONSHIP_ROOT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         private const string NS_ROOT = "application/vnd.openxmlformats-officedocument.spreadsheetml";
 
@@ -64,8 +64,8 @@ namespace EpaTool.Report {
 
         private void WriteSharedStringsXml() {
             int count = 0;
-            
-            foreach (var x in this._sheets) {
+
+            foreach(var x in this._sheets) {
                 count += x.WordCount;
             }
 
@@ -85,11 +85,11 @@ namespace EpaTool.Report {
             sstNode.SetAttribute("uniqueCount", this._sharedStrings.Count.ToString(NumberFormatInfo.InvariantInfo));
             sharedStringsDoc.AppendChild(sstNode);
 
-            var words = new List<KeyValuePair<string,int>>(this._sharedStrings);
-            words.Sort((a,b) => a.Value.CompareTo(b.Value));
+            var words = new List<KeyValuePair<string, int>>(this._sharedStrings);
+            words.Sort((a, b) => a.Value.CompareTo(b.Value));
 
-            foreach (KeyValuePair<string, int> kvp in words) {
-                
+            foreach(KeyValuePair<string, int> kvp in words) {
+
                 //Create and append the si node.
                 XmlElement siNode = sharedStringsDoc.CreateElement("si");
                 sstNode.AppendChild(siNode);
@@ -130,12 +130,12 @@ namespace EpaTool.Report {
             workBook.SetAttribute("xmlns", SCHEMA_MAIN);
             workBook.SetAttribute("xmlns:r", RELATIONSHIP_ROOT);
             workbookDoc.AppendChild(workBook);
-            
+
             //Create and append the sheets node to the workBook node.
             XmlElement sheets = workbookDoc.CreateElement("sheets");
             workBook.AppendChild(sheets);
 
-            for (int i = 1; i <= this._sheets.Count; i++) {
+            for(int i = 1; i <= this._sheets.Count; i++) {
                 string sid = i.ToString(NumberFormatInfo.InvariantInfo);
                 //Create and append the sheet node to the sheets node.
                 XmlElement sheet = workbookDoc.CreateElement("sheet");
@@ -148,17 +148,17 @@ namespace EpaTool.Report {
             Uri uri = PackUriHelper.CreatePartUri(new Uri("xl/workbook.xml", UriKind.Relative));
             var part = this._package.CreatePart(uri, NS_WORKBOOK, CompressionOption.Maximum);
             workbookDoc.Save(part.GetStream(FileMode.Create, FileAccess.Write));
-     
-            this._package.CreateRelationship(uri, TargetMode.Internal, RELATIONSHIP_WORKBOOK, "rId1" );
+
+            this._package.CreateRelationship(uri, TargetMode.Internal, RELATIONSHIP_WORKBOOK, "rId1");
         }
 
         public void Save(string outputFile) {
             this._package = Package.Open(outputFile, FileMode.Create);
-            
+
             this.WriteWorkbookXml();
             this.WriteSharedStringsXml();
 
-            for (int i = 0; i < this._sheets.Count; i++) {
+            for(int i = 0; i < this._sheets.Count; i++) {
                 this.WriteWorksheet(this._sheets[i], i + 1);
             }
 
@@ -173,7 +173,7 @@ namespace EpaTool.Report {
         }
 
         public void Dispose() {
-            if (this._package != null) {
+            if(this._package != null) {
                 this._package.Close();
                 this._package = null;
             }
@@ -182,12 +182,12 @@ namespace EpaTool.Report {
         }
 
         private static string GetColumnName(int columnNumber) {
-            if (columnNumber > EXCEL_MAX_COLUMNS || columnNumber < 0)
+            if(columnNumber > EXCEL_MAX_COLUMNS || columnNumber < 0)
                 throw new ArgumentOutOfRangeException("columnNumber");
-           
+
             string columnName = string.Empty;
-                       
-            for (int dividend = columnNumber; dividend > 0; ) {
+
+            for(int dividend = columnNumber; dividend > 0; ) {
                 int modulo = (dividend - 1) % 26;
                 columnName = (char)(65 + modulo) + columnName;
                 dividend = (dividend - modulo) / 26;
@@ -209,7 +209,7 @@ namespace EpaTool.Report {
                 this._transposedMode = transposedMode;
                 this._sharedStrings = sharedStrings;
                 this._xml = new XmlDocument { PreserveWhitespace = PRESERVE_WHITESPACE };
-                
+
                 // Get a reference to the root node, and then add the XML declaration.
                 XmlElement wsRoot = this._xml.DocumentElement;
                 XmlDeclaration wsxmldecl = this._xml.CreateXmlDeclaration("1.0", "UTF-8", "yes");
@@ -232,7 +232,7 @@ namespace EpaTool.Report {
             public string Name { get { return this._name; } }
 
             public void AddData(params object[] row) {
-                if (this._transposedMode)
+                if(this._transposedMode)
                     this.AddColumn(row);
                 else
                     this.AddRow(row);
@@ -252,7 +252,7 @@ namespace EpaTool.Report {
 
                 int col = 0;
 
-                foreach (object o in row) {
+                foreach(object o in row) {
                     string cellAddr = GetColumnName(col + 1) + rowName;
                     this.AddCell(rNode, o, cellAddr);
 
@@ -264,10 +264,10 @@ namespace EpaTool.Report {
                 XmlElement sheetData = this._xml["worksheet"]["sheetData"];
                 XmlNodeList rows = sheetData.GetElementsByTagName("row");
 
-                if (rows.Count < row.Length) {
-                    for (int i = rows.Count; i < row.Length; i++) {
+                if(rows.Count < row.Length) {
+                    for(int i = rows.Count; i < row.Length; i++) {
                         XmlElement rNode = this._xml.CreateElement("row");
-                        rNode.SetAttribute("r", (i+1).ToString(NumberFormatInfo.InvariantInfo));
+                        rNode.SetAttribute("r", (i + 1).ToString(NumberFormatInfo.InvariantInfo));
                         // rNode.SetAttribute("spans", "1:" + colspan);
                         sheetData.AppendChild(rNode);
                     }
@@ -278,7 +278,7 @@ namespace EpaTool.Report {
                 int iRow = 1;
                 string columnName = GetColumnName(this._rowsAdded);
 
-                foreach (object o in row) {
+                foreach(object o in row) {
                     XmlNode rNode = rows[iRow - 1];
                     string cellAddr = columnName + iRow.ToString(NumberFormatInfo.InvariantInfo);
 
@@ -294,33 +294,34 @@ namespace EpaTool.Report {
                 // if (!(value is ValueType)) return false;
 
                 var v = value as IConvertible;
-                if (v == null) return null;
+                if(v == null)
+                    return null;
 
-                switch (v.GetTypeCode()) {
-                    case TypeCode.SByte:
-                    case TypeCode.Byte:
-                    case TypeCode.Int16:
-                    case TypeCode.UInt16:
-                    case TypeCode.Int32:
-                    case TypeCode.UInt32:
-                    case TypeCode.Int64:
-                    case TypeCode.UInt64:
-                    case TypeCode.Single:
-                    case TypeCode.Double:
-                    case TypeCode.Decimal:
-                        return v.ToString(NumberFormatInfo.InvariantInfo);
+                switch(v.GetTypeCode()) {
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Decimal:
+                return v.ToString(NumberFormatInfo.InvariantInfo);
 
-                    default:
-                        return null;
+                default:
+                return null;
                 }
             }
 
             private void AddCell(XmlNode rNode, object o, string cellAddr) {
-      
+
                 string dataType;
                 string dataValue = NumberToStringInvariant(o);
 
-                if (!string.IsNullOrEmpty(dataValue)) {
+                if(!string.IsNullOrEmpty(dataValue)) {
                     dataType = "n";
                 }
                 else {
@@ -329,7 +330,7 @@ namespace EpaTool.Report {
                     int idx;
 
                     lock(this._sharedStrings) {
-                        if (!this._sharedStrings.TryGetValue(s, out idx)) {
+                        if(!this._sharedStrings.TryGetValue(s, out idx)) {
                             idx = this._sharedStrings.Count;
                             this._sharedStrings.Add(s, idx);
                         }
@@ -343,7 +344,7 @@ namespace EpaTool.Report {
 
                 //Create and add the column node.
                 XmlElement cNode = this._xml.CreateElement("c");
-                
+
                 cNode.SetAttribute("r", cellAddr);
                 cNode.SetAttribute("t", dataType);
                 rNode.AppendChild(cNode);
@@ -357,9 +358,10 @@ namespace EpaTool.Report {
 
         }
 
-        public Spreadsheet this[int i] { 
-            get { return this._sheets[i]; } 
-            set { this._sheets[i] = value; } }
+        public Spreadsheet this[int i] {
+            get { return this._sheets[i]; }
+            set { this._sheets[i] = value; }
+        }
     }
 
 }

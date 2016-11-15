@@ -16,9 +16,9 @@
  */
 
 using System.Collections.Generic;
-using org.addition.epanet.network.structures;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.quality.structures {
+namespace Epanet.Quality.Structures {
 
     ///<summary>Wrapper class for the Tank in the water quality simulation.</summary>
     public class QualityTank:QualityNode {
@@ -27,7 +27,7 @@ namespace org.addition.epanet.quality.structures {
 
         ///<summary>Initialize tank properties from the original tank node.</summary>
         public QualityTank(Node node):base(node) {
-            segments = new LinkedList<QualitySegment>();
+            this.segments = new LinkedList<QualitySegment>();
             this.Volume = ((Tank)node).V0;
             this.Concentration = node.C0[0];
         }

@@ -17,126 +17,86 @@
 
 using System;
 
-namespace org.addition.epanet.msx.Solvers {
+namespace Epanet.MSX.Solvers {
 
-public class Newton {
+    public class Newton {
 
-    int      Nmax;      // max. number of equations
-    int      []Indx;    // permutation vector of row indexes
-    double   []F;       // function & adjustment vector
-    double   []W;       // work vector
-    double   [][]J;     // Jacobian matrix
+        ///<summary>max. number of equations</summary>
+        int Nmax;
 
-    ///<summary>opens the algebraic solver to handle a system of n equations.</summary>
-    public void newton_open(int n)
-    {
-        Nmax    = 0;
-        Indx    = null;
-        F       = null;
-        W       = null;
-        Indx	= new int[n+1];
-        F   	= new double[n+1];
-        W		= new double[n+1];
-        J       = Utilities.CreateMatrix(n+1, n+1);
-        Nmax = n;
-    }
+        ///<summary>permutation vector of row indexes</summary>
+        int[] Indx;
+
+        ///<summary>function & adjustment vector</summary>
+        double[] F;
+
+        ///<summary>work vector</summary>
+        double[] W;
+
+        ///<summary>Jacobian matrix</summary>
+        double[][] J;
 
 
-    //=============================================================================
-    // uses newton-raphson iterations to solve n nonlinear eqns.
-#if COMMENTED2
-    public int newton_solve(double[] x, int n, int maxit, int numsig, JacobianFunction func)
-    {
-        int i, k;
-        double errx, errmax, cscal, relconvg = Math.Pow(10.0, -numsig);
-
-        // --- check that system was sized adequetely
-
-        if ( n > Nmax ) return -3;
-
-        // --- use up to maxit iterations to find a solution
-
-        for (k=1; k<=maxit; k++)
-        {
-            // --- evaluate the Jacobian matrix
-
-            Utilities.jacobian(x, n, F, W, J, func);
-
-            // --- factorize the Jacobian
-
-            if ( Utilities.factorize(J, n, W, Indx) ==0 ) return -1;
-
-            // --- solve for the updates to x (returned in F)
-
-            for (i=1; i<=n; i++) F[i] = -F[i];
-            Utilities.solve(J, n, Indx, F);
-
-            // --- update solution x & check for convergence
-
-            errmax = 0.0;
-            for (i=1; i<=n; i++)
-            {
-                cscal = x[i];
-                if (cscal < relconvg) cscal = relconvg;
-                x[i] += F[i];
-                errx = Math.Abs(F[i]/cscal);
-                if (errx > errmax) errmax = errx;
-            }
-            if (errmax <= relconvg) return k;
+        ///<summary>opens the algebraic solver to handle a system of n equations.</summary>
+        public void newton_open(int n) {
+            this.Nmax = 0;
+            this.Indx = null;
+            this.F = null;
+            this.W = null;
+            this.Indx = new int[n + 1];
+            this.F = new double[n + 1];
+            this.W = new double[n + 1];
+            this.J = Utilities.CreateMatrix(n + 1, n + 1);
+            this.Nmax = n;
         }
 
-        // --- return error code if no convergence
+        ///<summary>uses newton-raphson iterations to solve n nonlinear eqns.</summary>
+        public int newton_solve(
+            double[] x,
+            int n,
+            int maxit,
+            int numsig,
+            JacobianInterface jint,
+            JacobianInterface.Operation op) {
+            double errx, errmax, cscal, relconvg = Math.Pow(10.0, -numsig);
 
-        return -2;
-    }
+            // check that system was sized adequetely
 
-#endif
+            if (n > this.Nmax) return -3;
 
-    ///<summary>uses newton-raphson iterations to solve n nonlinear eqns.</summary>
-    public int newton_solve(double[] x, int n, int maxit, int numsig,
-                     JacobianInterface jint, JacobianInterface.Operation op)
-    {
-        int i, k;
-        double errx, errmax, cscal, relconvg = Math.Pow(10.0, -numsig);
+            // use up to maxit iterations to find a solution
 
-        // check that system was sized adequetely
+            for (int i = 1; i <= maxit; i++) {
+                // evaluate the Jacobian matrix
 
-        if ( n > Nmax ) return -3;
+                Utilities.Jacobian(x, n, this.F, this.W, this.J, jint, op);
 
-        // use up to maxit iterations to find a solution
+                // factorize the Jacobian
 
-        for (k=1; k<=maxit; k++)
-        {
-            // evaluate the Jacobian matrix
+                if (Utilities.Factorize(this.J, n, this.W, this.Indx) == 0) return -1;
 
-            Utilities.Jacobian(x, n, F, W, J, jint,op);
+                // solve for the updates to x (returned in F)
 
-            // factorize the Jacobian
+                for (int j = 1; j <= n; j++) this.F[j] = -this.F[j];
+                Utilities.Solve(this.J, n, this.Indx, this.F);
 
-            if ( Utilities.Factorize(J, n, W, Indx) ==0 ) return -1;
+                // update solution x & check for convergence
 
-            // solve for the updates to x (returned in F)
-
-            for (i=1; i<=n; i++) F[i] = -F[i];
-            Utilities.Solve(J, n, Indx, F);
-
-            // update solution x & check for convergence
-
-            errmax = 0.0;
-            for (i=1; i<=n; i++)
-            {
-                cscal = x[i];
-                if (cscal < relconvg) cscal = relconvg;
-                x[i] += F[i];
-                errx = Math.Abs(F[i]/cscal);
-                if (errx > errmax) errmax = errx;
+                errmax = 0.0;
+                for (int j = 1; j <= n; j++) {
+                    cscal = x[j];
+                    if (cscal < relconvg) cscal = relconvg;
+                    x[j] += this.F[j];
+                    errx = Math.Abs(this.F[j] / cscal);
+                    if (errx > errmax) errmax = errx;
+                }
+                if (errmax <= relconvg) return i;
             }
-            if (errmax <= relconvg) return k;
+
+            // return error code if no convergence
+
+            return -2;
         }
-
-        // return error code if no convergence
-
-        return -2;
     }
-}
+
 }

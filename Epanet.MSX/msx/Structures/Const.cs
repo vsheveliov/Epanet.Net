@@ -15,32 +15,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System;
+namespace Epanet.MSX.Structures {
 
-namespace org.addition.epanet.msx.Structures {
-
-// MATH EXPRESSION CONSTANT OBJECT
-public class Const {
-    private string  id;      // name
-    private double  value;   // value
-
-    public Const() {
+    /// <summary>Math expression constant object.</summary>
+    public class Const {
+        public string Id { get; set; }
+        public double Value { get; set; }
     }
 
-    public string getId() {
-        return id;
-    }
-
-    public void setId(string id) {
-        this.id = id;
-    }
-
-    public double getValue() {
-        return value;
-    }
-
-    public void setValue(double value) {
-        this.value = value;
-    }
-}
 }

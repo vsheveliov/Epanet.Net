@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.hydraulic.models {
+namespace Epanet.Hydraulic.Models {
 
     ///<summary>Chezy-Manning model calculator, which is implemented through the Hazen-Williams model.</summary>
 

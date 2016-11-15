@@ -17,7 +17,7 @@
 
 using System;
 
-namespace org.addition.epanet.util {
+namespace Epanet.Util {
 
     ///<summary>Epanet exception codes handler.</summary>
     public class ENException:Exception {
@@ -30,14 +30,14 @@ namespace org.addition.epanet.util {
 
         ///<summary>Get error code.</summary>
         /// <returns>Code id.</returns>
-        public ErrorCode getCodeID() { return codeID; }
+        public ErrorCode getCodeID() { return this.codeID; }
 
         ///<summary>Contructor from error code id.</summary>
         ///<param name="id">Error code id.</param>
 
         public ENException(ErrorCode id) {
-            arguments = null;
-            codeID = id;
+            this.arguments = null;
+            this.codeID = id;
         }
 
         /// <summary>Contructor from error code id and multiple arguments.</summary>
@@ -45,14 +45,14 @@ namespace org.addition.epanet.util {
         /// <param name="arg">Extra arguments.</param>
         ///  
         public ENException(ErrorCode id, params object[] arg) {
-            codeID = id;
-            arguments = arg;
+            this.codeID = id;
+            this.arguments = arg;
         }
 
         ///<summary>Contructor from other exception and multiple arguments.</summary>
         public ENException(ENException e, params object[] arg) {
-            arguments = arg;
-            codeID = e.getCodeID();
+            this.arguments = arg;
+            this.codeID = e.getCodeID();
         }
 
         ///<summary>Get arguments array.</summary>
@@ -74,10 +74,10 @@ namespace org.addition.epanet.util {
 
 
                 if (str == null)
-                    return string.Format("Unknown error message ({0})", codeID);
+                    return string.Format("Unknown error message ({0})", this.codeID);
 
-                if (arguments != null)
-                    return string.Format(str, arguments);
+                if (this.arguments != null)
+                    return string.Format(str, this.arguments);
 
                 return str;
             }

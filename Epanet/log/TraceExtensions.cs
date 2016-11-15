@@ -17,7 +17,7 @@
 
 using System.Diagnostics;
 
-namespace org.addition.epanet.log {
+namespace Epanet.Log {
     /// <summary>
     /// Shortcut methods for <see cref="TraceSource"/> logger
     /// </summary>

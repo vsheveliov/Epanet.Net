@@ -15,12 +15,11 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-
 using System.Collections.Generic;
 using System.Linq;
-using org.addition.epanet.network.structures;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.network {
+namespace Epanet.Network {
 
 
     ///<summary>Hydraulic network structure.</summary>

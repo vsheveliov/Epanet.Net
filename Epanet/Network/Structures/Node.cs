@@ -18,7 +18,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic node structure  (junction)</summary>
 
@@ -43,7 +43,7 @@ namespace org.addition.epanet.network.structures {
             this._id = id;
             this.C0 = new double[1];
             this.Comment = "";
-            initDemand = 0;
+            this.initDemand = 0;
             this.Type = NodeType.JUNC;
             this.Position = EnPoint.Invalid;
         }

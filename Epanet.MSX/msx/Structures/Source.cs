@@ -15,61 +15,31 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
 
-public class Source {
-    private EnumTypes.SourceType    type;               // sourceType
-    private int                     species;            // species index
-    private double                  c0;                 // base concentration
-    private int                     pattern;            // time pattern index
-    private double                  massRate;           // actual mass flow rate
+    public class Source {
+        ///<summary>species index</summary>
+        public int Species { set; get; }
+       
+        ///<summary>base concentration</summary>
+        public double C0 { get; set; }
+      
+        ///<summary>time pattern index</summary>
+        public int Pattern { get; set; }
+      
+        ///<summary>actual mass flow rate</summary>
+        public double MassRate { get; set; }
 
-    public int getSpecies() {
-        return species;
+        ///<summary>sourceType</summary>
+        public EnumTypes.SourceType Type { get; set; }
+
+        public Source() {
+            this.Type = EnumTypes.SourceType.CONCEN;
+            this.Species = 0;
+            this.C0 = 0;
+            this.Pattern = 0;
+            this.MassRate = 0;
+        }
     }
 
-    public void setSpecies(int species) {
-        this.species = species;
-    }
-
-    public double getC0() {
-        return c0;
-    }
-
-    public void setC0(double c0) {
-        this.c0 = c0;
-    }
-
-    public int getPattern() {
-        return pattern;
-    }
-
-    public void setPattern(int pattern) {
-        this.pattern = pattern;
-    }
-
-    public double getMassRate() {
-        return massRate;
-    }
-
-    public void setMassRate(double sMass) {
-        this.massRate = sMass;
-    }
-
-    public EnumTypes.SourceType getType() {
-        return type;
-    }
-
-    public void setType(EnumTypes.SourceType type) {
-        this.type = type;
-    }
-
-    public Source() {
-        type = EnumTypes.SourceType.CONCEN;
-        species = 0;
-        c0 = 0;
-        pattern = 0;
-        massRate = 0;
-    }
-}
 }

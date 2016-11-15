@@ -18,7 +18,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic link structure (pipe)</summary>
     public class Link:IComparable<Link> {
@@ -180,7 +180,7 @@ namespace org.addition.epanet.network.structures {
             double realkm = this.Km * Math.Pow(this.Diameter, 4.0) / 0.02517;
             this.Diameter = diameter;
             this.Km = 0.02517 * realkm / Math.Pow(diameter, 4);
-            initResistance(net.PropertiesMap.Formflag, net.PropertiesMap.Hexp);
+            this.initResistance(net.PropertiesMap.Formflag, net.PropertiesMap.Hexp);
         }
 
 #if DEBUG // NUCONVERT

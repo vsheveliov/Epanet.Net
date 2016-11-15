@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     public static class NUConvert {
         public static double convertArea(PropertiesMap.UnitsType type, double value) {

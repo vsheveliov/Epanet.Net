@@ -15,11 +15,11 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using org.addition.epanet.network;
-using org.addition.epanet.network.io;
-using org.addition.epanet.network.structures;
+using Epanet.Network;
+using Epanet.Network.IO;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.util {
+namespace Epanet.Util {
     public static class EnumsTxt {
 
         public static string ParseStr(this Link.LinkType value) {
@@ -412,9 +412,9 @@ namespace org.addition.epanet.util {
         }
 
 
-        public static string parseStr(this Network.SectType value)
+        public static string parseStr(this Network.Network.SectType value)
         {
-            if (value < Network.SectType.TITLE || value > Network.SectType.END) {
+            if (value < Network.Network.SectType.TITLE || value > Network.Network.SectType.END) {
                 // throw new System.ArgumentOutOfRangeException("value");
                 return null;
             }
@@ -422,74 +422,74 @@ namespace org.addition.epanet.util {
             return "[" + value + "]";
         }
         
-        public static string reportStr(this Network.SectType value) {
+        public static string reportStr(this Network.Network.SectType value) {
             switch (value) {        
-                case Network.SectType.BACKDROP:    return Keywords.t_BACKDROP;
-                case Network.SectType.CONTROLS:    return Keywords.t_CONTROL;
-                case Network.SectType.COORDINATES: return Keywords.t_COORD;
-                case Network.SectType.CURVES:      return Keywords.t_CURVE;
-                case Network.SectType.DEMANDS:     return Keywords.t_DEMAND;
-                case Network.SectType.EMITTERS:    return Keywords.t_EMITTER;
-                case Network.SectType.END:         return Keywords.t_END;
-                case Network.SectType.ENERGY:      return Keywords.t_ENERGY;
-                case Network.SectType.JUNCTIONS:   return Keywords.t_JUNCTION;
-                case Network.SectType.LABELS:      return Keywords.t_LABEL;
-                case Network.SectType.MIXING:      return Keywords.t_MIXING;
-                case Network.SectType.OPTIONS:     return Keywords.t_OPTION;
-                case Network.SectType.PATTERNS:    return Keywords.t_PATTERN;
-                case Network.SectType.PIPES:       return Keywords.t_PIPE;
-                case Network.SectType.PUMPS:       return Keywords.t_PUMP;
-                case Network.SectType.QUALITY:     return Keywords.t_QUALITY;
-                case Network.SectType.REACTIONS:   return Keywords.t_REACTION;
-                case Network.SectType.REPORT:      return Keywords.t_REPORT;
-                case Network.SectType.RESERVOIRS:  return Keywords.t_RESERVOIR;
-                case Network.SectType.ROUGHNESS:   return Keywords.t_ROUGHNESS;
-                case Network.SectType.RULES:       return Keywords.t_RULE;
-                case Network.SectType.SOURCES:     return Keywords.t_SOURCE;
-                case Network.SectType.STATUS:      return Keywords.t_STATUS;
-                case Network.SectType.TAGS:        return Keywords.t_TAG;
-                case Network.SectType.TANKS:       return Keywords.t_TANK;
-                case Network.SectType.TIMES:       return Keywords.t_TIME;
-                case Network.SectType.TITLE:       return Keywords.t_TITLE;
-                case Network.SectType.VALVES:      return Keywords.t_VALVE;
-                case Network.SectType.VERTICES:    return Keywords.t_VERTICE;
+                case Network.Network.SectType.BACKDROP:    return Keywords.t_BACKDROP;
+                case Network.Network.SectType.CONTROLS:    return Keywords.t_CONTROL;
+                case Network.Network.SectType.COORDINATES: return Keywords.t_COORD;
+                case Network.Network.SectType.CURVES:      return Keywords.t_CURVE;
+                case Network.Network.SectType.DEMANDS:     return Keywords.t_DEMAND;
+                case Network.Network.SectType.EMITTERS:    return Keywords.t_EMITTER;
+                case Network.Network.SectType.END:         return Keywords.t_END;
+                case Network.Network.SectType.ENERGY:      return Keywords.t_ENERGY;
+                case Network.Network.SectType.JUNCTIONS:   return Keywords.t_JUNCTION;
+                case Network.Network.SectType.LABELS:      return Keywords.t_LABEL;
+                case Network.Network.SectType.MIXING:      return Keywords.t_MIXING;
+                case Network.Network.SectType.OPTIONS:     return Keywords.t_OPTION;
+                case Network.Network.SectType.PATTERNS:    return Keywords.t_PATTERN;
+                case Network.Network.SectType.PIPES:       return Keywords.t_PIPE;
+                case Network.Network.SectType.PUMPS:       return Keywords.t_PUMP;
+                case Network.Network.SectType.QUALITY:     return Keywords.t_QUALITY;
+                case Network.Network.SectType.REACTIONS:   return Keywords.t_REACTION;
+                case Network.Network.SectType.REPORT:      return Keywords.t_REPORT;
+                case Network.Network.SectType.RESERVOIRS:  return Keywords.t_RESERVOIR;
+                case Network.Network.SectType.ROUGHNESS:   return Keywords.t_ROUGHNESS;
+                case Network.Network.SectType.RULES:       return Keywords.t_RULE;
+                case Network.Network.SectType.SOURCES:     return Keywords.t_SOURCE;
+                case Network.Network.SectType.STATUS:      return Keywords.t_STATUS;
+                case Network.Network.SectType.TAGS:        return Keywords.t_TAG;
+                case Network.Network.SectType.TANKS:       return Keywords.t_TANK;
+                case Network.Network.SectType.TIMES:       return Keywords.t_TIME;
+                case Network.Network.SectType.TITLE:       return Keywords.t_TITLE;
+                case Network.Network.SectType.VALVES:      return Keywords.t_VALVE;
+                case Network.Network.SectType.VERTICES:    return Keywords.t_VERTICE;
                 default:                           return null;
             }
         }
 
-        public static bool TryParse(string text, out Network.SectType result) {
+        public static bool TryParse(string text, out Network.Network.SectType result) {
 
-            if (text.Match(Keywords.s_BACKDROP)) { result = Network.SectType.BACKDROP; }
-            else if (text.Match(Keywords.s_CONTROLS)) { result = Network.SectType.CONTROLS; }
-            else if (text.Match(Keywords.s_COORDS)) { result = Network.SectType.COORDINATES; }
-            else if (text.Match(Keywords.s_CURVES)) { result = Network.SectType.CURVES; }
-            else if (text.Match(Keywords.s_DEMANDS)) { result = Network.SectType.DEMANDS; }
-            else if (text.Match(Keywords.s_EMITTERS)) { result = Network.SectType.EMITTERS; }
-            else if (text.Match(Keywords.s_END)) { result = Network.SectType.END; }
-            else if (text.Match(Keywords.s_ENERGY)) { result = Network.SectType.ENERGY; }
-            else if (text.Match(Keywords.s_JUNCTIONS)) { result = Network.SectType.JUNCTIONS; }
-            else if (text.Match(Keywords.s_LABELS)) { result = Network.SectType.LABELS; }
-            else if (text.Match(Keywords.s_MIXING)) { result = Network.SectType.MIXING; }
-            else if (text.Match(Keywords.s_OPTIONS)) { result = Network.SectType.OPTIONS; }
-            else if (text.Match(Keywords.s_PATTERNS)) { result = Network.SectType.PATTERNS; }
-            else if (text.Match(Keywords.s_PIPES)) { result = Network.SectType.PIPES; }
-            else if (text.Match(Keywords.s_PUMPS)) { result = Network.SectType.PUMPS; }
-            else if (text.Match(Keywords.s_QUALITY)) { result = Network.SectType.QUALITY; }
-            else if (text.Match(Keywords.s_REACTIONS)) { result = Network.SectType.REACTIONS; }
-            else if (text.Match(Keywords.s_REPORT)) { result = Network.SectType.REPORT; }
-            else if (text.Match(Keywords.s_RESERVOIRS)) { result = Network.SectType.RESERVOIRS; }
-            else if (text.Match(Keywords.s_ROUGHNESS)) { result = Network.SectType.ROUGHNESS; }
-            else if (text.Match(Keywords.s_RULES)) { result = Network.SectType.RULES; }
-            else if (text.Match(Keywords.s_SOURCES)) { result = Network.SectType.SOURCES; }
-            else if (text.Match(Keywords.s_STATUS)) { result = Network.SectType.STATUS; }
-            else if (text.Match(Keywords.s_TAGS)) { result = Network.SectType.TAGS; }
-            else if (text.Match(Keywords.s_TANKS)) { result = Network.SectType.TANKS; }
-            else if (text.Match(Keywords.s_TIMES)) { result = Network.SectType.TIMES; }
-            else if (text.Match(Keywords.s_TITLE)) { result = Network.SectType.TITLE; }
-            else if (text.Match(Keywords.s_VALVES)) { result = Network.SectType.VALVES; }
-            else if (text.Match(Keywords.s_VERTICES)) { result = Network.SectType.VERTICES; }
+            if (text.Match(Keywords.s_BACKDROP)) { result = Network.Network.SectType.BACKDROP; }
+            else if (text.Match(Keywords.s_CONTROLS)) { result = Network.Network.SectType.CONTROLS; }
+            else if (text.Match(Keywords.s_COORDS)) { result = Network.Network.SectType.COORDINATES; }
+            else if (text.Match(Keywords.s_CURVES)) { result = Network.Network.SectType.CURVES; }
+            else if (text.Match(Keywords.s_DEMANDS)) { result = Network.Network.SectType.DEMANDS; }
+            else if (text.Match(Keywords.s_EMITTERS)) { result = Network.Network.SectType.EMITTERS; }
+            else if (text.Match(Keywords.s_END)) { result = Network.Network.SectType.END; }
+            else if (text.Match(Keywords.s_ENERGY)) { result = Network.Network.SectType.ENERGY; }
+            else if (text.Match(Keywords.s_JUNCTIONS)) { result = Network.Network.SectType.JUNCTIONS; }
+            else if (text.Match(Keywords.s_LABELS)) { result = Network.Network.SectType.LABELS; }
+            else if (text.Match(Keywords.s_MIXING)) { result = Network.Network.SectType.MIXING; }
+            else if (text.Match(Keywords.s_OPTIONS)) { result = Network.Network.SectType.OPTIONS; }
+            else if (text.Match(Keywords.s_PATTERNS)) { result = Network.Network.SectType.PATTERNS; }
+            else if (text.Match(Keywords.s_PIPES)) { result = Network.Network.SectType.PIPES; }
+            else if (text.Match(Keywords.s_PUMPS)) { result = Network.Network.SectType.PUMPS; }
+            else if (text.Match(Keywords.s_QUALITY)) { result = Network.Network.SectType.QUALITY; }
+            else if (text.Match(Keywords.s_REACTIONS)) { result = Network.Network.SectType.REACTIONS; }
+            else if (text.Match(Keywords.s_REPORT)) { result = Network.Network.SectType.REPORT; }
+            else if (text.Match(Keywords.s_RESERVOIRS)) { result = Network.Network.SectType.RESERVOIRS; }
+            else if (text.Match(Keywords.s_ROUGHNESS)) { result = Network.Network.SectType.ROUGHNESS; }
+            else if (text.Match(Keywords.s_RULES)) { result = Network.Network.SectType.RULES; }
+            else if (text.Match(Keywords.s_SOURCES)) { result = Network.Network.SectType.SOURCES; }
+            else if (text.Match(Keywords.s_STATUS)) { result = Network.Network.SectType.STATUS; }
+            else if (text.Match(Keywords.s_TAGS)) { result = Network.Network.SectType.TAGS; }
+            else if (text.Match(Keywords.s_TANKS)) { result = Network.Network.SectType.TANKS; }
+            else if (text.Match(Keywords.s_TIMES)) { result = Network.Network.SectType.TIMES; }
+            else if (text.Match(Keywords.s_TITLE)) { result = Network.Network.SectType.TITLE; }
+            else if (text.Match(Keywords.s_VALVES)) { result = Network.Network.SectType.VALVES; }
+            else if (text.Match(Keywords.s_VERTICES)) { result = Network.Network.SectType.VERTICES; }
             else {
-                result = (Network.SectType)(-1);
+                result = (Network.Network.SectType)(-1);
                 return false;
             }
 

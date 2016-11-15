@@ -20,7 +20,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace org.addition.epanet.log {
+namespace Epanet.Log {
     public sealed class InvariantStreamWriter : StreamWriter {
         public InvariantStreamWriter(Stream s, Encoding enc) : base(s, enc) { }
 

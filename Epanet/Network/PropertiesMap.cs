@@ -16,10 +16,10 @@
  */
 
 using System.Collections.Generic;
-using org.addition.epanet.network.io;
-using org.addition.epanet.util;
+using Epanet.Network.IO;
+using Epanet.Util;
 
-namespace org.addition.epanet.network {
+namespace Epanet.Network {
 
     ///<summary>Simulation configuration properties map.</summary>
     public class PropertiesMap {

@@ -18,62 +18,41 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Log;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic.structures
-{
+namespace Epanet.Hydraulic.Structures {
 
-    public class SimulationRule
-    {
+    public class SimulationRule {
 
-        // Temporary action item
-        public class ActItem
-        {
-            public ActItem(SimulationRule rule, Action action)
-            {
-                this.rule = rule;
-                this.action = action;
+        /// <summary>Temporary action item</summary>
+        private class ActItem {
+            public ActItem(SimulationRule rule, Action action) {
+                this.Rule = rule;
+                this.Action = action;
             }
 
-            public SimulationRule rule;
-            public Action action;
+            public SimulationRule Rule;
+            public Action Action;
         }
 
-        // Rules execution result
-        public class Result
-        {
-            public Result(long step, long htime)
-            {
-                this.step = step;
-                this.htime = htime;
-            }
-
-            public long step;
-            public long htime;
-
-        }
-
-        // Rule premise
-        public class Premise
-        {
-            public Premise(string[] Tok, Rule.Rulewords lOp, List<SimulationNode> nodes, List<SimulationLink> links)
-            {
+        /// <summary>Rule premise.</summary>
+        private class Premise {
+            public Premise(string[] tok, Rule.Rulewords lOp, List<SimulationNode> nodes, List<SimulationLink> links) {
                 Rule.Objects loType;
                 Rule.Varwords lVar;
                 object lObj;
                 Rule.Operators lROp;
 
-                if (Tok.Length != 5 && Tok.Length != 6)
+                if (tok.Length != 5 && tok.Length != 6)
                     throw new ENException(ErrorCode.Err201);
 
-                EnumsTxt.TryParse(Tok[1], out loType);
+                EnumsTxt.TryParse(tok[1], out loType);
 
-                if (loType == Rule.Objects.r_SYSTEM)
-                {
-                    EnumsTxt.TryParse(Tok[2], out lVar);
+                if (loType == Rule.Objects.r_SYSTEM) {
+                    EnumsTxt.TryParse(tok[2], out lVar);
 
                     if (lVar != Rule.Varwords.r_DEMAND && lVar != Rule.Varwords.r_TIME &&
                         lVar != Rule.Varwords.r_CLOCKTIME)
@@ -81,115 +60,107 @@ namespace org.addition.epanet.hydraulic.structures
 
                     lObj = Rule.Objects.r_SYSTEM;
                 }
-                else
-                {
-                    if(!EnumsTxt.TryParse(Tok[3], out lVar))
+                else {
+                    if (!EnumsTxt.TryParse(tok[3], out lVar))
                         throw new ENException(ErrorCode.Err201);
 
-                    switch (loType)
-                    {
-                        case Rule.Objects.r_NODE:
-                        case Rule.Objects.r_JUNC:
-                        case Rule.Objects.r_RESERV:
-                        case Rule.Objects.r_TANK:
-                            loType = Rule.Objects.r_NODE;
-                            break;
-                        case Rule.Objects.r_LINK:
-                        case Rule.Objects.r_PIPE:
-                        case Rule.Objects.r_PUMP:
-                        case Rule.Objects.r_VALVE:
-                            loType = Rule.Objects.r_LINK;
-                            break;
-                        default:
-                            throw new ENException(ErrorCode.Err201);
+                    switch (loType) {
+                    case Rule.Objects.r_NODE:
+                    case Rule.Objects.r_JUNC:
+                    case Rule.Objects.r_RESERV:
+                    case Rule.Objects.r_TANK:
+                        loType = Rule.Objects.r_NODE;
+                        break;
+                    case Rule.Objects.r_LINK:
+                    case Rule.Objects.r_PIPE:
+                    case Rule.Objects.r_PUMP:
+                    case Rule.Objects.r_VALVE:
+                        loType = Rule.Objects.r_LINK;
+                        break;
+                    default:
+                        throw new ENException(ErrorCode.Err201);
                     }
 
-                    if (loType == Rule.Objects.r_NODE)
-                    {
+                    if (loType == Rule.Objects.r_NODE) {
                         //Node nodeRef = net.getNode(Tok[2]);
                         SimulationNode nodeRef = null;
                         foreach (SimulationNode simNode  in  nodes)
-                        if (simNode.Node.Id.Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
-                            nodeRef = simNode;
+                            if (simNode.Node.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
+                                nodeRef = simNode;
 
                         if (nodeRef == null)
                             throw new ENException(ErrorCode.Err203);
-                        switch (lVar)
-                        {
-                            case Rule.Varwords.r_DEMAND:
-                            case Rule.Varwords.r_HEAD:
-                            case Rule.Varwords.r_GRADE:
-                            case Rule.Varwords.r_LEVEL:
-                            case Rule.Varwords.r_PRESSURE:
-                                break;
-                            case Rule.Varwords.r_FILLTIME:
-                            case Rule.Varwords.r_DRAINTIME:
-                                if (nodeRef is SimulationTank)
+                        switch (lVar) {
+                        case Rule.Varwords.r_DEMAND:
+                        case Rule.Varwords.r_HEAD:
+                        case Rule.Varwords.r_GRADE:
+                        case Rule.Varwords.r_LEVEL:
+                        case Rule.Varwords.r_PRESSURE:
+                            break;
+                        case Rule.Varwords.r_FILLTIME:
+                        case Rule.Varwords.r_DRAINTIME:
+                            if (nodeRef is SimulationTank)
                                 throw new ENException(ErrorCode.Err201);
-                                break;
+                            break;
 
-                            default:
-                                throw new ENException(ErrorCode.Err201);
+                        default:
+                            throw new ENException(ErrorCode.Err201);
                         }
                         lObj = nodeRef;
                     }
-                    else
-                    {
+                    else {
                         //Link linkRef = net.getLink(Tok[2]);
                         SimulationLink linkRef = null;
                         foreach (SimulationLink simLink  in  links)
-                        if (simLink.Link.Id.Equals(Tok[2], StringComparison.OrdinalIgnoreCase))
-                            linkRef = simLink;
+                            if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
+                                linkRef = simLink;
 
                         if (linkRef == null)
                             throw new ENException(ErrorCode.Err204);
-                        switch (lVar)
-                        {
-                            case Rule.Varwords.r_FLOW:
-                            case Rule.Varwords.r_STATUS:
-                            case Rule.Varwords.r_SETTING:
-                                break;
-                            default:
-                                throw new ENException(ErrorCode.Err201);
+                        switch (lVar) {
+                        case Rule.Varwords.r_FLOW:
+                        case Rule.Varwords.r_STATUS:
+                        case Rule.Varwords.r_SETTING:
+                            break;
+                        default:
+                            throw new ENException(ErrorCode.Err201);
                         }
                         lObj = linkRef;
                     }
                 }
 
                 Rule.Operators op;
-                
-                if(!EnumsTxt.TryParse(loType == Rule.Objects.r_SYSTEM ? Tok[3] : Tok[4], out op))
+
+                if (!EnumsTxt.TryParse(loType == Rule.Objects.r_SYSTEM ? tok[3] : tok[4], out op))
                     throw new ENException(ErrorCode.Err201);
 
-                switch (op)
-                {
-                    case Rule.Operators.IS:
-                        lROp = Rule.Operators.EQ;
-                        break;
-                    case Rule.Operators.NOT:
-                        lROp = Rule.Operators.NE;
-                        break;
-                    case Rule.Operators.BELOW:
-                        lROp = Rule.Operators.LT;
-                        break;
-                    case Rule.Operators.ABOVE:
-                        lROp = Rule.Operators.GT;
-                        break;
-                    default:
-                        lROp = op;
-                        break;
+                switch (op) {
+                case Rule.Operators.IS:
+                    lROp = Rule.Operators.EQ;
+                    break;
+                case Rule.Operators.NOT:
+                    lROp = Rule.Operators.NE;
+                    break;
+                case Rule.Operators.BELOW:
+                    lROp = Rule.Operators.LT;
+                    break;
+                case Rule.Operators.ABOVE:
+                    lROp = Rule.Operators.GT;
+                    break;
+                default:
+                    lROp = op;
+                    break;
                 }
 
                 // BUG: Baseform bug lStat == Rule.Values.IS_NUMBER
                 Rule.Values lStat = Rule.Values.IS_NUMBER;
                 double lVal = Constants.MISSING;
 
-                if (lVar == Rule.Varwords.r_TIME || lVar == Rule.Varwords.r_CLOCKTIME)
-                {
-                    if (Tok.Length == 6)
-                        lVal = Utilities.GetHour(Tok[4], Tok[5])*3600.0;
+                if (lVar == Rule.Varwords.r_TIME || lVar == Rule.Varwords.r_CLOCKTIME) {
+                    if (tok.Length == 6)
+                        lVal = Utilities.GetHour(tok[4], tok[5]) * 3600.0;
                     else
-                        lVal = Utilities.GetHour(Tok[4], "")*3600.0;
+                        lVal = Utilities.GetHour(tok[4], "") * 3600.0;
 
                     if (lVal < 0.0)
                         throw new ENException(ErrorCode.Err202);
@@ -197,19 +168,16 @@ namespace org.addition.epanet.hydraulic.structures
                 else {
                     Rule.Values k;
 
-                    if(!EnumsTxt.TryParse(Tok[Tok.Length - 1], out k) || lStat <= Rule.Values.IS_NUMBER)
-                    {
-                        if (lStat == (Rule.Values)(-1) || lStat <= Rule.Values.IS_NUMBER)
-                        {
-                            if(!Tok[Tok.Length - 1].ToDouble(out lVal))
+                    if (!EnumsTxt.TryParse(tok[tok.Length - 1], out k) || lStat <= Rule.Values.IS_NUMBER) {
+                        if (lStat == (Rule.Values)(-1) || lStat <= Rule.Values.IS_NUMBER) {
+                            if (!tok[tok.Length - 1].ToDouble(out lVal))
                                 throw new ENException(ErrorCode.Err202);
 
                             if (lVar == Rule.Varwords.r_FILLTIME || lVar == Rule.Varwords.r_DRAINTIME)
-                                lVal = lVal*3600.0;
+                                lVal = lVal * 3600.0;
                         }
                     }
-                    else
-                    {
+                    else {
                         lStat = k;
                     }
 
@@ -224,175 +192,133 @@ namespace org.addition.epanet.hydraulic.structures
             }
 
             /// <summary>Logical operator</summary>
-            private readonly Rule.Rulewords logop ; 
+            public readonly Rule.Rulewords logop;
             private readonly object @object;
             /// <summary>Pressure, flow, etc</summary>
-            private readonly Rule.Varwords variable ; 
+            private readonly Rule.Varwords variable;
             /// <summary>Relational operator</summary>
-            private readonly Rule.Operators relop; 
+            private readonly Rule.Operators relop;
             /// <summary>Variable's status</summary>
             private readonly Rule.Values status;
             /// <summary>Variable's value</summary>
-            private readonly double value; 
+            private readonly double value;
 
-            public Rule.Rulewords getLogop()
-            {
-                return this.logop;
-            }
-
-            public object getObject()
-            {
-                return this.@object;
-            }
-
-            public Rule.Varwords getVariable()
-            {
-                return this.variable;
-            }
-
-            public Rule.Operators getRelop()
-            {
-                return this.relop;
-            }
-
-            public Rule.Values getStatus()
-            {
-                return this.status;
-            }
-
-            public double getValue()
-            {
-                return this.value;
-            }
-
-
-            // Checks if a particular premise is true
-            public bool checkPremise(FieldsMap fMap, PropertiesMap pMap,
-                long Time1, long Htime, double dsystem)
-            {
+            /// <summary>Checks if a particular premise is true.</summary>
+            public bool CheckPremise(
+                FieldsMap fMap,
+                PropertiesMap pMap,
+                long time1,
+                long htime,
+                double dsystem) {
                 if (this.variable == Rule.Varwords.r_TIME || this.variable == Rule.Varwords.r_CLOCKTIME)
-                    return (this.checkTime(pMap, Time1, Htime));
+                    return this.CheckTime(pMap, time1, htime);
                 else if (this.status > Rule.Values.IS_NUMBER)
-                    return (this.checkStatus());
+                    return this.CheckStatus();
                 else
-                    return (this.checkValue(fMap, dsystem));
+                    return this.CheckValue(fMap, dsystem);
             }
 
-            // Checks if condition on system time holds
-            private bool checkTime(PropertiesMap pMap, long Time1, long Htime)
-            {
-                bool flag;
-                long t1, t2, x;
+            /// <summary>Checks if condition on system time holds.</summary>
+            private bool CheckTime(PropertiesMap pMap, long time1, long htime) {
+                long t1, t2;
 
-                if (this.variable == Rule.Varwords.r_TIME)
-                {
-                    t1 = Time1;
-                    t2 = Htime;
+                if (this.variable == Rule.Varwords.r_TIME) {
+                    t1 = time1;
+                    t2 = htime;
                 }
-                else if (this.variable == Rule.Varwords.r_CLOCKTIME)
-                {
-                    t1 = (Time1 + pMap.Tstart)%Constants.SECperDAY;
-                    t2 = (Htime + pMap.Tstart)%Constants.SECperDAY;
+                else if (this.variable == Rule.Varwords.r_CLOCKTIME) {
+                    t1 = (time1 + pMap.Tstart) % Constants.SECperDAY;
+                    t2 = (htime + pMap.Tstart) % Constants.SECperDAY;
                 }
                 else
                     return false;
 
-                x = (long) (this.value);
-                switch (this.relop)
-                {
-                    case Rule.Operators.LT:
-                        if (t2 >= x) return (false);
-                        break;
-                    case Rule.Operators.LE:
-                        if (t2 > x) return (false);
-                        break;
-                    case Rule.Operators.GT:
-                        if (t2 <= x) return (false);
-                        break;
-                    case Rule.Operators.GE:
-                        if (t2 < x) return (false);
-                        break;
+                var x = (long)this.value;
+                switch (this.relop) {
+                case Rule.Operators.LT:
+                    if (t2 >= x) return false;
+                    break;
+                case Rule.Operators.LE:
+                    if (t2 > x) return false;
+                    break;
+                case Rule.Operators.GT:
+                    if (t2 <= x) return false;
+                    break;
+                case Rule.Operators.GE:
+                    if (t2 < x) return false;
+                    break;
 
-                    case Rule.Operators.EQ:
-                    case Rule.Operators.NE:
-                        flag = false;
-                        if (t2 < t1)
-                        {
-                            if (x >= t1 || x <= t2) flag = true;
-                        }
-                        else
-                        {
-                            if (x >= t1 && x <= t2) flag = true;
-                        }
-                        if (this.relop == Rule.Operators.EQ && !flag) return true;
-                        if (this.relop == Rule.Operators.NE && flag) return true;
-                        break;
+                case Rule.Operators.EQ:
+                case Rule.Operators.NE:
+                    var flag = false;
+                    if (t2 < t1) {
+                        if (x >= t1 || x <= t2) flag = true;
+                    }
+                    else {
+                        if (x >= t1 && x <= t2) flag = true;
+                    }
+                    if (this.relop == Rule.Operators.EQ && !flag) return true;
+                    if (this.relop == Rule.Operators.NE && flag) return true;
+                    break;
                 }
 
                 return true;
             }
 
-            // Checks if condition on link status holds
-            private bool checkStatus()
-            {
-                switch (this.status)
-                {
-                    case Rule.Values.IS_OPEN:
-                    case Rule.Values.IS_CLOSED:
-                    case Rule.Values.IS_ACTIVE:
-                        Rule.Values j;
-                        Link.StatType i = (Link.StatType)(-1);
-                        if (this.@object is SimulationLink)
-                        i = ((SimulationLink)this.@object).SimStatus;
+            /// <summary>Checks if condition on link status holds.</summary>
+            private bool CheckStatus() {
+                switch (this.status) {
+                case Rule.Values.IS_OPEN:
+                case Rule.Values.IS_CLOSED:
+                case Rule.Values.IS_ACTIVE:
+                    Rule.Values j;
+                    var simlink = this.@object as SimulationLink;
+                    Link.StatType i = simlink == null ? (Link.StatType)(-1) : simlink.SimStatus;
 
-                        if (i != null && i <= Link.StatType.CLOSED)
-                            j = Rule.Values.IS_CLOSED;
-                        else if (i == Link.StatType.ACTIVE)
-                            j = Rule.Values.IS_ACTIVE;
-                        else
-                            j = Rule.Values.IS_OPEN;
+                    if(i >= Link.StatType.XHEAD && i <= Link.StatType.CLOSED)
+                        j = Rule.Values.IS_CLOSED;
+                    else if (i == Link.StatType.ACTIVE)
+                        j = Rule.Values.IS_ACTIVE;
+                    else
+                        j = Rule.Values.IS_OPEN;
 
-                        if (j == this.status && this.relop == Rule.Operators.EQ)
-                            return true;
-                        if (j != this.status && this.relop == Rule.Operators.NE)
-                            return true;
-                        break;
+                    if (j == this.status && this.relop == Rule.Operators.EQ)
+                        return true;
+                    if (j != this.status && this.relop == Rule.Operators.NE)
+                        return true;
+                    break;
                 }
                 return false;
             }
 
             /// <summary>Checks if numerical condition on a variable is true.</summary>
-            private bool checkValue(FieldsMap fMap, double dsystem) {
-                double tol = 1e-3;
+            private bool CheckValue(FieldsMap fMap, double dsystem) {
+                const double tol = 0.001D;
                 double x;
 
-                SimulationLink link = null;
-                SimulationNode node = null;
+                SimulationLink link = this.@object as SimulationLink;
+                SimulationNode node = this.@object as SimulationNode;
 
-                if (this.@object is SimulationLink)
-                    link = ((SimulationLink)this.@object);
-                else if (this.@object is SimulationNode)
-                    node = ((SimulationNode)this.@object);
 
                 switch (this.variable) {
                 case Rule.Varwords.r_DEMAND:
                     if ((Rule.Objects)this.@object == Rule.Objects.r_SYSTEM)
                         x = dsystem * fMap.GetUnits(FieldsMap.FieldType.DEMAND);
                     else
-                        x = node.getSimDemand() * fMap.GetUnits(FieldsMap.FieldType.DEMAND);
+                        x = node.SimDemand * fMap.GetUnits(FieldsMap.FieldType.DEMAND);
                     break;
 
                 case Rule.Varwords.r_HEAD:
                 case Rule.Varwords.r_GRADE:
-                    x = node.getSimHead() * fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                    x = node.SimHead * fMap.GetUnits(FieldsMap.FieldType.HEAD);
                     break;
 
                 case Rule.Varwords.r_PRESSURE:
-                    x = (node.getSimHead() - node.getElevation()) * fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                    x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
                     break;
 
                 case Rule.Varwords.r_LEVEL:
-                    x = (node.getSimHead() - node.getElevation()) * fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                    x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldsMap.FieldType.HEAD);
                     break;
 
                 case Rule.Varwords.r_FLOW:
@@ -422,13 +348,13 @@ namespace org.addition.epanet.hydraulic.structures
 
                     SimulationTank tank = (SimulationTank)this.@object;
 
-                    if (tank.isReservoir())
+                    if (tank.IsReservoir)
                         return false;
 
-                    if (tank.getSimDemand() <= Constants.TINY)
+                    if (tank.SimDemand <= Constants.TINY)
                         return false;
 
-                    x = (tank.getVmax() - tank.getSimVolume()) / tank.getSimDemand();
+                    x = (tank.Vmax - tank.SimVolume) / tank.SimDemand;
 
                     break;
                 }
@@ -438,13 +364,13 @@ namespace org.addition.epanet.hydraulic.structures
 
                     SimulationTank tank = (SimulationTank)this.@object;
 
-                    if (tank.isReservoir())
+                    if (tank.IsReservoir)
                         return false;
 
-                    if (tank.getSimDemand() >= -Constants.TINY)
+                    if (tank.SimDemand >= -Constants.TINY)
                         return false;
 
-                    x = (tank.getVmin() - tank.getSimVolume()) / tank.getSimDemand();
+                    x = (tank.Vmin - tank.SimVolume) / tank.SimDemand;
                     break;
                 }
                 default:
@@ -482,26 +408,24 @@ namespace org.addition.epanet.hydraulic.structures
 
         }
 
-        public class Action
-        {
+        private class Action {
             private readonly string _label;
 
             public Action(string[] tok, List<SimulationLink> links, string label) {
                 this._label = label;
 
-                int Ntokens = tok.Length;
+                int ntokens = tok.Length;
 
-                Rule.Values s, k;
-                double x;
+                Rule.Values k;
 
-                if (Ntokens != 6)
+                if (ntokens != 6)
                     throw new ENException(ErrorCode.Err201);
 
                 //Link linkRef = net.getLink(tok[2]);
                 SimulationLink linkRef = null;
                 foreach (SimulationLink simLink  in  links)
-                if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
-                    linkRef = simLink;
+                    if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
+                        linkRef = simLink;
 
                 if (linkRef == null)
                     throw new ENException(ErrorCode.Err204);
@@ -509,14 +433,13 @@ namespace org.addition.epanet.hydraulic.structures
                 if (linkRef.Type == Link.LinkType.CV)
                     throw new ENException(ErrorCode.Err207);
 
-                s = (Rule.Values)(-1);
-                x = Constants.MISSING;
+                var s = (Rule.Values)(-1);
+                double x = Constants.MISSING;
 
                 if (EnumsTxt.TryParse(tok[5], out k) && k > Rule.Values.IS_NUMBER) {
                     s = k;
                 }
-                else
-                {
+                else {
                     if (!tok[5].ToDouble(out x) || x < 0.0)
                         throw new ENException(ErrorCode.Err202);
                 }
@@ -534,179 +457,127 @@ namespace org.addition.epanet.hydraulic.structures
                 this.setting = x;
             }
 
-            public readonly SimulationLink link ;
-            private readonly Rule.Values status ;
+            public readonly SimulationLink link;
+            private readonly Rule.Values status;
             private readonly double setting;
 
-            public SimulationLink getLink()
-            {
-                return this.link;
-            }
-
-            public Rule.Values getStatus()
-            {
-                return this.status;
-            }
-
-            public double getSetting()
-            {
-                return this.setting;
-            }
-
-            // Execute action, returns true if the link was alterated.
-            public bool execute(FieldsMap fMap, PropertiesMap pMap, TraceSource log, double tol, long Htime)
-            {
+            /// <summary>Execute action, returns true if the link was alterated.</summary>
+            public bool Execute(FieldsMap fMap, PropertiesMap pMap, TraceSource log, double tol, long htime) {
                 bool flag = false;
 
                 Link.StatType s = this.link.SimStatus;
                 double v = this.link.SimSetting;
                 double x = this.setting;
 
-                if (this.status == Rule.Values.IS_OPEN && s <= Link.StatType.CLOSED)
-                {
+                if (this.status == Rule.Values.IS_OPEN && s <= Link.StatType.CLOSED) {
                     // Switch link from closed to open
-                    this.link.setLinkStatus(true);
+                    this.link.SetLinkStatus(true);
                     flag = true;
                 }
-                else if (this.status == Rule.Values.IS_CLOSED && s > Link.StatType.CLOSED)
-                {
+                else if (this.status == Rule.Values.IS_CLOSED && s > Link.StatType.CLOSED) {
                     // Switch link from not closed to closed
-                    this.link.setLinkStatus(false);
+                    this.link.SetLinkStatus(false);
                     flag = true;
                 }
-                else if (x != Constants.MISSING)
-                {
+                else if (x != Constants.MISSING) {
                     // Change link's setting
-                    switch (this.link.Type)
-                    {
-                        case Link.LinkType.PRV:
-                        case Link.LinkType.PSV:
-                        case Link.LinkType.PBV:
-                            x = x/fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
-                            break;
-                        case Link.LinkType.FCV:
-                            x = x/fMap.GetUnits(FieldsMap.FieldType.FLOW);
-                            break;
+                    switch (this.link.Type) {
+                    case Link.LinkType.PRV:
+                    case Link.LinkType.PSV:
+                    case Link.LinkType.PBV:
+                        x = x / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                        break;
+                    case Link.LinkType.FCV:
+                        x = x / fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                        break;
                     }
-                    if (Math.Abs(x - v) > tol)
-                    {
-                        this.link.setLinkSetting(x);
+                    if (Math.Abs(x - v) > tol) {
+                        this.link.SetLinkSetting(x);
                         flag = true;
                     }
                 }
 
-                if (flag)
-                {
-                    if (pMap.Statflag != null) // Report rule action
-                        this.logRuleExecution(log, Htime);
+                if (flag) {
+                    if (pMap.Statflag > 0) // Report rule action
+                        this.LogRuleExecution(log, htime);
                     return true;
                 }
 
                 return false;
             }
 
-            public void logRuleExecution(TraceSource log, long Htime)
-            {
-                log.Warning(Epanet.Properties.Text.ResourceManager.GetString("FMT63"), Htime.GetClockTime(), this.link.Type.ParseStr(), this.link.Link.Id, this._label);
+            private void LogRuleExecution(TraceSource log, long htime) {
+                log.Warning(
+                    Properties.Text.ResourceManager.GetString("FMT63"),
+                    htime.GetClockTime(),
+                    this.link.Type.ParseStr(),
+                    this.link.Link.Id,
+                    this._label);
             }
         }
 
 
-        private readonly string label ;
+        private readonly string label;
         private readonly double priority;
-        private readonly List<Premise> Pchain ;
-        private readonly List<Action> Tchain ;
-        private readonly List<Action> Fchain ;
-
-        public string getLabel()
-        {
-            return this.label;
-        }
-
-        public double getPriority()
-        {
-            return this.priority;
-        }
-
-        public Premise[] getPchain()
-        {
-            return this.Pchain.ToArray();
-        }
-
-        public List<Action> getTchain()
-        {
-            return this.Tchain;
-        }
-
-        public List<Action> getFchain()
-        {
-            return this.Fchain;
-        }
+        private readonly List<Premise> pchain = new List<Premise>();
+        private readonly List<Action> tchain = new List<Action>();
+        private readonly List<Action> fchain = new List<Action>();
 
 
         // Simulation Methods
 
 
-        // Evaluate rule premises.
-        private bool evalPremises(FieldsMap fMap, PropertiesMap pMap,
-            long Time1, long Htime, double dsystem)
-        {
+        /// <summary>Evaluate rule premises.</summary>
+        private bool EvalPremises(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            long time1,
+            long htime,
+            double dsystem) {
             bool result = true;
 
-            foreach (var p  in  this.getPchain())
-            {
-                if (p.getLogop() == Rule.Rulewords.r_OR)
-                {
+            foreach (var p  in  this.pchain) {
+                if (p.logop == Rule.Rulewords.r_OR) {
                     if (!result)
-                        result = p.checkPremise(fMap, pMap, Time1, Htime, dsystem);
+                        result = p.CheckPremise(fMap, pMap, time1, htime, dsystem);
                 }
-                else
-                {
+                else {
                     if (!result)
                         return false;
-                    result = p.checkPremise(fMap, pMap, Time1, Htime, dsystem);
+                    result = p.CheckPremise(fMap, pMap, time1, htime, dsystem);
                 }
 
             }
             return result;
         }
 
-        // Adds rule's actions to action list
-        private static void updateActionList(SimulationRule rule, List<ActItem> actionList, bool branch)
-        {
-            if (branch)
-            {
+        /// <summary>Adds rule's actions to action list.</summary>
+        private static void UpdateActionList(SimulationRule rule, List<ActItem> actionList, bool branch) {
+            if (branch) {
                 // go through the true action branch
-                foreach (Action a  in  rule.getTchain())
-                {
-                    if (!checkAction(rule, a, actionList)) // add a new action from the "true" chain
+                foreach (Action a  in  rule.tchain) {
+                    if (!CheckAction(rule, a, actionList)) // add a new action from the "true" chain
                         actionList.Add(new ActItem(rule, a));
                 }
             }
-            else
-            {
-                foreach (Action a  in  rule.getFchain())
-                {
-                    if (!checkAction(rule, a, actionList)) // add a new action from the "false" chain
+            else {
+                foreach (Action a  in  rule.fchain) {
+                    if (!CheckAction(rule, a, actionList)) // add a new action from the "false" chain
                         actionList.Add(new ActItem(rule, a));
                 }
             }
         }
 
-        // Checks if an action with the same link is already on the Action List
-        private static bool checkAction(SimulationRule rule, Action action, List<ActItem> actionList)
-        {
+        /// <summary>Checks if an action with the same link is already on the Action List.</summary>
+        private static bool CheckAction(SimulationRule rule, Action action, List<ActItem> actionList) {
 
-            foreach (ActItem item  in  actionList)
-            {
-                if (item.action.link == action.link)
-                {
+            foreach (ActItem item  in  actionList) {
+                if (item.Action.link == action.link) {
                     // Action with same link
-                    if (rule.priority > item.rule.priority)
-                    {
+                    if (rule.priority > item.Rule.priority) {
                         // Replace Actitem action with higher priority rule
-                        item.rule = rule;
-                        item.action = action;
+                        item.Rule = rule;
+                        item.Action = action;
                     }
 
                     return true;
@@ -716,16 +587,18 @@ namespace org.addition.epanet.hydraulic.structures
             return false;
         }
 
-        // Implements actions on action list, returns the number of actions executed.
-        private static int takeActions(FieldsMap fMap, PropertiesMap pMap, TraceSource log, List<ActItem> actionList,
-            long htime)
-        {
+        /// <summary>Implements actions on action list, returns the number of actions executed.</summary>
+        private static int TakeActions(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            TraceSource log,
+            List<ActItem> actionList,
+            long htime) {
             double tol = 1e-3;
             int n = 0;
 
-            foreach (ActItem item  in  actionList)
-            {
-                if (item.action.execute(fMap, pMap, log, tol, htime))
+            foreach (ActItem item  in  actionList) {
+                if (item.Action.Execute(fMap, pMap, log, tol, htime))
                     n++;
             }
 
@@ -733,51 +606,60 @@ namespace org.addition.epanet.hydraulic.structures
         }
 
 
-        // Checks which rules should fire at current time.
-        private static int check(FieldsMap fMap, PropertiesMap pMap, List<SimulationRule> rules, TraceSource log,
-            long Htime, long dt, double dsystem)
-        {
+        /// <summary>Checks which rules should fire at current time.</summary>
+        private static int Check(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            List<SimulationRule> rules,
+            TraceSource log,
+            long htime,
+            long dt,
+            double dsystem) {
             // Start of rule evaluation time interval
-            long Time1 = Htime - dt + 1;
+            long time1 = htime - dt + 1;
 
             List<ActItem> actionList = new List<ActItem>();
 
             foreach (SimulationRule rule  in  rules)
-            updateActionList(rule, actionList, rule.evalPremises(fMap, pMap, Time1, Htime, dsystem));
+                UpdateActionList(rule, actionList, rule.EvalPremises(fMap, pMap, time1, htime, dsystem));
 
-            return takeActions(fMap, pMap, log, actionList, Htime);
+            return TakeActions(fMap, pMap, log, actionList, htime);
         }
 
-        // updates next time step by checking if any rules will fire before then; also updates tank levels.
-        public static Result minimumTimeStep(FieldsMap fMap, PropertiesMap pMap, TraceSource log,
-            List<SimulationRule> rules, List<SimulationTank> tanks,
-            long Htime, long tstep, double dsystem)
-        {
-            long tnow,
-                // Start of time interval for rule evaluation
-                tmax,
-                // End of time interval for rule evaluation
-                dt,
-                // Normal time increment for rule evaluation
-                dt1; // Actual time increment for rule evaluation
+        /// <summary>
+        /// Updates next time step by checking if any rules will fire before then; 
+        /// also updates tank levels.
+        /// </summary>
+        public static void MinimumTimeStep(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            TraceSource log,
+            List<SimulationRule> rules,
+            List<SimulationTank> tanks,
+            long htime,
+            long tstep,
+            double dsystem,
+            out long tstepOut,
+            out long htimeOut) {
+
+            long dt; // Normal time increment for rule evaluation
+            long dt1; // Actual time increment for rule evaluation
 
             // Find interval of time for rule evaluation
-            tnow = Htime;
-            tmax = tnow + tstep;
+            long tnow = htime;        // Start of time interval for rule evaluation
+            long tmax = tnow + tstep; // End of time interval for rule evaluation
 
             //If no rules, then time increment equals current time step
-            if (rules.Count == 0)
-            {
+            if (rules.Count == 0) {
                 dt = tstep;
                 dt1 = dt;
             }
-            else
-            {
+            else {
                 // Otherwise, time increment equals rule evaluation time step and
                 // first actual increment equals time until next even multiple of
                 // Rulestep occurs.
                 dt = pMap.Rulestep;
-                dt1 = pMap.Rulestep - (tnow%pMap.Rulestep);
+                dt1 = pMap.Rulestep - tnow % pMap.Rulestep;
             }
 
             // Make sure time increment is no larger than current time step
@@ -798,118 +680,113 @@ namespace org.addition.epanet.hydraulic.structures
             //       Also note that dt1 will equal dt after the first
             //       time increment is taken.
 
-            do
-            {
-                Htime += dt1; // Update simulation clock
-                SimulationTank.stepWaterLevels(tanks, fMap, dt1); // Find new tank levels
-                if (check(fMap, pMap, rules, log, Htime, dt1, dsystem) != 0) break; // Stop if rules fire
-                dt = Math.Min(dt, tmax - Htime); // Update time increment
+            do {
+                htime += dt1; // Update simulation clock
+                SimulationTank.StepWaterLevels(tanks, fMap, dt1); // Find new tank levels
+                if (Check(fMap, pMap, rules, log, htime, dt1, dsystem) != 0) break; // Stop if rules fire
+                dt = Math.Min(dt, tmax - htime); // Update time increment
                 dt1 = dt; // Update actual increment
-            } while (dt > 0);
+            }
+            while (dt > 0);
 
             //Compute an updated simulation time step (*tstep)
             // and return simulation time to its original value
-            tstep = Htime - tnow;
-            Htime = tnow;
+            tstepOut = htime - tnow;
+            htimeOut = tnow;
 
-            return new Result(tstep, Htime);
         }
 
-        public SimulationRule(Rule _rule, List<SimulationLink> links, List<SimulationNode> nodes)
-        {
-            this.label = _rule.Label;
-            this.Pchain = new List<Premise>();
-            this.Tchain = new List<Action>();
-            this.Fchain = new List<Action>();
+        public SimulationRule(Rule rule, List<SimulationLink> links, List<SimulationNode> nodes) {
+            this.label = rule.Label;
 
             double tempPriority = 0.0;
 
             Rule.Rulewords ruleState = Rule.Rulewords.r_RULE;
-            foreach(string _line in _rule.Code)
-            {
-                string[] tok = _line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string line in rule.Code) {
+                string[] tok = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 Rule.Rulewords key;
 
-                if(!EnumsTxt.TryParse(tok[0], out key))
+                if (!EnumsTxt.TryParse(tok[0], out key))
                     throw new ENException(ErrorCode.Err201);
 
-                switch (key)
-                {
-                    case Rule.Rulewords.r_IF:
-                        if (ruleState != Rule.Rulewords.r_RULE)
-                            throw new ENException(ErrorCode.Err221);
-                        ruleState = Rule.Rulewords.r_IF;
-                    this.parsePremise(tok, Rule.Rulewords.r_AND, nodes, links);
-                        break;
+                switch (key) {
+                case Rule.Rulewords.r_IF:
+                    if (ruleState != Rule.Rulewords.r_RULE)
+                        throw new ENException(ErrorCode.Err221);
+                    ruleState = Rule.Rulewords.r_IF;
+                    this.ParsePremise(tok, Rule.Rulewords.r_AND, nodes, links);
+                    break;
 
-                    case Rule.Rulewords.r_AND:
-                        if (ruleState == Rule.Rulewords.r_IF)
-                            this.parsePremise(tok, Rule.Rulewords.r_AND, nodes, links);
-                        else if (ruleState == Rule.Rulewords.r_THEN || ruleState == Rule.Rulewords.r_ELSE)
-                            this.parseAction(ruleState, tok, links);
-                        else
-                            throw new ENException(ErrorCode.Err221);
-                        break;
+                case Rule.Rulewords.r_AND:
+                    if (ruleState == Rule.Rulewords.r_IF)
+                        this.ParsePremise(tok, Rule.Rulewords.r_AND, nodes, links);
+                    else if (ruleState == Rule.Rulewords.r_THEN || ruleState == Rule.Rulewords.r_ELSE)
+                        this.ParseAction(ruleState, tok, links);
+                    else
+                        throw new ENException(ErrorCode.Err221);
+                    break;
 
-                    case Rule.Rulewords.r_OR:
-                        if (ruleState == Rule.Rulewords.r_IF)
-                            this.parsePremise(tok, Rule.Rulewords.r_OR, nodes, links);
-                        else
-                            throw new ENException(ErrorCode.Err221);
-                        break;
+                case Rule.Rulewords.r_OR:
+                    if (ruleState == Rule.Rulewords.r_IF)
+                        this.ParsePremise(tok, Rule.Rulewords.r_OR, nodes, links);
+                    else
+                        throw new ENException(ErrorCode.Err221);
+                    break;
 
-                    case Rule.Rulewords.r_THEN:
-                        if (ruleState != Rule.Rulewords.r_IF)
-                            throw new ENException(ErrorCode.Err221);
-                        ruleState = Rule.Rulewords.r_THEN;
-                    this.parseAction(ruleState, tok, links);
-                        break;
+                case Rule.Rulewords.r_THEN:
+                    if (ruleState != Rule.Rulewords.r_IF)
+                        throw new ENException(ErrorCode.Err221);
+                    ruleState = Rule.Rulewords.r_THEN;
+                    this.ParseAction(ruleState, tok, links);
+                    break;
 
-                    case Rule.Rulewords.r_ELSE:
-                        if (ruleState != Rule.Rulewords.r_THEN)
-                            throw new ENException(ErrorCode.Err221);
-                        ruleState = Rule.Rulewords.r_ELSE;
-                    this.parseAction(ruleState, tok, links);
-                        break;
+                case Rule.Rulewords.r_ELSE:
+                    if (ruleState != Rule.Rulewords.r_THEN)
+                        throw new ENException(ErrorCode.Err221);
+                    ruleState = Rule.Rulewords.r_ELSE;
+                    this.ParseAction(ruleState, tok, links);
+                    break;
 
-                    case Rule.Rulewords.r_PRIORITY:
-                    {
-                        if (ruleState != Rule.Rulewords.r_THEN && ruleState != Rule.Rulewords.r_ELSE)
-                            throw new ENException(ErrorCode.Err221);
+                case Rule.Rulewords.r_PRIORITY: {
+                    if (ruleState != Rule.Rulewords.r_THEN && ruleState != Rule.Rulewords.r_ELSE)
+                        throw new ENException(ErrorCode.Err221);
 
-                        ruleState = Rule.Rulewords.r_PRIORITY;
+                    ruleState = Rule.Rulewords.r_PRIORITY;
 
-                        if (!tok[1].ToDouble(out tempPriority))
-                            throw new ENException(ErrorCode.Err202);
+                    if (!tok[1].ToDouble(out tempPriority))
+                        throw new ENException(ErrorCode.Err202);
 
-                        break;
-                    }
+                    break;
+                }
 
-                    default:
-                        throw new ENException(ErrorCode.Err201);
+                default:
+                    throw new ENException(ErrorCode.Err201);
                 }
             }
 
             this.priority = tempPriority;
         }
 
-        protected void parsePremise(string[] Tok, Rule.Rulewords logop, List<SimulationNode> nodes,
-            List<SimulationLink> links)
-        {
-            Premise p = new Premise(Tok, logop, nodes, links);
-            this.Pchain.Add(p);
+        private void ParsePremise(
+            string[] tok,
+            Rule.Rulewords logop,
+            List<SimulationNode> nodes,
+            List<SimulationLink> links) {
+            Premise p = new Premise(tok, logop, nodes, links);
+            this.pchain.Add(p);
 
         }
 
-        protected void parseAction(Rule.Rulewords state, string[] tok, List<SimulationLink> links)
-        {
+        private void ParseAction(Rule.Rulewords state, string[] tok, List<SimulationLink> links) {
             Action a = new Action(tok, links, this.label);
 
             if (state == Rule.Rulewords.r_THEN)
-                this.Tchain.Insert(0, a);
+                this.tchain.Insert(0, a);
             else
-                this.Fchain.Insert(0, a);
+                this.fchain.Insert(0, a);
         }
 
     }
+
 }

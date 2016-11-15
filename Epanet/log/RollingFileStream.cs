@@ -19,7 +19,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace org.addition.epanet.log {
+namespace Epanet.Log {
     public sealed class RollingFileStream : FileStream {
 
         public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode)

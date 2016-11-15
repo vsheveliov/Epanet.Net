@@ -16,9 +16,9 @@
  */
 
 using System;
-using org.addition.epanet.msx.Solvers;
+using Epanet.MSX.Solvers;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public static class Utilities {
 
@@ -43,19 +43,12 @@ namespace org.addition.epanet.msx {
             b = b.Trim();
 
             // --- fail if substring is empty
-            if (b.Length == 0) return false;
-
-
-            if (a.ToLower().Contains(b.ToLower()))
-                return true;
-
-
-            return false;
+            return b.Length != 0 && a.ToLower().Contains(b.ToLower());
         }
 
         /// <summary>Allocates memory for a 2-dimensional array of doubles.</summary>
-        public static double[][] CreateMatrix(int nrows, int ncols) {
-            var result = new double[nrows][];
+        public static double[,] CreateMatrix(int nrows, int ncols) {
+            double[,] result = new double[nrows,ncols];
             for (int i = 0; i < nrows; i++) {
                 result[i] = new double[ncols];
             }

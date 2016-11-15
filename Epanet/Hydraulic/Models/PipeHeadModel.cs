@@ -15,10 +15,10 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.network;
+using Epanet.Hydraulic.Structures;
+using Epanet.Network;
 
-namespace org.addition.epanet.hydraulic.models {
+namespace Epanet.Hydraulic.Models {
 
     ///<summary>Pipe head loss model calculator.</summary>
     public abstract class PipeHeadModel {

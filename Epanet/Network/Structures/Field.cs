@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Report field properties.</summary>
     public class Field {
@@ -42,7 +42,7 @@ namespace org.addition.epanet.network.structures {
         public Field(string name) {
             this.Name = name;
             this.Enabled = false;
-            precision = 2;
+            this.precision = 2;
             this.SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
             this.SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
         }
@@ -52,7 +52,7 @@ namespace org.addition.epanet.network.structures {
 
         public int Precision { get { return this.precision; } }
 
-        public double GetRptLim(RangeType type) { return rptLim[(int)type]; }
+        public double GetRptLim(RangeType type) { return this.rptLim[(int)type]; }
 
         ///<summary>Units of reported variable.</summary>
         public string Units { get; set; }

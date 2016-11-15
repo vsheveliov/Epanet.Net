@@ -19,9 +19,9 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Xml.Serialization;
-using org.addition.epanet.util;
+using Epanet.Util;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
 
     public class XmlParser:InputParser {
 

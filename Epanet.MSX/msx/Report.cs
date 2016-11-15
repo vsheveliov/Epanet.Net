@@ -19,16 +19,12 @@ using System;
 using System.Globalization;
 using System.IO;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class Report {
 
-
-
-
         private const int SERIES_TABLE = 0;
         private const int STATS_TABLE = 1;
-
 
         private Network msx;
         private ENToolkit2 epanet;
@@ -37,9 +33,9 @@ namespace org.addition.epanet.msx {
 
         public void LoadDependencies(EpanetMSX epa) {
             this.msx = epa.Network;
-            epanet = epa.EnToolkit;
-            @out = epa.Output;
-            inpReader = epa.Reader;
+            this.epanet = epa.EnToolkit;
+            this.@out = epa.Output;
+            this.inpReader = epa.Reader;
         }
 
         private static readonly string[] Logo = {
@@ -56,6 +52,7 @@ namespace org.addition.epanet.msx {
             "", "Average Values  ", "Minimum Values  ",
             "Maximum Values  ", "Range of Values "
         };
+
         private static string _line;
         private static long _lineNum;
         private static long _pageNum;
@@ -77,7 +74,7 @@ namespace org.addition.epanet.msx {
 
         public EnumTypes.ErrorCodeType MSXrpt_write(FileInfo outputFile) {
             BinaryReader raf;
-            int magic = 0;
+            int magic;
 
 
             // check that results are available
@@ -122,15 +119,15 @@ namespace org.addition.epanet.msx {
             // Report on all requested nodes
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; i++) {
                 if (!this.msx.Node[i].Rpt) continue;
-                this.dname = epanet.ENgetnodeid(i);
+                this.dname = this.epanet.ENgetnodeid(i);
                 this.CreateTableHdr(EnumTypes.ObjectTypes.NODE, SERIES_TABLE);
                 this.WriteNodeTable(raf, i, SERIES_TABLE);
             }
 
             // Report on all requested links
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
-                if (!this.msx.Link[i].getRpt()) continue;
-                this.dname = epanet.ENgetlinkid(i);
+                if (!this.msx.Link[i].Rpt) continue;
+                this.dname = this.epanet.ENgetlinkid(i);
                 this.CreateTableHdr(EnumTypes.ObjectTypes.LINK, SERIES_TABLE);
                 this.WriteLinkTable(raf, i, SERIES_TABLE);
             }
@@ -155,13 +152,13 @@ namespace org.addition.epanet.msx {
             // Check if any links to be reported
             count = 0;
             for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++)
-                count += this.msx.Link[j].getRpt() ? 1 : 0;
+                count += this.msx.Link[j].Rpt ? 1 : 0;
 
             // Report on all requested links
             if (count > 0) {
                 this.CreateTableHdr(EnumTypes.ObjectTypes.LINK, STATS_TABLE);
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) {
-                    if (this.msx.Link[j].getRpt()) this.WriteLinkTable(raf, j, STATS_TABLE);
+                    if (this.msx.Link[j].Rpt) this.WriteLinkTable(raf, j, STATS_TABLE);
                 }
             }
         }
@@ -186,13 +183,13 @@ namespace org.addition.epanet.msx {
                 this.tableHdr.Line4 = "----------------";
             }
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                if (this.msx.Species[i].getRpt() == 0) continue;
-                if (objType == EnumTypes.ObjectTypes.NODE && this.msx.Species[i].getType() == EnumTypes.SpeciesType.WALL)
+                if (this.msx.Species[i].Rpt == 0) continue;
+                if (objType == EnumTypes.ObjectTypes.NODE && this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL)
                     continue;
-                string s1 = string.Format("  {0,10}", this.msx.Species[i].getId());
+                string s1 = string.Format("  {0,10}", this.msx.Species[i].Id);
                 this.tableHdr.Line2 += s1;
                 this.tableHdr.Line4 += "  ----------";
-                s1 = inpReader.MSXinp_getSpeciesUnits(i);
+                s1 = this.inpReader.MSXinp_getSpeciesUnits(i);
 
                 this.tableHdr.Line3 += string.Format("  {0,10}", s1);
             }
@@ -220,16 +217,16 @@ namespace org.addition.epanet.msx {
                     _line = string.Format("{0:4}:{1:00}", hrs[0], mins[0]);
                 }
                 if (tableType == STATS_TABLE) {
-                    this.dname = epanet.ENgetnodeid(j);
+                    this.dname = this.epanet.ENgetnodeid(j);
                     _line = string.Format("{0,-16}", this.dname);
                 }
 
                 for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                    if (this.msx.Species[m].getRpt() == 0) continue;
-                    if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.WALL) continue;
+                    if (this.msx.Species[m].Rpt == 0) continue;
+                    if (this.msx.Species[m].Type == EnumTypes.SpeciesType.WALL) continue;
                     float c = this.@out.MSXout_getNodeQual(raf, i, j, m);
                     string fmt = "  {0,10:F"
-                                 + this.msx.Species[m].getPrecision().ToString(NumberFormatInfo.InvariantInfo) + "}";
+                                 + this.msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
                     _line += string.Format(fmt, c);
                 }
                 this.WriteLine(_line);
@@ -245,14 +242,14 @@ namespace org.addition.epanet.msx {
                     _line = string.Format("{0,4}:{1:00}", hrs[0], mins[0]);
                 }
                 if (tableType == STATS_TABLE) {
-                    this.dname = epanet.ENgetlinkid(j);
+                    this.dname = this.epanet.ENgetlinkid(j);
                     _line = string.Format("{0,-16}", this.dname);
                 }
                 for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                    if (this.msx.Species[m].getRpt() == 0) continue;
+                    if (this.msx.Species[m].Rpt == 0) continue;
                     float c = this.@out.MSXout_getLinkQual(raf, k, j, m);
                     string fmt = "  {0,10:F"
-                                 + this.msx.Species[m].getPrecision().ToString(NumberFormatInfo.InvariantInfo) + "}";
+                                 + this.msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
                     _line += string.Format(fmt, c);
                 }
                 this.WriteLine(_line);

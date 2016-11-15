@@ -17,7 +17,7 @@
 
 using System.Diagnostics;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
 
     ///<summary>Network conversion units only class.</summary>
     public class NullParser:InputParser {

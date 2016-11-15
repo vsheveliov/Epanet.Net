@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet {
+namespace Epanet {
     /// <summary>Epanet error codes</summary>
     public enum ErrorCode {
         /// <summary>No error</summary>

@@ -15,12 +15,11 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures
-{
+namespace Epanet.MSX.Structures {
 
-    public interface ExprVariable
-    {
-        double getPipeVariableValue(int id);
-        double getTankVariableValue(int id);
+    public interface IExprVariable {
+        double GetPipeVariableValue(int id);
+        double GetTankVariableValue(int id);
     }
+
 }

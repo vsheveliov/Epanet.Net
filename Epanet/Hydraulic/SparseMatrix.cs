@@ -17,9 +17,9 @@
 
 using System;
 using System.Collections.Generic;
-using org.addition.epanet.hydraulic.structures;
+using Epanet.Hydraulic.Structures;
 
-namespace org.addition.epanet.hydraulic {
+namespace Epanet.Hydraulic {
 
 ///<summary>Linear system solving support class.</summary>
 public class SparseMatrix {
@@ -35,11 +35,11 @@ public class SparseMatrix {
         }
 
         public int getNode() {
-            return node;
+            return this.node;
         }
 
         public int getLink() {
-            return link;
+            return this.link;
         }
     }
 
@@ -57,48 +57,48 @@ public class SparseMatrix {
 
 
     public int getOrder(int id) {
-        return Order[id + 1] - 1;
+        return this.Order[id + 1] - 1;
     }
 
     public int getRow(int id) {
-        return Row[id + 1] - 1;
+        return this.Row[id + 1] - 1;
     }
 
     public int getNdx(int id) {
-        return Ndx[id + 1] - 1;
+        return this.Ndx[id + 1] - 1;
     }
 
     public int getCoeffsCount() {
-        return coeffsCount;
+        return this.coeffsCount;
     }
 
     ///<summary>Creates sparse representation of coeff. matrix.</summary>
     public SparseMatrix(List<SimulationNode> nodes, List<SimulationLink> links, int juncs) {
 
-        Order = new int[nodes.Count + 1];
-        Row = new int[nodes.Count + 1];
-        Ndx = new int[links.Count + 1];
-        Degree = new int[nodes.Count + 1];
+        this.Order = new int[nodes.Count + 1];
+        this.Row = new int[nodes.Count + 1];
+        this.Ndx = new int[links.Count + 1];
+        this.Degree = new int[nodes.Count + 1];
 
         // For each node, builds an adjacency list that identifies all links connected to the node (see buildlists())
         List<AdjItem>[] adjList = new List<AdjItem>[nodes.Count + 1];
         for (int i = 0; i <= nodes.Count; i++)     // <= is necessary due to the array start index being 1
             adjList[i] = new List<AdjItem>();
 
-        buildlists(adjList,nodes, links, true);     // Build node-link adjacency lists with parallel links removed.
-        xparalinks(adjList);           // Remove parallel links //,nodes.size()
-        countdegree(adjList,juncs);                 // Find degree of each junction
+        this.buildlists(adjList,nodes, links, true);     // Build node-link adjacency lists with parallel links removed.
+        this.xparalinks(adjList);           // Remove parallel links //,nodes.size()
+        this.countdegree(adjList,juncs);                 // Find degree of each junction
 
-        coeffsCount = links.Count;
+        this.coeffsCount = links.Count;
 
         // Re-order nodes to minimize number of non-zero coeffs
         // in factorized solution matrix. At same time, adjacency
         // list is updated with links representing non-zero coeffs.
-        reordernodes(adjList, juncs);
+        this.reordernodes(adjList, juncs);
 
-        storesparse(adjList,juncs);             // Sort row indexes in NZSUB to optimize linsolve()
-        ordersparse(juncs);
-        buildlists(adjList,nodes, links, false); // Re-build adjacency lists without removing parallel links for use in future connectivity checking.
+        this.storesparse(adjList,juncs);             // Sort row indexes in NZSUB to optimize linsolve()
+        this.ordersparse(juncs);
+        this.buildlists(adjList,nodes, links, false); // Re-build adjacency lists without removing parallel links for use in future connectivity checking.
     }
 
 
@@ -119,7 +119,7 @@ public class SparseMatrix {
             int j = link.Second.Index + 1;
 
             if (paraflag)
-                pmark = paralink(adjlist,i, j, k);
+                pmark = this.paralink(adjlist,i, j, k);
 
             // Include link in start node i's list
             AdjItem alink = new AdjItem(!pmark ? j : 0, k);
@@ -144,11 +144,11 @@ public class SparseMatrix {
     private bool paralink(List<AdjItem>[] adjlist,int i, int j, int k) {
         foreach (AdjItem alink  in  adjlist[i]) {
             if (alink.getNode() == j) {
-                Ndx[k] = alink.getLink();
+                this.Ndx[k] = alink.getLink();
                 return true;
             }
         }
-        Ndx[k] = k;
+        this.Ndx[k] = k;
         return false;
     }
 
@@ -169,11 +169,11 @@ public class SparseMatrix {
      * @param Njuncs Number of junctions.
      */
     private void countdegree(List<AdjItem>[] adjlist,int Njuncs) {
-        Array.Clear(Degree, 0, Degree.Length);
+        Array.Clear(this.Degree, 0, this.Degree.Length);
         
         for (int i = 1; i <= Njuncs; i++) {
             foreach (AdjItem li  in  adjlist[i])
-                if (li.getNode() > 0) Degree[i]++;
+                if (li.getNode() > 0) this.Degree[i]++;
         }
     }
 
@@ -186,23 +186,23 @@ public class SparseMatrix {
         int k, knode, m, n;
 
         for (k = 1; k < adjlist.Length; k++) {
-            Row[k] = k;
-            Order[k] = k;
+            this.Row[k] = k;
+            this.Order[k] = k;
         }
 
         n = Njuncs;
 
         for (k = 1; k <= n; k++) {
-            m = mindegree(k, n);
-            knode = Order[m];
-            growlist(adjlist,knode);
-            Order[m] = Order[k];
-            Order[k] = knode;
-            Degree[knode] = 0;
+            m = this.mindegree(k, n);
+            knode = this.Order[m];
+            this.growlist(adjlist,knode);
+            this.Order[m] = this.Order[k];
+            this.Order[k] = knode;
+            this.Degree[knode] = 0;
         }
 
         for (k = 1; k <= n; k++)
-            Row[Order[k]] = k;
+            this.Row[this.Order[k]] = k;
     }
 
     /**
@@ -217,7 +217,7 @@ public class SparseMatrix {
                 imin = n;
 
         for (i = k; i <= n; i++) {
-            m = Degree[Order[i]];
+            m = this.Degree[this.Order[i]];
             if (m < min) {
                 min = m;
                 imin = i;
@@ -235,9 +235,9 @@ public class SparseMatrix {
         for (int i = 0; i < adjlist[knode].Count; i++) {
             AdjItem alink = adjlist[knode][i];
             int node = alink.getNode();
-            if (Degree[node] > 0) {
-                Degree[node]--;
-                newlink(adjlist,adjlist[knode], i);
+            if (this.Degree[node] > 0) {
+                this.Degree[node]--;
+                this.newlink(adjlist,adjlist[knode], i);
             }
         }
     }
@@ -256,13 +256,13 @@ public class SparseMatrix {
             AdjItem blink = list[i];
             jnode = blink.getNode();
 
-            if (Degree[jnode] > 0) {
-                if (!linked(adjList,inode, jnode)) {
-                    coeffsCount++;
-                    addlink(adjList,inode, jnode, coeffsCount);
-                    addlink(adjList,jnode, inode, coeffsCount);
-                    Degree[inode]++;
-                    Degree[jnode]++;
+            if (this.Degree[jnode] > 0) {
+                if (!this.linked(adjList,inode, jnode)) {
+                    this.coeffsCount++;
+                    this.addlink(adjList,inode, jnode, this.coeffsCount);
+                    this.addlink(adjList,jnode, inode, this.coeffsCount);
+                    this.Degree[inode]++;
+                    this.Degree[jnode]++;
                 }
             }
         }
@@ -308,27 +308,27 @@ public class SparseMatrix {
      */
     private void storesparse(List<AdjItem>[] adjlist,int n)
     {
-        XLNZ = new int[n + 2];
-        NZSUB = new int[coeffsCount + 2];
-        LNZ = new int[coeffsCount + 2];
+        this.XLNZ = new int[n + 2];
+        this.NZSUB = new int[this.coeffsCount + 2];
+        this.LNZ = new int[this.coeffsCount + 2];
 
         int k = 0;
-        XLNZ[1] = 1;
+        this.XLNZ[1] = 1;
         for (int i = 1; i <= n; i++) {
             int m = 0;
-            int ii = Order[i];
+            int ii = this.Order[i];
 
             foreach (AdjItem alink  in  adjlist[ii]) {
-                int j = Row[alink.getNode()];
+                int j = this.Row[alink.getNode()];
                 int l = alink.getLink();
                 if (j > i && j <= n) {
                     m++;
                     k++;
-                    NZSUB[k] = j;
-                    LNZ[k] = l;
+                    this.NZSUB[k] = j;
+                    this.LNZ[k] = l;
                 }
             }
-            XLNZ[i + 1] = XLNZ[i] + m;
+            this.XLNZ[i + 1] = this.XLNZ[i] + m;
         }
     }
 
@@ -338,20 +338,20 @@ public class SparseMatrix {
         int i, k;
 
         int[] xlnzt = new int[n + 2];
-        int[] nzsubt = new int[coeffsCount + 2];
-        int[] lnzt = new int[coeffsCount + 2];
+        int[] nzsubt = new int[this.coeffsCount + 2];
+        int[] lnzt = new int[this.coeffsCount + 2];
         int[] nzt = new int[n + 2];
 
         for (i = 1; i <= n; i++) {
-            for (k = XLNZ[i]; k < XLNZ[i + 1]; k++)
-                nzt[NZSUB[k]]++;
+            for (k = this.XLNZ[i]; k < this.XLNZ[i + 1]; k++)
+                nzt[this.NZSUB[k]]++;
         }
         xlnzt[1] = 1;
         for (i = 1; i <= n; i++)
             xlnzt[i + 1] = xlnzt[i] + nzt[i];
 
-        transpose(n, XLNZ, NZSUB, LNZ, xlnzt, nzsubt, lnzt, nzt);
-        transpose(n, xlnzt, nzsubt, lnzt, XLNZ, NZSUB, LNZ, nzt);
+        this.transpose(n, this.XLNZ, this.NZSUB, this.LNZ, xlnzt, nzsubt, lnzt, nzt);
+        this.transpose(n, xlnzt, nzsubt, lnzt, this.XLNZ, this.NZSUB, this.LNZ, nzt);
 
     }
 
@@ -416,25 +416,25 @@ public class SparseMatrix {
                 // L(*,k) starting at first[k] of L(*,k).
                 newk = link[k];
                 kfirst = first[k];
-                ljk = Aij[LNZ[kfirst]-1];
+                ljk = Aij[this.LNZ[kfirst]-1];
                 diagj += ljk*ljk;
                 istrt = kfirst + 1;
-                istop = XLNZ[k+1] - 1;
+                istop = this.XLNZ[k+1] - 1;
                 if (istop >= istrt)
                 {
 
                     // Before modification, update vectors 'first'
                     // and 'link' for future modification steps.
                     first[k] = istrt;
-                    isub = NZSUB[istrt];
+                    isub = this.NZSUB[istrt];
                     link[k] = link[isub];
                     link[isub] = k;
 
                     // The actual mod is saved in vector 'temp'.
                     for (i=istrt; i<=istop; i++)
                     {
-                        isub = NZSUB[i];
-                        temp[isub] += Aij[LNZ[i]-1]*ljk;
+                        isub = this.NZSUB[i];
+                        temp[isub] += Aij[this.LNZ[i]-1]*ljk;
                     }
                 }
                 k = newk;
@@ -449,19 +449,19 @@ public class SparseMatrix {
             }
             diagj = Math.Sqrt(diagj);
             Aii[j-1] = diagj;
-            istrt = XLNZ[j];
-            istop = XLNZ[j+1] - 1;
+            istrt = this.XLNZ[j];
+            istop = this.XLNZ[j+1] - 1;
             if (istop >= istrt)
             {
                 first[j] = istrt;
-                isub = NZSUB[istrt];
+                isub = this.NZSUB[istrt];
                 link[j] = link[isub];
                 link[isub] = j;
                 for (i=istrt; i<=istop; i++)
                 {
-                    isub = NZSUB[i];
-                    bj = (Aij[LNZ[i]-1] - temp[isub])/diagj;
-                    Aij[LNZ[i]-1] = bj;
+                    isub = this.NZSUB[i];
+                    bj = (Aij[this.LNZ[i]-1] - temp[isub])/diagj;
+                    Aij[this.LNZ[i]-1] = bj;
                     temp[isub] = 0.0;
                 }
             }
@@ -472,14 +472,14 @@ public class SparseMatrix {
         {
             bj = B[j-1]/Aii[j-1];
             B[j-1] = bj;
-            istrt = XLNZ[j];
-            istop = XLNZ[j+1] - 1;
+            istrt = this.XLNZ[j];
+            istop = this.XLNZ[j+1] - 1;
             if (istop >= istrt)
             {
                 for (i=istrt; i<=istop; i++)
                 {
-                    isub = NZSUB[i];
-                    B[isub-1] -= Aij[LNZ[i]-1]*bj;
+                    isub = this.NZSUB[i];
+                    B[isub-1] -= Aij[this.LNZ[i]-1]*bj;
                 }
             }
         }
@@ -488,14 +488,14 @@ public class SparseMatrix {
         for (j=n; j>=1; j--)
         {
             bj = B[j-1];
-            istrt = XLNZ[j];
-            istop = XLNZ[j+1] - 1;
+            istrt = this.XLNZ[j];
+            istop = this.XLNZ[j+1] - 1;
             if (istop >= istrt)
             {
                 for (i=istrt; i<=istop; i++)
                 {
-                    isub = NZSUB[i];
-                    bj -= Aij[LNZ[i]-1]*B[isub-1];
+                    isub = this.NZSUB[i];
+                    bj -= Aij[this.LNZ[i]-1]*B[isub-1];
                 }
             }
             B[j-1] = bj/Aii[j-1];

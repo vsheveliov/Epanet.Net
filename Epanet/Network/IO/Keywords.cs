@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.network.io
+namespace Epanet.Network.IO
 {
 
     ///<summary>Parse and report keywords.</summary>

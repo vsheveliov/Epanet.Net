@@ -18,7 +18,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>2D graph used to map volume, pump, efficiency and head loss curves.</summary>
     public class Curve {

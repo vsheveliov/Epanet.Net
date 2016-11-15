@@ -20,11 +20,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using org.addition.epanet.log;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Log;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
 
 
     ///<summary>INP parser class.</summary>
@@ -71,7 +71,7 @@ namespace org.addition.epanet.network.io.input {
         /// <param name="f"></param>
 
         private void ParsePc(Network net, string f) {
-            _lineNumber = 0;
+            this._lineNumber = 0;
             Network.SectType sectionType = (Network.SectType)(-1);
             StreamReader buffReader;
 
@@ -85,7 +85,7 @@ namespace org.addition.epanet.network.io.input {
             try {
                 string line;
                 while ((line = buffReader.ReadLine()) != null) {
-                    _lineNumber++;
+                    this._lineNumber++;
 
                     line = line.Trim();
 
@@ -125,7 +125,7 @@ namespace org.addition.epanet.network.io.input {
                             }
                         }
                         catch (ENException e) {
-                            LogException(sectionType, e.getCodeID(), line, tokens);
+                            this.LogException(sectionType, e.getCodeID(), line, tokens);
                         }
                     }
 
@@ -278,7 +278,7 @@ namespace org.addition.epanet.network.io.input {
                         }
                     }
                     catch (ENException e) {
-                        LogException(sectionType, e.getCodeID(), line, tokens);
+                        this.LogException(sectionType, e.getCodeID(), line, tokens);
                         errSum++;
                     }
                     if (errSum == Constants.MAXERRS) break;

@@ -15,80 +15,63 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
 
-// Chemical species object
+    /// <summary>Chemical species object.</summary>
     public class Species {
-        string id; // name
-        string units; // mass units code [MAXUNITS]
-        double aTol; // absolute tolerance
-        double rTol; // relative tolerance
-        EnumTypes.SpeciesType type; // BULK or WALL
-        EnumTypes.ExpressionType pipeExprType; // type of pipe chemistry
-        EnumTypes.ExpressionType tankExprType; // type of tank chemistry
-        int precision; // reporting precision
-        byte rpt; // reporting flag
-        MathExpr pipeExpr; // pipe chemistry expression
-        MathExpr tankExpr; // tank chemistry expression
+
+        private string units;
 
         public Species() {
-            id = "";
-            units = "";
-            pipeExpr = null;
-            tankExpr = null;
-            pipeExprType = EnumTypes.ExpressionType.NO_EXPR;
-            tankExprType = EnumTypes.ExpressionType.NO_EXPR;
-            precision = 2;
-            rpt = 0;
+            this.Id = "";
+            this.units = "";
+            this.PipeExpr = null;
+            this.TankExpr = null;
+            this.PipeExprType = EnumTypes.ExpressionType.NO_EXPR;
+            this.TankExprType = EnumTypes.ExpressionType.NO_EXPR;
+            this.Precision = 2;
+            this.Rpt = 0;
         }
 
-        public string getId() { return id; }
+        ///<summary>name</summary>
+        public string Id { get; set; }
 
-        public void setId(string value) { this.id = value; }
-
-        public string getUnits() { return units; }
-
-        public void setUnits(string value) {
-            this.units = value;
-            if (this.units.Length > Constants.MAXUNITS)
-                this.units = this.units.Substring(0, Constants.MAXUNITS);
+        ///<summary>mass units code [MAXUNITS]</summary>
+        public string Units {
+            get { return this.units; }
+            set {
+                this.units = value;
+                if (this.units.Length > Constants.MAXUNITS)
+                    this.units = this.units.Substring(0, Constants.MAXUNITS);
+            }
         }
 
-        public double getaTol() { return aTol; }
+        ///<summary>absolute tolerance</summary>
+        public double ATol { get; set; }
 
-        public void setaTol(double value) { this.aTol = value; }
+        ///<summary>relative tolerance</summary>
+        public double RTol { get; set; }
 
-        public double getrTol() { return rTol; }
+        ///<summary>BULK or WALL</summary>
+        public EnumTypes.SpeciesType Type { get; set; }
 
-        public void setrTol(double value) { this.rTol = value; }
+        ///<summary>type of pipe chemistry</summary>
+        public EnumTypes.ExpressionType PipeExprType { get; set; }
 
-        public EnumTypes.SpeciesType getType() { return type; }
+        ///<summary>type of tank chemistry</summary>
+        public EnumTypes.ExpressionType TankExprType { get; set; }
 
-        public void setType(EnumTypes.SpeciesType value) { this.type = value; }
+        ///<summary>reporting precision</summary>
+        public int Precision { get; set; }
 
-        public EnumTypes.ExpressionType getPipeExprType() { return pipeExprType; }
+        ///<summary>reporting flag</summary>
+        public byte Rpt { get; set; }
 
-        public void setPipeExprType(EnumTypes.ExpressionType value) { this.pipeExprType = value; }
+        ///<summary>pipe chemistry expression</summary>
+        public MathExpr PipeExpr { get; set; }
 
-        public EnumTypes.ExpressionType getTankExprType() { return tankExprType; }
-
-        public void setTankExprType(EnumTypes.ExpressionType value) { this.tankExprType = value; }
-
-        public int getPrecision() { return precision; }
-
-        public void setPrecision(int value) { this.precision = value; }
-
-        public byte getRpt() { return rpt; }
-
-        public void setRpt(byte value) { this.rpt = value; }
-
-        public MathExpr getPipeExpr() { return pipeExpr; }
-
-        public void setPipeExpr(MathExpr value) { this.pipeExpr = value; }
-
-        public MathExpr getTankExpr() { return tankExpr; }
-
-        public void setTankExpr(MathExpr value) { this.tankExpr = value; }
+        ///<summary>tank chemistry expression</summary>
+        public MathExpr TankExpr { get; set; }
     }
 
 }

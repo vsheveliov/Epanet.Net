@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.quality.structures {
+namespace Epanet.Quality.Structures {
 
     ///<summary>Discrete water quality segment.</summary>
     public class QualitySegment {

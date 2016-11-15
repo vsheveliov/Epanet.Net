@@ -19,9 +19,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using org.addition.epanet.network;
+using Epanet.Network;
 
-namespace org.addition.epanet.quality {
+namespace Epanet.Quality {
 
     ///<summary>Binary quality file reader class.</summary>
     public class QualityReader:IEnumerable<QualityReader.Step>, IDisposable {
@@ -181,12 +181,12 @@ namespace org.addition.epanet.quality {
             /// <summary>Get link quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Species concentration, trace or age value in user units.</returns>
-            public float GetLinkQuality(int id) { return (float)_fld.RevertUnit(FieldsMap.FieldType.QUALITY, this._linkQ[id]); }
+            public float GetLinkQuality(int id) { return (float)this._fld.RevertUnit(FieldsMap.FieldType.QUALITY, this._linkQ[id]); }
 
             /// <summary>Get node quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Specie concentration, trace or age value in user units.</returns>
-            public float GetNodeQuality(int id) { return (float)_fld.RevertUnit(FieldsMap.FieldType.QUALITY, this._nodeQ[id]); }
+            public float GetNodeQuality(int id) { return (float)this._fld.RevertUnit(FieldsMap.FieldType.QUALITY, this._nodeQ[id]); }
 
             /// <summary> Read quality data from file stream.</summary>
             internal void Read() {

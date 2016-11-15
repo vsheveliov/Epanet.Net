@@ -16,11 +16,11 @@
  */
 
 using System.Collections.Generic;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.quality.structures {
+namespace Epanet.Quality.Structures {
 
     ///<summary>Wrapper class for the Link in the water quality simulation.</summary>
     public class QualityLink {
@@ -41,9 +41,9 @@ namespace org.addition.epanet.quality.structures {
         public QualityLink(IList<Node> oNodes, List<QualityNode> qNodes, Link link) {
             int n1 = oNodes.IndexOf(link.FirstNode);
             int n2 = oNodes.IndexOf(link.SecondNode);
-            first = qNodes[n1];
-            second = qNodes[n2];
-            segments = new LinkedList<QualitySegment>();
+            this.first = qNodes[n1];
+            this.second = qNodes[n2];
+            this.segments = new LinkedList<QualitySegment>();
             this.link = link;
         }
 

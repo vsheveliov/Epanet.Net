@@ -17,14 +17,14 @@
 
 using System.Collections.Generic;
 using System.IO;
-using org.addition.epanet.msx.Structures;
+using Epanet.MSX.Structures;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class Project {
         public void LoadDependencies(EpanetMSX epa) {
             this.msx = epa.Network;
-            reader = epa.Reader;
+            this.reader = epa.Reader;
         }
 
         private Network msx;
@@ -50,8 +50,8 @@ namespace org.addition.epanet.msx {
             errcode = Utilities.Call(errcode, this.CreateHashTables());
 
             // allocate memory for the required number of objects
-            errcode = Utilities.Call(errcode, reader.CountMsxObjects(buffReader));
-            errcode = Utilities.Call(errcode, reader.CountNetObjects());
+            errcode = Utilities.Call(errcode, this.reader.CountMsxObjects(buffReader));
+            errcode = Utilities.Call(errcode, this.reader.CountNetObjects());
             errcode = Utilities.Call(errcode, this.CreateObjects());
 
             buffReader.Close();
@@ -59,8 +59,8 @@ namespace org.addition.epanet.msx {
 
             // Read in the EPANET and MSX object data
 
-            errcode = Utilities.Call(errcode, reader.ReadNetData());
-            errcode = Utilities.Call(errcode, reader.ReadMsxData(buffReader));
+            errcode = Utilities.Call(errcode, this.reader.ReadNetData());
+            errcode = Utilities.Call(errcode, this.reader.ReadMsxData(buffReader));
 
             //if (MSX.RptFile.getFilename().equals(""))
             //    errcode = Utilities.CALL(errcode, openRptFile());
@@ -107,7 +107,7 @@ namespace org.addition.epanet.msx {
 
 // --- do nothing if object already exists in a hash table
 
-            if (MSXproj_findObject(type, id) > 0) return 0;
+            if (this.MSXproj_findObject(type, id) > 0) return 0;
 
 // --- insert object's ID into the hash table for that type of object
 
@@ -181,8 +181,8 @@ namespace org.addition.epanet.msx {
 
             // Convert pipe diameter & length
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
-                this.msx.Link[i].setDiam(this.msx.Link[i].getDiam() / this.msx.Ucf[(int)EnumTypes.UnitsType.DIAM_UNITS]);
-                this.msx.Link[i].setLen(this.msx.Link[i].getLen() / this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS]);
+                this.msx.Link[i].Diam = this.msx.Link[i].Diam / this.msx.Ucf[(int)EnumTypes.UnitsType.DIAM_UNITS];
+                this.msx.Link[i].Len = this.msx.Link[i].Len / this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
             }
 
             // Convert initial tank volumes
@@ -193,8 +193,8 @@ namespace org.addition.epanet.msx {
 
             // Assign default tolerances to species
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                if (this.msx.Species[i].getrTol() == 0.0) this.msx.Species[i].setrTol(this.msx.DefRtol);
-                if (this.msx.Species[i].getaTol() == 0.0) this.msx.Species[i].setaTol(this.msx.DefAtol);
+                if (this.msx.Species[i].RTol == 0.0) this.msx.Species[i].RTol = this.msx.DefRtol;
+                if (this.msx.Species[i].ATol == 0.0) this.msx.Species[i].ATol = this.msx.DefAtol;
             }
 
             return errcode;

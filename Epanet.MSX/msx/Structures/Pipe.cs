@@ -15,36 +15,16 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
+    public class Pipe {
+        ///<summary>integration time step</summary>
+        public double Hstep { get; set; }
 
+        ///<summary>segment volume</summary>
+        public double V { get; set; }
 
-public class Pipe {
-    double    hstep;        // integration time step
-    double    v;            // segment volume
-    double    [] c;         // species concentrations
-
-    public double getHstep() {
-        return hstep;
+        ///<summary>species concentrations</summary>
+        public double[] C { get; set; }
     }
 
-    public void setHstep(double hstep) {
-        this.hstep = hstep;
-    }
-
-    public double getV() {
-        return v;
-    }
-
-    public void setV(double v) {
-        this.v = v;
-    }
-
-    public double[] getC() {
-        return c;
-    }
-
-    public void setC(double[] c) {
-        this.c = c;
-    }
-}
 }

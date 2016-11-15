@@ -19,12 +19,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Epanet.Network.Structures;
+using Epanet.Util;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
 
-namespace org.addition.epanet.network.io.output {
+namespace Epanet.Network.IO.Output {
 
 ///<summary>EXCEL XLSX composer class.</summary>
 public class ExcelComposer : OutputComposer {

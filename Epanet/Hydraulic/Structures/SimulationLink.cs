@@ -18,222 +18,232 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Epanet.Hydraulic.Models;
+using Epanet.Log;
+using Epanet.Network;
+using Epanet.Network.Structures;
 using Epanet.Properties;
-using org.addition.epanet.hydraulic.models;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic.structures {
+namespace Epanet.Hydraulic.Structures {
 
 
-public class SimulationLink {
+    public class SimulationLink {
 
 
-    protected readonly SimulationNode first;
-    protected readonly SimulationNode second;
-    protected readonly Link link;
-    protected readonly int index;
+        protected readonly SimulationNode first;
+        protected readonly SimulationNode second;
+        protected readonly Link link;
+        protected readonly int index;
 
-    /// <summary>Epanet 'S[k]', link current status</summary>
-    protected Link.StatType status;  
+        /// <summary>Epanet 'S[k]', link current status</summary>
+        protected Link.StatType status;
 
-    /// <summary>Epanet 'Q[k]', link flow value</summary>
-    protected double flow;           
-    
-    /// <summary>Epanet 'P[k]', Inverse headloss derivatives</summary>
-    protected double invHeadLoss;    
+        /// <summary>Epanet 'Q[k]', link flow value</summary>
+        protected double flow;
 
-    /// <summary>Epanet 'Y[k]', Flow correction factors</summary>
-    protected double flowCorrection; 
-    
-    /// <summary>Epanet 'K[k]', Link setting</summary>
-    protected double setting;        
+        /// <summary>Epanet 'P[k]', Inverse headloss derivatives</summary>
+        protected double invHeadLoss;
 
-    protected Link.StatType oldStatus;
+        /// <summary>Epanet 'Y[k]', Flow correction factors</summary>
+        protected double flowCorrection;
+
+        /// <summary>Epanet 'K[k]', Link setting</summary>
+        protected double setting;
+
+        protected Link.StatType oldStatus;
 
 
-    public static SimulationLink createIndexedLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
-        SimulationLink ret;
-        if (@ref is Valve)
-            ret = new SimulationValve(new List<SimulationNode>(byId.Values), @ref, idx);
-        else if (@ref is Pump)
-            ret = new SimulationPump(new List<SimulationNode>(byId.Values), @ref, idx);
-        else
-            ret = new SimulationLink(byId, @ref, idx);
+        public static SimulationLink CreateIndexedLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
+            SimulationLink ret;
+            if (@ref is Valve)
+                ret = new SimulationValve(new List<SimulationNode>(byId.Values), @ref, idx);
+            else if (@ref is Pump)
+                ret = new SimulationPump(new List<SimulationNode>(byId.Values), @ref, idx);
+            else
+                ret = new SimulationLink(byId, @ref, idx);
 
-        return ret;
-    }
-
-    public static SimulationLink createIndexedLink(List<SimulationNode> indexedNodes, Link @ref, int idx) {
-        SimulationLink ret = null;
-        if (@ref is Valve)
-            ret = new SimulationValve(indexedNodes, @ref, idx);
-        else if (@ref is Pump)
-            ret = new SimulationPump(indexedNodes, @ref, idx);
-        else
-            ret = new SimulationLink(indexedNodes, @ref, idx);
-
-        return ret;
-    }
-
-    public SimulationLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
-
-        link = @ref;
-        first = byId[this.link.FirstNode.Id];
-        second = byId[this.link.SecondNode.Id];
-        this.index = idx;
-
-        // Init
-        setting = this.link.Roughness;
-        status = this.link.Status;
-
-    }
-
-    public SimulationLink(List<SimulationNode> indexedNodes, Link @ref, int idx) {
-        link = @ref;
-
-        foreach (SimulationNode indexedNode  in  indexedNodes) {
-            if (indexedNode.Id == this.link.FirstNode.Id)
-                first = indexedNode;
-            else if (indexedNode.Id == this.link.SecondNode.Id)
-                second = indexedNode;
-            if (first != null && second != null) break;
+            return ret;
         }
-        this.index = idx;
 
-        // Init
-        setting = this.link.Roughness;
-        status = this.link.Status;
-    }
+        public static SimulationLink CreateIndexedLink(List<SimulationNode> indexedNodes, Link @ref, int idx) {
+            SimulationLink ret = null;
+            if (@ref is Valve)
+                ret = new SimulationValve(indexedNodes, @ref, idx);
+            else if (@ref is Pump)
+                ret = new SimulationPump(indexedNodes, @ref, idx);
+            else
+                ret = new SimulationLink(indexedNodes, @ref, idx);
 
-#region Indexed link methods
-    
-    public SimulationNode First { get { return this.first; } }
-
-    public SimulationNode Second { get { return this.second; } }
-
-    public Link Link { get { return this.link; } }
-
-    public int Index { get { return this.index; } }
-
-#endregion
-    
-#region Network link Getters
-
-    public double[] C0 { get { return this.link.C0; } }
-
-    public double Diameter { get { return this.link.Diameter; } }
-
-    public double Roughness { get { return this.link.Roughness; } }
-
-    public double Km { get { return this.link.Km; } }
-
-    public double FlowResistance { get { return this.link.FlowResistance; } }
-
-    public Link.LinkType Type { get { return this.link.Type; } }
-
-#endregion
-
-#region Simulation getters & setters
-
-    public Link.StatType SimStatus { get { return this.status; } set { this.status = value; } }
-
-    public double SimFlow { get { return this.flow; } set { this.flow = value; } }
-
-    public double SimSetting { get { return this.setting; } set { this.setting = value; } }
-
-    public double SimInvHeadLoss { get { return this.invHeadLoss; } set { this.invHeadLoss = value; } }
-
-    public double SimFlowCorrection { get { return this.flowCorrection; } set { this.flowCorrection = value; } }
-
-    public Link.StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
-
-#endregion
-
-    // Simulation Methods
-
-    /// <summary>Sets link status to OPEN(true) or CLOSED(false).</summary>
-    public void setLinkStatus(bool value) {
-        if (value) {
-            if (this is SimulationPump)
-                setting = 1.0;
-
-            else if (Type != Link.LinkType.GPV)
-                setting = Constants.MISSING;
-
-            status = Link.StatType.OPEN;
-        } else {
-            if (this is SimulationPump)
-                setting = 0.0;
-            else if (Type != Link.LinkType.GPV)
-                setting = Constants.MISSING;
-
-            status = Link.StatType.CLOSED;
+            return ret;
         }
-    }
 
-    /// <summary>Sets pump speed or valve setting, adjusting link status and flow when necessary.</summary>
-    public void setLinkSetting(double value) {
-        if (this is SimulationPump) {
-            setting = value;
-            if (value > 0 && status <= Link.StatType.CLOSED)
-                status = Link.StatType.OPEN;
+        public SimulationLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
 
-            if (value == 0 && status > Link.StatType.CLOSED)
-                status = Link.StatType.CLOSED;
+            this.link = @ref;
+            this.first = byId[this.link.FirstNode.Id];
+            this.second = byId[this.link.SecondNode.Id];
+            this.index = idx;
 
-        } else if (Type == Link.LinkType.FCV) {
-            setting = value;
-            status = Link.StatType.ACTIVE;
-        } else {
-            if (setting == Constants.MISSING && status <= Link.StatType.CLOSED)
-                status = Link.StatType.OPEN;
+            // Init
+            this.setting = this.link.Roughness;
+            this.status = this.link.Status;
 
-            setting = value;
         }
-    }
 
-    
-    /// <summary>
-    /// Sets initial flow in link to QZERO if link is closed, to design flow for a pump, 
-    /// or to flow at velocity of 1 fps for other links.
-    /// </summary>
-    public void initLinkFlow() {
-        if (this.SimStatus == Link.StatType.CLOSED)
-            this.flow = Constants.QZERO;
-        else if (this is SimulationPump)
-            this.flow = this.Roughness * ((SimulationPump) this).getQ0();
-        else
-            this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
-    }
+        public SimulationLink(List<SimulationNode> indexedNodes, Link @ref, int idx) {
+            this.link = @ref;
 
-    public void initLinkFlow(Link.StatType type, double Kc) {
-        if (type == Link.StatType.CLOSED)
-            this.flow = Constants.QZERO;
-        else if (this is SimulationPump)
-            this.flow = Kc * ((SimulationPump) this).getQ0();
-        else
-            this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
-    }
+            foreach (SimulationNode indexedNode  in  indexedNodes) {
+                if (indexedNode.Id == this.link.FirstNode.Id)
+                    this.first = indexedNode;
+                else if (indexedNode.Id == this.link.SecondNode.Id)
+                    this.second = indexedNode;
+                if (this.first != null && this.second != null) break;
+            }
+            this.index = idx;
 
-    /// <summary>Compute P, Y and matrix coeffs.</summary>
-    private void computeMatrixCoeff(FieldsMap fMap,
-                                    PropertiesMap pMap,
-                                    PipeHeadModel hlModel,
-                                    IList<Curve> curves,
-                                    SparseMatrix smat, LSVariables ls) {
+            // Init
+            this.setting = this.link.Roughness;
+            this.status = this.link.Status;
+        }
 
-        switch (Type) {
+        #region Indexed link methods
+
+        public SimulationNode First { get { return this.first; } }
+
+        public SimulationNode Second { get { return this.second; } }
+
+        public Link Link { get { return this.link; } }
+
+        public int Index { get { return this.index; } }
+
+        #endregion
+
+        #region Network link Getters
+
+        public double[] C0 { get { return this.link.C0; } }
+
+        public double Diameter { get { return this.link.Diameter; } }
+
+        public double Roughness { get { return this.link.Roughness; } }
+
+        public double Km { get { return this.link.Km; } }
+
+        public double FlowResistance { get { return this.link.FlowResistance; } }
+
+        public Link.LinkType Type { get { return this.link.Type; } }
+
+        #endregion
+
+        #region Simulation getters & setters
+
+        /// <summary>Epanet 'S[k]', link current status</summary>
+        public Link.StatType SimStatus { get { return this.status; } set { this.status = value; } }
+
+        /// <summary>Epanet 'Q[k]', link flow value</summary>
+        public double SimFlow { get { return this.flow; } set { this.flow = value; } }
+
+        /// <summary>Epanet 'K[k]', Link setting</summary>
+        public double SimSetting { get { return this.setting; } set { this.setting = value; } }
+
+        /// <summary>Epanet 'P[k]', Inverse headloss derivatives</summary>
+        public double SimInvHeadLoss { get { return this.invHeadLoss; } set { this.invHeadLoss = value; } }
+
+        /// <summary>Epanet 'Y[k]', Flow correction factors</summary>
+        public double SimFlowCorrection { get { return this.flowCorrection; } set { this.flowCorrection = value; } }
+
+        public Link.StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
+
+        #endregion
+
+        // Simulation Methods
+
+        /// <summary>Sets link status to OPEN(true) or CLOSED(false).</summary>
+        public void SetLinkStatus(bool value) {
+            if (value) {
+                if (this is SimulationPump)
+                    this.setting = 1.0;
+
+                else if (this.Type != Link.LinkType.GPV)
+                    this.setting = Constants.MISSING;
+
+                this.status = Link.StatType.OPEN;
+            }
+            else {
+                if (this is SimulationPump)
+                    this.setting = 0.0;
+                else if (this.Type != Link.LinkType.GPV)
+                    this.setting = Constants.MISSING;
+
+                this.status = Link.StatType.CLOSED;
+            }
+        }
+
+        /// <summary>Sets pump speed or valve setting, adjusting link status and flow when necessary.</summary>
+        public void SetLinkSetting(double value) {
+            if (this is SimulationPump) {
+                this.setting = value;
+                if (value > 0 && this.status <= Link.StatType.CLOSED)
+                    this.status = Link.StatType.OPEN;
+
+                if (value == 0 && this.status > Link.StatType.CLOSED)
+                    this.status = Link.StatType.CLOSED;
+
+            }
+            else if (this.Type == Link.LinkType.FCV) {
+                this.setting = value;
+                this.status = Link.StatType.ACTIVE;
+            }
+            else {
+                if (this.setting == Constants.MISSING && this.status <= Link.StatType.CLOSED)
+                    this.status = Link.StatType.OPEN;
+
+                this.setting = value;
+            }
+        }
+
+
+        /// <summary>
+        /// Sets initial flow in link to QZERO if link is closed, to design flow for a pump, 
+        /// or to flow at velocity of 1 fps for other links.
+        /// </summary>
+        public void InitLinkFlow() {
+            if (this.SimStatus == Link.StatType.CLOSED)
+                this.flow = Constants.QZERO;
+            else if (this is SimulationPump)
+                this.flow = this.Roughness * ((SimulationPump)this).Q0;
+            else
+                this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
+        }
+
+        public void InitLinkFlow(Link.StatType type, double kc) {
+            if (type == Link.StatType.CLOSED)
+                this.flow = Constants.QZERO;
+            else if (this is SimulationPump)
+                this.flow = kc * ((SimulationPump)this).Q0;
+            else
+                this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
+        }
+
+        /// <summary>Compute P, Y and matrix coeffs.</summary>
+        private void ComputeMatrixCoeff(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            PipeHeadModel hlModel,
+            IList<Curve> curves,
+            SparseMatrix smat,
+            LSVariables ls) {
+
+            switch (this.Type) {
             // Pipes
             case Link.LinkType.CV:
             case Link.LinkType.PIPE:
-                computePipeCoeff(pMap, hlModel);
+                this.ComputePipeCoeff(pMap, hlModel);
                 break;
             // Pumps
             case Link.LinkType.PUMP:
-                ((SimulationPump) this).computePumpCoeff(fMap, pMap);
+                ((SimulationPump)this).ComputePumpCoeff(fMap, pMap);
                 break;
             // Valves
             case Link.LinkType.PBV:
@@ -244,152 +254,162 @@ public class SimulationLink {
             case Link.LinkType.PSV:
                 // If valve status fixed then treat as pipe
                 // otherwise ignore the valve for now.
-                if (!((SimulationValve) this).computeValveCoeff(fMap, pMap, curves))
+                if (!((SimulationValve)this).computeValveCoeff(fMap, pMap, curves))
                     return;
                 break;
             default:
                 return;
-        }
-
-        int n1 = this.first.Index;
-        int n2 = this.second.Index;
-
-        ls.addNodalInFlow(n1, -flow);
-        ls.addNodalInFlow(n2, +flow);
-
-        ls.addAij(smat.getNdx(Index), -invHeadLoss);
-
-        if (!(first is SimulationTank)) {
-            ls.addAii(smat.getRow(n1), +invHeadLoss);
-            ls.addRHSCoeff(smat.getRow(n1), +flowCorrection);
-        } else
-            ls.addRHSCoeff(smat.getRow(n2), +(invHeadLoss * first.getSimHead()));
-
-        if (!(second is SimulationTank)) {
-            ls.addAii(smat.getRow(n2), +invHeadLoss);
-            ls.addRHSCoeff(smat.getRow(n2), -flowCorrection);
-        } else
-            ls.addRHSCoeff(smat.getRow(n1), +(invHeadLoss * second.getSimHead()));
-
-    }
-
-    // Computes P & Y coefficients for pipe k
-    private void computePipeCoeff(PropertiesMap pMap, PipeHeadModel hlModel) {
-        // For closed pipe use headloss formula: h = CBIG*q
-        if (status <= Link.StatType.CLOSED) {
-            invHeadLoss = 1.0 / Constants.CBIG;
-            flowCorrection = flow;
-            return;
-        }
-
-        PipeHeadModel.LinkCoeffs coeffs = hlModel.compute(pMap, this);
-        invHeadLoss = coeffs.InvHeadLoss;
-        flowCorrection = coeffs.FlowCorrection;
-    }
-
-
-    // Closes link flowing into full or out of empty tank
-    private void tankStatus(PropertiesMap pMap) {
-        double q = flow;
-        SimulationNode n1 = First;
-        SimulationNode n2 = Second;
-
-        // Make node n1 be the tank
-        if (!(n1 is SimulationTank)) {
-            if (!(n2 is SimulationTank))
-                return;                      // neither n1 or n2 is a tank
-            // N2 is a tank, swap !
-            SimulationNode n = n1;
-            n1 = n2;
-            n2 = n;
-            q = -q;
-        }
-
-        double h = n1.getSimHead() - n2.getSimHead();
-
-        SimulationTank tank = (SimulationTank) n1;
-
-        // Skip reservoirs & closed links
-        if (tank.getArea() == 0.0 || status <= Link.StatType.CLOSED)
-            return;
-
-        // If tank full, then prevent flow into it
-        if (tank.getSimHead() >= tank.getHmax() - pMap.Htol) {
-            //Case 1: Link is a pump discharging into tank
-            if (Type == Link.LinkType.PUMP) {
-                if (Second == n1)
-                    status = Link.StatType.TEMPCLOSED;
-            } else if (cvStatus(pMap, Link.StatType.OPEN, h, q) == Link.StatType.CLOSED) //  Case 2: Downstream head > tank head
-                status = Link.StatType.TEMPCLOSED;
-        }
-
-        // If tank empty, then prevent flow out of it
-        if (tank.getSimHead() <= tank.getHmin() + pMap.Htol) {
-            // Case 1: Link is a pump discharging from tank
-            if (Type == Link.LinkType.PUMP) {
-                if (First == n1)
-                    status = Link.StatType.TEMPCLOSED;
             }
-            // Case 2: Tank head > downstream head
-            else if (cvStatus(pMap, Link.StatType.CLOSED, h, q) == Link.StatType.OPEN)
-                status = Link.StatType.TEMPCLOSED;
-        }
-    }
 
-    /// <summary>Updates status of a check valve.</summary>
-    private static Link.StatType cvStatus(PropertiesMap pMap, Link.StatType s, double dh, double q) {
-        if (Math.Abs(dh) > pMap.Htol) {
-            if (dh < -pMap.Htol)
-                return (Link.StatType.CLOSED);
-            else if (q < -pMap.Qtol)
-                return (Link.StatType.CLOSED);
+            int n1 = this.first.Index;
+            int n2 = this.second.Index;
+
+            ls.addNodalInFlow(n1, -this.flow);
+            ls.addNodalInFlow(n2, +this.flow);
+
+            ls.addAij(smat.getNdx(this.Index), -this.invHeadLoss);
+
+            if (!(this.first is SimulationTank)) {
+                ls.addAii(smat.getRow(n1), +this.invHeadLoss);
+                ls.addRHSCoeff(smat.getRow(n1), +this.flowCorrection);
+            }
             else
-                return (Link.StatType.OPEN);
-        } else {
-            if (q < -pMap.Qtol)
-                return (Link.StatType.CLOSED);
+                ls.addRHSCoeff(smat.getRow(n2), +(this.invHeadLoss * this.first.SimHead));
+
+            if (!(this.second is SimulationTank)) {
+                ls.addAii(smat.getRow(n2), +this.invHeadLoss);
+                ls.addRHSCoeff(smat.getRow(n2), -this.flowCorrection);
+            }
             else
-                return (s);
-        }
-    }
+                ls.addRHSCoeff(smat.getRow(n1), +(this.invHeadLoss * this.second.SimHead));
 
-    /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
-    private bool linkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log) {
-        bool change = false;
-
-        double dh = first.getSimHead() - second.getSimHead();
-
-        Link.StatType tStatus = status;
-
-        if (tStatus == Link.StatType.XHEAD || tStatus == Link.StatType.TEMPCLOSED)
-            status = Link.StatType.OPEN;
-
-        if (Type == Link.LinkType.CV)
-            status = cvStatus(pMap, status, dh, flow);
-
-        if (this is SimulationPump && status >= Link.StatType.OPEN && setting > 0.0)
-            status = ((SimulationPump) this).pumpStatus(pMap, -dh);
-
-        if (Type == Link.LinkType.FCV && setting != Constants.MISSING)
-            status = ((SimulationValve) this).fcvStatus(pMap, tStatus);
-
-        if (first is SimulationTank || second is SimulationTank)
-            tankStatus(pMap);
-
-        if (tStatus != status) {
-            change = true;
-            if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
-                logStatChange(fMap, log, this, tStatus, status);
         }
 
-        return (change);
-    }
+        // Computes P & Y coefficients for pipe k
+        private void ComputePipeCoeff(PropertiesMap pMap, PipeHeadModel hlModel) {
+            // For closed pipe use headloss formula: h = CBIG*q
+            if (this.status <= Link.StatType.CLOSED) {
+                this.invHeadLoss = 1.0 / Constants.CBIG;
+                this.flowCorrection = this.flow;
+                return;
+            }
 
-    protected static void logStatChange(FieldsMap fMap, TraceSource logger, SimulationLink link, Link.StatType s1, Link.StatType s2) {
+            PipeHeadModel.LinkCoeffs coeffs = hlModel.compute(pMap, this);
+            this.invHeadLoss = coeffs.InvHeadLoss;
+            this.flowCorrection = coeffs.FlowCorrection;
+        }
 
-        if (s1 == s2) {
 
-            switch (link.Type) {
+        // Closes link flowing into full or out of empty tank
+        private void TankStatus(PropertiesMap pMap) {
+            double q = this.flow;
+            SimulationNode n1 = this.First;
+            SimulationNode n2 = this.Second;
+
+            // Make node n1 be the tank
+            if (!(n1 is SimulationTank)) {
+                if (!(n2 is SimulationTank))
+                    return; // neither n1 or n2 is a tank
+                // N2 is a tank, swap !
+                SimulationNode n = n1;
+                n1 = n2;
+                n2 = n;
+                q = -q;
+            }
+
+            double h = n1.SimHead - n2.SimHead;
+
+            SimulationTank tank = (SimulationTank)n1;
+
+            // Skip reservoirs & closed links
+            if (tank.Area == 0.0 || this.status <= Link.StatType.CLOSED)
+                return;
+
+            // If tank full, then prevent flow into it
+            if (tank.SimHead >= tank.Hmax - pMap.Htol) {
+                //Case 1: Link is a pump discharging into tank
+                if (this.Type == Link.LinkType.PUMP) {
+                    if (this.Second == n1)
+                        this.status = Link.StatType.TEMPCLOSED;
+                }
+                else if (CvStatus(pMap, Link.StatType.OPEN, h, q) == Link.StatType.CLOSED)
+                    //  Case 2: Downstream head > tank head
+                    this.status = Link.StatType.TEMPCLOSED;
+            }
+
+            // If tank empty, then prevent flow out of it
+            if (tank.SimHead <= tank.Hmin + pMap.Htol) {
+                // Case 1: Link is a pump discharging from tank
+                if (this.Type == Link.LinkType.PUMP) {
+                    if (this.First == n1)
+                        this.status = Link.StatType.TEMPCLOSED;
+                }
+                // Case 2: Tank head > downstream head
+                else if (CvStatus(pMap, Link.StatType.CLOSED, h, q) == Link.StatType.OPEN)
+                    this.status = Link.StatType.TEMPCLOSED;
+            }
+        }
+
+        /// <summary>Updates status of a check valve.</summary>
+        private static Link.StatType CvStatus(PropertiesMap pMap, Link.StatType s, double dh, double q) {
+            if (Math.Abs(dh) > pMap.Htol) {
+                if (dh < -pMap.Htol)
+                    return (Link.StatType.CLOSED);
+                else if (q < -pMap.Qtol)
+                    return (Link.StatType.CLOSED);
+                else
+                    return (Link.StatType.OPEN);
+            }
+            else {
+                if (q < -pMap.Qtol)
+                    return (Link.StatType.CLOSED);
+                else
+                    return (s);
+            }
+        }
+
+        /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
+        private bool LinkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log) {
+            bool change = false;
+
+            double dh = this.first.SimHead - this.second.SimHead;
+
+            Link.StatType tStatus = this.status;
+
+            if (tStatus == Link.StatType.XHEAD || tStatus == Link.StatType.TEMPCLOSED)
+                this.status = Link.StatType.OPEN;
+
+            if (this.Type == Link.LinkType.CV)
+                this.status = CvStatus(pMap, this.status, dh, this.flow);
+
+            if (this is SimulationPump && this.status >= Link.StatType.OPEN && this.setting > 0.0)
+                this.status = ((SimulationPump)this).PumpStatus(pMap, -dh);
+
+            if (this.Type == Link.LinkType.FCV && this.setting != Constants.MISSING)
+                this.status = ((SimulationValve)this).fcvStatus(pMap, tStatus);
+
+            if (this.first is SimulationTank || this.second is SimulationTank)
+                this.TankStatus(pMap);
+
+            if (tStatus != this.status) {
+                change = true;
+                if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
+                    LogStatChange(fMap, log, this, tStatus, this.status);
+            }
+
+            return (change);
+        }
+
+        protected static void LogStatChange(
+            FieldsMap fMap,
+            TraceSource logger,
+            SimulationLink link,
+            Link.StatType s1,
+            Link.StatType s2) {
+
+            if (s1 == s2) {
+
+                switch (link.Type) {
                 case Link.LinkType.PRV:
                 case Link.LinkType.PSV:
                 case Link.LinkType.PBV:
@@ -398,51 +418,64 @@ public class SimulationLink {
                 case Link.LinkType.FCV:
                     link.setting *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
                     break;
+                }
+                logger.Verbose(
+                    Text.ResourceManager.GetString("FMT56"),
+                    link.Type.ParseStr(),
+                    link.Link.Id,
+                    link.setting);
+                return;
             }
-            logger.Verbose(Text.ResourceManager.GetString("FMT56"), link.Type.ParseStr(), link.Link.Id, link.setting);
-            return;
+
+            Link.StatType j1, j2;
+
+            if (s1 == Link.StatType.ACTIVE)
+                j1 = Link.StatType.ACTIVE;
+            else if (s1 <= Link.StatType.CLOSED)
+                j1 = Link.StatType.CLOSED;
+            else
+                j1 = Link.StatType.OPEN;
+            if (s2 == Link.StatType.ACTIVE) j2 = Link.StatType.ACTIVE;
+            else if (s2 <= Link.StatType.CLOSED)
+                j2 = Link.StatType.CLOSED;
+            else
+                j2 = Link.StatType.OPEN;
+
+            if (j1 != j2) {
+                logger.Verbose(
+                    Text.ResourceManager.GetString("FMT57"),
+                    link.Type.ParseStr(),
+                    link.Link.Id,
+                    j1.ReportStr(),
+                    j2.ReportStr());
+            }
+
         }
 
-        Link.StatType j1, j2;
-
-        if (s1 == Link.StatType.ACTIVE)
-            j1 = Link.StatType.ACTIVE;
-        else if (s1 <= Link.StatType.CLOSED)
-            j1 = Link.StatType.CLOSED;
-        else
-            j1 = Link.StatType.OPEN;
-        if (s2 == Link.StatType.ACTIVE) j2 = Link.StatType.ACTIVE;
-        else if (s2 <= Link.StatType.CLOSED)
-            j2 = Link.StatType.CLOSED;
-        else
-            j2 = Link.StatType.OPEN;
-
-        if (j1 != j2) {
-            logger.Verbose(Text.ResourceManager.GetString("FMT57"), link.Type.ParseStr(), link.Link.Id, j1.ReportStr(), j2.ReportStr());
+        /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
+        public static bool LinkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log, List<SimulationLink> links) {
+            bool change = false;
+            foreach (SimulationLink link  in  links) {
+                if (link.LinkStatus(pMap, fMap, log))
+                    change = true;
+            }
+            return change;
         }
 
+        /// <summary>Computes solution matrix coefficients for links.</summary>
+        public static void ComputeMatrixCoeffs(
+            FieldsMap fMap,
+            PropertiesMap pMap,
+            PipeHeadModel hlModel,
+            List<SimulationLink> links,
+            IList<Curve> curves,
+            SparseMatrix smat,
+            LSVariables ls) {
+
+            foreach (SimulationLink link  in  links) {
+                link.ComputeMatrixCoeff(fMap, pMap, hlModel, curves, smat, ls);
+            }
+        }
     }
 
-    /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
-    public static bool linkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log, List<SimulationLink> links) {
-        bool change = false;
-        foreach (SimulationLink link  in  links) {
-            if (link.linkStatus(pMap, fMap, log))
-                change = true;
-        }
-        return change;
-    }
-
-    /// <summary>Computes solution matrix coefficients for links.</summary>
-    public static void computeMatrixCoeffs(FieldsMap fMap,
-                                           PropertiesMap pMap,
-                                           PipeHeadModel hlModel,
-                                           List<SimulationLink> links, IList<Curve> curves,
-                                           SparseMatrix smat, LSVariables ls) {
-
-        foreach (SimulationLink link  in  links) {
-            link.computeMatrixCoeff(fMap, pMap, hlModel, curves, smat, ls);
-        }
-    }
-}
 }

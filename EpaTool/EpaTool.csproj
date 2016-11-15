@@ -8,7 +8,7 @@
     <ProjectGuid>{CEE3E2E6-58DB-4F65-827D-B1854E6FBBF0}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EpaTool</RootNamespace>
+    <RootNamespace>Epanet</RootNamespace>
     <AssemblyName>EpaTool</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -90,7 +90,8 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Report\ReportGenerator.cs" />
-    <Compile Include="Report\XLSXWriter.cs" />
+    <Compile Include="SampleOOPNetwork2.cs" />
+    <Compile Include="SampleOOPNetworkDyn2.cs" />
     <Compile Include="UI\EpanetUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -107,7 +108,7 @@
     <Compile Include="UI\ReportOptions.designer.cs">
       <DependentUpon>ReportOptions.cs</DependentUpon>
     </Compile>
-    <Compile Include="XLSXWriter.cs" />
+    <Compile Include="Report\XLSXWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="UI\package.html" />

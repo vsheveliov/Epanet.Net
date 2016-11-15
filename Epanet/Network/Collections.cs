@@ -17,9 +17,9 @@
 
 using System;
 using System.Collections.ObjectModel;
-using org.addition.epanet.network.structures;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.network
+namespace Epanet.Network
 {
     public abstract class StringKeyedCollection<T> : KeyedCollection<string, T>
     {

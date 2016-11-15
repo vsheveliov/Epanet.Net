@@ -21,16 +21,15 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using org.addition.epanet.hydraulic;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.io.input;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.quality;
-using org.addition.epanet.util;
+using Epanet.Hydraulic;
+using Epanet.Hydraulic.IO;
+using Epanet.Network;
+using Epanet.Network.IO.Input;
+using Epanet.Network.Structures;
+using Epanet.Quality;
+using Epanet.Util;
 
-namespace org.addition.epanet {
+namespace Epanet {
 
     public class EPATool {
 
@@ -77,9 +76,9 @@ namespace org.addition.epanet {
             case NodeVariableType.ELEVATION:
                 return fmap.RevertUnit((FieldsMap.FieldType)type, node.Elevation);
             case NodeVariableType.DEMAND:
-                return step != null ? step.getNodeDemand(index, node, fmap) : 0;
+                return step != null ? step.GetNodeDemand(index, node, fmap) : 0;
             case NodeVariableType.HEAD:
-                return step != null ? step.getNodeHead(index, node, fmap) : 0;
+                return step != null ? step.GetNodeHead(index, node, fmap) : 0;
             case NodeVariableType.INITQUALITY: {
                 double dsum = 0;
                 foreach (double d in node.C0) dsum += d;
@@ -87,9 +86,9 @@ namespace org.addition.epanet {
                 return fmap.RevertUnit((FieldsMap.FieldType)type, dsum);
             }
             case NodeVariableType.PRESSURE:
-                return step != null ? step.getNodePressure(index, node, fmap) : 0;
+                return step != null ? step.GetNodePressure(index, node, fmap) : 0;
             case NodeVariableType.QUALITY:
-                return step != null ? step.getNodeQuality(index) : 0;
+                return step != null ? step.GetNodeQuality(index) : 0;
             default:
                 return 0.0;
             }
@@ -125,15 +124,15 @@ namespace org.addition.epanet {
                     : link.Roughness;
 
             case LinkVariableType.FLOW:
-                return step != null ? Math.Abs(step.getLinkFlow(index, link, fmap)) : 0;
+                return step != null ? Math.Abs(step.GetLinkFlow(index, link, fmap)) : 0;
             case LinkVariableType.VELOCITY:
-                return step != null ? Math.Abs(step.getLinkVelocity(index, link, fmap)) : 0;
+                return step != null ? Math.Abs(step.GetLinkVelocity(index, link, fmap)) : 0;
             case LinkVariableType.UNITHEADLOSS:
-                return step != null ? step.getLinkHeadLoss(index, link, fmap) : 0;
+                return step != null ? step.GetLinkHeadLoss(index, link, fmap) : 0;
             case LinkVariableType.FRICTIONFACTOR:
-                return step != null ? step.getLinkFriction(index, link, fmap) : 0;
+                return step != null ? step.GetLinkFriction(index, link, fmap) : 0;
             case LinkVariableType.QUALITY:
-                return step != null ? fmap.RevertUnit((FieldsMap.FieldType)type, step.getLinkAvrQuality(index)) : 0;
+                return step != null ? fmap.RevertUnit((FieldsMap.FieldType)type, step.GetLinkAvrQuality(index)) : 0;
             default:
                 return 0.0;
             }
@@ -144,7 +143,7 @@ namespace org.addition.epanet {
 
             string hydFile = null;
             string qualFile = null;
-            Network net = new Network();
+            Network.Network net = new Network.Network();
 
             List<NodeVariableType> nodesVariables = new List<NodeVariableType>();
             List<LinkVariableType> linksVariables = new List<LinkVariableType>();
@@ -194,7 +193,7 @@ namespace org.addition.epanet {
             }
 
             try {
-                InputParser parserINP = InputParser.Create(Network.FileType.INP_FILE, log);
+                InputParser parserINP = InputParser.Create(Network.Network.FileType.INP_FILE, log);
                 parserINP.Parse(net, inFile);
                 PropertiesMap pMap = net.PropertiesMap;
 
@@ -251,7 +250,7 @@ namespace org.addition.epanet {
                 ConsoleLog("START_RUNNING");
 
                 HydraulicSim hydSim = new HydraulicSim(net, log);
-                hydSim.simulate(hydFile);
+                hydSim.Simulate(hydFile);
 
 
                 if (net.PropertiesMap.Qualflag != (PropertiesMap.QualType.NONE)) {

@@ -18,14 +18,16 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Epanet.Hydraulic.IO;
+using Epanet.MSX;
+using Epanet.MSX.Structures;
+using Epanet.Network;
 using Epanet.Properties;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.msx;
-using org.addition.epanet.msx.Structures;
-using org.addition.epanet.network;
-using org.addition.epanet.quality;
-using org.addition.epanet.util;
-using Network = org.addition.epanet.network.Network;
+using Epanet.Quality;
+using Epanet.Report;
+using Epanet.Util;
+using Constants = Epanet.Constants;
+using Network = Epanet.Network.Network;
 
 namespace EpaTool.Report {
 
@@ -121,8 +123,6 @@ namespace EpaTool.Report {
         /// <param name="hydFile">Abstract representation of the hydraulic simulation output file.</param>
         /// <param name="net">Hydraulic network.</param>
         /// <param name="values">Variables report flag.</param>
-        /// <throws>IOException</throws>
-        /// <throws>org.addition.epanet.util.ENException</throws>
         public void CreateHydReport(string hydFile, Network net, bool[] values) {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(hydFile);
@@ -161,7 +161,7 @@ namespace EpaTool.Report {
                     // NODES HEADS
                     if (resultSheets[(int)HydVariable.Type.Head] != null) {
                         for (int i = 0; i < nodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodeHead(i, nodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodeHead(i, nodes[i], net.FieldsMap);
                         }
 
                         resultSheets[(int)HydVariable.Type.Head].AddData(nodeRow);
@@ -170,7 +170,7 @@ namespace EpaTool.Report {
                     // NODES DEMANDS
                     if (resultSheets[(int)HydVariable.Type.Demands] != null) {
                         for(int i = 0; i < nodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodeDemand(i, nodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodeDemand(i, nodes[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Demands].AddData(nodeRow);
                     }
@@ -178,7 +178,7 @@ namespace EpaTool.Report {
                     // NODES PRESSURE
                     if (resultSheets[(int)HydVariable.Type.Pressure] != null) {
                         for(int i = 0; i < nodes.Count; i++) {
-                            nodeRow[i + 1] = step.getNodePressure(i, nodes[i], net.FieldsMap);
+                            nodeRow[i + 1] = step.GetNodePressure(i, nodes[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Pressure].AddData(nodeRow);
                     }
@@ -186,7 +186,7 @@ namespace EpaTool.Report {
                     // LINK FLOW
                     if (resultSheets[(int)HydVariable.Type.Flows] != null) {
                         for(int i = 0; i < links.Count; i++) {
-                            linkRow[i + 1] = step.getLinkFlow(i, links[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkFlow(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Flows].AddData(linkRow);
                     }
@@ -194,7 +194,7 @@ namespace EpaTool.Report {
                     // LINK VELOCITY
                     if (resultSheets[(int)HydVariable.Type.Velocity] != null) {
                         for(int i = 0; i < links.Count; i++) {
-                            linkRow[i + 1] = step.getLinkVelocity(i, links[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkVelocity(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Velocity].AddData(linkRow);
                     }
@@ -202,7 +202,7 @@ namespace EpaTool.Report {
                     // LINK HEADLOSS
                     if (resultSheets[(int)HydVariable.Type.Headloss] != null) {
                         for(int i = 0; i < links.Count; i++) {
-                            linkRow[i + 1] = step.getLinkHeadLoss(i, links[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkHeadLoss(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Headloss].AddData(linkRow);
                     }
@@ -210,7 +210,7 @@ namespace EpaTool.Report {
                     // LINK FRICTION
                     if (resultSheets[(int)HydVariable.Type.Friction] != null) {
                         for(int i = 0; i < links.Count; i++) {
-                            linkRow[i + 1] = step.getLinkFriction(i, links[i], net.FieldsMap);
+                            linkRow[i + 1] = step.GetLinkFriction(i, links[i], net.FieldsMap);
                         }
                         resultSheets[(int)HydVariable.Type.Friction].AddData(linkRow);
                     }
@@ -369,7 +369,7 @@ namespace EpaTool.Report {
             var linkRow = new object[totalSpecies + 1];
 
             for (int i = 1; i < links.Length; i++) {
-                if (!links[i].getRpt()) continue;
+                if (!links[i].Rpt) continue;
                 XLSXWriter.Spreadsheet spr =
                     this._sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
                     
@@ -477,8 +477,8 @@ namespace EpaTool.Report {
                 }
 
                 sh.AddData(Text.FMT36, pMap.SpGrav);
-                sh.AddData(Text.FMT37a, pMap.Viscos / org.addition.epanet.Constants.VISCOS);
-                sh.AddData(Text.FMT37b, pMap.Diffus / org.addition.epanet.Constants.DIFFUS);
+                sh.AddData(Text.FMT37a, pMap.Viscos / Constants.VISCOS);
+                sh.AddData(Text.FMT37b, pMap.Diffus / Constants.DIFFUS);
                 sh.AddData(Text.FMT38, pMap.Dmult);
                 sh.AddData(Text.FMT39, fMap.RevertUnit(FieldsMap.FieldType.TIME, pMap.Duration), fMap.GetField(FieldsMap.FieldType.TIME).Units);
 
@@ -488,7 +488,7 @@ namespace EpaTool.Report {
                     sh.AddData("Species");
                     Species[] spe = msx.Network.Species;
                     for (int i = 1; i < msx.Network.Species.Length; i++) {
-                        sh.AddData(spe[i].getId(), spe[i].getUnits());
+                        sh.AddData(spe[i].Id, spe[i].Units);
                     }
                 }
             }

@@ -21,7 +21,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace org.addition.epanet.log {
+namespace Epanet.Log {
 
     public sealed class EpanetTraceListener : TextWriterTraceListener {
 

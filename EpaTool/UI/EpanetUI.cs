@@ -22,17 +22,16 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using org.addition.epanet.log;
-using org.addition.epanet.msx.Structures;
-using org.addition.epanet.network;
-using org.addition.epanet.network.io.input;
-using org.addition.epanet.network.io.output;
-using org.addition.epanet.util;
+using Epanet.Log;
+using Epanet.Network;
+using Epanet.Network.IO.Input;
+using Epanet.Network.IO.Output;
+using Epanet.Util;
 
 namespace EpaTool {
 
     public sealed partial class EpanetUI : Form {
-        private const string WEBLINK = "http://www.baseform.org/?epaToolLink";
+        private const string WEBLINK = "https://github.com/vsheveliov/Epanet.Net";
         private const string LASTDOC = @"E:\LPRO\_WORK\EN_goefis.inp";
 
         /// <summary>Application title string.</summary>

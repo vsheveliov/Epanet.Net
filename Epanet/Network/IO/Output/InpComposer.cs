@@ -20,10 +20,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.network.io.output {
+namespace Epanet.Network.IO.Output {
 
 ///<summary>INP file composer.</summary>
 public class InpComposer : OutputComposer{

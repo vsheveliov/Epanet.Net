@@ -15,32 +15,20 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
+    // TODO: remove this class since only Expr used
+    /// <summary>Intermediate term object.</summary>
+    public class Term {
+        public Term() {
+            this.Id = "";
+            this.Expr = null;
+        }
 
-// Intermediate term object
-public class Term {
-    string    id;       // name
-    MathExpr  expr;     // math expression for term
+        ///<summary>name</summary>
+        public string Id { get; set; }
 
-    public Term() {
-        id="";
-        expr = null;
+        ///<summary>math expression for term</summary>
+        public MathExpr Expr { get; set; }
     }
 
-    public string getId() {
-        return id;
-    }
-
-    public void setId(string id) {
-        this.id = id;
-    }
-
-    public MathExpr getExpr() {
-        return expr;
-    }
-
-    public void setExpr(MathExpr expr) {
-        this.expr = expr;
-    }
-}
 }

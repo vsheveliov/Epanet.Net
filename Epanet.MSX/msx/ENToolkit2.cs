@@ -19,17 +19,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using System.Linq;
+using Epanet.Hydraulic.IO;
+using Epanet.Network;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.msx {
-
+namespace Epanet.MSX {
 
     ///<summary>Bridge between the hydraulic network properties and the multi-species simulation MSX class.</summary>
     public class ENToolkit2 {
-
 
         public const int EN_INITVOLUME = 14;
         public const int EN_MIXMODEL = 15;
@@ -63,15 +62,15 @@ namespace org.addition.epanet.msx {
         public const int EN_TANK = 2;
 
 
-        private readonly List<Link> links;
-        private readonly List<Node> nodes;
-        private readonly network.Network net;
+        private readonly IList<Link> links;
+        private readonly IList<Node> nodes;
+        private readonly Epanet.Network.Network net;
 
         private HydraulicReader dseek;
 
-        public AwareStep getStep(int htime) {
+        public AwareStep GetStep(int htime) {
             try {
-                return dseek.getStep(htime);
+                return this.dseek.getStep(htime);
             }
             catch (IOException e) {
                 Debug.Print(e.ToString());
@@ -79,49 +78,36 @@ namespace org.addition.epanet.msx {
             return null;
         }
 
-        public ENToolkit2(network.Network net) {
+        public ENToolkit2(Epanet.Network.Network net) {
             this.net = net;
-            links = new List<Link>(net.getLinks());
-            nodes = new List<Node>(net.getNodes());
+            this.links = net.Links;
+            this.nodes = net.Nodes;
         }
 
-        public void open(string hydFile) {
-            dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydFile)));
-        }
+        public void Open(string hydFile) { this.dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydFile))); }
 
-        public void close() {
-            dseek.close();
-        }
+        public void Close() { this.dseek.Close(); }
 
-        public string ENgetlinkid(int j) {
-            return links[j - 1].getId();
-        }
+        public string ENgetlinkid(int j) { return this.links[j - 1].Id; }
 
-        public string ENgetnodeid(int j) {
-            return nodes[j - 1].getId();
-        }
+        public string ENgetnodeid(int j) { return this.nodes[j - 1].Id; }
 
         public int ENgetnodeindex(string s, out int tmp) {
-            Node n = net.getNode(s);
-            tmp = nodes.IndexOf(n) + 1;
+            Node n = this.net.GetNode(s);
+            tmp = this.nodes.IndexOf(n) + 1;
 
-            if (tmp == 0)
-                return (203);
-
-            return 0;
+            return tmp == 0 ? (203) : 0;
         }
 
         public int ENgetlinkindex(string s, out int tmp) {
-            Link l = net.getLink(s);
-            tmp = links.IndexOf(l) + 1;
-            if (tmp == 0)
-                return (204);
-            return 0;
+            Link l = this.net.GetLink(s);
+            tmp = this.links.IndexOf(l) + 1;
+            return tmp == 0 ? 204 : 0;
         }
 
         public EnumTypes.FlowUnitsType ENgetflowunits() {
             try {
-                return (EnumTypes.FlowUnitsType)net.getPropertiesMap().getFlowflag();
+                return (EnumTypes.FlowUnitsType)this.net.PropertiesMap.Flowflag;
             }
             catch (ENException e) {
                 Debug.Print(e.ToString());
@@ -130,69 +116,68 @@ namespace org.addition.epanet.msx {
         }
 
         public int ENgetnodetype(int i) {
-            var n = nodes[i - 1];
+            var n = this.nodes[i - 1];
             var tank = n as Tank;
             if (tank != null) {
-                return tank.getArea() == 0 ? EN_RESERVOIR : EN_TANK;
+                return tank.IsReservoir ? EN_RESERVOIR : EN_TANK;
             }
 
             return EN_JUNCTION;
         }
 
         public float ENgetlinkvalue(int index, int code) {
-            FieldsMap fMap = net.getFieldsMap();
+            FieldsMap fMap = this.net.FieldsMap;
 
             double v;
 
-            if (index <= 0 || index > links.Count)
+            if (index <= 0 || index > this.links.Count)
                 throw new ENException(ErrorCode.Err204);
 
-            var link = links[index - 1];
+            var link = this.links[index - 1];
 
             switch (code) {
-                case EN_DIAMETER:
-                    if (link is Pump)
-                        v = 0.0;
-                    else
-                        v = fMap.revertUnit(FieldsMap.Type.DIAM, link.getDiameter());
-                    break;
+            case EN_DIAMETER:
+                if (link is Pump)
+                    v = 0.0;
+                else
+                    v = fMap.RevertUnit(FieldsMap.FieldType.DIAM, link.Diameter);
+                break;
 
-                case EN_LENGTH:
-                    v = fMap.revertUnit(FieldsMap.Type.ELEV, link.getLenght());
-                    break;
+            case EN_LENGTH:
+                v = fMap.RevertUnit(FieldsMap.FieldType.ELEV, link.Lenght);
+                break;
 
-                case EN_ROUGHNESS:
-                    if (link.getType() <= Link.LinkType.PIPE) {
-                        if (net.getPropertiesMap().getFormflag() == PropertiesMap.FormType.DW)
-                            v = fMap.revertUnit(FieldsMap.Type.ELEV, link.getRoughness()*1000.00);
-                        else
-                            v = link.getRoughness();
-                    }
-                    else
-                        v = 0.0;
-                    break;
-                default:
-                    throw new ENException(ErrorCode.Err251);
+            case EN_ROUGHNESS:
+                if (link.Type <= Link.LinkType.PIPE) {
+                    v = this.net.PropertiesMap.Formflag == PropertiesMap.FormType.DW
+                        ? fMap.RevertUnit(FieldsMap.FieldType.ELEV, link.Roughness * 1000.00)
+                        : link.Roughness;
+                }
+                else
+                    v = 0.0;
+                break;
+            default:
+                throw new ENException(ErrorCode.Err251);
             }
             return ((float)v);
         }
 
         public int ENgetcount(int code) {
             switch (code) {
-                case EN_NODECOUNT:
-                    return nodes.Count;
-                case EN_TANKCOUNT:
-                    return net.getTanks().Length;
-                case EN_LINKCOUNT:
-                    return links.Count;
-                case EN_PATCOUNT:
-                    return net.getPatterns().Length;
-                case EN_CURVECOUNT:
-                    return net.getCurves().Length;
-                case EN_CONTROLCOUNT:
-                    return net.getControls().Length;
-                default:
-                    return 0;
+            case EN_NODECOUNT:
+                return this.nodes.Count;
+            case EN_TANKCOUNT:
+                return this.net.Tanks.Count();
+            case EN_LINKCOUNT:
+                return this.links.Count;
+            case EN_PATCOUNT:
+                return this.net.Patterns.Count;
+            case EN_CURVECOUNT:
+                return this.net.Curves.Count;
+            case EN_CONTROLCOUNT:
+                return this.net.Controls.Count;
+            default:
+                return 0;
             }
         }
 
@@ -202,82 +187,86 @@ namespace org.addition.epanet.msx {
                 return (251);
             try {
                 switch (code) {
-                    case EN_DURATION:
-                        value = net.getPropertiesMap().getDuration();
-                        break;
-                    case EN_HYDSTEP:
-                        value = net.getPropertiesMap().getHstep();
-                        break;
-                    case EN_QUALSTEP:
-                        value = net.getPropertiesMap().getQstep();
-                        break;
-                    case EN_PATTERNSTEP:
-                        value = net.getPropertiesMap().getPstep();
-                        break;
-                    case EN_PATTERNSTART:
-                        value = net.getPropertiesMap().getPstart();
-                        break;
-                    case EN_REPORTSTEP:
-                        value = net.getPropertiesMap().getRstep();
-                        break;
-                    case EN_REPORTSTART:
-                        value = net.getPropertiesMap().getRstart();
-                        break;
-                    case EN_STATISTIC:
-                        value = (long)net.getPropertiesMap().getTstatflag();
-                        break;
-                    case EN_PERIODS:
-                        throw new NotSupportedException();
-                            //value = dseek.getAvailableSteps().size();                 break;
+                case EN_DURATION:
+                    value = this.net.PropertiesMap.Duration;
+                    break;
+                case EN_HYDSTEP:
+                    value = this.net.PropertiesMap.Hstep;
+                    break;
+                case EN_QUALSTEP:
+                    value = this.net.PropertiesMap.Qstep;
+                    break;
+                case EN_PATTERNSTEP:
+                    value = this.net.PropertiesMap.Pstep;
+                    break;
+                case EN_PATTERNSTART:
+                    value = this.net.PropertiesMap.Pstart;
+                    break;
+                case EN_REPORTSTEP:
+                    value = this.net.PropertiesMap.Rstep;
+                    break;
+                case EN_REPORTSTART:
+                    value = this.net.PropertiesMap.Rstart;
+                    break;
+                case EN_STATISTIC:
+                    value = (long)this.net.PropertiesMap.Tstatflag;
+                    break;
+                case EN_PERIODS:
+                    throw new NotSupportedException();
+                //value = dseek.getAvailableSteps().size();                 break;
                 }
             }
-            catch (ENException) {
-
-            }
+            catch (ENException) {}
             return (value);
         }
 
         public float ENgetnodevalue(int index, int code) {
             double v;
 
-            FieldsMap fMap = net.getFieldsMap();
+            FieldsMap fMap = this.net.FieldsMap;
 
-            if (index <= 0 || index > nodes.Count)
+            if (index <= 0 || index > this.nodes.Count)
                 return (203);
 
+            Tank tank;
             switch (code) {
-                case EN_INITVOLUME:
-                    v = 0.0;
-                    if (nodes[index - 1] is Tank)
-                        v = fMap.revertUnit(FieldsMap.Type.VOLUME, ((Tank)nodes[index - 1]).getV0());
-                    break;
+            case EN_INITVOLUME:
+                v = 0.0;
+                tank = this.nodes[index - 1] as Tank;
+                if (tank != null)
+                    v = fMap.RevertUnit(FieldsMap.FieldType.VOLUME, tank.V0);
+                break;
 
-                case EN_MIXMODEL:
-                    v = (double)Tank.MixType.MIX1;
-                    if (nodes[index - 1] is Tank)
-                        v = (double)((Tank)nodes[index - 1]).getMixModel();
-                    break;
+            case EN_MIXMODEL:
+                v = (double)Tank.MixType.MIX1;
+                tank = this.nodes[index - 1] as Tank;
+                if (tank != null)
+                    v = (double)tank.MixModel;
+                break;
 
 
-                case EN_MIXZONEVOL:
-                    v = 0.0;
-                    if (nodes[index - 1] is Tank)
-                        v = fMap.revertUnit(FieldsMap.Type.VOLUME, ((Tank)nodes[index - 1]).getV1max());
-                    break;
+            case EN_MIXZONEVOL:
+                v = 0.0;
+                tank = this.nodes[index - 1] as Tank;
+                if (tank != null)
+                    v = fMap.RevertUnit(FieldsMap.FieldType.VOLUME, tank.V1Max);
+                break;
 
-                default:
-                    throw new ENException(ErrorCode.Err251);
+            default:
+                throw new ENException(ErrorCode.Err251);
             }
             return (float)v;
         }
 
-        public int[] ENgetlinknodes(int index) {
-            if (index < 1 || index > links.Count)
+        public void ENgetlinknodes(int index, out int n1, out int n2) {
+            if (index < 1 || index > this.links.Count)
                 throw new ENException(ErrorCode.Err204);
 
-            Link l = links[index - 1];
+            Link l = this.links[index - 1];
 
-            return new int[] {nodes.IndexOf(l.getFirst()) + 1, nodes.IndexOf(l.getSecond()) + 1};
+            n1 = this.nodes.IndexOf(l.FirstNode) + 1;
+            n2 = this.nodes.IndexOf(l.SecondNode) + 1;
         }
     }
+
 }

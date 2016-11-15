@@ -17,7 +17,7 @@
 
 using System.Collections.Generic;
 
-namespace org.addition.epanet.network.structures {
+namespace Epanet.Network.Structures {
 
     ///<summary>Temporal pattern.</summary>
     public class Pattern {

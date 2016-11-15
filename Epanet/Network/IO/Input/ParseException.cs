@@ -1,7 +1,6 @@
-﻿using Epanet;
-using org.addition.epanet.util;
+﻿using Epanet.Util;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
     public sealed class EpanetParseException : ENException {
 
         public EpanetParseException(ErrorCode id, int line, string file, params object[] args) : base(id, args) {

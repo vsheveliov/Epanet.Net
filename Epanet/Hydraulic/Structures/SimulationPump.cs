@@ -17,261 +17,210 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.hydraulic.structures {
+namespace Epanet.Hydraulic.Structures {
 
-public class SimulationPump : SimulationLink {
+    public class SimulationPump:SimulationLink {
+        public SimulationPump(List<SimulationNode> indexedNodes, Link @ref, int idx):base(indexedNodes, @ref, idx) {
 
-    private double h0;                  // Simulated shutoff head
-    private double flowCoefficient;     // Simulated Flow coefficent
-    private double n;                   // Simulated flow expoent
+            for (int i = 0; i < 6; i++)
+                this.energy[i] = ((Pump)@ref).Energy[0]; // BUG: Baseform bug ?
 
-    public class Energy {
-        public Energy(double power, double efficiency) {
-            this.power = power;
-            this.efficiency = efficiency;
+            this.H0 = ((Pump)@ref).H0;
+            this.FlowCoefficient = ((Pump)@ref).FlowCoefficient;
+            this.N = ((Pump)@ref).N;
         }
 
-        public double power;        // Pump used power (KW)
-        public double efficiency;   // Pump effiency
-    }
+        private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
-    public SimulationPump(List<SimulationNode> indexedNodes, Link @ref, int idx):base(indexedNodes, @ref, idx) {
-        
-        for (int i = 0; i < 6; i++)
-            energy[i] = ((Pump)@ref).Energy[0]; // BUG: Baseform bug ?
+        public Pump.PumpType Ptype { get { return ((Pump)this.link).Ptype; } }
 
-        h0 = ((Pump) @ref).H0;
-        flowCoefficient = ((Pump) @ref).FlowCoefficient;
-        n = ((Pump) @ref).N;
-    }
+        public double Q0 { get { return ((Pump)this.link).Q0; } }
 
-    private double[] energy = {0, 0, 0, 0, 0, 0};
+        public double Qmax { get { return ((Pump)this.link).Qmax; } }
 
+        public double Hmax { get { return ((Pump)this.link).Hmax; } }
 
-    public Pump.PumpType getPtype() {
-        return ((Pump) this.link).Ptype;
-    }
+        public Curve Hcurve { get { return ((Pump)this.link).Hcurve; } }
 
-    public double getQ0() {
-        return ((Pump) this.link).Q0;
-    }
+        public Curve Ecurve { get { return ((Pump)this.link).Ecurve; } }
 
-    public double getQmax() {
-        return ((Pump) this.link).Qmax;
-    }
+        public Pattern Upat { get { return ((Pump)this.link).Upat; } }
 
-    public double getHmax() {
-        return ((Pump) this.link).Hmax;
-    }
+        public Pattern Epat { get { return ((Pump)this.link).Epat; } }
 
+        public double Ecost { get { return ((Pump)this.link).Ecost; } }
 
-    public Curve getHcurve() {
-        return ((Pump) this.link).Hcurve;
-    }
+        // Simulation getters and setters
+        public double[] Energy { get { return this.energy; } }
 
-    public Curve getEcurve() {
-        return ((Pump) this.link).Ecurve;
-    }
+        ///<summary>Simulated shutoff head</summary>
+        public double H0 { set; get; }
 
-    public Pattern getUpat() {
-        return ((Pump) this.link).Upat;
-    }
+        ///<summary>Simulated Flow coefficent</summary>
+        private double FlowCoefficient { get; set; }
 
-    public Pattern getEpat() {
-        return ((Pump) this.link).Epat;
-    }
+        ///<summary>Simulated flow expoent</summary>
+        public double N { set; get; }
 
-    public double getEcost() {
-        return ((Pump) this.link).Ecost;
-    }
+        /// <summary>Computes flow energy associated with this link pump.</summary>
+        /// <param name="pMap"></param>
+        /// <param name="fMap"></param>
+        /// <param name="power">Pump used power (KW)</param>
+        /// <param name="efficiency">Pump effiency</param>
+        private void GetFlowEnergy(PropertiesMap pMap, FieldsMap fMap, out double power, out double efficiency) {
+            power = efficiency = 0.0;
 
+            if (this.status <= Link.StatType.CLOSED) {
+                return;
+            }
 
-    // Simulation getters and setters
+            double q = Math.Abs(this.flow);
+            double dh = Math.Abs(this.first.SimHead - this.second.SimHead);
 
+            double e = pMap.Epump;
 
-    public double getEnergy(int id) {
-        return energy[id];//((Pump)node).getEnergy(id);
-    }
+            if (this.Ecurve != null) {
+                Curve curve = this.Ecurve;
+                e = curve.LinearInterpolator(q * fMap.GetUnits(FieldsMap.FieldType.FLOW));
+            }
 
-    public void setEnergy(int id, double value) {
-        energy[id] = value;
-    }
+            e = Math.Min(e, 100.0);
+            e = Math.Max(e, 1.0);
+            e /= 100.0;
 
-
-    private void setH0(double value) {
-        this.h0 = value;
-    }
-
-    public double getH0() {
-        return h0;
-    }
-
-    public double getFlowCoefficient() {
-        return flowCoefficient;
-    }
-
-    private void setFlowCoefficient(double value) {
-        this.flowCoefficient = value;
-    }
-
-    private void setN(double n) {
-        this.n = n;
-    }
-
-    public double getN() {
-        return n;
-    }
-
-    // Computes flow energy associated with this link pump.
-    private Energy getFlowEnergy(PropertiesMap pMap, FieldsMap fMap) {
-        Energy ret = new Energy(0.0, 0.0);
-
-        if (status <= Link.StatType.CLOSED) {
-            return ret;
+            power = dh * q * pMap.SpGrav / 8.814 / e * Constants.KWperHP;
+            efficiency = e;
         }
 
-        double q = Math.Abs(flow);
-        double dh = Math.Abs(first.getSimHead() - second.getSimHead());
 
-        double e = pMap.Epump;
+        /// <summary>Accumulates pump energy usage.</summary>
+        private double UpdateEnergy(
+            PropertiesMap pMap,
+            FieldsMap fMap,
+            long n,
+            double c0,
+            double f0,
+            double dt) {
+            //Skip closed pumps
+            if (this.status <= Link.StatType.CLOSED) return 0.0;
+            double q = Math.Max(Constants.QZERO, Math.Abs(this.flow));
 
-        if (getEcurve() != null) {
-            Curve curve = getEcurve();
-            e = curve.LinearInterpolator(q * fMap.GetUnits(FieldsMap.FieldType.FLOW));
-        }
-        e = Math.Min(e, 100.0);
-        e = Math.Max(e, 1.0);
-        e /= 100.0;
+            // Find pump-specific energy cost
+            double c = this.Ecost > 0.0 ? this.Ecost : c0;
 
-        ret.power = dh * q * pMap.SpGrav / 8.814 / e * Constants.KWperHP;
-        ret.efficiency = e;
+            if (this.Epat != null) {
+                int m = (int)(n % this.Epat.FactorsList.Count);
+                c *= this.Epat.FactorsList[m];
+            }
+            else
+                c *= f0;
 
-        return ret;
-    }
+            // Find pump energy & efficiency
+            double power, efficiency;
+            this.GetFlowEnergy(pMap, fMap, out power, out efficiency);
 
+            // Update pump's cumulative statistics
+            this.energy[0] = this.energy[0] + dt; // Time on-line
+            this.energy[1] = this.energy[1] + efficiency * dt; // Effic.-hrs
+            this.energy[2] = this.energy[2] + power / q * dt; // kw/cfs-hrs
+            this.energy[3] = this.energy[3] + power * dt; // kw-hrs
+            this.energy[4] = Math.Max(this.energy[4], power);
+            this.energy[5] = this.energy[5] + c * power * dt; // cost-hrs.
 
-    // Accumulates pump energy usage.
-    private double updateEnergy(PropertiesMap pMap, FieldsMap fMap,
-                                long n, double c0, double f0, double dt) {
-        double c = 0;
-
-        //Skip closed pumps
-        if (status <= Link.StatType.CLOSED) return 0.0;
-        double q = Math.Max(Constants.QZERO, Math.Abs(flow));
-
-        // Find pump-specific energy cost
-        if (getEcost() > 0.0)
-            c = getEcost();
-        else
-            c = c0;
-
-        if (getEpat() != null) {
-            int m = (int) (n % this.getEpat().FactorsList.Count);
-            c *= this.getEpat().FactorsList[m];
-        } else
-            c *= f0;
-
-        // Find pump energy & efficiency
-        Energy energy = getFlowEnergy(pMap, fMap);
-
-        // Update pump's cumulative statistics
-        setEnergy(0, getEnergy(0) + dt);                        // Time on-line
-        setEnergy(1, getEnergy(1) + energy.efficiency * dt);    // Effic.-hrs
-        setEnergy(2, getEnergy(2) + energy.power / q * dt);     // kw/cfs-hrs
-        setEnergy(3, getEnergy(3) + energy.power * dt);         // kw-hrs
-        setEnergy(4, Math.Max(getEnergy(4), energy.power));
-        setEnergy(5, getEnergy(5) + c * energy.power * dt);         // cost-hrs.
-
-        return energy.power;
-    }
-
-    // Computes P & Y coeffs. for pump in the link
-    public void computePumpCoeff(FieldsMap fMap, PropertiesMap pMap) {
-        double h0, q, r, n;
-
-        if (status <= Link.StatType.CLOSED || setting == 0.0) {
-            invHeadLoss = 1.0 / Constants.CBIG;
-            flowCorrection = flow;
-            return;
+            return power;
         }
 
-        q = Math.Max(Math.Abs(flow), Constants.TINY);
+        /// <summary>Computes P and Y coeffs. for pump in the link.</summary>
+        public void ComputePumpCoeff(FieldsMap fMap, PropertiesMap pMap) {
+            double h0, q, r, n;
 
-        if (getPtype() == Pump.PumpType.CUSTOM) {
+            if (this.status <= Link.StatType.CLOSED || this.setting == 0.0) {
+                this.invHeadLoss = 1.0 / Constants.CBIG;
+                this.flowCorrection = this.flow;
+                return;
+            }
 
-            Curve.Coeffs coeffs = getHcurve().getCoeff(fMap, q / setting);
+            q = Math.Max(Math.Abs(this.flow), Constants.TINY);
 
-            setH0(-coeffs.h0);
-            setFlowCoefficient(-coeffs.r);
-            setN(1.0);
+            if (this.Ptype == Pump.PumpType.CUSTOM) {
+
+                Curve.Coeffs coeffs = this.Hcurve.getCoeff(fMap, q / this.setting);
+
+                this.H0 = -coeffs.h0;
+                this.FlowCoefficient = -coeffs.r;
+                this.N = 1.0;
+            }
+
+            h0 = this.setting * this.setting * this.H0;
+            n = this.N;
+            r = this.FlowCoefficient * Math.Pow(this.setting, 2.0 - n);
+            if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
+
+            this.invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);
+            this.flowCorrection = this.flow / n + this.invHeadLoss * h0;
         }
 
-        h0 = (setting * setting) * getH0();
-        n = getN();
-        r = getFlowCoefficient() * Math.Pow(setting, 2.0 - n);
-        if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
+        /// <summary>Get new pump status.</summary>
+        /// <param name="pMap"></param>
+        /// <param name="dh">head gain</param>
+        /// <returns></returns>
+        public Link.StatType PumpStatus(PropertiesMap pMap, double dh) {
+            double hmax;
 
-        invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);
-        flowCorrection = flow / n + invHeadLoss * h0;
-    }
+            if (this.Ptype == Pump.PumpType.CONST_HP)
+                hmax = Constants.BIG;
+            else
+                hmax = this.setting * this.setting * this.Hmax;
 
-    // Get new pump status
-    // dh head gain
-    public Link.StatType pumpStatus(PropertiesMap pMap, double dh) {
-        double hmax;
+            if (dh > hmax + pMap.Htol)
+                return Link.StatType.XHEAD;
 
-        if (getPtype() == Pump.PumpType.CONST_HP)
-            hmax = Constants.BIG;
-        else
-            hmax = (setting * setting) * getHmax();
-
-        if (dh > hmax + pMap.Htol)
-            return (Link.StatType.XHEAD);
-
-        return (Link.StatType.OPEN);
-    }
-
-    // Update pumps energy
-    public static double stepEnergy(PropertiesMap pMap, FieldsMap fMap,
-                                    Pattern Epat,
-                                    List<SimulationPump> pumps,
-                                    long htime, long hstep) {
-        double dt, psum = 0.0;
-
-
-        if (pMap.Duration == 0)
-            dt = 1.0;
-        else if (htime < pMap.Duration)
-            dt = (double) hstep / 3600.0;
-        else
-            dt = 0.0;
-
-        if (dt == 0.0)
-            return 0.0;
-
-        long n = (htime + pMap.Pstart) / pMap.Pstep;
-
-
-        double c0 = pMap.Ecost;
-        double f0 = 1.0;
-
-        if (Epat != null) {
-            long m = n % (long) Epat.FactorsList.Count;
-            f0 = Epat.FactorsList[(int) m];
+            return Link.StatType.OPEN;
         }
 
-        foreach (SimulationPump pump  in  pumps) {
-            psum += pump.updateEnergy(pMap, fMap, n, c0, f0, dt);
+        /// <summary>Update pumps energy.</summary>
+        public static double StepEnergy(
+            PropertiesMap pMap,
+            FieldsMap fMap,
+            Pattern epat,
+            List<SimulationPump> pumps,
+            long htime,
+            long hstep) {
+            double dt, psum = 0.0;
+
+
+            if (pMap.Duration == 0)
+                dt = 1.0;
+            else if (htime < pMap.Duration)
+                dt = (double)hstep / 3600.0;
+            else
+                dt = 0.0;
+
+            if (dt == 0.0)
+                return 0.0;
+
+            long n = (htime + pMap.Pstart) / pMap.Pstep;
+
+
+            double c0 = pMap.Ecost;
+            double f0 = 1.0;
+
+            if (epat != null) {
+                long m = n % (long)epat.FactorsList.Count;
+                f0 = epat.FactorsList[(int)m];
+            }
+
+            foreach (SimulationPump pump  in  pumps) {
+                psum += pump.UpdateEnergy(pMap, fMap, n, c0, f0, dt);
+            }
+
+            return psum;
         }
 
-        return psum;
+
     }
 
-
-}
 }

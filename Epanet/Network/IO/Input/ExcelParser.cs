@@ -21,11 +21,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using Epanet.Util;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using org.addition.epanet.util;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
 
 ///<summary>Excel XLSX file parser.</summary>
 public class ExcelParser : InpParser {
@@ -198,7 +198,7 @@ public class ExcelParser : InpParser {
                                     foreach (string tk  in  tokArray)
                                         line += tk + " ";
 
-                                    LogException(lastType, e.getCodeID(), line, tokArray);
+                                    this.LogException(lastType, e.getCodeID(), line, tokArray);
                                     errSum++;
                                 }
                             }

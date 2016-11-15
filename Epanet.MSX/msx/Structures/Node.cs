@@ -17,7 +17,7 @@
 
 using System.Collections.Generic;
 
-namespace org.addition.epanet.msx.Structures {
+namespace Epanet.MSX.Structures {
 
 // Node object
     public class Node {
@@ -25,7 +25,7 @@ namespace org.addition.epanet.msx.Structures {
         private readonly List<Source> sources;
 
         public Node(int species) {
-            sources = new List<Source>();
+            this.sources = new List<Source>();
             this.Tank = 0;
             this.Rpt = false;
             this.C = new double[species];

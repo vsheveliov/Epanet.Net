@@ -16,10 +16,10 @@
  */
 
 using System;
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.network;
+using Epanet.Hydraulic.Structures;
+using Epanet.Network;
 
-namespace org.addition.epanet.hydraulic.models {
+namespace Epanet.Hydraulic.Models {
 
     ///<summary>Hazen-Williams model calculator.</summary>
     public class HWModelCalculator:PipeHeadModel {

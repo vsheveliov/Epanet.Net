@@ -19,11 +19,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using org.addition.epanet.log;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Log;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.network.io.input {
+namespace Epanet.Network.IO.Input {
 
 
 ///<summary>Abstract input file parser.</summary>

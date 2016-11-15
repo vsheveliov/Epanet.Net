@@ -18,11 +18,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using org.addition.epanet.network.io;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Network.IO;
+using Epanet.Network.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.network {
+namespace Epanet.Network {
 
     ///<summary>Units report properties & conversion support class</summary>
     public class FieldsMap {
@@ -107,7 +107,7 @@ namespace org.addition.epanet.network {
         /// <param name="fieldType">Field type.</param>
         /// <returns>Report field.</returns>
         /// <remarks>
-        /// Throws <see cref="org.addition.epanet.util.ENException"/> 
+        /// Throws <see cref="ENException"/> 
         /// If specified type not found.
         /// </remarks>
         public Field GetField(FieldType fieldType) {

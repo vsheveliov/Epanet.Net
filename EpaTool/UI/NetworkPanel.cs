@@ -21,8 +21,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using org.addition.epanet.network;
-using org.addition.epanet.network.structures;
+using Epanet.Network;
+using Epanet.Network.Structures;
 
 namespace EpaTool {
 

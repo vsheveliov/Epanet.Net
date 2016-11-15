@@ -17,25 +17,25 @@
 
 using System;
 using System.Collections.Generic;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.msx.Structures;
-using org.addition.epanet.util;
+using Epanet.Hydraulic.IO;
+using Epanet.MSX.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class Quality {
 
 
         private int UP_NODE(int i) {
-            return this.flowDir[i] == '+' ? this.msx.Link[i].getN1() : this.msx.Link[i].getN2();
+            return this.flowDir[i] == '+' ? this.msx.Link[i].N1 : this.msx.Link[i].N2;
         }
 
         private int DOWN_NODE(int i) {
-            return this.flowDir[i] == '+' ? this.msx.Link[i].getN2() : this.msx.Link[i].getN1();
+            return this.flowDir[i] == '+' ? this.msx.Link[i].N2 : this.msx.Link[i].N1;
         }
 
         private double Linkvol(int k) {
-            return 0.785398 * this.msx.Link[k].getLen() * Math.Pow(this.msx.Link[k].getDiam(), 2);
+            return 0.785398 * this.msx.Link[k].Len * Math.Pow(this.msx.Link[k].Diam, 2);
         }
 
         //  External variables
@@ -48,10 +48,10 @@ namespace org.addition.epanet.msx {
 
         public void LoadDependencies(EpanetMSX epa) {
             this.msx = epa.Network; // MSX project data
-            tank = epa.TankMix;
-            chemical = epa.Chemical;
-            @out = epa.Output;
-            tk2 = epa.EnToolkit;
+            this.tank = epa.TankMix;
+            this.chemical = epa.Chemical;
+            this.@out = epa.Output;
+            this.tk2 = epa.EnToolkit;
         }
 
         //  Local variables
@@ -97,7 +97,7 @@ namespace org.addition.epanet.msx {
 
 // --- open the chemistry system
 
-            errcode = chemical.MSXchem_open();
+            errcode = this.chemical.MSXchem_open();
             if (errcode > 0) return errcode;
 
 // --- allocate a memory pool for pipe segments
@@ -150,7 +150,7 @@ namespace org.addition.epanet.msx {
 // --- check if wall species are present
 
             for (n = 1; n <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; n++) {
-                if (this.msx.Species[n].getType() == EnumTypes.SpeciesType.WALL) this.hasWallSpecies = true;
+                if (this.msx.Species[n].Type == EnumTypes.SpeciesType.WALL) this.hasWallSpecies = true;
             }
             //if ( errcode == 0)
             //    MSX.QualityOpened = true;
@@ -176,8 +176,8 @@ namespace org.addition.epanet.msx {
                     this.msx.Tank[i].C[j] = this.msx.Node[nn].C0[j];
             }
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.PATTERN]; i++) {
-                this.msx.Pattern[i].setInterval(0);
-                this.msx.Pattern[i].setCurrent(0); //MSX.Pattern[i]);//first);
+                this.msx.Pattern[i].Interval = 0;
+                this.msx.Pattern[i].Current = 0; //MSX.Pattern[i]);//first);
             }
 
             // Check if a separate WQ report is required
@@ -186,11 +186,11 @@ namespace org.addition.epanet.msx {
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; i++)
                 n += this.msx.Node[i].Rpt ? 1 : 0;
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++)
-                n += this.msx.Link[i].getRpt() ? 1 : 0;
+                n += this.msx.Link[i].Rpt ? 1 : 0;
             if (n > 0) {
                 n = 0;
                 for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++)
-                    n += this.msx.Species[i].getRpt();
+                    n += this.msx.Species[i].Rpt;
             }
             if (n > 0) this.msx.Rptflag = true;
 
@@ -262,7 +262,7 @@ namespace org.addition.epanet.msx {
                     // report results if its time to do so
                     if (this.msx.Qtime == this.msx.Rtime) // MSX.Saveflag &&
                     {
-                        errcode = Utilities.Call(errcode, @out.MSXout_saveResults());
+                        errcode = Utilities.Call(errcode, this.@out.MSXout_saveResults());
                         this.msx.Rtime += this.msx.Rstep;
                         this.msx.Nperiods++;
                     }
@@ -288,7 +288,7 @@ namespace org.addition.epanet.msx {
 
             // If there's no time remaining, then save the final records to output file
             if (tleft[0] <= 0)
-                errcode = Utilities.Call(errcode, @out.MSXout_saveFinalResults())
+                errcode = Utilities.Call(errcode, this.@out.MSXout_saveFinalResults())
                     ;
 
             return errcode;
@@ -298,7 +298,7 @@ namespace org.addition.epanet.msx {
         public double MSXqual_getNodeQual(int j, int m) {
 // --- return 0 for WALL species
 
-            if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.WALL) return 0.0;
+            if (this.msx.Species[m].Type == EnumTypes.SpeciesType.WALL) return 0.0;
 
 // --- if node is a tank, return its internal concentration
 
@@ -322,21 +322,21 @@ namespace org.addition.epanet.msx {
             //seg = MSX.Segments[k][0];
             //while (seg != null)
             foreach (Pipe seg  in  this.msx.Segments[k]) {
-                vsum += seg.getV();
-                msum += seg.getC()[m] * seg.getV();
+                vsum += seg.V;
+                msum += seg.C[m] * seg.V;
                 //seg = seg->prev;
             }
             if (vsum > 0.0) return msum / vsum;
             else {
-                return (MSXqual_getNodeQual(this.msx.Link[k].getN1(), m) +
-                        MSXqual_getNodeQual(this.msx.Link[k].getN2(), m)) / 2.0;
+                return (this.MSXqual_getNodeQual(this.msx.Link[k].N1, m) +
+                        this.MSXqual_getNodeQual(this.msx.Link[k].N2, m)) / 2.0;
             }
         }
 
         /// <summary>Checks if two sets of concentrations are the same</summary>
         public bool MSXqual_isSame(double[] c1, double[] c2) {
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                if (Math.Abs(c1[i] - c2[i]) >= this.msx.Species[i].getaTol()) return false;
+                if (Math.Abs(c1[i] - c2[i]) >= this.msx.Species[i].ATol) return false;
             }
             return true;
         }
@@ -345,22 +345,22 @@ namespace org.addition.epanet.msx {
         /// Retrieves hydraulic solution and time step for next hydraulic event  from a hydraulics file.
         /// </summary>
         private EnumTypes.ErrorCodeType GetHydVars() {
-            AwareStep step = tk2.GetStep((int)this.msx.Htime);
+            AwareStep step = this.tk2.GetStep((int)this.msx.Htime);
 
             int n = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE];
             for (int i = 0; i < n; i++)
-                this.msx.D[i + 1] = (float)step.getNodeDemand(i, null, null);
+                this.msx.D[i + 1] = (float)step.GetNodeDemand(i, null, null);
 
             for (int i = 0; i < n; i++)
-                this.msx.H[i + 1] = (float)step.getNodeHead(i, null, null);
+                this.msx.H[i + 1] = (float)step.GetNodeHead(i, null, null);
 
             n = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK];
 
             for (int i = 0; i < n; i++)
-                this.msx.Q[i + 1] = (float)step.getLinkFlow(i, null, null);
+                this.msx.Q[i + 1] = (float)step.GetLinkFlow(i, null, null);
 
             // update elapsed time until next hydraulic event
-            this.msx.Htime = step.getTime() + step.getStep();
+            this.msx.Htime = step.Time + step.Step;
 
             // Initialize pipe segments (at time 0) or else re-orient segments to accommodate any flow reversals
             if (this.msx.Qtime < this.msx.Dur) {
@@ -389,7 +389,7 @@ namespace org.addition.epanet.msx {
                 // Qstep is nominal quality time step
                 dt = Math.Min(this.msx.Qstep, tstep - qtime); // get actual time step
                 qtime += dt; // update amount of input tstep taken
-                errcode = chemical.MSXchem_react(dt); // react species in each pipe & tank
+                errcode = this.chemical.MSXchem_react(dt); // react species in each pipe & tank
                 if (errcode != 0)
                     return errcode;
                 this.AdvectSegs(dt); // advect segments in each pipe
@@ -424,9 +424,9 @@ namespace org.addition.epanet.msx {
 
                 int n = this.DOWN_NODE(i);
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                    if (this.msx.Link[i].getC0()[j] != Constants.MISSING)
-                        this.msx.C1[j] = this.msx.Link[i].getC0()[j];
-                    else if (this.msx.Species[j].getType() == EnumTypes.SpeciesType.BULK)
+                    if (this.msx.Link[i].C0[j] != Constants.MISSING)
+                        this.msx.C1[j] = this.msx.Link[i].C0[j];
+                    else if (this.msx.Species[j].Type == EnumTypes.SpeciesType.BULK)
                         this.msx.C1[j] = this.msx.Node[n].C0[j];
                     else this.msx.C1[j] = 0.0;
                 }
@@ -526,7 +526,7 @@ namespace org.addition.epanet.msx {
 
                 // Skip zero-length links (pumps & valves) & no-flow links
                 if (this.newSeg[i] == null ||
-                    this.msx.Link[i].getLen() == 0.0 || this.msx.Q[i] == 0.0) continue;
+                    this.msx.Link[i].Len == 0.0 || this.msx.Q[i] == 0.0) continue;
 
                 // Find conc. of wall species in new segment to be added and adjust conc.
                 // of wall species to reflect shifted positions of existing segments
@@ -558,8 +558,8 @@ namespace org.addition.epanet.msx {
             vsum = 0.0;
             vleft = vin;
             for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                if (this.msx.Species[i].getType() == EnumTypes.SpeciesType.WALL)
-                    newseg.getC()[i] = 0.0;
+                if (this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL)
+                    newseg.C[i] = 0.0;
             }
 
             // repeat while some inflow volume still remains
@@ -569,7 +569,7 @@ namespace org.addition.epanet.msx {
                 Pipe seg = segIt.Value;
 
                 // Find volume added by this segment
-                vadded = seg.getV();
+                vadded = seg.V;
                 if (vadded > vleft) vadded = vleft;
 
                 // Update total volume added and inflow volume remaining
@@ -579,8 +579,8 @@ namespace org.addition.epanet.msx {
 
                 // Add wall species mass contributed by this segment to new segment
                 for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                    if (this.msx.Species[i].getType() == EnumTypes.SpeciesType.WALL)
-                        newseg.getC()[i] += vadded * seg.getC()[i];
+                    if (this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL)
+                        newseg.C[i] += vadded * seg.C[i];
                 }
             }
 
@@ -588,7 +588,7 @@ namespace org.addition.epanet.msx {
 
             if (vsum > 0.0) {
                 for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                    if (this.msx.Species[i].getType() == EnumTypes.SpeciesType.WALL) newseg.getC()[i] /= vsum;
+                    if (this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL) newseg.C[i] /= vsum;
                 }
             }
         }
@@ -619,7 +619,7 @@ namespace org.addition.epanet.msx {
 
                 // Find the future end position of this segment
 
-                vend = vstart + seg1.getV();
+                vend = vstart + seg1.V;
                 if (vend > v)
                     vend = v;
 
@@ -633,14 +633,14 @@ namespace org.addition.epanet.msx {
                     // Move to next downstream WQ segment
                     seg2 = segIt2.Value;
 
-                    if (seg2.getV() == 0.0)
+                    if (seg2.V == 0.0)
                         continue;
 
-                    vsum += seg2.getV();
+                    vsum += seg2.V;
                     if (vsum >= vstart && vsum <= vend) {
                         for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                            if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.WALL)
-                                this.msx.C1[m] += (vsum - vcur) * seg2.getC()[m];
+                            if (this.msx.Species[m].Type == EnumTypes.SpeciesType.WALL)
+                                this.msx.C1[m] += (vsum - vcur) * seg2.C[m];
                         }
                         vcur = vsum;
                     }
@@ -649,16 +649,16 @@ namespace org.addition.epanet.msx {
 
                 // Update the wall species concentrations in the segment
                 for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                    if (this.msx.Species[m].getType() != EnumTypes.SpeciesType.WALL)
+                    if (this.msx.Species[m].Type != EnumTypes.SpeciesType.WALL)
                         continue;
 
                     if (seg2 != null)
-                        this.msx.C1[m] += (vend - vcur) * seg2.getC()[m];
+                        this.msx.C1[m] += (vend - vcur) * seg2.C[m];
 
-                    seg1.getC()[m] = this.msx.C1[m] / (vend - vstart);
+                    seg1.C[m] = this.msx.C1[m] / (vend - vstart);
 
-                    if (seg1.getC()[m] < 0.0)
-                        seg1.getC()[m] = 0.0;
+                    if (seg1.C[m] < 0.0)
+                        seg1.C[m] = 0.0;
                 }
 
                 // re-start at the current end location
@@ -690,7 +690,7 @@ namespace org.addition.epanet.msx {
             // move mass from first segment of each link into link's downstream node
 
             for (int k = 1; k <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; k++) {
-                int i = UP_NODE(k); // upstream node
+                int i = this.UP_NODE(k); // upstream node
                 int j = this.DOWN_NODE(k); // downstream node
                 v = Math.Abs(this.msx.Q[k]) * dt; // flow volume
 
@@ -703,9 +703,9 @@ namespace org.addition.epanet.msx {
                     if (this.msx.Segments[k].Count > 0)
                         seg = this.msx.Segments[k].First.Value; //get(0);
                     for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                        if (this.msx.Species[m].getType() != EnumTypes.SpeciesType.BULK) continue;
+                        if (this.msx.Species[m].Type != EnumTypes.SpeciesType.BULK) continue;
                         cseg = this.msx.Node[i].C[m];
-                        if (seg != null) cseg = seg.getC()[m];
+                        if (seg != null) cseg = seg.C[m];
                         this.massIn[j][m] += v * cseg;
                     }
                     // Remove all segments in the pipe
@@ -726,7 +726,7 @@ namespace org.addition.epanet.msx {
                         // Volume transported from this segment is minimum of remaining flow volume & segment volume
                         // (unless leading segment is also last segment)
 
-                        vseg = seg.getV();
+                        vseg = seg.V;
                         vseg = Math.Min(vseg, v);
 
                         if (this.msx.Segments[k].Count == 1) // if (seg == MSX.LastSeg[k]) vseg = v;
@@ -734,8 +734,8 @@ namespace org.addition.epanet.msx {
 
                         //update volume & mass entering downstream node
                         for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                            if (this.msx.Species[m].getType() != EnumTypes.SpeciesType.BULK) continue;
-                            cseg = seg.getC()[m];
+                            if (this.msx.Species[m].Type != EnumTypes.SpeciesType.BULK) continue;
+                            cseg = seg.C[m];
                             this.massIn[j][m] += vseg * cseg;
                         }
                         this.volIn[j] += vseg;
@@ -745,7 +745,7 @@ namespace org.addition.epanet.msx {
 
                         // If all of segment's volume was transferred, then replace leading segment with the one behind it
                         // (Note that the current seg is recycled for later use.)
-                        if (v >= 0.0 && vseg >= seg.getV()) {
+                        if (v >= 0.0 && vseg >= seg.V) {
                             if (this.msx.Segments[k].Count > 0)
                                 this.msx.Segments[k].RemoveFirst(); //remove(0);
                             //MSX.Segments[k] = seg->prev;
@@ -754,7 +754,7 @@ namespace org.addition.epanet.msx {
                         }
                         // Otherwise reduce segment's volume
                         else {
-                            seg.setV(seg.getV() - vseg);
+                            seg.V = seg.V - vseg;
                         }
                     }
             }
@@ -778,17 +778,17 @@ namespace org.addition.epanet.msx {
                 if (this.msx.Segments[i].Count > 0) // accumulate concentrations
                 {
                     for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++) {
-                        if (this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK)
-                            this.massIn[jj][m] += this.msx.Segments[i].First.Value.getC()[m];
+                        if (this.msx.Species[m].Type == EnumTypes.SpeciesType.BULK)
+                            this.massIn[jj][m] += this.msx.Segments[i].First.Value.C[m];
                     }
                     this.volIn[jj]++;
                 }
-                jj = UP_NODE(i); // upstream node
+                jj = this.UP_NODE(i); // upstream node
                 if (this.msx.Segments[i].Count > 0) // accumulate concentrations
                 {
                     for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                        if (this.msx.Species[j].getType() == EnumTypes.SpeciesType.BULK)
-                            this.massIn[jj][j] += this.msx.Segments[i].Last.Value.getC()[j];
+                        if (this.msx.Species[j].Type == EnumTypes.SpeciesType.BULK)
+                            this.massIn[jj][j] += this.msx.Segments[i].Last.Value.C[j];
                         //get(MSX.Segments[k].size()-1).getC()[m];
                     }
                     this.volIn[jj]++;
@@ -832,7 +832,7 @@ namespace org.addition.epanet.msx {
                     }
 
                     // Compute new equilibrium mixture
-                    chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Node[i].C);
+                    this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Node[i].C);
                 }
 
                 // Node is a tank or reservoir
@@ -856,16 +856,16 @@ namespace org.addition.epanet.msx {
 
                         switch (this.msx.Tank[jj].MixModel) {
                         case EnumTypes.MixType.MIX1:
-                            tank.MSXtank_mix1(jj, this.volIn[i], this.msx.C1, dt);
+                            this.tank.MSXtank_mix1(jj, this.volIn[i], this.msx.C1, dt);
                             break;
                         case EnumTypes.MixType.MIX2:
-                            tank.MSXtank_mix2(jj, this.volIn[i], this.msx.C1, dt);
+                            this.tank.MSXtank_mix2(jj, this.volIn[i], this.msx.C1, dt);
                             break;
                         case EnumTypes.MixType.FIFO:
-                            tank.MSXtank_mix3(jj, this.volIn[i], this.msx.C1, dt);
+                            this.tank.MSXtank_mix3(jj, this.volIn[i], this.msx.C1, dt);
                             break;
                         case EnumTypes.MixType.LIFO:
-                            tank.MSXtank_mix4(jj, this.volIn[i], this.msx.C1, dt);
+                            this.tank.MSXtank_mix4(jj, this.volIn[i], this.msx.C1, dt);
                             break;
                         }
                         for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++)
@@ -906,7 +906,7 @@ namespace org.addition.epanet.msx {
                 }
 
                 // Compute a new chemical equilibrium at the source node
-                chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Node[i].C);
+                this.chemical.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.Node[i].C);
             }
         }
 
@@ -916,46 +916,45 @@ namespace org.addition.epanet.msx {
             double massadded, s;
 
             // Only analyze bulk species
-            int m = source.getSpecies();
+            int m = source.Species;
             massadded = 0.0;
-            if (source.getC0() > 0.0 && this.msx.Species[m].getType() == EnumTypes.SpeciesType.BULK) {
+            if (!(source.C0 > 0.0) || this.msx.Species[m].Type != EnumTypes.SpeciesType.BULK) return;
+            
+            // Mass added depends on type of source
 
-                // Mass added depends on type of source
+            s = this.GetSourceQual(source);
+            switch (source.Type) {
+            // Concen. Source : Mass added = source concen. * -(demand)
+            case EnumTypes.SourceType.CONCEN:
+                // Only add source mass if demand is negative
+                if (this.msx.D[n] < 0.0)
+                    massadded = -s * this.msx.D[n] * dt;
 
-                s = this.GetSourceQual(source);
-                switch (source.getType()) {
-                // Concen. Source : Mass added = source concen. * -(demand)
-                case EnumTypes.SourceType.CONCEN:
-                    // Only add source mass if demand is negative
-                    if (this.msx.D[n] < 0.0)
-                        massadded = -s * this.msx.D[n] * dt;
+                // If node is a tank then set concen. to 0.
+                // (It will be re-set to true value later on)
+                if (this.msx.Node[n].Tank > 0)
+                    this.msx.Node[n].C[m] = 0.0;
+                break;
 
-                    // If node is a tank then set concen. to 0.
-                    // (It will be re-set to true value later on)
-                    if (this.msx.Node[n].Tank > 0)
-                        this.msx.Node[n].C[m] = 0.0;
-                    break;
+            // Mass Inflow Booster Source
+            case EnumTypes.SourceType.MASS:
+                massadded = s * dt / Constants.LperFT3;
+                break;
 
-                // Mass Inflow Booster Source
-                case EnumTypes.SourceType.MASS:
-                    massadded = s * dt / Constants.LperFT3;
-                    break;
+            // Setpoint Booster Source: Mass added is difference between source & node concen. times outflow volume
+            case EnumTypes.SourceType.SETPOINT:
+                if (s > this.msx.Node[n].C[m])
+                    massadded = (s - this.msx.Node[n].C[m]) * volout;
+                break;
 
-                // Setpoint Booster Source: Mass added is difference between source & node concen. times outflow volume
-                case EnumTypes.SourceType.SETPOINT:
-                    if (s > this.msx.Node[n].C[m])
-                        massadded = (s - this.msx.Node[n].C[m]) * volout;
-                    break;
-
-                // Flow-Paced Booster Source: Mass added = source concen. times outflow volume
-                case EnumTypes.SourceType.FLOWPACED:
-                    massadded = s * volout;
-                    break;
-                }
-
-                // Adjust nodal concentration to reflect source addition
-                this.msx.Node[n].C[m] += massadded / volout;
+            // Flow-Paced Booster Source: Mass added = source concen. times outflow volume
+            case EnumTypes.SourceType.FLOWPACED:
+                massadded = s * volout;
+                break;
             }
+
+            // Adjust nodal concentration to reflect source addition
+            this.msx.Node[n].C[m] += massadded / volout;
         }
 
         ///<summary>Releases outflow from nodes into incident links.</summary>
@@ -983,8 +982,8 @@ namespace org.addition.epanet.msx {
                 // Place bulk WQ at upstream node in new segment identified for link
 
                 for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; j++) {
-                    if (this.msx.Species[j].getType() == EnumTypes.SpeciesType.BULK)
-                        this.newSeg[i].getC()[j] = this.msx.Node[n].C[j];
+                    if (this.msx.Species[j].Type == EnumTypes.SpeciesType.BULK)
+                        this.newSeg[i].C[j] = this.msx.Node[n].C[j];
                 }
 
                 // If link has no last segment, then we must add a new one
@@ -998,19 +997,19 @@ namespace org.addition.epanet.msx {
                     useNewSeg = 1;
 
                 // Ostherwise check if quality in last segment differs from that of the new segment
-                else if (!MSXqual_isSame(seg.getC(), this.newSeg[i].getC()))
+                else if (!this.MSXqual_isSame(seg.C, this.newSeg[i].C))
                     useNewSeg = 1;
 
 
                 // Quality of last seg & new seg are close simply increase volume of last seg
                 if (useNewSeg == 0) {
-                    seg.setV(seg.getV() + v);
+                    seg.V = seg.V + v;
                     //MSXqual_removeSeg(NewSeg[k]);
                     this.newSeg[i] = null;
                 }
                 else {
                     // Otherwise add the new seg to the end of the link
-                    this.newSeg[i].setV(v);
+                    this.newSeg[i].V = v;
                     this.msx.Segments[i].AddLast(this.newSeg[i]);
                     //MSXqual_addSeg(k, NewSeg[k]);
                 }
@@ -1025,47 +1024,47 @@ namespace org.addition.epanet.msx {
             double c, f = 1.0;
 
             // Get source concentration (or mass flow) in original units
-            c = source.getC0();
+            c = source.C0;
 
             // Convert mass flow rate from min. to sec.
-            if (source.getType() == EnumTypes.SourceType.MASS) c /= 60.0;
+            if (source.Type == EnumTypes.SourceType.MASS) c /= 60.0;
 
             // Apply time pattern if assigned
-            i = source.getPattern();
+            i = source.Pattern;
 
             if (i == 0)
                 return c;
 
-            k = (this.msx.Qtime + this.msx.Pstart) / this.msx.Pstep % this.msx.Pattern[i].getLength();
+            k = (this.msx.Qtime + this.msx.Pstart) / this.msx.Pstep % this.msx.Pattern[i].Length;
 
-            if (k != this.msx.Pattern[i].getInterval()) {
-                if (k < this.msx.Pattern[i].getInterval()) {
-                    this.msx.Pattern[i].setCurrent(0); //); = MSX.Pattern[i].first;
-                    this.msx.Pattern[i].setInterval(0); //interval = 0;
+            if (k != this.msx.Pattern[i].Interval) {
+                if (k < this.msx.Pattern[i].Interval) {
+                    this.msx.Pattern[i].Current = 0; //); = MSX.Pattern[i].first;
+                    this.msx.Pattern[i].Interval = 0; //interval = 0;
                 }
-                while (this.msx.Pattern[i].getCurrent() != 0 && this.msx.Pattern[i].getInterval() < k) {
-                    this.msx.Pattern[i].setCurrent(this.msx.Pattern[i].getCurrent() + 1);
-                    this.msx.Pattern[i].setInterval(this.msx.Pattern[i].getInterval() + 1);
+                while (this.msx.Pattern[i].Current != 0 && this.msx.Pattern[i].Interval < k) {
+                    this.msx.Pattern[i].Current = this.msx.Pattern[i].Current + 1;
+                    this.msx.Pattern[i].Interval = this.msx.Pattern[i].Interval + 1;
                 }
             }
 
-            if (this.msx.Pattern[i].getCurrent() != 0)
-                f = this.msx.Pattern[i].getMultipliers()[this.msx.Pattern[i].getCurrent()];
+            if (this.msx.Pattern[i].Current != 0)
+                f = this.msx.Pattern[i].Multipliers[this.msx.Pattern[i].Current];
 
             return c * f;
         }
 
-        //
+
         public Pipe CreateSeg(double v, double[] c) {
             var seg = new Pipe();
-            seg.setC(new double[this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + 1]);
+            seg.C = new double[this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] + 1];
 
             // Assign volume, WQ, & integration time step to the new segment
-            seg.setV(v);
+            seg.V = v;
             for (int m = 1; m <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; m++)
-                seg.getC()[m] = c[m];
+                seg.C[m] = c[m];
 
-            seg.setHstep(0.0);
+            seg.Hstep = 0.0;
             return seg;
         }
 

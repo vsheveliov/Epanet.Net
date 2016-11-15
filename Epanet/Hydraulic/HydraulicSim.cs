@@ -20,861 +20,883 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Epanet.Hydraulic.IO;
+using Epanet.Hydraulic.Models;
+using Epanet.Hydraulic.Structures;
+using Epanet.Log;
+using Epanet.Network;
+using Epanet.Network.IO;
+using Epanet.Network.Structures;
 using Epanet.Properties;
-using org.addition.epanet.hydraulic.io;
-using org.addition.epanet.hydraulic.models;
-using org.addition.epanet.hydraulic.structures;
-using org.addition.epanet.log;
-using org.addition.epanet.network;
-using org.addition.epanet.network.io;
-using org.addition.epanet.network.structures;
-using org.addition.epanet.util;
+using Epanet.Util;
 
-namespace org.addition.epanet.hydraulic {
+namespace Epanet.Hydraulic {
 
-///<summary>Hydraulic simulation class.</summary>
-public class HydraulicSim {
+    ///<summary>Hydraulic simulation class.</summary>
+    public class HydraulicSim {
+        private const int BUFFER_SIZE = 512 * 1024; //512kb
+        [NonSerialized]
+        private bool running;
+        [NonSerialized]
+        private Thread runningThread;
 
+        protected HydraulicSim() { }
 
-    public const int BUFFER_SIZE = 512 * 1024; //512kb
-    [NonSerialized]
-    protected bool running;
-    [NonSerialized]
-    protected Thread runningThread;
+        ///<summary>Step solving result</summary>
+        protected class NetSolveStep {
+            public NetSolveStep(int iter, double relerr) {
+                this.Iter = iter;
+                this.Relerr = relerr;
+            }
 
-    protected HydraulicSim() {
-    }
-
-    ///<summary>Step solving result</summary>
-    protected class NetSolveStep {
-        public NetSolveStep(int iter, double relerr) {
-            this.iter = iter;
-            this.relerr = relerr;
+            public int Iter;
+            public double Relerr;
         }
 
-        public int iter;
-        public double relerr;
-    }
-
-    ///<summary>Event logger reference.</summary>
-    protected TraceSource logger;
+        ///<summary>Event logger reference.</summary>
+        private readonly TraceSource logger;
 
 
-    protected List<SimulationNode> nNodes;
-    protected List<SimulationLink> nLinks;
-    protected List<SimulationPump> nPumps;
-    protected List<SimulationTank> nTanks;
-    protected List<SimulationNode> nJunctions;
-    protected List<SimulationValve> nValves;
+        private List<SimulationNode> nodes;
+        private List<SimulationLink> links;
+        private List<SimulationPump> pumps;
+        private List<SimulationTank> tanks;
+        private List<SimulationNode> junctions;
+        private List<SimulationValve> valves;
 
 
-    protected List<SimulationControl> nControls;
-    protected List<SimulationRule> nRules;
-    protected IList<Curve> nCurves;
+        private List<SimulationControl> controls;
+        private List<SimulationRule> rules;
+        private IList<Curve> curves;
 
 
-    ///<summary>Simulation conversion units.</summary>
-    protected FieldsMap fMap;
+        ///<summary>Simulation conversion units.</summary>
+        protected FieldsMap fMap;
 
-    ///<summary>Simulation properties.</summary>
-    protected PropertiesMap pMap;
+        ///<summary>Simulation properties.</summary>
+        private PropertiesMap pMap;
 
-    ///<summary>Energy cost time pattern.</summary>
-    protected Pattern Epat;
+        ///<summary>Energy cost time pattern.</summary>
+        private Pattern epat;
 
-    ///<summary>Linear system solver support class.</summary>
-    protected SparseMatrix smat;
+        ///<summary>Linear system solver support class.</summary>
+        private SparseMatrix smat;
 
-    ///<summary>Linear system variable storage class.</summary>
-    protected LSVariables lsv;
+        ///<summary>Linear system variable storage class.</summary>
+        private LSVariables lsv;
 
-    ///<summary>Current report time.</summary>
-    protected long Rtime;
+        ///<summary>System wide demand.</summary>
+        private double dsystem;
 
-    ///<summary>Current hydraulic simulation time.</summary>
-    protected long Htime;
+        ///<summary>Output stream of the hydraulic solution.</summary>
+        private BinaryWriter simulationOutput;
 
-    ///<summary>System wide demand.</summary>
-    protected double Dsystem;
+        ///<summary>Pipe headloss model calculator.</summary>
+        private PipeHeadModel pHlModel;
 
-    ///<summary>Output stream of the hydraulic solution.</summary>
-    protected BinaryWriter simulationOutput;
+        ///<summary>Get current hydraulic simulation time.</summary>
+        public long Htime { get; private set; }
 
-    ///<summary>Pipe headloss model calculator.</summary>
-    protected PipeHeadModel pHLModel;
+        ///<summary>Get current report time.</summary>
+        public long Rtime { get; private set; }
 
-    ///<summary>Get current hydraulic simulation time.</summary>
-    public long getHtime() {
-        return this.Htime;
-    }
-
-    ///<summary>Get current report time.</summary>
-    public long getRtime() {
-        return this.Rtime;
-    }
-
-
-    /**
-     * Init hydraulic simulation, preparing the linear solver and the hydraulic structures wrappers.
-     *
-     * @param net Hydraulic network reference.
-     * @param log Logger reference.
-     * @throws ENException
-     */
-    
-    public HydraulicSim(Network net, TraceSource log) {
-        this.running = false;
-        this.logger = log;
-        this.createSimulationNetwork(net);
-    }
-
-    protected void createSimulationNetwork(Network net) {
-        this.nNodes = new List<SimulationNode>();
-        this.nLinks = new List<SimulationLink>();
-        this.nPumps = new List<SimulationPump>();
-        this.nTanks = new List<SimulationTank>();
-        this.nJunctions = new List<SimulationNode>();
-        this.nValves = new List<SimulationValve>();
-        this.nRules = new List<SimulationRule>();
-
-
-        Dictionary<string, SimulationNode> nodesById = new Dictionary<string, SimulationNode>();
-        foreach (Node n  in  net.Nodes) {
-            SimulationNode node = SimulationNode.createIndexedNode(n, this.nNodes.Count);
-            this.nNodes.Add(node);
-            nodesById[node.Id] = node;
-
-            if (node is SimulationTank)
-                this.nTanks.Add((SimulationTank) node);
-            else
-                this.nJunctions.Add(node);
+        ///<summary>Init hydraulic simulation, preparing the linear solver and the hydraulic structures wrappers.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        /// <param name="log">Logger reference.</param>
+        public HydraulicSim(Network.Network net, TraceSource log) {
+            this.running = false;
+            this.logger = log;
+            this.CreateSimulationNetwork(net);
         }
 
-        foreach (Link l  in  net.Links) {
-            SimulationLink link = SimulationLink.createIndexedLink(nodesById, l, this.nLinks.Count);
-            this.nLinks.Add(link);
+        private void CreateSimulationNetwork(Network.Network net) {
+            this.nodes = new List<SimulationNode>();
+            this.links = new List<SimulationLink>();
+            this.pumps = new List<SimulationPump>();
+            this.tanks = new List<SimulationTank>();
+            this.junctions = new List<SimulationNode>();
+            this.valves = new List<SimulationValve>();
+            this.rules = new List<SimulationRule>();
 
-            if (link is SimulationValve)
-                this.nValves.Add((SimulationValve) link);
-            else if (link is SimulationPump)
-                this.nPumps.Add((SimulationPump) link);
-        }
 
-        foreach (Rule r  in  net.Rules) {
-            SimulationRule rule = new SimulationRule(r, this.nLinks, this.nNodes);//, tmpLinks, tmpNodes);
-            this.nRules.Add(rule);
-        }
+            Dictionary<string, SimulationNode> nodesById = new Dictionary<string, SimulationNode>();
+            foreach (Node n  in  net.Nodes) {
+                SimulationNode node = SimulationNode.CreateIndexedNode(n, this.nodes.Count);
+                this.nodes.Add(node);
+                nodesById[node.Id] = node;
 
-        this.nCurves = net.Curves;
+                if (node is SimulationTank)
+                    this.tanks.Add((SimulationTank)node);
+                else
+                    this.junctions.Add(node);
+            }
 
-        this.nControls = new List<SimulationControl>();
+            foreach (Link l  in  net.Links) {
+                SimulationLink link = SimulationLink.CreateIndexedLink(nodesById, l, this.links.Count);
+                this.links.Add(link);
 
-        foreach (Control ctr  in  net.Controls)
-            this.nControls.Add(new SimulationControl(this.nNodes, this.nLinks, ctr));
+                if (link is SimulationValve)
+                    this.valves.Add((SimulationValve)link);
+                else if (link is SimulationPump)
+                    this.pumps.Add((SimulationPump)link);
+            }
 
-        this.fMap = net.FieldsMap;
-        this.pMap = net.PropertiesMap;
-        this.Epat = net.GetPattern(this.pMap.EpatId);
-        this.smat = new SparseMatrix(this.nNodes, this.nLinks, this.nJunctions.Count);
-        this.lsv = new LSVariables(this.nNodes.Count, this.smat.getCoeffsCount());
+            foreach (Rule r  in  net.Rules) {
+                SimulationRule rule = new SimulationRule(r, this.links, this.nodes); //, tmpLinks, tmpNodes);
+                this.rules.Add(rule);
+            }
 
-        this.Htime = 0;
+            this.curves = net.Curves;
 
-        switch (this.pMap.Formflag) {
+            this.controls = new List<SimulationControl>();
+
+            foreach (Control ctr  in  net.Controls)
+                this.controls.Add(new SimulationControl(this.nodes, this.links, ctr));
+
+            this.fMap = net.FieldsMap;
+            this.pMap = net.PropertiesMap;
+            this.epat = net.GetPattern(this.pMap.EpatId);
+            this.smat = new SparseMatrix(this.nodes, this.links, this.junctions.Count);
+            this.lsv = new LSVariables(this.nodes.Count, this.smat.getCoeffsCount());
+
+            this.Htime = 0;
+
+            switch (this.pMap.Formflag) {
 
             case PropertiesMap.FormType.HW:
-            this.pHLModel = new HWModelCalculator();
+                this.pHlModel = new HWModelCalculator();
                 break;
             case PropertiesMap.FormType.DW:
-            this.pHLModel = new DwModelCalculator();
+                this.pHlModel = new DwModelCalculator();
                 break;
             case PropertiesMap.FormType.CM:
-            this.pHLModel = new CMModelCalculator();
+                this.pHlModel = new CMModelCalculator();
                 break;
-        }
+            }
 
 
-        foreach (SimulationLink link  in  this.nLinks) {
-            link.initLinkFlow();
-        }
+            foreach (SimulationLink link  in  this.links) {
+                link.InitLinkFlow();
+            }
 
 
-        foreach (SimulationNode node  in  this.nJunctions) {
-            if (node.getKe() > 0.0)
-                node.setSimEmitter(1.0);
-        }
+            foreach (SimulationNode node  in  this.junctions) {
+                if (node.Ke > 0.0)
+                    node.SimEmitter = 1.0;
+            }
 
-        foreach (SimulationLink link  in  this.nLinks) {
+            foreach (SimulationLink link  in  this.links) {
 
-            if ((link.Type == Link.LinkType.PRV ||
-                    link.Type == Link.LinkType.PSV ||
-                    link.Type == Link.LinkType.FCV)
+                if ((link.Type == Link.LinkType.PRV ||
+                     link.Type == Link.LinkType.PSV ||
+                     link.Type == Link.LinkType.FCV)
                     &&
                     (link.Roughness != Constants.MISSING))
-                link.SimStatus = Link.StatType.ACTIVE;
+                    link.SimStatus = Link.StatType.ACTIVE;
 
 
-            if (link.SimStatus <= Link.StatType.CLOSED)
-                link.SimFlow = Constants.QZERO;
-            else if (Math.Abs(link.SimFlow) <= Constants.QZERO)
-                link.initLinkFlow(link.SimStatus, link.SimSetting);
+                if (link.SimStatus <= Link.StatType.CLOSED)
+                    link.SimFlow = Constants.QZERO;
+                else if (Math.Abs(link.SimFlow) <= Constants.QZERO)
+                    link.InitLinkFlow(link.SimStatus, link.SimSetting);
 
-            link.SimOldStatus = link.SimStatus;
-        }
-
-        foreach (SimulationPump pump  in  this.nPumps) {
-            for (int j = 0; j < 6; j++)
-                pump.setEnergy(j, 0.0);
-        }
-
-        this.Htime = 0;
-        this.Rtime = this.pMap.Rstep;
-    }
-
-    /**
-     * Run hydraulic simuation.
-     *
-     * @param hyd Abstract file where the output of the hydraulic simulation will be writen.
-     * @throws ENException
-     */
-
-    public void simulate(string hyd) {
-        try {
-            FileStream @out = new FileStream(hyd, FileMode.Create, FileAccess.Write, FileShare.Read,
-                BUFFER_SIZE);
-
-            using (@out)
-            {
-                this.simulate(@out);
+                link.SimOldStatus = link.SimStatus;
             }
-        } catch (IOException) {
-            throw new ENException(ErrorCode.Err305);
+
+            foreach (SimulationPump pump  in  this.pumps) {
+                Array.Clear(pump.Energy, 0, pump.Energy.Length);
+            }
+
+            this.Htime = 0;
+            this.Rtime = this.pMap.Rstep;
         }
-    }
+
+        ///<summary>Run hydraulic simuation.</summary>
+        /// <param name="hyd">File name where the output of the hydraulic simulation will be writen.</param>
+        public void Simulate(string hyd) {
+            try {
+                FileStream @out = new FileStream(
+                    hyd,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.Read,
+                    BUFFER_SIZE);
+
+                using (@out) {
+                    this.Simulate(@out);
+                }
+            }
+            catch (IOException) {
+                throw new ENException(ErrorCode.Err305);
+            }
+        }
 
 
-    /**
-     * Run hydraulic simuation.
-     *
-     * @param out output stream for the hydraulic simulation data.
-     * @throws ENException, IOException 
-     */
-    public void simulate(Stream @out) {
-        this.simulate( new BinaryWriter(@out));
-    }
+        ///<summary>Run hydraulic simuation.</summary>
+        /// <param name="out">output stream for the hydraulic simulation data.</param>
+        public void Simulate(Stream @out) {
+            this.Simulate(new BinaryWriter(@out));
+        }
 
-    public long simulateSingleStep() {
+        public long SimulateSingleStep() {
 
-        if (!this.running)
+            if (!this.running)
+                this.running = true;
+
+            if (!this.RunHyd()) {
+                this.running = false;
+                return 0;
+            }
+
+            long hydstep = 0;
+
+            if (this.Htime < this.pMap.Duration)
+                hydstep = this.TimeStep();
+
+            if (this.pMap.Duration == 0)
+                SimulationPump.StepEnergy(this.pMap, this.fMap, this.epat, this.pumps, this.Htime, 0);
+            else if (this.Htime < this.pMap.Duration)
+                SimulationPump.StepEnergy(this.pMap, this.fMap, this.epat, this.pumps, this.Htime, hydstep);
+
+            if (this.Htime < this.pMap.Duration) {
+                this.Htime += hydstep;
+                if (this.Htime >= this.Rtime)
+                    this.Rtime += this.pMap.Rstep;
+            }
+
+            long tstep = hydstep;
+
+            if (!this.running && tstep > 0) {
+                this.running = false;
+                return 0;
+            }
+
+            if (this.running && tstep > 0)
+                return tstep;
+            else {
+                this.running = false;
+                return 0;
+            }
+        }
+
+        public void Simulate(BinaryWriter @out) {
+            bool halted = false;
+
+            if (this.running)
+                throw new InvalidOperationException("Already running");
+
+            this.runningThread = Thread.CurrentThread;
             this.running = true;
 
-        if (!this.runHyd()) {
-            this.running = false;
-            return 0;
-        }
-
-        long hydstep = 0;
-
-        if (this.Htime < this.pMap.Duration)
-            hydstep = this.timeStep();
-
-        if (this.pMap.Duration == 0)
-            SimulationPump.stepEnergy(this.pMap, this.fMap, this.Epat, this.nPumps, this.Htime, 0);
-        else if (this.Htime < this.pMap.Duration)
-            SimulationPump.stepEnergy(this.pMap, this.fMap, this.Epat, this.nPumps, this.Htime, hydstep);
-
-        if (this.Htime < this.pMap.Duration) {
-            this.Htime += hydstep;
-            if (this.Htime >= this.Rtime)
-                this.Rtime += this.pMap.Rstep;
-        }
-
-        long tstep = hydstep;
-
-        if (!this.running && tstep > 0) {
-            this.running = false;
-            return 0;
-        }
-
-        if (this.running && tstep > 0)
-            return tstep;
-        else {
-            this.running = false;
-            return 0;
-        }
-    }
-
-    public void simulate(BinaryWriter @out) {
-        bool halted = false;
-
-        if (this.running)
-            throw new InvalidOperationException("Already running");
-
-        this.runningThread = Thread.CurrentThread;
-        this.running = true;
-
-        this.simulationOutput = @out;
-        if (this.simulationOutput != null) {
-            AwareStep.writeHeader(@out, this, this.pMap.Rstart, this.pMap.Rstep, this.pMap.Duration);
-        }
+            this.simulationOutput = @out;
+            if (this.simulationOutput != null) {
+                AwareStep.WriteHeader(@out, this, this.pMap.Rstart, this.pMap.Rstep, this.pMap.Duration);
+            }
 //        writeHeader(simulationOutput);
-        try {
-            long tstep;
-            do {
-                if (!this.runHyd())
-                    break;
+            try {
+                long tstep;
+                do {
+                    if (!this.RunHyd())
+                        break;
 
-                tstep = this.nextHyd();
+                    tstep = this.NextHyd();
 
-                if (!this.running && tstep > 0)
-                    halted = true;
-            }
-            while (this.running && tstep > 0);
-        } catch (IOException e) {
-            Debug.Print(e.ToString());
-            throw new ENException(ErrorCode.Err1000);
-        } finally {
-            this.running = false;
-            this.runningThread = null;
-        }
-
-        if (halted)
-            throw new ENException(ErrorCode.Err1000);
-
-    }
-
-
-    /**
-     * Halt hydraulic simulation.
-     *
-     * @throws InterruptedException
-     */
-    public void stopRunning() {
-        this.running = false;
-        if (this.runningThread != null && this.runningThread.IsAlive)
-            this.runningThread.Join(1000);
-    }
-
-    ///<summary>Solves network hydraulics in a single time period.</summary>
-    private bool runHyd() {
-
-        // Find new demands & control actions
-        this.computeDemands();
-        this.computeControls();
-
-        // Solve network hydraulic equations
-        NetSolveStep nss = this.netSolve();
-
-        // Report new status & save results
-        if (this.pMap.Statflag != PropertiesMap.StatFlag.NO)
-            this.logHydStat(nss);
-
-        // If system unbalanced and no extra trials
-        // allowed, then activate the Haltflag.
-        if (nss.relerr > this.pMap.Hacc && this.pMap.ExtraIter == -1) {
-            this.Htime = this.pMap.Duration;
-            return false;
-        }
-
-        this.logHydWarn(nss);
-
-        return true;
-    }
-
-    /**
-     * Solve the linear equation system to compute the links flows and nodes heads.
-     *
-     * @return Solver steps and relative error
-     * @throws ENException
-     */
-    protected NetSolveStep netSolve() {
-        NetSolveStep ret = new NetSolveStep(0, 0);
-
-        int nextCheck = this.pMap.CheckFreq;
-
-        if (this.pMap.Statflag == PropertiesMap.StatFlag.FULL)
-            this.logRelErr(ret);
-
-        int maxTrials = this.pMap.MaxIter;
-
-        if (this.pMap.ExtraIter > 0)
-            maxTrials += this.pMap.ExtraIter;
-
-        double relaxFactor = 1.0;
-        int errcode = 0;
-        ret.iter = 1;
-
-        while (ret.iter <= maxTrials) {
-            //Compute coefficient matrices A & F and solve A*H = F
-            // where H = heads, A = Jacobian coeffs. derived from
-            // head loss gradients, & F = flow correction terms.
-            this.newCoeffs();
-
-            //dumpMatrixCoeffs(new File("dumpMatrix.txt"),true);
-
-            // Solution for H is returned in F from call to linsolve().
-            errcode = this.smat.linsolve(this.nJunctions.Count, this.lsv.getAiiVector(), this.lsv.getAijVector(), this.lsv.getRHSCoeffs());
-
-            // Ill-conditioning problem
-            if (errcode > 0) {
-                // If control valve causing problem, fix its status & continue,
-                // otherwise end the iterations with no solution.
-                if (SimulationValve.checkBadValve(this.pMap, this.logger, this.nValves, this.Htime, this.smat.getOrder(errcode)))
-                    continue;
-                else break;
-            }
-
-            // Update current solution.
-            // (Row[i] = row of solution matrix corresponding to node i).
-            foreach (SimulationNode node  in  this.nJunctions) {
-                node.setSimHead(this.lsv.getRHSCoeff(this.smat.getRow(node.Index))); // Update heads
-            }
-
-            // Update flows
-            ret.relerr = this.newFlows(relaxFactor);
-
-            // Write convergence error to status report if called for
-            if (this.pMap.Statflag == PropertiesMap.StatFlag.FULL)
-                this.logRelErr(ret);
-
-            relaxFactor = 1.0;
-
-            bool valveChange = false;
-
-            //  Apply solution damping & check for change in valve status
-            if (this.pMap.DampLimit > 0.0) {
-                if (ret.relerr <= this.pMap.DampLimit) {
-                    relaxFactor = 0.6;
-                    valveChange = SimulationValve.valveStatus(this.fMap, this.pMap, this.logger, this.nValves);
+                    if (!this.running && tstep > 0)
+                        halted = true;
                 }
-            } else
-                valveChange = SimulationValve.valveStatus(this.fMap, this.pMap, this.logger, this.nValves);
-
-            // Check for convergence
-            if (ret.relerr <= this.pMap.Hacc) {
-
-                //  We have convergence. Quit if we are into extra iterations.
-                if (ret.iter > this.pMap.MaxIter)
-                    break;
-
-                //  Quit if no status changes occur.
-                bool statChange = false;
-
-                if (valveChange)
-                    statChange = true;
-
-                if (SimulationLink.linkStatus(this.pMap, this.fMap, this.logger, this.nLinks))
-                    statChange = true;
-
-                if (SimulationControl.PSwitch(this.logger, this.pMap, this.fMap, this.nControls))
-                    statChange = true;
-
-                if (!statChange)
-                    break;
-
-                //  We have a status change so continue the iterations
-                nextCheck = ret.iter + this.pMap.CheckFreq;
-            } else if (ret.iter <= this.pMap.MaxCheck && ret.iter == nextCheck) {
-                // No convergence yet. See if its time for a periodic status
-                // check  on pumps, CV's, and pipes connected to tanks.
-                SimulationLink.linkStatus(this.pMap, this.fMap, this.logger, this.nLinks);
-                nextCheck += this.pMap.CheckFreq;
+                while (this.running && tstep > 0);
+            }
+            catch (IOException e) {
+                Debug.Print(e.ToString());
+                throw new ENException(ErrorCode.Err1000);
+            }
+            finally {
+                this.running = false;
+                this.runningThread = null;
             }
 
-            ret.iter++;
+            if (halted)
+                throw new ENException(ErrorCode.Err1000);
+
         }
 
+        ///<summary>Halt hydraulic simulation.</summary>
+        public void StopRunning() {
+            this.running = false;
+            if (this.runningThread != null && this.runningThread.IsAlive)
+                this.runningThread.Join(1000);
+        }
 
-        foreach (SimulationNode node  in  this.nJunctions)
-            node.setSimDemand(node.getSimDemand() + node.getSimEmitter());
+        ///<summary>Solves network hydraulics in a single time period.</summary>
+        private bool RunHyd() {
 
-        if (errcode > 0) {
-            this.logHydErr(this.smat.getOrder(errcode));
-            errcode = 110;
+            // Find new demands & control actions
+            this.ComputeDemands();
+            this.ComputeControls();
+
+            // Solve network hydraulic equations
+            NetSolveStep nss = this.NetSolve();
+
+            // Report new status & save results
+            if (this.pMap.Statflag != PropertiesMap.StatFlag.NO)
+                this.LogHydStat(nss);
+
+            // If system unbalanced and no extra trials
+            // allowed, then activate the Haltflag.
+            if (nss.Relerr > this.pMap.Hacc && this.pMap.ExtraIter == -1) {
+                this.Htime = this.pMap.Duration;
+                return false;
+            }
+
+            this.LogHydWarn(nss);
+
+            return true;
+        }
+
+        ///<summary>Solve the linear equation system to compute the links flows and nodes heads.</summary>
+        /// <returns>Solver steps and relative error.</returns>
+        protected NetSolveStep NetSolve() {
+            NetSolveStep ret = new NetSolveStep(0, 0);
+
+            int nextCheck = this.pMap.CheckFreq;
+
+            if (this.pMap.Statflag == PropertiesMap.StatFlag.FULL)
+                this.LogRelErr(ret);
+
+            int maxTrials = this.pMap.MaxIter;
+
+            if (this.pMap.ExtraIter > 0)
+                maxTrials += this.pMap.ExtraIter;
+
+            double relaxFactor = 1.0;
+            int errcode = 0;
+            ret.Iter = 1;
+
+            while (ret.Iter <= maxTrials) {
+                //Compute coefficient matrices A & F and solve A*H = F
+                // where H = heads, A = Jacobian coeffs. derived from
+                // head loss gradients, & F = flow correction terms.
+                this.NewCoeffs();
+
+                //dumpMatrixCoeffs(new File("dumpMatrix.txt"),true);
+
+                // Solution for H is returned in F from call to linsolve().
+                errcode = this.smat.linsolve(
+                                  this.junctions.Count,
+                                  this.lsv.getAiiVector(),
+                                  this.lsv.getAijVector(),
+                                  this.lsv.getRHSCoeffs());
+
+                // Ill-conditioning problem
+                if (errcode > 0) {
+                    // If control valve causing problem, fix its status & continue,
+                    // otherwise end the iterations with no solution.
+                    if (SimulationValve.checkBadValve(
+                        this.pMap,
+                        this.logger,
+                        this.valves,
+                        this.Htime,
+                        this.smat.getOrder(errcode)))
+                        continue;
+                    else break;
+                }
+
+                // Update current solution.
+                // (Row[i] = row of solution matrix corresponding to node i).
+                foreach (SimulationNode node  in  this.junctions) {
+                    node.SimHead = this.lsv.getRHSCoeff(this.smat.getRow(node.Index)); // Update heads
+                }
+
+                // Update flows
+                ret.Relerr = this.NewFlows(relaxFactor);
+
+                // Write convergence error to status report if called for
+                if (this.pMap.Statflag == PropertiesMap.StatFlag.FULL)
+                    this.LogRelErr(ret);
+
+                relaxFactor = 1.0;
+
+                bool valveChange = false;
+
+                //  Apply solution damping & check for change in valve status
+                if (this.pMap.DampLimit > 0.0) {
+                    if (ret.Relerr <= this.pMap.DampLimit) {
+                        relaxFactor = 0.6;
+                        valveChange = SimulationValve.valveStatus(this.fMap, this.pMap, this.logger, this.valves);
+                    }
+                }
+                else
+                    valveChange = SimulationValve.valveStatus(this.fMap, this.pMap, this.logger, this.valves);
+
+                // Check for convergence
+                if (ret.Relerr <= this.pMap.Hacc) {
+
+                    //  We have convergence. Quit if we are into extra iterations.
+                    if (ret.Iter > this.pMap.MaxIter)
+                        break;
+
+                    //  Quit if no status changes occur.
+                    bool statChange = false;
+
+                    if (valveChange)
+                        statChange = true;
+
+                    if (SimulationLink.LinkStatus(this.pMap, this.fMap, this.logger, this.links))
+                        statChange = true;
+
+                    if (SimulationControl.PSwitch(this.logger, this.pMap, this.fMap, this.controls))
+                        statChange = true;
+
+                    if (!statChange)
+                        break;
+
+                    //  We have a status change so continue the iterations
+                    nextCheck = ret.Iter + this.pMap.CheckFreq;
+                }
+                else if (ret.Iter <= this.pMap.MaxCheck && ret.Iter == nextCheck) {
+                    // No convergence yet. See if its time for a periodic status
+                    // check  on pumps, CV's, and pipes connected to tanks.
+                    SimulationLink.LinkStatus(this.pMap, this.fMap, this.logger, this.links);
+                    nextCheck += this.pMap.CheckFreq;
+                }
+
+                ret.Iter++;
+            }
+
+
+            foreach (SimulationNode node  in  this.junctions)
+                node.SimDemand = node.SimDemand + node.SimEmitter;
+
+            if (errcode > 0) {
+                this.LogHydErr(this.smat.getOrder(errcode));
+                errcode = 110;
+                return ret;
+            }
+
+            if (errcode != 0)
+                throw new ENException((ErrorCode)errcode);
+
             return ret;
         }
 
-        if (errcode != 0)
-            throw new ENException((ErrorCode)errcode);
 
-        return ret;
-    }
+        ///<summary>Computes coefficients of linearized network eqns.</summary>
+        void NewCoeffs() {
+            this.lsv.clear();
 
-
-    ///<summary>Computes coefficients of linearized network eqns.</summary>
-    void newCoeffs() {
-        this.lsv.clear();
-
-        foreach (SimulationLink link  in  this.nLinks) {
-            link.SimInvHeadLoss = 0;
-            link.SimFlowCorrection = 0;
-        }
-
-        SimulationLink.computeMatrixCoeffs(this.fMap, this.pMap, this.pHLModel, this.nLinks, this.nCurves, this.smat, this.lsv);   // Compute link coeffs.
-        SimulationNode.computeEmitterCoeffs(this.pMap, this.nJunctions, this.smat, this.lsv);                       // Compute emitter coeffs.
-        SimulationNode.computeNodeCoeffs(this.nJunctions, this.smat, this.lsv);                                // Compute node coeffs.
-        SimulationValve.computeMatrixCoeffs(this.pMap, this.lsv, this.smat, this.nValves);                          // Compute valve coeffs.
-    }
-
-    ///<summary>Updates link flows after new nodal heads computed.</summary>
-    double newFlows(double RelaxFactor) {
-
-        foreach (SimulationTank node  in  this.nTanks)
-            node.setSimDemand(0);
-
-        double qsum = 0.0;
-        double dqsum = 0.0;
-
-        foreach (SimulationLink link  in  this.nLinks) {
-            SimulationNode n1 = link.First;
-            SimulationNode n2 = link.Second;
-
-            double dh = n1.getSimHead() - n2.getSimHead();
-            double dq = link.SimFlowCorrection - link.SimInvHeadLoss * dh;
-
-            dq *= RelaxFactor;
-
-            if (link is SimulationPump) {
-                if (((SimulationPump) link).getPtype() == Pump.PumpType.CONST_HP && dq > link.SimFlow)
-                    dq = link.SimFlow / 2.0;
+            foreach (SimulationLink link  in  this.links) {
+                link.SimInvHeadLoss = 0;
+                link.SimFlowCorrection = 0;
             }
 
-            link.SimFlow = link.SimFlow - dq;
+            SimulationLink.ComputeMatrixCoeffs(
+                this.fMap,
+                this.pMap,
+                this.pHlModel,
+                this.links,
+                this.curves,
+                this.smat,
+                this.lsv); // Compute link coeffs.
+            SimulationNode.ComputeEmitterCoeffs(this.pMap, this.junctions, this.smat, this.lsv);
+                // Compute emitter coeffs.
+            SimulationNode.ComputeNodeCoeffs(this.junctions, this.smat, this.lsv); // Compute node coeffs.
+            SimulationValve.computeMatrixCoeffs(this.pMap, this.lsv, this.smat, this.valves); // Compute valve coeffs.
+        }
 
-            qsum += Math.Abs(link.SimFlow);
-            dqsum += Math.Abs(dq);
+        ///<summary>Updates link flows after new nodal heads computed.</summary>
+        double NewFlows(double relaxFactor) {
 
-            if (link.SimStatus > Link.StatType.CLOSED) {
-                if (n1 is SimulationTank)
-                    n1.setSimDemand(n1.getSimDemand() - link.SimFlow);
-                if (n2 is SimulationTank)
-                    n2.setSimDemand(n2.getSimDemand() + link.SimFlow);
+            foreach (SimulationTank node  in  this.tanks)
+                node.SimDemand = 0;
+
+            double qsum = 0.0;
+            double dqsum = 0.0;
+
+            foreach (SimulationLink link  in  this.links) {
+                SimulationNode n1 = link.First;
+                SimulationNode n2 = link.Second;
+
+                double dh = n1.SimHead - n2.SimHead;
+                double dq = link.SimFlowCorrection - link.SimInvHeadLoss * dh;
+
+                dq *= relaxFactor;
+
+                if (link is SimulationPump) {
+                    if (((SimulationPump)link).Ptype == Pump.PumpType.CONST_HP && dq > link.SimFlow)
+                        dq = link.SimFlow / 2.0;
+                }
+
+                link.SimFlow = link.SimFlow - dq;
+
+                qsum += Math.Abs(link.SimFlow);
+                dqsum += Math.Abs(dq);
+
+                if (link.SimStatus > Link.StatType.CLOSED) {
+                    if (n1 is SimulationTank)
+                        n1.SimDemand = n1.SimDemand - link.SimFlow;
+                    if (n2 is SimulationTank)
+                        n2.SimDemand = n2.SimDemand + link.SimFlow;
+                }
             }
-        }
 
-        foreach (SimulationNode node  in  this.nJunctions) {
+            foreach (SimulationNode node  in  this.junctions) {
 
-            if (node.getKe() == 0.0)
-                continue;
-            double dq = node.emitFlowChange(this.pMap);
-            node.setSimEmitter(node.getSimEmitter() - dq);
-            qsum += Math.Abs(node.getSimEmitter());
-            dqsum += Math.Abs(dq);
-        }
-
-        if (qsum > this.pMap.Hacc)
-            return (dqsum / qsum);
-        else
-            return (dqsum);
-
-    }
-
-    ///<summary>Implements simple controls based on time or tank levels.</summary>
-    private void computeControls() {
-        SimulationControl.StepActions(this.logger, this.fMap, this.pMap, this.nControls, this.Htime);
-    }
-
-    ///<summary>Computes demands at nodes during current time period.</summary>
-    private void computeDemands() {
-        // Determine total elapsed number of pattern periods
-        long p = (this.Htime + this.pMap.Pstart) / this.pMap.Pstep;
-
-        this.Dsystem = 0.0; //System-wide demand
-
-        // Update demand at each node according to its assigned pattern
-        foreach (SimulationNode node  in  this.nJunctions) {
-            double sum = 0.0;
-            foreach (Demand demand  in  node.getDemand()) {
-                // pattern period (k) = (elapsed periods) modulus (periods per pattern)
-                List<double> factors = demand.Pattern.FactorsList;
-
-                long k = p % (long) factors.Count;
-                double djunc = (demand.Base) * factors[(int) k] * this.pMap.Dmult;
-                if (djunc > 0.0)
-                    this.Dsystem += djunc;
-
-                sum += djunc;
+                if (node.Ke == 0.0)
+                    continue;
+                double dq = node.EmitFlowChange(this.pMap);
+                node.SimEmitter = node.SimEmitter - dq;
+                qsum += Math.Abs(node.SimEmitter);
+                dqsum += Math.Abs(dq);
             }
-            node.setSimDemand(sum);
+
+            if (qsum > this.pMap.Hacc)
+                return (dqsum / qsum);
+            else
+                return (dqsum);
+
         }
 
-        // Update head at fixed grade nodes with time patterns
-        foreach (SimulationTank tank  in  this.nTanks) {
-            if (tank.getArea() == 0.0) {
-                Pattern pat = tank.getPattern();
-                if (pat != null) {
-                    List<double> factors = pat.FactorsList;
-                    long k = p % factors.Count;
+        ///<summary>Implements simple controls based on time or tank levels.</summary>
+        private void ComputeControls() {
+            SimulationControl.StepActions(this.logger, this.fMap, this.pMap, this.controls, this.Htime);
+        }
 
-                    tank.setSimHead(tank.getElevation() * factors[(int)k]);
+        ///<summary>Computes demands at nodes during current time period.</summary>
+        private void ComputeDemands() {
+            // Determine total elapsed number of pattern periods
+            long p = (this.Htime + this.pMap.Pstart) / this.pMap.Pstep;
+
+            this.dsystem = 0.0; //System-wide demand
+
+            // Update demand at each node according to its assigned pattern
+            foreach (SimulationNode node  in  this.junctions) {
+                double sum = 0.0;
+                foreach (Demand demand  in  node.Demand) {
+                    // pattern period (k) = (elapsed periods) modulus (periods per pattern)
+                    List<double> factors = demand.Pattern.FactorsList;
+
+                    long k = p % (long)factors.Count;
+                    double djunc = (demand.Base) * factors[(int)k] * this.pMap.Dmult;
+                    if (djunc > 0.0)
+                        this.dsystem += djunc;
+
+                    sum += djunc;
+                }
+                node.SimDemand = sum;
+            }
+
+            // Update head at fixed grade nodes with time patterns
+            foreach (SimulationTank tank  in  this.tanks) {
+                if (tank.Area == 0.0) {
+                    Pattern pat = tank.Pattern;
+                    if (pat != null) {
+                        List<double> factors = pat.FactorsList;
+                        long k = p % factors.Count;
+
+                        tank.SimHead = tank.Elevation * factors[(int)k];
+                    }
+                }
+            }
+
+            // Update status of pumps with utilization patterns
+            foreach (SimulationPump pump  in  this.pumps) {
+                if (pump.Upat != null) {
+                    List<Double> factors = pump.Upat.FactorsList;
+                    int k = (int)(p % factors.Count);
+                    pump.SetLinkSetting(factors[k]);
                 }
             }
         }
 
-        // Update status of pumps with utilization patterns
-        foreach (SimulationPump pump  in  this.nPumps) {
-            if (pump.getUpat() != null) {
-                List<Double> factors = pump.getUpat().FactorsList;
-                int k = (int)(p % factors.Count);
-                pump.setLinkSetting(factors[k]);
+        ///<summary>Finds length of next time step & updates tank levels and rule-based contol actions.</summary>
+        protected virtual long NextHyd() {
+            long hydstep = 0;
+
+            if (this.simulationOutput != null)
+                AwareStep.Write(this.simulationOutput, this, this.Htime);
+
+            if (this.Htime < this.pMap.Duration)
+                hydstep = this.TimeStep();
+
+            if (this.pMap.Duration == 0)
+                SimulationPump.StepEnergy(this.pMap, this.fMap, this.epat, this.pumps, this.Htime, 0);
+            else if (this.Htime < this.pMap.Duration)
+                SimulationPump.StepEnergy(this.pMap, this.fMap, this.epat, this.pumps, this.Htime, hydstep);
+
+            if (this.Htime < this.pMap.Duration) {
+                this.Htime += hydstep;
+                if (this.Htime >= this.Rtime)
+                    this.Rtime += this.pMap.Rstep;
             }
-        }
-    }
 
-    ///<summary>Finds length of next time step & updates tank levels and rule-based contol actions.</summary>
-    protected long nextHyd() {
-        long hydstep = 0;
-
-        if (this.simulationOutput != null)
-            AwareStep.write(this.simulationOutput, this, this.Htime);
-
-        if (this.Htime < this.pMap.Duration)
-            hydstep = this.timeStep();
-
-        if (this.pMap.Duration == 0)
-            SimulationPump.stepEnergy(this.pMap, this.fMap, this.Epat, this.nPumps, this.Htime, 0);
-        else if (this.Htime < this.pMap.Duration)
-            SimulationPump.stepEnergy(this.pMap, this.fMap, this.Epat, this.nPumps, this.Htime, hydstep);
-
-        if (this.Htime < this.pMap.Duration) {
-            this.Htime += hydstep;
-            if (this.Htime >= this.Rtime)
-                this.Rtime += this.pMap.Rstep;
+            return hydstep;
         }
 
-        return hydstep;
-    }
+        ///<summary>Computes time step to advance hydraulic simulation.</summary>
+        long TimeStep() {
+            long tstep = this.pMap.Hstep;
 
-    ///<summary>Computes time step to advance hydraulic simulation.</summary>
-    long timeStep() {
-        long tstep = this.pMap.Hstep;
+            long n = ((this.Htime + this.pMap.Pstart) / this.pMap.Pstep) + 1;
+            long t = n * this.pMap.Pstep - this.Htime;
 
-        long n = ((this.Htime + this.pMap.Pstart) / this.pMap.Pstep) + 1;
-        long t = n * this.pMap.Pstep - this.Htime;
+            if (t > 0 && t < tstep)
+                tstep = t;
 
-        if (t > 0 && t < tstep)
-            tstep = t;
+            // Revise time step based on smallest time to fill or drain a tank
+            t = this.Rtime - this.Htime;
+            if (t > 0 && t < tstep) tstep = t;
 
-        // Revise time step based on smallest time to fill or drain a tank
-        t = this.Rtime - this.Htime;
-        if (t > 0 && t < tstep) tstep = t;
+            tstep = SimulationTank.MinimumTimeStep(this.tanks, tstep);
+            tstep = SimulationControl.MinimumTimeStep(this.fMap, this.pMap, this.controls, this.Htime, tstep);
 
-        tstep = SimulationTank.minimumTimeStep(this.nTanks, tstep);
-        tstep = SimulationControl.MinimumTimeStep(this.fMap, this.pMap, this.nControls, this.Htime, tstep);
+            if (this.rules.Count > 0) {
+                long step, htime;
 
-        if (this.nRules.Count > 0) {
-            SimulationRule.Result res = SimulationRule.minimumTimeStep(this.fMap, this.pMap, this.logger, this.nRules, this.nTanks, this.Htime, tstep, this.Dsystem);
-            tstep = res.step;
-            this.Htime = res.htime;
-        } else
-            SimulationTank.stepWaterLevels(this.nTanks, this.fMap, tstep);
+                SimulationRule.MinimumTimeStep(
+                    this.fMap,
+                    this.pMap,
+                    this.logger,
+                    this.rules,
+                    this.tanks,
+                    this.Htime,
+                    tstep,
+                    this.dsystem,
+                    out step,
+                    out htime);
 
-        return (tstep);
-    }
+                tstep = step;
+                this.Htime = htime;
+            }
+            else
+                SimulationTank.StepWaterLevels(this.tanks, this.fMap, tstep);
 
-
-    ///<summary>Save current step simulation results in the temp hydfile.</summary>
-    private void saveStep() {
-
-        MemoryStream ms = new MemoryStream(this.nLinks.Count * 3 * sizeof(float) + this.nNodes.Count * 2 * sizeof(float) + sizeof(int));
-        BinaryWriter bb = new BinaryWriter(ms);
-
-
-        try {
-            bb.Write((int)this.Htime);
-
-            foreach (SimulationNode node  in  this.nNodes)
-                bb.Write((float) node.getSimDemand());
-
-            foreach (SimulationNode node  in  this.nNodes)
-                bb.Write((float) node.getSimHead());
-
-            foreach (SimulationLink link  in  this.nLinks)
-                if (link.SimStatus <= Link.StatType.CLOSED)
-                    bb.Write((float) 0.0);
-
-                else
-                    bb.Write((float) link.SimFlow);
-
-            foreach (SimulationLink link  in  this.nLinks)
-                bb.Write((int)link.SimStatus);
-
-            foreach (SimulationLink link  in  this.nLinks)
-                bb.Write((float) link.SimSetting);
-
-            this.simulationOutput.Write(ms.GetBuffer());
-
-        } catch (IOException) {
-            throw new ENException(ErrorCode.Err308);
+            return (tstep);
         }
-    }
 
 
-    // Report hydraulic warning.
-    // Note: Warning conditions checked in following order:
-    //  1. System balanced but unstable
-    //  2. Negative pressures
-    //  3. FCV cannot supply flow or PRV/PSV cannot maintain pressure
-    //  4. Pump out of range
-    //  5. Network disconnected
-    //  6. System unbalanced
-    private void logHydWarn(NetSolveStep nss) {
-        try {
-            int flag;
+        ///<summary>Save current step simulation results in the temp hydfile.</summary>
+        private void SaveStep() {
 
-            string atime = this.Htime.GetClockTime();
+            MemoryStream ms =
+                new MemoryStream(
+                    this.links.Count * 3 * sizeof(float) + this.nodes.Count * 2 * sizeof(float) + sizeof(int));
+            BinaryWriter bb = new BinaryWriter(ms);
 
-            if (nss.iter > this.pMap.MaxIter && nss.relerr <= this.pMap.Hacc) {
-                if (this.pMap.Messageflag)
-                    this.logger.Warning(Error.ResourceManager.GetString("WARN02"), atime);
-                flag = 2;
-            }
 
-            // Check for negative pressures
-            foreach (SimulationNode node  in  this.nJunctions) {
-                if (node.getSimHead() < node.getElevation() && node.getSimDemand() > 0.0) {
-                    if (this.pMap.Messageflag)
-                        this.logger.Warning(Error.ResourceManager.GetString("WARN06"), atime);
-                    flag = 6;
-                    break;
-                }
-            }
+            try {
+                bb.Write((int)this.Htime);
 
-            // Check for abnormal valve condition
-            foreach (SimulationValve valve  in  this.nValves) {
-                int j = valve.Index;
-                if (valve.SimStatus >= Link.StatType.XFCV) {
-                    if (this.pMap.Messageflag)
-                        this.logger.Warning(Error.ResourceManager.GetString("WARN05"), valve.Type.ParseStr(), valve.Link.Id,
-                                valve.SimStatus.ReportStr(), atime);
-                    flag = 5;
-                }
-            }
+                foreach (SimulationNode node  in  this.nodes)
+                    bb.Write((float)node.SimDemand);
 
-            // Check for abnormal pump condition
-            foreach (SimulationPump pump  in  this.nPumps) {
-                Link.StatType s = pump.SimStatus;
-                if (pump.SimStatus >= Link.StatType.OPEN) {
-                    if (pump.SimFlow > pump.SimSetting * pump.getQmax())
-                        s = Link.StatType.XFLOW;
-                    if (pump.SimFlow < 0.0)
-                        s = Link.StatType.XHEAD;
-                }
+                foreach (SimulationNode node  in  this.nodes)
+                    bb.Write((float)node.SimHead);
 
-                if (s == Link.StatType.XHEAD || s == Link.StatType.XFLOW) {
-                    if (this.pMap.Messageflag)
-                        this.logger.Warning(Error.ResourceManager.GetString("WARN04"), pump.Link.Id, pump.SimStatus.ReportStr(), atime);
-                    flag = 4;
-                }
-            }
-
-            // Check if system is unbalanced
-            if (nss.iter > this.pMap.MaxIter && nss.relerr > this.pMap.Hacc) {
-                string str = string.Format(Error.ResourceManager.GetString("WARN01"), atime);
-
-                if (this.pMap.ExtraIter == -1)
-                    str += Keywords.t_HALTED;
-
-                if (this.pMap.Messageflag)
-                    this.logger.Warning(str);
-
-                flag = 1;
-            }
-        } catch (ENException e) {
-        }
-    }
-
-    // Report hydraulic status.
-    private void logHydStat(NetSolveStep nss) {
-        try {
-            string atime = this.Htime.GetClockTime();
-            if (nss.iter > 0) {
-                if (nss.relerr <= this.pMap.Hacc)
-                    this.logger.Warning(Text.ResourceManager.GetString("FMT58"), atime, nss.iter);
-                else
-                    this.logger.Warning(Text.ResourceManager.GetString("FMT59"), atime, nss.iter, nss.relerr);
-            }
-
-            foreach (SimulationTank tank  in  this.nTanks) {
-                Link.StatType newstat;
-
-                if (Math.Abs(tank.getSimDemand()) < 0.001)
-                    newstat = Link.StatType.CLOSED;
-                else if (tank.getSimDemand() > 0.0)
-                    newstat = Link.StatType.FILLING;
-                else if (tank.getSimDemand() < 0.0)
-                    newstat = Link.StatType.EMPTYING;
-                else
-                    newstat = tank.getOldStat();
-
-                if (newstat != tank.getOldStat()) {
-                    if (!tank.isReservoir())
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT50"), atime, tank.Id, newstat.ReportStr(),
-                            (tank.getSimHead() - tank.getElevation())*this.fMap.GetUnits(FieldsMap.FieldType.HEAD),
-                            this.fMap.GetField(FieldsMap.FieldType.HEAD).Units);
+                foreach (SimulationLink link  in  this.links)
+                    if (link.SimStatus <= Link.StatType.CLOSED)
+                        bb.Write((float)0.0);
 
                     else
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT51"), atime, tank.Id, newstat.ReportStr());
+                        bb.Write((float)link.SimFlow);
 
-                    tank.setOldStat(newstat);
+                foreach (SimulationLink link  in  this.links)
+                    bb.Write((int)link.SimStatus);
+
+                foreach (SimulationLink link  in  this.links)
+                    bb.Write((float)link.SimSetting);
+
+                this.simulationOutput.Write(ms.GetBuffer());
+
+            }
+            catch (IOException) {
+                throw new ENException(ErrorCode.Err308);
+            }
+        }
+
+        /// <summary>Report hydraulic warning.</summary>
+        /// <param name="nss"></param>
+        /// <remarks>
+        /// Note: Warning conditions checked in following order:
+        /// <list type="number">
+        /// <item>1. System balanced but unstable</item>
+        /// <item>2. Negative pressures</item>
+        /// <item>3. FCV cannot supply flow or PRV/PSV cannot maintain pressure</item>
+        /// <item>4. Pump out of range</item>
+        /// <item>5. Network disconnected</item>
+        /// <item>6. System unbalanced</item> 
+        /// </list>
+        /// </remarks>
+        private void LogHydWarn(NetSolveStep nss) {
+            try {
+                int flag;
+
+                string atime = this.Htime.GetClockTime();
+
+                if (nss.Iter > this.pMap.MaxIter && nss.Relerr <= this.pMap.Hacc) {
+                    if (this.pMap.Messageflag)
+                        this.logger.Warning(Error.ResourceManager.GetString("WARN02"), atime);
+                    flag = 2;
+                }
+
+                // Check for negative pressures
+                foreach (SimulationNode node  in  this.junctions) {
+                    if (node.SimHead < node.Elevation && node.SimDemand > 0.0) {
+                        if (this.pMap.Messageflag)
+                            this.logger.Warning(Error.ResourceManager.GetString("WARN06"), atime);
+                        flag = 6;
+                        break;
+                    }
+                }
+
+                // Check for abnormal valve condition
+                foreach (SimulationValve valve  in  this.valves) {
+                    int j = valve.Index;
+                    if (valve.SimStatus >= Link.StatType.XFCV) {
+                        if (this.pMap.Messageflag)
+                            this.logger.Warning(
+                                    Error.ResourceManager.GetString("WARN05"),
+                                    valve.Type.ParseStr(),
+                                    valve.Link.Id,
+                                    valve.SimStatus.ReportStr(),
+                                    atime);
+                        flag = 5;
+                    }
+                }
+
+                // Check for abnormal pump condition
+                foreach (SimulationPump pump  in  this.pumps) {
+                    Link.StatType s = pump.SimStatus;
+                    if (pump.SimStatus >= Link.StatType.OPEN) {
+                        if (pump.SimFlow > pump.SimSetting * pump.Qmax)
+                            s = Link.StatType.XFLOW;
+                        if (pump.SimFlow < 0.0)
+                            s = Link.StatType.XHEAD;
+                    }
+
+                    if (s == Link.StatType.XHEAD || s == Link.StatType.XFLOW) {
+                        if (this.pMap.Messageflag)
+                            this.logger.Warning(
+                                    Error.ResourceManager.GetString("WARN04"),
+                                    pump.Link.Id,
+                                    pump.SimStatus.ReportStr(),
+                                    atime);
+                        flag = 4;
+                    }
+                }
+
+                // Check if system is unbalanced
+                if (nss.Iter > this.pMap.MaxIter && nss.Relerr > this.pMap.Hacc) {
+                    string str = string.Format(Error.ResourceManager.GetString("WARN01"), atime);
+
+                    if (this.pMap.ExtraIter == -1)
+                        str += Keywords.t_HALTED;
+
+                    if (this.pMap.Messageflag)
+                        this.logger.Warning(str);
+
+                    flag = 1;
                 }
             }
+            catch (ENException e) {}
+        }
 
-            foreach (SimulationLink link  in  this.nLinks) {
-                if (link.SimStatus != link.SimOldStatus) {
-                    if (this.Htime == 0)
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT52"),
-                                atime,
-                                link.Type.ParseStr(),
-                                link.Link.Id,
-                                link.SimStatus.ReportStr());
+        /// <summary>Report hydraulic status.</summary>
+        private void LogHydStat(NetSolveStep nss) {
+            try {
+                string atime = this.Htime.GetClockTime();
+                if (nss.Iter > 0) {
+                    if (nss.Relerr <= this.pMap.Hacc)
+                        this.logger.Warning(Text.ResourceManager.GetString("FMT58"), atime, nss.Iter);
                     else
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT53"), atime,
-                                link.Type.ParseStr(),
-                                link.Link.Id,
-                                link.SimOldStatus.ReportStr(),
-                                link.SimStatus.ReportStr());
-                    link.SimOldStatus = link.SimStatus;
+                        this.logger.Warning(Text.ResourceManager.GetString("FMT59"), atime, nss.Iter, nss.Relerr);
+                }
+
+                foreach (SimulationTank tank  in  this.tanks) {
+                    Link.StatType newstat;
+
+                    if (Math.Abs(tank.SimDemand) < 0.001)
+                        newstat = Link.StatType.CLOSED;
+                    else if (tank.SimDemand > 0.0)
+                        newstat = Link.StatType.FILLING;
+                    else if (tank.SimDemand < 0.0)
+                        newstat = Link.StatType.EMPTYING;
+                    else
+                        newstat = tank.OldStat;
+
+                    if (newstat != tank.OldStat) {
+                        if (!tank.IsReservoir)
+                            this.logger.Warning(
+                                    Text.ResourceManager.GetString("FMT50"),
+                                    atime,
+                                    tank.Id,
+                                    newstat.ReportStr(),
+                                    (tank.SimHead - tank.Elevation) * this.fMap.GetUnits(FieldsMap.FieldType.HEAD),
+                                    this.fMap.GetField(FieldsMap.FieldType.HEAD).Units);
+
+                        else
+                            this.logger.Warning(
+                                    Text.ResourceManager.GetString("FMT51"),
+                                    atime,
+                                    tank.Id,
+                                    newstat.ReportStr());
+
+                        tank.OldStat = newstat;
+                    }
+                }
+
+                foreach (SimulationLink link  in  this.links) {
+                    if (link.SimStatus != link.SimOldStatus) {
+                        if (this.Htime == 0)
+                            this.logger.Warning(
+                                    Text.ResourceManager.GetString("FMT52"),
+                                    atime,
+                                    link.Type.ParseStr(),
+                                    link.Link.Id,
+                                    link.SimStatus.ReportStr());
+                        else
+                            this.logger.Warning(
+                                    Text.ResourceManager.GetString("FMT53"),
+                                    atime,
+                                    link.Type.ParseStr(),
+                                    link.Link.Id,
+                                    link.SimOldStatus.ReportStr(),
+                                    link.SimStatus.ReportStr());
+                        link.SimOldStatus = link.SimStatus;
+                    }
                 }
             }
-        } catch (ENException e) {
+            catch (ENException e) {}
         }
-    }
 
 
-    private void logRelErr(NetSolveStep ret) {
-        if (ret.iter == 0) {
-            this.logger.Warning(Text.ResourceManager.GetString("FMT64"), this.Htime.GetClockTime());
-        } else {
-            this.logger.Warning(Text.ResourceManager.GetString("FMT65"), ret.iter, ret.relerr);
+        private void LogRelErr(NetSolveStep ret) {
+            if (ret.Iter == 0) {
+                this.logger.Warning(Text.ResourceManager.GetString("FMT64"), this.Htime.GetClockTime());
+            }
+            else {
+                this.logger.Warning(Text.ResourceManager.GetString("FMT65"), ret.Iter, ret.Relerr);
+            }
         }
-    }
 
-    private void logHydErr(int order) {
-        try {
-            if (this.pMap.Messageflag)
-                this.logger.Warning(Text.ResourceManager.GetString("FMT62"),
-                        this.Htime.GetClockTime(), this.nNodes[order].Id);
-        } catch (ENException e) {
+        private void LogHydErr(int order) {
+            try {
+                if (this.pMap.Messageflag)
+                    this.logger.Warning(
+                            Text.ResourceManager.GetString("FMT62"),
+                            this.Htime.GetClockTime(),
+                            this.nodes[order].Id);
+            }
+            catch (ENException e) {}
+            this.LogHydStat(new NetSolveStep(0, 0));
         }
-        this.logHydStat(new NetSolveStep(0, 0));
+
+        public List<SimulationNode> Nodes { get { return this.nodes; } }
+
+        public List<SimulationLink> Links { get { return this.links; } }
+
+        public List<SimulationRule> Rules { get { return this.rules; } }
+
+        public List<SimulationControl> Controls { get { return this.controls; } }
     }
 
-    public List<SimulationNode> getnNodes() {
-        return this.nNodes;
-    }
-
-    public List<SimulationLink> getnLinks() {
-        return this.nLinks;
-    }
-
-    public List<SimulationRule> getnRules() {
-        return this.nRules;
-    }
-
-    public List<SimulationControl> getnControls() {
-        return this.nControls;
-    }
-
-}
 }

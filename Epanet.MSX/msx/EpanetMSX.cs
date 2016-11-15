@@ -17,10 +17,10 @@
 
 using System;
 using System.Threading;
-using org.addition.epanet.msx.Structures;
-using org.addition.epanet.util;
+using Epanet.MSX.Structures;
+using Epanet.Util;
 
-namespace org.addition.epanet.msx {
+namespace Epanet.MSX {
 
     public class EpanetMSX {
         private readonly InpReader reader;
@@ -52,7 +52,7 @@ namespace org.addition.epanet.msx {
             Species[] spe = this.network.Species;
             string[] ret = new string[spe.Length - 1];
             for (int i = 1; i < spe.Length; i++) {
-                ret[i - 1] = spe[i].getId();
+                ret[i - 1] = spe[i].Id;
             }
             return ret;
         }
@@ -106,10 +106,10 @@ namespace org.addition.epanet.msx {
         public EnumTypes.ErrorCodeType Run(string outFile) {
             EnumTypes.ErrorCodeType err = 0;
             bool halted = false;
-            if (running) throw new InvalidOperationException("Already running");
+            if (this.running) throw new InvalidOperationException("Already running");
 
-            runningThread = Thread.CurrentThread;
-            running = true;
+            this.runningThread = Thread.CurrentThread;
+            this.running = true;
             try {
                 this.quality.MSXqual_init();
 
@@ -126,16 +126,16 @@ namespace org.addition.epanet.msx {
                     }
                     err = this.quality.MSXqual_step(tTemp, tLeft);
                     newHour = tTemp[0] / 3600;
-                    if (!running && tLeft[0] > 0)
+                    if (!this.running && tLeft[0] > 0)
                         halted = true;
                 }
-                while (running && err == 0 && tLeft[0] > 0);
+                while (this.running && err == 0 && tLeft[0] > 0);
 
 
             }
             finally {
-                running = false;
-                runningThread = null;
+                this.running = false;
+                this.runningThread = null;
             }
 
             if (halted)
@@ -148,9 +148,9 @@ namespace org.addition.epanet.msx {
         private void WriteCon(string str) { Console.Out.Write(str); }
 
         public void StopRunning() {
-            running = false;
-            if (runningThread != null && runningThread.IsAlive)
-                runningThread.Join(1000);
+            this.running = false;
+            if (this.runningThread != null && this.runningThread.IsAlive)
+                this.runningThread.Join(1000);
         }
     }
 

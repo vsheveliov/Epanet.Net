@@ -15,9 +15,9 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using org.addition.epanet.network.structures;
+using Epanet.Network.Structures;
 
-namespace org.addition.epanet.quality.structures {
+namespace Epanet.Quality.Structures {
 
     ///<summary>Wrapper class for the Node in the water quality simulation.</summary>
     public class QualityNode {
