@@ -30,15 +30,12 @@ namespace Epanet.Network.IO.Input {
 ///<summary>Excel XLSX file parser.</summary>
 public class ExcelParser : InpParser {
 
-
-    public ExcelParser(TraceSource logger):base(logger) {
-        this.Log = logger;
-    }
+    public ExcelParser(TraceSource logger):base(logger) { }
 
     private string ConvertCell(ICell cell, Network.SectType section) {
         switch (cell.CellType) {
         case CellType.Numeric:
-            return this._timeStyles.Contains(cell.CellStyle)
+            return this.timeStyles.Contains(cell.CellStyle)
                 ? ((long)Math.Round(cell.NumericCellValue * 86400)).GetClockTime()
                 : cell.NumericCellValue.ToString(CultureInfo.InvariantCulture);
 
@@ -55,7 +52,7 @@ public class ExcelParser : InpParser {
         }
     }
 
-    readonly List<ICellStyle> _timeStyles = new List<ICellStyle>();
+    private readonly List<ICellStyle> timeStyles = new List<ICellStyle>();
 
     private void FindTimeStyle(XSSFWorkbook workbook) {
         short[] validTimeFormats =
@@ -77,10 +74,10 @@ public class ExcelParser : InpParser {
 
             //if(org.apache.poi.ss.usermodel.DateUtil.isInternalDateFormat(style.getDataFormat()))
             if (Array.IndexOf(validTimeFormats, style.DataFormat, 0) != -1)
-                this._timeStyles.Add(style);
+                this.timeStyles.Add(style);
             else if (style.GetDataFormatString().ToLower().Contains("[h]:mm") ||
                         style.GetDataFormatString().ToLower().Contains("[hh]:mm"))
-                this._timeStyles.Add(style);
+                this.timeStyles.Add(style);
         }
     }
 
@@ -138,13 +135,13 @@ public class ExcelParser : InpParser {
         }
 
         AdjustData(net);
-        net.FieldsMap.Prepare(net.PropertiesMap.Unitsflag,
-                net.PropertiesMap.Flowflag,
-                net.PropertiesMap.Pressflag,
-                net.PropertiesMap.Qualflag,
+        net.FieldsMap.Prepare(net.PropertiesMap.UnitsFlag,
+                net.PropertiesMap.FlowFlag,
+                net.PropertiesMap.PressFlag,
+                net.PropertiesMap.QualFlag,
                 net.PropertiesMap.ChemUnits,
                 net.PropertiesMap.SpGrav,
-                net.PropertiesMap.Hstep);
+                net.PropertiesMap.HStep);
 
         this.Convert(net);
         return net;

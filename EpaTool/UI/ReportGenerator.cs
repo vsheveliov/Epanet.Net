@@ -137,7 +137,7 @@ namespace Epanet.UI {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydBinFile)));
 
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.Rstart) / net.PropertiesMap.Rstep)
+            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep)
                               + 1;
             var netNodes = net.Nodes;
             var netLinks = net.Links;
@@ -172,10 +172,10 @@ namespace Epanet.UI {
             object[] nodeRow = new object[dseek.Nodes + 1];
             object[] linkRow = new object[dseek.Links + 1];
 
-            for (long time = net.PropertiesMap.Rstart;
+            for (long time = net.PropertiesMap.RStart;
                  time <= net.PropertiesMap.Duration;
-                 time += net.PropertiesMap.Rstep) {
-                AwareStep step = dseek.getStep(time);
+                 time += net.PropertiesMap.RStep) {
+                AwareStep step = dseek.GetStep(time);
 
                 if (step != null) {
                     nodeRow[0] = time.GetClockTime();
@@ -251,7 +251,7 @@ namespace Epanet.UI {
         public void createQualReport(string qualFile, Network.Network net, bool nodes, bool links) {
             this.Rtime = 0;
 
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.Rstart) / net.PropertiesMap.Rstep)
+            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep)
                               + 1;
 
             using (QualityReader dseek = new QualityReader(qualFile, net.FieldsMap)) {
@@ -282,9 +282,9 @@ namespace Epanet.UI {
                 object[] linkRow = new object[dseek.Links + 1];
 
                 using (var qIt = dseek.GetEnumerator())
-                    for (long time = net.PropertiesMap.Rstart;
+                    for (long time = net.PropertiesMap.RStart;
                          time <= net.PropertiesMap.Duration;
-                         time += net.PropertiesMap.Rstep) {
+                         time += net.PropertiesMap.RStep) {
                         if (!qIt.MoveNext())
                             return;
 
@@ -322,7 +322,7 @@ namespace Epanet.UI {
             MSX.Structures.Link[] links = netMSX.Network.Link;
             string[] nSpecies = netMSX.GetSpeciesNames();
 
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.Rstart) / net.PropertiesMap.Rstep)
+            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep)
                               + 1;
 
             MsxReader reader = new MsxReader(nodes.Length - 1, links.Length - 1, nSpecies.Length, netMSX.ResultsOffset);
@@ -359,9 +359,9 @@ namespace Epanet.UI {
                     var spr = this.sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
                     spr.AddData(nodesHead);
 
-                    for (long time = net.PropertiesMap.Rstart, period = 0;
+                    for (long time = net.PropertiesMap.RStart, period = 0;
                          time <= net.PropertiesMap.Duration;
-                         time += net.PropertiesMap.Rstep, period++) {
+                         time += net.PropertiesMap.RStep, period++) {
                         nodeRow[0] = time.GetClockTime();
 
                         for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
@@ -381,9 +381,9 @@ namespace Epanet.UI {
                         this.sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
                     spr.AddData(linksHead);
 
-                    for (long time = net.PropertiesMap.Rstart, period = 0;
+                    for (long time = net.PropertiesMap.RStart, period = 0;
                          time <= net.PropertiesMap.Duration;
-                         time += net.PropertiesMap.Rstep, period++) {
+                         time += net.PropertiesMap.RStep, period++) {
                         linkRow[0] = time.GetClockTime();
 
                         for (int j = 0, ji = 0; j < nSpecies.Length; j++) {
@@ -444,29 +444,29 @@ namespace Epanet.UI {
                 sh.AddData(Text.ResourceManager.GetString("FMT22"), nPipes);
                 sh.AddData(Text.ResourceManager.GetString("FMT23"), nPumps);
                 sh.AddData(Text.ResourceManager.GetString("FMT24"), nValves);
-                sh.AddData(Text.ResourceManager.GetString("FMT25"), pMap.Formflag.ParseStr());
+                sh.AddData(Text.ResourceManager.GetString("FMT25"), pMap.FormFlag.ParseStr());
 
-                sh.AddData(Text.ResourceManager.GetString("FMT26"), pMap.Hstep.GetClockTime());
-                sh.AddData(Text.ResourceManager.GetString("FMT27"), pMap.Hacc);
+                sh.AddData(Text.ResourceManager.GetString("FMT26"), pMap.HStep.GetClockTime());
+                sh.AddData(Text.ResourceManager.GetString("FMT27"), pMap.HAcc);
                 sh.AddData(Text.ResourceManager.GetString("FMT27a"), pMap.CheckFreq);
                 sh.AddData(Text.ResourceManager.GetString("FMT27b"), pMap.MaxCheck);
                 sh.AddData(Text.ResourceManager.GetString("FMT27c"), pMap.DampLimit);
                 sh.AddData(Text.ResourceManager.GetString("FMT28"), pMap.MaxIter);
 
-                if (pMap.Qualflag == PropertiesMap.QualType.NONE || pMap.Duration == 0.0)
+                if (pMap.QualFlag == PropertiesMap.QualType.NONE || pMap.Duration == 0.0)
                     sh.AddData(Text.ResourceManager.GetString("FMT29"), "None");
-                else if (pMap.Qualflag == PropertiesMap.QualType.CHEM)
+                else if (pMap.QualFlag == PropertiesMap.QualType.CHEM)
                     sh.AddData(Text.ResourceManager.GetString("FMT30"), pMap.ChemName);
-                else if (pMap.Qualflag == PropertiesMap.QualType.TRACE)
+                else if (pMap.QualFlag == PropertiesMap.QualType.TRACE)
                     sh.AddData(
                         Text.ResourceManager.GetString("FMT31"),
                         "Trace From Node",
                         net.GetNode(pMap.TraceNode).Id);
-                else if (pMap.Qualflag == PropertiesMap.QualType.AGE)
+                else if (pMap.QualFlag == PropertiesMap.QualType.AGE)
                     sh.AddData(Text.ResourceManager.GetString("FMT32"), "Age");
 
-                if (pMap.Qualflag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
-                    sh.AddData(Text.ResourceManager.GetString("FMT33"), "Time Step", pMap.Qstep.GetClockTime());
+                if (pMap.QualFlag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
+                    sh.AddData(Text.ResourceManager.GetString("FMT33"), "Time Step", pMap.QStep.GetClockTime());
                     sh.AddData(
                         Text.ResourceManager.GetString("FMT34"),
                         "Tolerance",
@@ -477,7 +477,7 @@ namespace Epanet.UI {
                 sh.AddData(Text.ResourceManager.GetString("FMT36"), pMap.SpGrav);
                 sh.AddData(Text.ResourceManager.GetString("FMT37a"), pMap.Viscos / Constants.VISCOS);
                 sh.AddData(Text.ResourceManager.GetString("FMT37b"), pMap.Diffus / Constants.DIFFUS);
-                sh.AddData(Text.ResourceManager.GetString("FMT38"), pMap.Dmult);
+                sh.AddData(Text.ResourceManager.GetString("FMT38"), pMap.DMult);
                 sh.AddData(
                     Text.ResourceManager.GetString("FMT39"),
                     fMap.RevertUnit(FieldsMap.FieldType.TIME, pMap.Duration),

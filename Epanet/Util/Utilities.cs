@@ -24,84 +24,84 @@ namespace Epanet.Util {
 
     ///<summary>Epanet utilities methods.</summary>
     public static class Utilities {
-
         /// <summary>Check if two strings match (case independent), based on the shortest string length.</summary>
-        ///  <param name="a">string A.</param>
+        /// <param name="a">string A.</param>
         /// <param name="b">string B.</param>
-        ///  <returns>Boolean is the two strings are similar.</returns>
-        public static bool match(this string a, string b) {
-            if (a.Length == 0 || b.Length == 0)
-                return false;
+        /// <returns>Boolean is the two strings are similar.</returns>
+        public static bool Match2(this string a, string b) {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
 
-            if (a.Length > b.Length) {
-                string tmp = a.Substring(0, b.Length);
-                if (tmp.Equals(b, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            else {
-                string tmp = b.Substring(0, a.Length);
-                if (a.Equals(tmp, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            return false;
+            return a.Length > b.Length 
+                ? a.StartsWith(b, StringComparison.OrdinalIgnoreCase) 
+                : b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>Check if two strings match (case independent), based on the shortest string length.</summary>
-        /// <param name="str">string A.</param>
-        /// <param name="substr">string B.</param>
-        /// <returns>Boolean is the two strings are similar.</returns>
+        /// <summary>
+        /// Sees if substr matches any part of str (not case sensitive).
+        /// </summary>
+        /// <param name="str">string being searched</param>
+        /// <param name="substr">substring being searched for</param>
+        /// <returns>returns <c>true</c> if substr found in str, <c>false</c> if not</returns>
         public static bool Match(this string str, string substr) {
-            if (string.IsNullOrEmpty(str) || string.IsNullOrEmpty(substr)) return false;
+            
+            /* Fail if substring is empty */
+            if (string.IsNullOrEmpty(str) || string.IsNullOrEmpty(substr))
+                return false;
 
-            if (str.Length < substr.Length) return false;
+            /* Skip leading blanks of str. */
+            str = str.TrimStart();
 
+            /* Check if substr matches remainder of str. */
             return str.StartsWith(substr, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>Converts time from units to hours.</summary>
+        /// <param name="time">string containing a time value</param>
+        /// <param name="units">string containing time units (PM or AM)</param>
+        /// <returns>numerical value of time in hours (1.0 is 3600 seconds), or -1 if an error occurs </returns>
+        public static double GetHour(string time, string units = null) {
+            const int COUNT = 3;
+            double[] y = new double[COUNT];
 
-        /// <summary>Parse time string to a double number.</summary>
-        ///  <param name="time">Time string.</param>
-        /// <param name="units">Units format (PM or AM).</param>
-        /// <returns>Time in hours (1.0 is 3600 seconds)</returns>
-        public static double GetHour(string time, string units) {
-            int n = 0;
-            double[] y = {0.0d, 0.0d, 0.0d};
-            string[] s = time.Split(':');
+            // Separate clock time into hrs, min, sec. 
+            string[] s = (time ?? string.Empty).Split(':');
 
-
-            for (int i = 0; i < s.Length && i <= 3; i++) {
-                if (!s[i].ToDouble(out y[i])) return -1.0;
-                n++;
+            int n;
+            for(n = 0; n < COUNT && n < s.Length; n++) {
+                if (!double.TryParse(s[n], out y[n])) return -1;
             }
 
+            // If decimal time with units attached then convert to hours. 
             if (n == 1) {
                 if (string.IsNullOrEmpty(units)) return y[0];
 
-                if (match(units, Keywords.w_SECONDS)) return y[0] / 3600.0;
-                if (match(units, Keywords.w_MINUTES)) return y[0] / 60.0;
-                if (match(units, Keywords.w_HOURS)) return y[0];
-                if (match(units, Keywords.w_DAYS)) return y[0] * 24.0;
+                if (Match(units, Keywords.w_SECONDS)) return y[0] / 3600.0;
+                if (Match(units, Keywords.w_MINUTES)) return y[0] / 60.0;
+                if (Match(units, Keywords.w_HOURS)) return y[0];
+                if (Match(units, Keywords.w_DAYS)) return y[0] * 24.0;
             }
 
+            // Convert hh:mm:ss format to decimal hours 
             if (n > 1) y[0] = y[0] + y[1] / 60.0 + y[2] / 3600.0;
 
-            if (units.Length == 0)
-                return y[0];
+            // If am/pm attached then adjust hour accordingly 
+            // (12 am is midnight, 12 pm is noon) 
+            if (string.IsNullOrEmpty(units)) return y[0];
 
             if (units.Equals(Keywords.w_AM, StringComparison.OrdinalIgnoreCase)) {
                 if (y[0] >= 13.0) return -1.0;
                 if (y[0] >= 12.0) return y[0] - 12.0;
-                else return y[0];
+                return y[0];
             }
+
             if (units.Equals(Keywords.w_PM, StringComparison.OrdinalIgnoreCase)) {
-                if (y[0] >= 13.0) return y[0] - 12.0;
+                if (y[0] >= 13.0) return -1.0;
                 if (y[0] >= 12.0) return y[0];
-                else return y[0] + 12.0;
+                return y[0] + 12.0;
             }
+
             return -1.0;
         }
-
-
 
         /// <summary>Convert time to a string.</summary>
         /// <param name="seconds">Time to convert, in seconds.</param>
@@ -147,10 +147,7 @@ namespace Epanet.Util {
             if (c <= 0.0 || c > 20.0) return false;
             b = -h4 / Math.Pow(q1, c);
 
-            if (b >= 0.0)
-                return false;
-            else
-                return true;
+            return !(b >= 0.0);
         }
 
         ///<summary>Get value signal, if bigger than 0 returns 1, -1 otherwise.</summary>
@@ -160,7 +157,9 @@ namespace Epanet.Util {
 
         public static void Reverse<T>(this LinkedList<T> linkedList) {
             if (linkedList == null || linkedList.Count < 2) return;
+            
             LinkedListNode<T> next;
+
             var head = linkedList.First;
 
             while ((next = head.Next) != null) {
@@ -169,30 +168,7 @@ namespace Epanet.Util {
             }
         }
 
-        public static bool IsNumber(this object value) {
-            if (value == null) return false;
-            var code = Type.GetTypeCode(value.GetType());
-
-            switch (code) {
-            case TypeCode.SByte:
-            case TypeCode.Byte:
-            case TypeCode.Int16:
-            case TypeCode.UInt16:
-            case TypeCode.Int32:
-            case TypeCode.UInt32:
-            case TypeCode.Int64:
-            case TypeCode.UInt64:
-            case TypeCode.Single:
-            case TypeCode.Double:
-            case TypeCode.Decimal:
-                return true;
-            default:
-                return false;
-            }
-
-            // return code >= TypeCode.SByte && code <= TypeCode.Decimal;
-
-        }
+    
 
         public static bool ToDouble(this string s, out double result) {
             return double.TryParse(

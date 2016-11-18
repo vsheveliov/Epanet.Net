@@ -1,4 +1,5 @@
-﻿namespace EpaTool {
+﻿
+namespace Epanet.UI {
 
     sealed partial class EpanetUI {
         /// <summary>

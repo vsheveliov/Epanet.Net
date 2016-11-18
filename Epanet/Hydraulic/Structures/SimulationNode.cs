@@ -28,14 +28,20 @@ namespace Epanet.Hydraulic.Structures {
         protected readonly int index;
         protected readonly Node node;
 
-        protected double head; // Epanet 'H[n]' variable, node head.
-        protected double demand; // Epanet 'D[n]' variable, node demand.
-        protected double emitter; // Epanet 'E[n]' variable, emitter flows
+        ///<summary>Epanet 'H[n]' variable, node head.</summary>
+        protected double head; 
 
-        public static SimulationNode CreateIndexedNode(Node _node, int idx) {
-            return _node is Tank
-                ? new SimulationTank(_node, idx)
-                : new SimulationNode(_node, idx);
+        ///<summary>Epanet 'D[n]' variable, node demand.</summary>
+        protected double demand; 
+
+        ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
+        protected double emitter; 
+
+
+        public static SimulationNode CreateIndexedNode(Node networkNode, int idx) {
+            return networkNode is Tank
+                ? new SimulationTank(networkNode, idx)
+                : new SimulationNode(networkNode, idx);
         }
 
         public SimulationNode(Node @ref, int idx) {
@@ -61,19 +67,20 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Ke { get { return this.node.Ke; } }
 
+        ///<summary>Epanet 'H[n]' variable, node head.</summary>
         public double SimHead { get { return this.head; } set { this.head = value; } }
 
+        ///<summary>Epanet 'D[n]' variable, node demand.</summary>
         public double SimDemand { get { return this.demand; } set { this.demand = value; } }
 
+        ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
         public double SimEmitter { get { return this.emitter; } set { this.emitter = value; } }
-
-
 
         /// <summary>Completes calculation of nodal flow imbalance (X) flow correction (F) arrays.</summary>
         public static void ComputeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LSVariables ls) {
             foreach (SimulationNode node  in  junctions) {
-                ls.addNodalInFlow(node, -node.demand);
-                ls.addRHSCoeff(smat.getRow(node.Index), +ls.getNodalInFlow(node));
+                ls.AddNodalInFlow(node, -node.demand);
+                ls.AddRhsCoeff(smat.GetRow(node.Index), +ls.GetNodalInFlow(node));
             }
         }
 
@@ -89,30 +96,31 @@ namespace Epanet.Hydraulic.Structures {
             List<SimulationNode> junctions,
             SparseMatrix smat,
             LSVariables ls) {
+
             foreach (SimulationNode node  in  junctions) {
                 if (node.Node.Ke == 0.0)
                     continue;
 
                 double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
                 double q = node.emitter;
-                double z = ke * Math.Pow(Math.Abs(q), pMap.Qexp);
-                double p = pMap.Qexp * z / Math.Abs(q);
+                double z = ke * Math.Pow(Math.Abs(q), pMap.QExp);
+                double p = pMap.QExp * z / Math.Abs(q);
 
                 p = p < pMap.RQtol ? 1.0 / pMap.RQtol : 1.0 / p;
 
                 double y = Utilities.GetSignal(q) * z * p;
-                ls.addAii(smat.getRow(node.Index), +p);
-                ls.addRHSCoeff(smat.getRow(node.Index), +(y + p * node.Node.Elevation));
-                ls.addNodalInFlow(node, -q);
+                ls.AddAii(smat.GetRow(node.Index), +p);
+                ls.AddRhsCoeff(smat.GetRow(node.Index), +(y + p * node.Node.Elevation));
+                ls.AddNodalInFlow(node, -q);
             }
         }
 
         /// <summary>Computes flow change at an emitter node.</summary>
         public double EmitFlowChange(PropertiesMap pMap) {
             double ke = Math.Max(Constants.CSMALL, this.Ke);
-            double p = pMap.Qexp * ke * Math.Pow(Math.Abs(this.emitter), (pMap.Qexp - 1.0));
+            double p = pMap.QExp * ke * Math.Pow(Math.Abs(this.emitter), (pMap.QExp - 1.0));
             p = p < pMap.RQtol ? 1.0d / pMap.RQtol : 1.0d / p;
-            return (this.emitter / pMap.Qexp - p * (this.head - this.Elevation));
+            return (this.emitter / pMap.QExp - p * (this.head - this.Elevation));
         }
 
     }

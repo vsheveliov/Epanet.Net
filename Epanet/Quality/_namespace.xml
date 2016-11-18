@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<documentation>
+  <summary>
+    Epanet water quality(single species) simulation.
+  </summary>
+
+<remarks>
+  <h3>Water quality simulation example</h3>
+<code>
+    Logger log = ...
+    Network net = ...
+    QualitySim qSim = new QualitySim(net,log);
+    qSim.simulate(new File("hydraulicSimFile.bin"),new File("qualitySimFile.bin"));
+</code>
+<h3>Water quality result reader</h3>
+<code>
+            Network.Network net = new Network.Network();
+            QualityReader qReader = new QualityReader("qualitySimFile.bin", net.FieldsMap);
+            long time = net.PropertiesMap.RStart;
+
+            foreach (QualityReader.Step step  in  qReader) {
+                Console.Write("Instant {0}, nodes quality : ", Utilities.GetClockTime(time));
+                for (int i = 0; i &lt; net.Junctions.Count(); i++)
+                    Console.Write("{0}\t", step.GetNodeQuality(i));
+
+                Console.WriteLine();
+
+                time += net.PropertiesMap.RStep;
+            }
+
+</code>
+</remarks>
+
+</documentation>

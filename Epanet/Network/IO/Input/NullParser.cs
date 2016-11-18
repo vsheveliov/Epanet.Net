@@ -26,13 +26,13 @@ namespace Epanet.Network.IO.Input {
         public override Network Parse(Network net, string f) {
             AdjustData(net);
             net.FieldsMap.Prepare(
-                   net.PropertiesMap.Unitsflag,
-                   net.PropertiesMap.Flowflag,
-                   net.PropertiesMap.Pressflag,
-                   net.PropertiesMap.Qualflag,
+                   net.PropertiesMap.UnitsFlag,
+                   net.PropertiesMap.FlowFlag,
+                   net.PropertiesMap.PressFlag,
+                   net.PropertiesMap.QualFlag,
                    net.PropertiesMap.ChemUnits,
                    net.PropertiesMap.SpGrav,
-                   net.PropertiesMap.Hstep);
+                   net.PropertiesMap.HStep);
             this.Convert(net);
             return net;
         }

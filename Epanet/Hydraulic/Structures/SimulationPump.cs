@@ -80,7 +80,7 @@ namespace Epanet.Hydraulic.Structures {
             double q = Math.Abs(this.flow);
             double dh = Math.Abs(this.first.SimHead - this.second.SimHead);
 
-            double e = pMap.Epump;
+            double e = pMap.EPump;
 
             if (this.Ecurve != null) {
                 Curve curve = this.Ecurve;
@@ -175,7 +175,7 @@ namespace Epanet.Hydraulic.Structures {
             else
                 hmax = this.setting * this.setting * this.Hmax;
 
-            if (dh > hmax + pMap.Htol)
+            if (dh > hmax + pMap.HTol)
                 return Link.StatType.XHEAD;
 
             return Link.StatType.OPEN;
@@ -202,10 +202,10 @@ namespace Epanet.Hydraulic.Structures {
             if (dt == 0.0)
                 return 0.0;
 
-            long n = (htime + pMap.Pstart) / pMap.Pstep;
+            long n = (htime + pMap.PStart) / pMap.PStep;
 
 
-            double c0 = pMap.Ecost;
+            double c0 = pMap.ECost;
             double f0 = 1.0;
 
             if (epat != null) {

@@ -105,7 +105,7 @@ namespace Epanet.Quality {
             this.tucf = 1.0;
             this.reactflag = false;
 
-            this.qualflag = this.pMap.Qualflag;
+            this.qualflag = this.pMap.QualFlag;
             if (this.qualflag != PropertiesMap.QualType.NONE) {
                 if (this.qualflag == PropertiesMap.QualType.TRACE) {
                     foreach (QualityNode qN  in  this.nodes)
@@ -134,7 +134,7 @@ namespace Epanet.Quality {
             this.wsource = 0.0;
 
             this.htime = 0;
-            this.rtime = this.pMap.Rstart;
+            this.rtime = this.pMap.RStart;
             this.qtime = 0;
             this.nperiods = 0;
             this.elevUnits = this.fMap.GetUnits(FieldsMap.FieldType.ELEV);
@@ -240,15 +240,15 @@ namespace Epanet.Quality {
             if (order == 0.0)
                 c = 1.0;
             else if (order < 0.0) {
-                c1 = this.pMap.Climit + Utilities.GetSignal(kb) * c;
+                c1 = this.pMap.CLimit + Utilities.GetSignal(kb) * c;
                 if (Math.Abs(c1) < Constants.TINY) c1 = Utilities.GetSignal(c1) * Constants.TINY;
                 c = c / c1;
             }
             else {
-                if (this.pMap.Climit == 0.0)
+                if (this.pMap.CLimit == 0.0)
                     c1 = c;
                 else
-                    c1 = Math.Max(0.0, Utilities.GetSignal(kb) * (this.pMap.Climit - c));
+                    c1 = Math.Max(0.0, Utilities.GetSignal(kb) * (this.pMap.CLimit - c));
 
                 if (order == 1.0)
                     c = c1;
@@ -266,7 +266,7 @@ namespace Epanet.Quality {
 
         ///<summary>Retrieves hydraulic solution and hydraulic time step for next hydraulic event.</summary>
         private void GetHyd(BinaryWriter outStream, HydraulicReader hydSeek) {
-            AwareStep step = hydSeek.getStep((int)this.htime);
+            AwareStep step = hydSeek.GetStep((int)this.htime);
             this.LoadHydValues(step);
 
             this.htime += step.Step;
@@ -274,7 +274,7 @@ namespace Epanet.Quality {
             if (this.htime >= this.rtime) {
                 this.SaveOutput(outStream);
                 this.nperiods++;
-                this.rtime += this.pMap.Rstep;
+                this.rtime += this.pMap.RStep;
             }
 
 
@@ -470,7 +470,7 @@ namespace Epanet.Quality {
             dcwall = rwall * (double)dt;
 
 
-            if (this.htime >= this.pMap.Rstart) {
+            if (this.htime >= this.pMap.RStart) {
                 this.wbulk += Math.Abs(dcbulk) * v;
                 this.wwall += Math.Abs(dcwall) * v;
             }
@@ -701,13 +701,13 @@ namespace Epanet.Quality {
 
                     // Update total mass added for time period & simulation
                     qN.MassRate = qN.MassRate + massadded;
-                    if (this.htime >= this.pMap.Rstart)
+                    if (this.htime >= this.pMap.RStart)
                         this.wsource += massadded;
                 }
             }
 
             // Add mass inflows from reservoirs to Wsource
-            if (this.htime >= this.pMap.Rstart) {
+            if (this.htime >= this.pMap.RStart) {
                 foreach (QualityTank qT  in  this.tanks) {
                     if (((Tank)qT.Node).IsReservoir) {
                         double volout = qT.VolumeIn - qT.Demand * dt;
@@ -734,7 +734,7 @@ namespace Epanet.Quality {
             Pattern pat = source.Pattern;
             if (pat == null)
                 return (c);
-            k = ((this.qtime + this.pMap.Pstart) / this.pMap.Pstep) % pat.FactorsList.Count;
+            k = ((this.qtime + this.pMap.PStart) / this.pMap.PStep) % pat.FactorsList.Count;
             return (c * pat.FactorsList[(int)k]);
         }
 
@@ -1016,7 +1016,7 @@ namespace Epanet.Quality {
             rbulk = this.Bulkrate(c, kb, this.pMap.TankOrder) * this.tucf;
 
             dc = rbulk * dt;
-            if (this.htime >= this.pMap.Rstart)
+            if (this.htime >= this.pMap.RStart)
                 this.wtank += Math.Abs(dc) * v;
             cnew = c + dc;
             cnew = Math.Max(0.0, cnew);
@@ -1027,7 +1027,7 @@ namespace Epanet.Quality {
         private void Transport(long tstep) {
             long qtime = 0, dt;
             while (qtime < tstep) {
-                dt = Math.Min(this.pMap.Qstep, tstep - qtime);
+                dt = Math.Min(this.pMap.QStep, tstep - qtime);
                 qtime += dt;
                 if (this.reactflag) this.Updatesegs(dt);
                 this.Accumulate(dt);

@@ -157,10 +157,11 @@ namespace Epanet.Hydraulic.Structures {
                 double lVal = Constants.MISSING;
 
                 if (lVar == Rule.Varwords.r_TIME || lVar == Rule.Varwords.r_CLOCKTIME) {
-                    if (tok.Length == 6)
-                        lVal = Utilities.GetHour(tok[4], tok[5]) * 3600.0;
-                    else
-                        lVal = Utilities.GetHour(tok[4], "") * 3600.0;
+                    lVal = tok.Length == 6
+                        ? Utilities.GetHour(tok[4], tok[5]) 
+                        : Utilities.GetHour(tok[4]);
+
+                    lVal *= 3600;
 
                     if (lVal < 0.0)
                         throw new ENException(ErrorCode.Err202);
@@ -227,8 +228,8 @@ namespace Epanet.Hydraulic.Structures {
                     t2 = htime;
                 }
                 else if (this.variable == Rule.Varwords.r_CLOCKTIME) {
-                    t1 = (time1 + pMap.Tstart) % Constants.SECperDAY;
-                    t2 = (htime + pMap.Tstart) % Constants.SECperDAY;
+                    t1 = (time1 + pMap.TStart) % Constants.SECperDAY;
+                    t2 = (htime + pMap.TStart) % Constants.SECperDAY;
                 }
                 else
                     return false;
@@ -409,10 +410,10 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         private class Action {
-            private readonly string _label;
+            private readonly string label;
 
             public Action(string[] tok, List<SimulationLink> links, string label) {
-                this._label = label;
+                this.label = label;
 
                 int ntokens = tok.Length;
 
@@ -498,7 +499,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (flag) {
-                    if (pMap.Statflag > 0) // Report rule action
+                    if (pMap.Stat_Flag > 0) // Report rule action
                         this.LogRuleExecution(log, htime);
                     return true;
                 }
@@ -512,7 +513,7 @@ namespace Epanet.Hydraulic.Structures {
                     htime.GetClockTime(),
                     this.link.Type.ParseStr(),
                     this.link.Link.Id,
-                    this._label);
+                    this.label);
             }
         }
 
@@ -658,8 +659,8 @@ namespace Epanet.Hydraulic.Structures {
                 // Otherwise, time increment equals rule evaluation time step and
                 // first actual increment equals time until next even multiple of
                 // Rulestep occurs.
-                dt = pMap.Rulestep;
-                dt1 = pMap.Rulestep - tnow % pMap.Rulestep;
+                dt = pMap.RuleStep;
+                dt1 = pMap.RuleStep - tnow % pMap.RuleStep;
             }
 
             // Make sure time increment is no larger than current time step

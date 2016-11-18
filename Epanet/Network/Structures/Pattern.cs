@@ -22,19 +22,19 @@ namespace Epanet.Network.Structures {
     ///<summary>Temporal pattern.</summary>
     public class Pattern {
         ///<summary>Pattern factors list.</summary>
-        private readonly List<double> _factors = new List<double>();
+        private readonly List<double> factors = new List<double>();
 
-        private readonly string _id;
-        public Pattern(string id) { this._id = id; }
+        private readonly string id;
+        public Pattern(string id) { this.id = id; }
 
-        public void Add(double factor) { this._factors.Add(factor); }
+        public void Add(double factor) { this.factors.Add(factor); }
 
-        public List<double> FactorsList { get { return this._factors; } }
+        public List<double> FactorsList { get { return this.factors; } }
 
         ///<summary>Pattern name.</summary>
-        public string Id { get { return this._id; } }
+        public string Id { get { return this.id; } }
 
-        public int Length { get { return this._factors.Count; } }
+        public int Length { get { return this.factors.Count; } }
     }
 
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<documentation>
+    <summary>
+      Composer classes, exports the hydraulic network to INP or XLSX files.
+    </summary>
+</documentation>

@@ -120,44 +120,44 @@ public abstract class InputParser {
     protected static void AdjustData(Network net) {
         PropertiesMap m = net.PropertiesMap;
 
-        if (m.Pstep <= 0) m.Pstep = 3600;
-        if (m.Rstep == 0) m.Rstep = m.Pstep;
-        if (m.Hstep <= 0) m.Hstep = 3600;
-        if (m.Hstep > m.Pstep) m.Hstep = m.Pstep;
-        if (m.Hstep > m.Rstep) m.Hstep = m.Rstep;
-        if (m.Rstart > m.Duration) m.Rstart = 0;
-        if (m.Duration == 0) m.Qualflag = PropertiesMap.QualType.NONE;
-        if (m.Qstep == 0) m.Qstep = m.Hstep / 10;
-        if (m.Rulestep == 0) m.Rulestep = m.Hstep / 10;
+        if (m.PStep <= 0) m.PStep = 3600;
+        if (m.RStep == 0) m.RStep = m.PStep;
+        if (m.HStep <= 0) m.HStep = 3600;
+        if (m.HStep > m.PStep) m.HStep = m.PStep;
+        if (m.HStep > m.RStep) m.HStep = m.RStep;
+        if (m.RStart > m.Duration) m.RStart = 0;
+        if (m.Duration == 0) m.QualFlag = PropertiesMap.QualType.NONE;
+        if (m.QStep == 0) m.QStep = m.HStep / 10;
+        if (m.RuleStep == 0) m.RuleStep = m.HStep / 10;
 
-        m.Rulestep = Math.Min(m.Rulestep, m.Hstep);
-        m.Qstep = Math.Min(m.Qstep, m.Hstep);
+        m.RuleStep = Math.Min(m.RuleStep, m.HStep);
+        m.QStep = Math.Min(m.QStep, m.HStep);
 
         if (m.Ctol == Constants.MISSING) {
-            m.Ctol = m.Qualflag == PropertiesMap.QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
+            m.Ctol = m.QualFlag == PropertiesMap.QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
         }
 
-        switch (m.Flowflag) {
+        switch (m.FlowFlag) {
             case PropertiesMap.FlowUnitsType.LPS:
             case PropertiesMap.FlowUnitsType.LPM:
             case PropertiesMap.FlowUnitsType.MLD:
             case PropertiesMap.FlowUnitsType.CMH:
             case PropertiesMap.FlowUnitsType.CMD:
-                m.Unitsflag = PropertiesMap.UnitsType.SI;
+                m.UnitsFlag = PropertiesMap.UnitsType.SI;
                 break;
             default:
-                m.Unitsflag = PropertiesMap.UnitsType.US;
+                m.UnitsFlag = PropertiesMap.UnitsType.US;
                 break;
         }
 
 
-        if (m.Unitsflag != PropertiesMap.UnitsType.SI)
-            m.Pressflag = PropertiesMap.PressUnitsType.PSI;
-        else if (m.Pressflag == PropertiesMap.PressUnitsType.PSI)
-            m.Pressflag = PropertiesMap.PressUnitsType.METERS;
+        if (m.UnitsFlag != PropertiesMap.UnitsType.SI)
+            m.PressFlag = PropertiesMap.PressUnitsType.PSI;
+        else if (m.PressFlag == PropertiesMap.PressUnitsType.PSI)
+            m.PressFlag = PropertiesMap.PressUnitsType.METERS;
 
         var ucf = 1.0;
-        if (m.Unitsflag == PropertiesMap.UnitsType.SI)
+        if (m.UnitsFlag == PropertiesMap.UnitsType.SI)
             ucf = Math.Pow(Constants.MperFT, 2);
 
         if (m.Viscos == Constants.MISSING)
@@ -174,11 +174,11 @@ public abstract class InputParser {
         else
             m.Diffus = m.Diffus / ucf;
 
-        m.Hexp = m.Formflag == PropertiesMap.FormType.HW ? 1.852 : 2.0;
+        m.HExp = m.FormFlag == PropertiesMap.FormType.HW ? 1.852 : 2.0;
 
-        double rfactor = m.Rfactor;
-        PropertiesMap.FormType formFlag = m.Formflag;
-        double kbulk = m.Kbulk;
+        double rfactor = m.RFactor;
+        PropertiesMap.FormType formFlag = m.FormFlag;
+        double kbulk = m.KBulk;
 
         foreach (Link link  in  net.Links) {
             if (link.Type > Link.LinkType.PIPE)
@@ -190,7 +190,7 @@ public abstract class InputParser {
             if (link.Kw == Constants.MISSING)
             {
                 if (rfactor == 0.0)
-                    link.Kw = m.Kwall;
+                    link.Kw = m.KWall;
                 else if ((link.Roughness > 0.0) && (link.Diameter > 0.0)) {
                     if (formFlag == PropertiesMap.FormType.HW)
                         link.Kw = rfactor / link.Roughness;
@@ -217,7 +217,7 @@ public abstract class InputParser {
             }
         }
 
-        if (m.Qualflag == PropertiesMap.QualType.NONE)
+        if (m.QualFlag == PropertiesMap.QualType.NONE)
             net.FieldsMap.GetField(FieldsMap.FieldType.QUALITY).Enabled = false;
 
     }
@@ -289,14 +289,14 @@ public abstract class InputParser {
         }
 
 
-        double ucf = Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pMap.Qexp) / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+        double ucf = Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pMap.QExp) / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
 
         foreach (Node node  in  net.Nodes) {
             if (node is Tank)
                 continue;
 
             if (node.Ke > 0.0)
-                node.Ke = ucf / Math.Pow(node.Ke, pMap.Qexp);
+                node.Ke = ucf / Math.Pow(node.Ke, pMap.QExp);
         }
 
         foreach (Tank tk  in  net.Tanks) {
@@ -314,17 +314,17 @@ public abstract class InputParser {
         }
 
 
-        pMap.Climit = pMap.Climit / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
+        pMap.CLimit = pMap.CLimit / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
         pMap.Ctol = pMap.Ctol / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
 
-        pMap.Kbulk = pMap.Kbulk / Constants.SECperDAY;
-        pMap.Kwall = pMap.Kwall / Constants.SECperDAY;
+        pMap.KBulk = pMap.KBulk / Constants.SECperDAY;
+        pMap.KWall = pMap.KWall / Constants.SECperDAY;
 
 
         foreach (Link lk  in  net.Links) {
 
             if (lk.Type <= Link.LinkType.PIPE) {
-                if (pMap.Formflag == PropertiesMap.FormType.DW)
+                if (pMap.FormFlag == PropertiesMap.FormType.DW)
                     lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldsMap.FieldType.ELEV));
                 lk.Diameter = lk.Diameter / fMap.GetUnits(FieldsMap.FieldType.DIAM);
                 lk.Lenght = lk.Lenght / fMap.GetUnits(FieldsMap.FieldType.LENGTH);
@@ -337,7 +337,7 @@ public abstract class InputParser {
                 Pump pump = (Pump) lk;
 
                 if (pump.Ptype == Pump.PumpType.CONST_HP) {
-                    if (pMap.Unitsflag == PropertiesMap.UnitsType.SI)
+                    if (pMap.UnitsFlag == PropertiesMap.UnitsType.SI)
                         pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldsMap.FieldType.POWER);
                 } else {
                     if (pump.Ptype == Pump.PumpType.POWER_FUNC) {
@@ -367,7 +367,7 @@ public abstract class InputParser {
                     }
             }
 
-            lk.initResistance(net.PropertiesMap.Formflag,net.PropertiesMap.Hexp);
+            lk.initResistance(net.PropertiesMap.FormFlag,net.PropertiesMap.HExp);
         }
 
         foreach (Control c_i  in  net.Controls) {

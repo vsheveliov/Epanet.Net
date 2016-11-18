@@ -91,14 +91,14 @@ namespace Epanet.Network.Structures {
 
         #endregion
 
-        private readonly string _label;
-        private readonly List<string> _code = new List<string>();
+        private readonly string label;
+        private readonly List<string> code = new List<string>();
 
-        public Rule(string label) { this._label = label; }
+        public Rule(string label) { this.label = label; }
 
-        public List<string> Code { get { return this._code; } }
+        public List<string> Code { get { return this.code; } }
 
-        public string Label { get { return this._label; } }
+        public string Label { get { return this.label; } }
     }
 
 }

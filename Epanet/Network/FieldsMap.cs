@@ -76,16 +76,16 @@ namespace Epanet.Network {
         }
 
         ///<summary>Report fields properties.</summary>
-        private readonly Dictionary<FieldType, Field> _fields;
+        private readonly Dictionary<FieldType, Field> fields;
 
         ///<summary>Fields units values.</summary>
-        private readonly Dictionary<FieldType, double> _units;
+        private readonly Dictionary<FieldType, double> units;
 
         ///<summary>Init fields default configuration</summary>
         public FieldsMap() {
             try {
-                this._fields = new Dictionary<FieldType, Field>();
-                this._units = new Dictionary<FieldType, double>();
+                this.fields = new Dictionary<FieldType, Field>();
+                this.units = new Dictionary<FieldType, double>();
 
                 foreach (FieldType type in Enum.GetValues(typeof(FieldType)))
                     this.SetField(type, new Field(type.ParseStr()));
@@ -111,7 +111,7 @@ namespace Epanet.Network {
         /// If specified type not found.
         /// </remarks>
         public Field GetField(FieldType fieldType) {
-            object obj = this._fields[fieldType];
+            object obj = this.fields[fieldType];
 
             if (obj == null)
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
@@ -126,7 +126,7 @@ namespace Epanet.Network {
         /// Throws <see cref="ENException"/> If specified type not found.
         /// </remarks>
         public double GetUnits(FieldType fieldType) {
-            object obj = this._units[fieldType];
+            object obj = this.units[fieldType];
             if (obj == null)
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
             else
@@ -249,20 +249,22 @@ namespace Epanet.Network {
             return fieldType != (FieldType)(-1) ? value * this.GetUnits(fieldType) : value;
         }
 
-        public double ConvertUnitToSystem(FieldType fieldType, double value) { return value / this.GetUnits(fieldType); }
+        public double ConvertUnitToSystem(FieldType fieldType, double value) {
+            return value / this.GetUnits(fieldType);
+        }
 
         ///<summary>Set field properties.</summary>
         /// <param name="fieldType">Field type.</param>
         /// <param name="value">Report field reference.</param>
         private void SetField(FieldType fieldType, Field value) {
-            this._fields[fieldType] = value;
+            this.fields[fieldType] = value;
         }
 
         ///<summary>Set conversion value from field type.</summary>
         /// <param name="fieldType">Field type.</param>
         /// <param name="value">Field value.</param>
         private void SetUnits(FieldType fieldType, double value) {
-            this._units[fieldType] = value;
+            this.units[fieldType] = value;
         }
 
     }

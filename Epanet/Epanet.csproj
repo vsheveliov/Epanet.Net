@@ -60,10 +60,7 @@
     <Compile Include="Hydraulic\HydraulicSim.cs" />
     <Compile Include="Hydraulic\IO\AwareStep.cs" />
     <Compile Include="Hydraulic\IO\HydraulicReader.cs" />
-    <Compile Include="Hydraulic\Models\CMModelCalculator.cs" />
-    <Compile Include="Hydraulic\Models\DwModelCalculator.cs" />
-    <Compile Include="Hydraulic\Models\HWModelCalculator.cs" />
-    <Compile Include="Hydraulic\Models\PipeHeadModel.cs" />
+    <Compile Include="Hydraulic\PipeHeadModelCalculators.cs" />
     <Compile Include="Hydraulic\SparseMatrix.cs" />
     <Compile Include="Hydraulic\Structures\LSVariables.cs" />
     <Compile Include="Hydraulic\Structures\SimulationControl.cs" />
@@ -123,19 +120,37 @@
     <Compile Include="Util\Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Hydraulic\IO\package.html" />
-    <Content Include="Hydraulic\Models\package.html" />
-    <Content Include="Hydraulic\package.html" />
-    <Content Include="Hydraulic\Structures\package.html" />
-    <Content Include="Network\IO\Input\package.html" />
-    <Content Include="Network\IO\Output\package.html" />
-    <Content Include="Network\IO\package.html" />
-    <Content Include="Network\package.html" />
-    <Content Include="Network\Structures\package.html" />
-    <Content Include="package.html" />
-    <Content Include="Quality\package.html" />
-    <Content Include="Quality\Structures\package.html" />
-    <Content Include="Util\package.html" />
+    <Content Include="Hydraulic\IO\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Hydraulic\_namespace.xml" />
+    <Content Include="Hydraulic\Structures\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Log\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Network\IO\Input\_namespace.xml" />
+    <Content Include="Network\IO\Output\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Network\IO\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Network\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Network\Structures\_namespace.xml" />
+    <Content Include="_namespace.xml" />
+    <Content Include="Quality\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Quality\Structures\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Util\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Error.resx">

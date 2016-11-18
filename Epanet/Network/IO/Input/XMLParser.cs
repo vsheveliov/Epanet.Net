@@ -25,15 +25,15 @@ namespace Epanet.Network.IO.Input {
 
     public class XmlParser:InputParser {
 
-        private readonly bool _gzipped;
+        private readonly bool gzipped;
 
-        public XmlParser(TraceSource log, bool gzipped):base(log) { this._gzipped = gzipped; }
+        public XmlParser(TraceSource log, bool gzipped):base(log) { this.gzipped = gzipped; }
 
         public override Network Parse(Network net, string f) {
             this.FileName = Path.GetFullPath(f);
 
             try {
-                Stream @is = this._gzipped
+                Stream @is = this.gzipped
                     ? (Stream)new GZipStream(File.OpenRead(f), CompressionMode.Decompress)
                     : File.OpenRead(f);
                 XmlSerializer x = new XmlSerializer(typeof(Network));

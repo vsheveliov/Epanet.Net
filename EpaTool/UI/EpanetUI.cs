@@ -23,12 +23,11 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using Epanet.Log;
-using Epanet.Network;
 using Epanet.Network.IO.Input;
 using Epanet.Network.IO.Output;
 using Epanet.Util;
 
-namespace EpaTool {
+namespace Epanet.UI {
 
     public sealed partial class EpanetUI : Form {
         private const string WEBLINK = "https://github.com/vsheveliov/Epanet.Net";
@@ -40,19 +39,19 @@ namespace EpaTool {
         private const string LOG_FILENAME = "epanet.log";
 
         /// <summary>Abstract representation of the network file(INP/XLSX/XML).</summary>
-        private string _inpFile;
+        private string inpFile;
 
-        private Network _net;
+        private Network.Network net;
 
-        private TraceSource _log;
+        private TraceSource log;
 
         /// <summary>Reference to the report options window.</summary>
-        private ReportOptions _reportOptions;
+        private ReportOptions reportOptions;
 
         public EpanetUI() {
             this.InitializeComponent();
             this.InitLogger();
-            this._log.Information(0, this.GetType().FullName + " started.");
+            this.log.Information(0, this.GetType().FullName + " started.");
             this.Text = APP_TITTLE;
             this.MinimumSize = new Size(848, 500);
             this.ClearInterface();
@@ -73,7 +72,7 @@ namespace EpaTool {
         }
 
         private void EpanetUI_FormClosing(object sender, FormClosingEventArgs e) {
-            this._log.Flush();
+            this.log.Flush();
             // Environment.Exit(0);
         }
 
@@ -82,7 +81,7 @@ namespace EpaTool {
         /// <summary>Reset the interface layout</summary>
         private void ClearInterface() {
             this.networkPanel.Net = null;
-            this._inpFile = null;
+            this.inpFile = null;
             this.Text = APP_TITTLE;
             this.textReservoirs.Text = "0";
             this.textTanks.Text = ("0");
@@ -96,9 +95,9 @@ namespace EpaTool {
             this.textQuality.Text = ("NONE");
             this.textDemand.Text = ("0.0");
 
-            if (this._reportOptions != null) {
-                this._reportOptions.Close();
-                this._reportOptions = null;
+            if (this.reportOptions != null) {
+                this.reportOptions.Close();
+                this.reportOptions = null;
             }
             
             this.saveButton.Enabled = false;
@@ -128,23 +127,23 @@ namespace EpaTool {
             try {
                 var pMap = this.Net.PropertiesMap;
                 this.textDuration.Text = pMap.Duration.GetClockTime();
-                this.textUnits.Text = pMap.Unitsflag.ToString();
-                this.textHeadloss.Text = pMap.Formflag.ToString();
-                this.textQuality.Text = pMap.Qualflag.ToString();
-                this.textDemand.Text = pMap.Dmult.ToString(CultureInfo.CurrentCulture);
-                this.textHydraulic.Text = pMap.Hstep.GetClockTime();
-                this.textPattern.Text = pMap.Pstep.GetClockTime();
+                this.textUnits.Text = pMap.UnitsFlag.ToString();
+                this.textHeadloss.Text = pMap.FormFlag.ToString();
+                this.textQuality.Text = pMap.QualFlag.ToString();
+                this.textDemand.Text = pMap.DMult.ToString(CultureInfo.CurrentCulture);
+                this.textHydraulic.Text = pMap.HStep.GetClockTime();
+                this.textPattern.Text = pMap.PStep.GetClockTime();
             }
             catch (ENException) { }
 
-            this.Text = APP_TITTLE + " - " + this._inpFile;
-            this.inpName.Text = this._inpFile;
+            this.Text = APP_TITTLE + " - " + this.inpFile;
+            this.inpName.Text = this.inpFile;
             this.networkPanel.Net = this.Net;
 
             
-            if (this._reportOptions != null) {
-                this._reportOptions.Close();
-                this._reportOptions = null;
+            if (this.reportOptions != null) {
+                this.reportOptions.Close();
+                this.reportOptions = null;
             }
             
             this.menuSave.Enabled = true;
@@ -156,14 +155,14 @@ namespace EpaTool {
             
         }
 
-        private Network Net {
-            get { return this._net; }
+        private Network.Network Net {
+            get { return this.net; }
             set {
-                if (this._net == value) return;
+                if (this.net == value) return;
 
-                this._net = this.networkPanel.Net = value;
+                this.net = this.networkPanel.Net = value;
 
-                if (this._net == null) {
+                if (this.net == null) {
                     this.ClearInterface();
                     return;
                 }
@@ -173,27 +172,27 @@ namespace EpaTool {
         }
 
         private void InitLogger() {
-            this._log = new TraceSource(typeof(EpanetUI).FullName, SourceLevels.All);
-            this._log.Listeners.Remove("Default");
+            this.log = new TraceSource(typeof(EpanetUI).FullName, SourceLevels.All);
+            this.log.Listeners.Remove("Default");
             RollingFileStream stream = new RollingFileStream(LOG_FILENAME, 0x1000, 10, FileMode.Append, FileShare.Read);
             TextWriter writer = new StreamWriter(stream, Encoding.Default);
             TextWriterTraceListener listener = new EpanetTraceListener(writer, LOG_FILENAME);
-            this._log.Listeners.Add(listener);
+            this.log.Listeners.Add(listener);
         }
 
         /// <summary>Show report options window to configure and run the simulation.</summary>
         private void RunSimulation(object sender, EventArgs e) {
-            if (this._reportOptions == null)
-                this._reportOptions = new ReportOptions(this._inpFile, null, this._log);
+            if (this.reportOptions == null)
+                this.reportOptions = new ReportOptions(this.inpFile, null, this.log);
 
-            this._reportOptions.ShowDialog(this);
+            this.reportOptions.ShowDialog(this);
         }
 
         /// <summary>Show the save dialog to save the network file.</summary>
         private void SaveEvent(object sender, EventArgs e) {
             if (this.Net == null) return;
 
-            string initialDirectory = Path.GetDirectoryName(Path.GetFullPath(this._inpFile)) ?? string.Empty;
+            string initialDirectory = Path.GetDirectoryName(Path.GetFullPath(this.inpFile)) ?? string.Empty;
 
             var dlg = new SaveFileDialog {
                 InitialDirectory = initialDirectory,
@@ -244,7 +243,7 @@ namespace EpaTool {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this._log.Error("Unable to save network configuration file: {0}", ex);
+                this.log.Error("Unable to save network configuration file: {0}", ex);
             }
             catch (Exception ex) {
                 MessageBox.Show(
@@ -253,7 +252,7 @@ namespace EpaTool {
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
 
-                this._log.Error(0, "Unable to save network configuration file: {0}", ex);
+                this.log.Error(0, "Unable to save network configuration file: {0}", ex);
             }
         }
 
@@ -287,24 +286,24 @@ namespace EpaTool {
             if (  fileExtension != ".xlsx" && 
                 fileExtension != ".inp" && fileExtension != ".xml" && fileExtension != ".gz") return;
 
-            this._inpFile = netFile;
+            this.inpFile = netFile;
 
             InputParser inpParser;
 
             switch (fileExtension.ToLowerInvariant()) {                    
                 case ".xlsx":
-                    inpParser = new ExcelParser(this._log);
+                    inpParser = new ExcelParser(this.log);
                     break;
                 
                 case ".xml":
-                    inpParser = new XmlParser(this._log, false);
+                    inpParser = new XmlParser(this.log, false);
                     break;
 
                 case ".gz":
-                    inpParser = new XmlParser(this._log, true);
+                    inpParser = new XmlParser(this.log, true);
                     break;
                 case ".inp":
-                    inpParser = new InpParser(this._log);
+                    inpParser = new InpParser(this.log);
                     break;
                 default:
                     MessageBox.Show(
@@ -315,10 +314,10 @@ namespace EpaTool {
                     return;
             }
 
-            var epanetNetwork = new Network();
+            var epanetNetwork = new Network.Network();
 
             try {
-                inpParser.Parse(epanetNetwork, this._inpFile);
+                inpParser.Parse(epanetNetwork, this.inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -328,7 +327,7 @@ namespace EpaTool {
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 this.ClearInterface();
-                this._inpFile = null;
+                this.inpFile = null;
                 return;
             }
             catch (Exception ex) {
@@ -338,9 +337,9 @@ namespace EpaTool {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this._log.Error("Unable to parse network configuration file: {0}", ex);
+                this.log.Error("Unable to parse network configuration file: {0}", ex);
                 this.ClearInterface();
-                this._inpFile = null;
+                this.inpFile = null;
 
                 return;
             }

@@ -33,14 +33,14 @@ namespace Epanet.Network.Structures {
             TANK = 2
         }
 
-        private readonly string _id;
-        private readonly List<Demand> _demand = new List<Demand>();
+        private readonly string id;
+        private readonly List<Demand> demand = new List<Demand>();
 
         [NonSerialized]
         private double initDemand;
         
         public Node(string id) {
-            this._id = id;
+            this.id = id;
             this.C0 = new double[1];
             this.Comment = "";
             this.initDemand = 0;
@@ -59,13 +59,13 @@ namespace Epanet.Network.Structures {
         public EnPoint Position { get; set; }
 
         ///<summary>Node id string.</summary>
-        public string Id { get { return this._id; } }
+        public string Id { get { return this.id; } }
 
         ///<summary>Node elevation(foot).</summary>
         public double Elevation { get; set; }
 
         ///<summary>Node demand list.</summary>
-        public List<Demand> Demand { get { return this._demand; } }
+        public List<Demand> Demand { get { return this.demand; } }
 
         ///<summary>Water quality source.</summary>
         public Source Source { get; set; }
@@ -79,7 +79,7 @@ namespace Epanet.Network.Structures {
         ///<summary>Node reporting flag.</summary>
         public bool RptFlag { get; set; }
 
-        public override int GetHashCode() { return string.IsNullOrEmpty(this._id) ? 0 : this._id.GetHashCode(); }
+        public override int GetHashCode() { return string.IsNullOrEmpty(this.id) ? 0 : this.id.GetHashCode(); }
 
         public int CompareTo(Node o) {
             if (o == null) return 1;

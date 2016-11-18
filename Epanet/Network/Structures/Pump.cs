@@ -31,7 +31,7 @@ namespace Epanet.Network.Structures {
         }
 
         ///<summary>Energy usage statistics.</summary>
-        private readonly double[] _energy = {0, 0, 0, 0, 0, 0};
+        private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
         public Pump(string id):base(id) { }
 
@@ -41,7 +41,7 @@ namespace Epanet.Network.Structures {
         ///<summary>Effic. v. flow curve reference.</summary>
         public Curve Ecurve { get; set; }
 
-        public double[] Energy { get { return this._energy; } }
+        public double[] Energy { get { return this.energy; } }
 
         ///<summary>Energy cost pattern.</summary>
         public Pattern Epat { get; set; }

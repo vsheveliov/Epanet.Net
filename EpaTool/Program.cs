@@ -17,8 +17,9 @@
 
 using System;
 using System.Windows.Forms;
+using Epanet.UI;
 
-namespace EpaTool
+namespace Epanet
 {
     static class Program
     {

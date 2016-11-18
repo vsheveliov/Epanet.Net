@@ -181,14 +181,16 @@ namespace Epanet {
                     continue;
                 }
 
-                if (parseMode == 1) {
-                    targetTimes.Add((long)(Utilities.GetHour(arg, "") * 3600));
-                }
-                else if (parseMode == 2) {
+                switch (parseMode) {
+                case 1:
+                    targetTimes.Add((long)(Utilities.GetHour(arg) * 3600));
+                    break;
+                case 2:
                     targetNodes.Add(arg);
-                }
-                else if (parseMode == 3) {
+                    break;
+                case 3:
                     targetLinks.Add(arg);
+                    break;
                 }
             }
 
@@ -200,13 +202,13 @@ namespace Epanet {
                 if (targetTimes.Count > 0) {
                     foreach (long time  in  targetTimes) {
                         string epanetTime = time.GetClockTime();
-                        if (time < pMap.Rstart)
+                        if (time < pMap.RStart)
                             throw new Exception("Target time \"" + epanetTime + "\" smaller than simulation start time");
 
                         if (time > pMap.Duration)
                             throw new Exception("Target time \"" + epanetTime + "\" bigger than simulation duration");
 
-                        if ((time - pMap.Rstart) % pMap.Rstep != 0)
+                        if ((time - pMap.RStart) % pMap.RStep != 0)
                             throw new Exception("Target time \"" + epanetTime + "\" not found");
                     }
                 }
@@ -224,14 +226,14 @@ namespace Epanet {
                 nodesVariables.Add(NodeVariableType.ELEVATION);
                 nodesVariables.Add(NodeVariableType.BASEDEMAND);
 
-                if (pMap.Qualflag != PropertiesMap.QualType.NONE)
+                if (pMap.QualFlag != PropertiesMap.QualType.NONE)
                     nodesVariables.Add(NodeVariableType.INITQUALITY);
 
                 nodesVariables.Add(NodeVariableType.PRESSURE);
                 nodesVariables.Add(NodeVariableType.HEAD);
                 nodesVariables.Add(NodeVariableType.DEMAND);
 
-                if (pMap.Qualflag != (PropertiesMap.QualType.NONE))
+                if (pMap.QualFlag != (PropertiesMap.QualType.NONE))
                     nodesVariables.Add(NodeVariableType.QUALITY);
 
                 linksVariables.Add(LinkVariableType.LENGHT);
@@ -242,7 +244,7 @@ namespace Epanet {
                 linksVariables.Add(LinkVariableType.UNITHEADLOSS);
                 linksVariables.Add(LinkVariableType.FRICTIONFACTOR);
 
-                if (pMap.Qualflag != PropertiesMap.QualType.NONE)
+                if (pMap.QualFlag != PropertiesMap.QualType.NONE)
                     linksVariables.Add(LinkVariableType.QUALITY);
 
                 hydFile = Path.GetTempFileName(); // "hydSim.bin"
@@ -253,7 +255,7 @@ namespace Epanet {
                 hydSim.Simulate(hydFile);
 
 
-                if (net.PropertiesMap.Qualflag != (PropertiesMap.QualType.NONE)) {
+                if (net.PropertiesMap.QualFlag != (PropertiesMap.QualType.NONE)) {
                     qualFile = Path.GetTempFileName(); // "qualSim.bin"
 
                     QualitySim q = new QualitySim(net, log);
@@ -308,8 +310,8 @@ namespace Epanet {
                 }
 
 
-                for (long time = pMap.Rstart; time <= pMap.Duration; time += pMap.Rstep) {
-                    AwareStep step = hydReader.getStep((int)time);
+                for (long time = pMap.RStart; time <= pMap.Duration; time += pMap.RStep) {
+                    AwareStep step = hydReader.GetStep((int)time);
 
                     int i = 0;
 
@@ -354,7 +356,7 @@ namespace Epanet {
                                 linksTextWriter.Write('\t');
                                 double val = GetLinkValue(
                                     linkVar,
-                                    net.PropertiesMap.Formflag,
+                                    net.PropertiesMap.FormFlag,
                                     net.FieldsMap,
                                     step,
                                     link,

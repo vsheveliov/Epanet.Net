@@ -1,4 +1,4 @@
-﻿namespace EpaTool {
+﻿namespace Epanet.UI {
     sealed partial class ReportOptions {
         /// <summary>
         /// Required designer variable.

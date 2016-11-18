@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<documentation>
+  <summary>
+    Parser classes, imports the hydraulic network from INP or XLSX files.
+  </summary>
+</documentation>

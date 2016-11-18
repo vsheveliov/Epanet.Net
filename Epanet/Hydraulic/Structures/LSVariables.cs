@@ -20,12 +20,20 @@ using System;
 namespace Epanet.Hydraulic.Structures {
 
     public class LSVariables {
-        private readonly double[] nodalInflows; // Epanet 'X[n]' variable
-        private readonly double[] matrixOffDiagonal; // Epante Aij[n] variable
-        private readonly double[] matrixDiagonal; // Epanet Aii[n] variable
-        private readonly double[] rightHandSideCoeffs; // Epanet F[n] variable
 
-        public void clear() {
+        ///<summary>Epanet 'X[n]' variable</summary>
+        private readonly double[] nodalInflows; 
+
+        ///<summary>Epante Aij[n] variable</summary>
+        private readonly double[] matrixOffDiagonal; 
+
+        ///<summary>Epanet Aii[n] variable</summary>
+        private readonly double[] matrixDiagonal; 
+
+        ///<summary>Epanet F[n] variable</summary>
+        private readonly double[] rightHandSideCoeffs; 
+        
+        public void Clear() {
             Array.Clear(this.nodalInflows, 0, this.nodalInflows.Length);
             Array.Clear(this.matrixOffDiagonal, 0, this.matrixOffDiagonal.Length);
             Array.Clear(this.matrixDiagonal, 0, this.matrixDiagonal.Length);
@@ -37,37 +45,34 @@ namespace Epanet.Hydraulic.Structures {
             this.matrixDiagonal = new double[nodes];
             this.matrixOffDiagonal = new double[coeffs];
             this.rightHandSideCoeffs = new double[nodes];
-            this.clear();
+            this.Clear();
         }
 
-        public void addRHSCoeff(int id, double value) { this.rightHandSideCoeffs[id] += value; }
+        public void AddRhsCoeff(int id, double value) { this.rightHandSideCoeffs[id] += value; }
 
-        public double getRHSCoeff(int id) { return this.rightHandSideCoeffs[id]; }
+        public double GetRhsCoeff(int id) { return this.rightHandSideCoeffs[id]; }
+        
+        public void AddNodalInFlow(int id, double value) { this.nodalInflows[id] += value; }
 
+        public double GetNodalInFlow(int id) { return this.nodalInflows[id]; }
+        
+        public void AddNodalInFlow(SimulationNode id, double value) { this.nodalInflows[id.Index] += value; }
 
-        public void addNodalInFlow(int id, double value) { this.nodalInflows[id] += value; }
+        public double GetNodalInFlow(SimulationNode id) { return this.nodalInflows[id.Index]; }
 
-        public double getNodalInFlow(int id) { return this.nodalInflows[id]; }
+        public void AddAii(int id, double value) { this.matrixDiagonal[id] += value; }
 
+        public double GetAii(int id) { return this.matrixDiagonal[id]; }
 
-        public void addNodalInFlow(SimulationNode id, double value) { this.nodalInflows[id.Index] += value; }
+        public void AddAij(int id, double value) { this.matrixOffDiagonal[id] += value; }
 
-        public double getNodalInFlow(SimulationNode id) { return this.nodalInflows[id.Index]; }
+        public double GetAij(int id) { return this.matrixOffDiagonal[id]; }
 
+        public double[] AiiVector { get { return this.matrixDiagonal; } }
 
-        public void addAii(int id, double value) { this.matrixDiagonal[id] += value; }
+        public double[] AijVector { get { return this.matrixOffDiagonal; } }
 
-        public double getAii(int id) { return this.matrixDiagonal[id]; }
-
-        public void addAij(int id, double value) { this.matrixOffDiagonal[id] += value; }
-
-        public double getAij(int id) { return this.matrixOffDiagonal[id]; }
-
-        public double[] getAiiVector() { return this.matrixDiagonal; }
-
-        public double[] getAijVector() { return this.matrixOffDiagonal; }
-
-        public double[] getRHSCoeffs() { return this.rightHandSideCoeffs; }
+        public double[] RhsCoeffs { get { return this.rightHandSideCoeffs; } }
     }
 
 }

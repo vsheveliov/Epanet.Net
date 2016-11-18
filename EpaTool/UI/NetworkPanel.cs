@@ -21,10 +21,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using Epanet.Network;
 using Epanet.Network.Structures;
 
-namespace EpaTool {
+namespace Epanet.UI {
 
     internal sealed class NetworkPanel : Panel {
         private const float NODE_DIAM = 5f;
@@ -52,42 +51,42 @@ namespace EpaTool {
         private const float ZOOM_SIZE_MAX = 100000;
         private const float ZOOM_SIZE_MIN = 10;
 
-        private float _dxo;
-        private float _dyo;
+        private float dxo;
+        private float dyo;
 
         /// <summary>Loaded hydraulic network.</summary>
-        private Network _net;
+        private Network.Network net;
 
-        private PointF _panPoint;
-        private float _zoom = 0.9f;
+        private PointF panPoint;
+        private float zoom = 0.9f;
 
         public float Zoom {
-            get { return this._zoom; }
+            get { return this.zoom; }
             private set {
-                if (this._networkBounds.IsEmpty) {
-                    this._zoom = 1f;
+                if (this.networkBounds.IsEmpty) {
+                    this.zoom = 1f;
                     return;
                 }
 
-                float sizeMax = Math.Max(this._networkBounds.Height, this._networkBounds.Width);
+                float sizeMax = Math.Max(this.networkBounds.Height, this.networkBounds.Width);
                 float sizeNew = sizeMax * value;
 
                 if (sizeNew > ZOOM_SIZE_MAX) {
-                    this._zoom = ZOOM_SIZE_MAX / sizeMax;
+                    this.zoom = ZOOM_SIZE_MAX / sizeMax;
                 }
                 else if (sizeNew < ZOOM_SIZE_MIN) {
-                    this._zoom = ZOOM_SIZE_MIN / sizeMax;
+                    this.zoom = ZOOM_SIZE_MIN / sizeMax;
                 }
                 else {
-                    this._zoom = value;
+                    this.zoom = value;
                 }
             }
         }
 
-        private RectangleF _networkBounds = RectangleF.Empty;
+        private RectangleF networkBounds = RectangleF.Empty;
 
         /// <summary>Reference to the selected node in network map.</summary>
-        private Node _selNode;
+        private Node selNode;
 
         public NetworkPanel() {
             this.SetStyle(
@@ -108,12 +107,12 @@ namespace EpaTool {
         public PointF MousePoint { get; private set; }
 
         [DefaultValue(null)]
-        public Network Net {
-            get { return this._net; }
+        public Network.Network Net {
+            get { return this.net; }
             set {
-                if (value == this._net) return;
+                if (value == this.net) return;
 
-                this._net = value;
+                this.net = value;
                 this.ZoomAll();
             }
         }
@@ -128,13 +127,13 @@ namespace EpaTool {
         public bool DrawTanks { get; set; }
 
         private Node PeekNearest(PointF pt) {
-            if (this._net == null)
+            if (this.net == null)
                 return null;
 
             Node nearest = null;
             double distance = double.MaxValue;
             
-            foreach (Node n in this._net.Nodes) {
+            foreach (Node n in this.net.Nodes) {
                 var pos = n.Position;
                 if (pos.IsInvalid) continue;
                 
@@ -159,8 +158,8 @@ namespace EpaTool {
         private void ZoomToPoint(float zoomScale, Point zoomPoint) {
             PointF pt = this.GetLogPoint(zoomPoint);
             this.Zoom = zoomScale;
-            this._dxo = -pt.X + zoomPoint.X / this.Zoom;
-            this._dyo = pt.Y + zoomPoint.Y / this.Zoom;
+            this.dxo = -pt.X + zoomPoint.X / this.Zoom;
+            this.dyo = pt.Y + zoomPoint.Y / this.Zoom;
             this.Refresh();
         }
 
@@ -173,12 +172,12 @@ namespace EpaTool {
         private RectangleF GetNetworkBounds() {
             var result = RectangleF.Empty;
 
-            if (this._net == null)
+            if (this.net == null)
                 return RectangleF.Empty;
 
             bool firstPass = true;
 
-            foreach (Node node in this._net.Nodes) {
+            foreach (Node node in this.net.Nodes) {
                 if (!node.Position.IsInvalid) {
                     var rect = new RectangleF(ToPointF(node.Position), SizeF.Empty);
                     if (firstPass) {
@@ -191,7 +190,7 @@ namespace EpaTool {
                 }
             }
 
-            foreach (Link link in this._net.Links) {
+            foreach (Link link in this.net.Links) {
                 foreach (var position in link.Vertices) {
                     if (!position.IsInvalid) {
                         var rect = new RectangleF(ToPointF(position), SizeF.Empty);
@@ -215,33 +214,33 @@ namespace EpaTool {
             float w = this.Width;
             float h = this.Height;
 
-            float zoom = (rect.Width / rect.Height) < (w / h)
-                ? h / this._networkBounds.Height
-                : w / this._networkBounds.Width;
+            float result = (rect.Width / rect.Height) < (w / h)
+                ? h / this.networkBounds.Height
+                : w / this.networkBounds.Width;
 
-            return zoom * 0.95f;
+            return result * 0.95f;
 
         }
 
         public void ZoomAll() {
-            if (this._net == null) return;
+            if (this.net == null) return;
 
             float w = this.Width;
             float h = this.Height;
-            this._networkBounds = this.GetNetworkBounds();
-            if (this._networkBounds.IsEmpty) return;
+            this.networkBounds = this.GetNetworkBounds();
+            if (this.networkBounds.IsEmpty) return;
 
-            this.Zoom = (this._networkBounds.Width / this._networkBounds.Height) < (w / h)
-                ? h / this._networkBounds.Height
-                : w / this._networkBounds.Width;
+            this.Zoom = (this.networkBounds.Width / this.networkBounds.Height) < (w / h)
+                ? h / this.networkBounds.Height
+                : w / this.networkBounds.Width;
 
-            this._dxo = -this._networkBounds.X;
-            this._dyo = this._networkBounds.Bottom;
+            this.dxo = -this.networkBounds.X;
+            this.dyo = this.networkBounds.Bottom;
 
             this.Zoom *= 0.95f;
 
-            this._dxo += w * 0.5f / this.Zoom - this._networkBounds.Width * 0.5f;
-            this._dyo += h * 0.5f / this.Zoom - this._networkBounds.Height * 0.5f;
+            this.dxo += w * 0.5f / this.Zoom - this.networkBounds.Width * 0.5f;
+            this.dyo += h * 0.5f / this.Zoom - this.networkBounds.Height * 0.5f;
 
             this.Invalidate();
         }
@@ -255,7 +254,7 @@ namespace EpaTool {
         }
 
         private PointF GetLogPoint(PointF pt) {
-            return new PointF(-this._dxo + pt.X / this.Zoom, this._dyo - pt.Y / this.Zoom);
+            return new PointF(-this.dxo + pt.X / this.Zoom, this.dyo - pt.Y / this.Zoom);
         }
 
         #region DrawNetwork methods
@@ -266,7 +265,7 @@ namespace EpaTool {
             using (Pen pen = new Pen(tankPenColor, -1f))
             using (Pen reservoirPen = new Pen(reservoirsColor, -1f))
             using(Pen tankPen = new Pen(tankPenColor, -1f)) {
-                foreach (Tank tank in this._net.Tanks) {
+                foreach (Tank tank in this.net.Tanks) {
                     var pos = tank.Position;
                     if (pos.IsInvalid)
                         continue;
@@ -308,7 +307,7 @@ namespace EpaTool {
 
         private void _DrawPipes(Graphics g) {
             using (Pen pen = new Pen(pipePenColor, -1f)) {
-                foreach (Link link in this._net.Links) {
+                foreach (Link link in this.net.Links) {
                     PointF[] points = new PointF[link.Vertices.Count + 2];
                     int i = 0;
                     points[i++] = ToPointF(link.FirstNode.Position);
@@ -328,7 +327,7 @@ namespace EpaTool {
             float diam = NODE_DIAM / this.Zoom;
 
             using(Pen pen = new Pen(nodePenColor, -1f)) {
-                foreach (Node node in this._net.Nodes) {
+                foreach (Node node in this.net.Nodes) {
                     if (node is Tank) continue;
                     var pos = node.Position;
                     if (pos.IsInvalid) continue;
@@ -352,18 +351,18 @@ namespace EpaTool {
             using(Brush b = new SolidBrush(labelColor)) 
             using (Pen pen = new Pen(SystemColors.Info, -1f))
             {
-                foreach (var l in this._net.Labels) {
+                foreach (var l in this.net.Labels) {
 
                     var pt = l.Position;
                     
 #if false
                     Node anchor = string.IsNullOrEmpty(l.AnchorNodeId)
                         ? null
-                        : this._net.getNode(l.AnchorNodeId);
+                        : this.net.GetNode(l.AnchorNodeId);
 
                     if (anchor != null) {
-                        var apt = anchor.getPosition();
-                        if (apt != null) {
+                        var apt = anchor.Position;
+                        if (!apt.IsInvalid) {
                             pt = apt;
                         }
                     }
@@ -393,44 +392,10 @@ namespace EpaTool {
 
         }
 
-        [Conditional("DEBUG")]
-        private void _DrawLabels2(Graphics g) {
-            GraphicsState gs = g.Save();
-
-            using (var sf = new StringFormat(StringFormatFlags.NoWrap))
-            using (var path = new GraphicsPath()) {
-                foreach (var l in this._net.Labels) {
-                    var pos = l.Position;
-                    if (pos.IsInvalid) continue;
-
-                    PointF pt = new PointF((float)pos.X, (float)pos.Y * -1);
-
-                    path.AddString(l.Text, this.Font.FontFamily, 0, this.Font.Size * 2, pt, sf);
-                    SizeF sz = g.MeasureString(l.Text, this.Font, pt, sf);
-                    path.AddRectangle(new RectangleF(pt, sz));
-
-                    //g.DrawRectangle(Pens.Green, (int)pt.X, (int)pt.Y, 100, -100);
-                }
-
-                using (var matrix = new Matrix()) {
-                    matrix.Scale(1f, -1f);
-                    path.Transform(matrix);
-                }
-
-
-
-                using (Brush b = new SolidBrush(labelColor)) {
-                    g.FillPath(b, path);
-                }
-
-            }
-        }
-
-
         private void _DrawSelection(Graphics g) {
-            if (this._selNode == null) return;
+            if (this.selNode == null) return;
 
-            PointF point = ToPointF(this._selNode.Position);
+            PointF point = ToPointF(this.selNode.Position);
             float size = (20f / this.Zoom);
             point.X -= size * 0.5f;
             point.Y -= size * 0.5f;
@@ -448,9 +413,9 @@ namespace EpaTool {
 
                 string s = string.Format(
                     "{0}: x={1:f};y={2:f}",
-                    this._selNode.Id,
-                    this._selNode.Position.X,
-                    this._selNode.Position.Y);
+                    this.selNode.Id,
+                    this.selNode.Position.X,
+                    this.selNode.Position.Y);
 
                 path.AddString(s, this.Font.FontFamily, 0, this.Font.Size * 2 / this.Zoom, pt, sf);
                 matrix.Scale(1f, -1f);
@@ -460,7 +425,7 @@ namespace EpaTool {
         }
 
         private void DrawNetwork(Graphics g) {
-            if (this.Net == null || this._networkBounds.IsEmpty)
+            if (this.Net == null || this.networkBounds.IsEmpty)
                 return;
 
             try {
@@ -469,14 +434,14 @@ namespace EpaTool {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.PageScale = this.Zoom;
-                g.TranslateTransform(this._dxo, this._dyo);
+                g.TranslateTransform(this.dxo, this.dyo);
                 g.ScaleTransform(1, -1);
             }
             catch {
                 return;
             }
 
-            float rectSize = Math.Max(this._networkBounds.Height, this._networkBounds.Width) * this.Zoom;
+            float rectSize = Math.Max(this.networkBounds.Height, this.networkBounds.Width) * this.Zoom;
   
             Debug.Print("rectSize1={0}", rectSize);
             if (rectSize > 4) {
@@ -493,7 +458,7 @@ namespace EpaTool {
                 Debug.Print("rectSize2={0}", rectSize);
                 g.FillRectangle(
                     Brushes.LightSlateGray,
-                    new RectangleF(this._networkBounds.Location, new SizeF(rectSize, rectSize)));
+                    new RectangleF(this.networkBounds.Location, new SizeF(rectSize, rectSize)));
 
             }
 
@@ -512,7 +477,7 @@ namespace EpaTool {
             e.Graphics.DrawLine(Pens.Red, -100, 0, 100, 0);
             e.Graphics.DrawLine(Pens.Red, 0, -100, 0, 100);
 
-            if (this._net == null)
+            if (this.net == null)
                 return;
 
             try {
@@ -543,14 +508,14 @@ namespace EpaTool {
             switch (e.Button) {
             case MouseButtons.Left:
                 Node nd = this.PeekNearest(this.GetLogPoint(e.Location));
-                if (!Equals(nd, this._selNode)) {
-                    this._selNode = nd;
+                if (!Equals(nd, this.selNode)) {
+                    this.selNode = nd;
                     this.Invalidate();
                 }
 
                 break;
             case MouseButtons.Middle:
-                this._panPoint = e.Location;
+                this.panPoint = e.Location;
                 break;
             case MouseButtons.Right:
                 break;
@@ -565,10 +530,10 @@ namespace EpaTool {
                 // case MouseButtons.None: break;
                 // case MouseButtons.Left: break;
             case MouseButtons.Middle: {
-                var pt = new PointF(e.X - this._panPoint.X, e.Y - this._panPoint.Y);
-                this._dxo += pt.X / this.Zoom;
-                this._dyo += pt.Y / this.Zoom;
-                this._panPoint = e.Location;
+                var pt = new PointF(e.X - this.panPoint.X, e.Y - this.panPoint.Y);
+                this.dxo += pt.X / this.Zoom;
+                this.dyo += pt.Y / this.Zoom;
+                this.panPoint = e.Location;
                 this.Invalidate();
             }
                 break;

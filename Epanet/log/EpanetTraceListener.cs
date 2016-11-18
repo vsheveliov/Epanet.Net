@@ -25,7 +25,7 @@ namespace Epanet.Log {
 
     public sealed class EpanetTraceListener : TextWriterTraceListener {
 
-        private bool _printDate = true;
+        private bool printDate = true;
         public EpanetTraceListener() { }
 
         public EpanetTraceListener(Stream stream) : base(stream) { }
@@ -50,7 +50,7 @@ namespace Epanet.Log {
         }
 
         public EpanetTraceListener(TextWriter writer, string name) : base(writer, name) { }
-        public bool PrintDate { get { return this._printDate; } set { this._printDate = value; } }
+        public bool PrintDate { get { return this.printDate; } set { this.printDate = value; } }
 
         public override void WriteLine(string message) {
             base.Write(DateTime.Now.ToString(base.Writer.FormatProvider));

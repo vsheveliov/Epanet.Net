@@ -67,138 +67,116 @@ namespace Epanet.Network {
             END = 28,
         }
 
-        private readonly List<Control> _controls;
-        private readonly CurveCollection _curves;
+        private readonly List<Control> controls;
+        private readonly CurveCollection curves;
         
         [System.NonSerialized]
-        private readonly FieldsMap _fields;
+        private readonly FieldsMap fields;
         
-        private readonly List<Label> _labels;
-        private readonly LinkCollection _links;
-        private readonly NodeCollection _nodes;
-        private readonly PatternCollection _patterns;
-        private readonly PropertiesMap _properties;
-        private readonly RuleCollection _rules;
-        private readonly List<string> _titleText;
+        private readonly List<Label> labels;
+        private readonly LinkCollection links;
+        private readonly NodeCollection nodes;
+        private readonly PatternCollection patterns;
+        private readonly PropertiesMap properties;
+        private readonly RuleCollection rules;
+        private readonly List<string> titleText;
 
         public Network() {
-            this._titleText = new List<string>();
-            this._patterns = new PatternCollection();
-            this._nodes = new NodeCollection();
-            this._links = new LinkCollection();
+            this.titleText = new List<string>();
+            this.patterns = new PatternCollection();
+            this.nodes = new NodeCollection();
+            this.links = new LinkCollection();
 
-            this._curves = new CurveCollection();
-            this._controls = new List<Control>();
-            this._labels = new List<Label>();
-            this._rules = new RuleCollection();
+            this.curves = new CurveCollection();
+            this.controls = new List<Control>();
+            this.labels = new List<Label>();
+            this.rules = new RuleCollection();
 
-            this._fields = new FieldsMap();
+            this.fields = new FieldsMap();
 
-            this._properties = new PropertiesMap();
+            this.properties = new PropertiesMap();
 
-            this._patterns.Add(new Pattern(string.Empty));
+            this.patterns.Add(new Pattern(string.Empty));
         }
         
-        public IList<Control> Controls { get { return this._controls; } }
+        public IList<Control> Controls { get { return this.controls; } }
 
         public Curve GetCurve(string name) {
             Curve curve;
-            return this._curves.TryGetValue(name, out curve) ? curve : null;
+            return this.curves.TryGetValue(name, out curve) ? curve : null;
         }
 
-        public IList<Curve> Curves { get { return this._curves; } }
+        public IList<Curve> Curves { get { return this.curves; } }
 
         ///<summary>Fields map with report variables properties and conversion units.</summary>
-        public FieldsMap FieldsMap { get { return this._fields; } }
+        public FieldsMap FieldsMap { get { return this.fields; } }
 
         ///<summary>Transient colleciton of junctions.</summary>
         public IEnumerable<Node> Junctions {
             get {
-                foreach(Node n in this._nodes) {
-                    if(!(n is Tank))
-                        yield return n;
-                }
+                return this.nodes.Where(x => !(x is Tank));
+
             }
         }
 
-        public IList<Label> Labels { get { return this._labels; } }
+        public IList<Label> Labels { get { return this.labels; } }
 
         public Link GetLink(string name) {
             Link obj;
-            return this._links.TryGetValue(name, out obj) ? obj : null;
+            return this.links.TryGetValue(name, out obj) ? obj : null;
         }
 
-        public IList<Link> Links { get { return this._links; } }
+        public IList<Link> Links { get { return this.links; } }
 
         public Node GetNode(string name) {
             Node obj;
-            return this._nodes.TryGetValue(name, out obj) ? obj : null;
+            return this.nodes.TryGetValue(name, out obj) ? obj : null;
         }
 
-        public IList<Node> Nodes { get { return this._nodes; } }
+        public IList<Node> Nodes { get { return this.nodes; } }
 
         public Pattern GetPattern(string name) {
             Pattern obj;
-            return this._patterns.TryGetValue(name, out obj) ? obj : null;
+            return this.patterns.TryGetValue(name, out obj) ? obj : null;
         }
 
-        public IList<Pattern> Patterns { get { return this._patterns; } }
+        public IList<Pattern> Patterns { get { return this.patterns; } }
 
         ///<summary>Properties Map with simulation configuration properties.</summary>
-        public PropertiesMap PropertiesMap { get { return this._properties; } }
+        public PropertiesMap PropertiesMap { get { return this.properties; } }
 
         ///<summary>Transient colleciton of pumps.</summary>
         public IEnumerable<Pump> Pumps {
             get {
-                foreach (Link l in this._links) {
-                    var pump = l as Pump;
-                    if (pump != null)
-                        yield return pump;
-                }
-            }
+                return this.links.Where(x => x.Type == Link.LinkType.PUMP).Select(x => (Pump)x);
+            } 
         }
 
         public Rule GetRule(string ruleName) {
             Rule obj;
-            return this._rules.TryGetValue(ruleName, out obj) ? obj : null;
+            return this.rules.TryGetValue(ruleName, out obj) ? obj : null;
 
         }
 
-        public IList<Rule> Rules { get { return this._rules; } }
+        public IList<Rule> Rules { get { return this.rules; } }
 
         ///<summary>Transient collection of tanks(and reservoirs)</summary>
-        public IEnumerable<Tank> Tanks {
-            get {
-                foreach (Node n in this._nodes) {
-                    var tank = n as Tank;
-                    if (tank != null)
-                        yield return tank;
-                }
-            }
-        }
+        public IEnumerable<Tank> Tanks { get { return this.nodes.OfType<Tank>(); } }
 
-        public List<string> TitleText { get { return this._titleText; } }
+        public List<string> TitleText { get { return this.titleText; } }
 
         ///<summary>Transient colleciton of valves.</summary>
-        public IEnumerable<Valve> Valves {
-            get {
-                foreach (Link l in this._links) {
-                    var valve = l as Valve;
-                    if (valve != null)
-                        yield return valve;
-                }
-            }
-        }
+        public IEnumerable<Valve> Valves { get { return this.links.OfType<Valve>(); } }
 
         public override string ToString() {
             string res = " Network\n";
-            res += "  Nodes : " + this._nodes.Count + "\n";
-            res += "  Links : " + this._links.Count + "\n";
-            res += "  Pattern : " + this._patterns.Count + "\n";
-            res += "  Curves : " + this._curves.Count + "\n";
-            res += "  Controls : " + this._controls.Count + "\n";
-            res += "  Labels : " + this._labels.Count + "\n";
-            res += "  Rules : " + this._rules.Count + "\n";
+            res += "  Nodes : " + this.nodes.Count + "\n";
+            res += "  Links : " + this.links.Count + "\n";
+            res += "  Pattern : " + this.patterns.Count + "\n";
+            res += "  Curves : " + this.curves.Count + "\n";
+            res += "  Controls : " + this.controls.Count + "\n";
+            res += "  Labels : " + this.labels.Count + "\n";
+            res += "  Rules : " + this.rules.Count + "\n";
             res += "  Tanks : " + this.Tanks.Count() + "\n";
             res += "  Pumps : " + this.Pumps.Count() + "\n";
             res += "  Valves : " + this.Valves.Count() + "\n";

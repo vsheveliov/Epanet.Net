@@ -79,9 +79,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="MSX\package.html" />
+    <Content Include="MSX\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="MSX\Solvers\package.html" />
-    <Content Include="MSX\Structures\package.html" />
+    <Content Include="MSX\Structures\_namespace.xml">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Epanet\Epanet.csproj">

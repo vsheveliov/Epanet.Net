@@ -90,7 +90,7 @@ namespace Epanet.Quality.Structures {
                    msum = 0.0;
 
             try {
-                if (pMap != null && pMap.Qualflag == PropertiesMap.QualType.NONE)
+                if (pMap != null && pMap.QualFlag == PropertiesMap.QualType.NONE)
                     return 0.0;
             }
             catch (ENException) {
@@ -102,10 +102,9 @@ namespace Epanet.Quality.Structures {
                 msum += seg.C * seg.V;
             }
 
-            if (vsum > 0.0)
-                return msum / vsum;
-            else
-                return (this.FirstNode.Quality + this.SecondNode.Quality) / 2.0;
+            return vsum > 0.0 
+                ? msum / vsum
+                : (this.FirstNode.Quality + this.SecondNode.Quality) / 2.0;
         }
     }
 

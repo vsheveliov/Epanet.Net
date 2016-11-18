@@ -100,13 +100,13 @@ namespace Epanet.Network.Structures {
             EMPTYING = 9,
         }
 
-        private readonly string _id;
-        private readonly List<EnPoint> _vertices;
+        private readonly string id;
+        private readonly List<EnPoint> vertices;
 
         public Link(string id) {
-            this._id = id;
+            this.id = id;
             this.Comment = "";
-            this._vertices = new List<EnPoint>();
+            this.vertices = new List<EnPoint>();
             this.Type = LinkType.CV;
             this.Status = StatType.XHEAD;
         }
@@ -127,7 +127,7 @@ namespace Epanet.Network.Structures {
         public double FlowResistance { get; set; }
 
         ///<summary>Link name.</summary>
-        public string Id { get { return this._id; } }
+        public string Id { get { return this.id; } }
 
         ///<summary>Bulk react. coeff.</summary>
         public double Kb { get; set; }
@@ -157,16 +157,16 @@ namespace Epanet.Network.Structures {
         public LinkType Type { get; set; }
 
         ///<summary>List of points for link path rendering.</summary>
-        public List<EnPoint> Vertices { get { return this._vertices; } }
+        public List<EnPoint> Vertices { get { return this.vertices; } }
 
         ///<summary>Link report flag.</summary>
         public bool RptFlag { get; set; }
 
-        public override int GetHashCode() { return string.IsNullOrEmpty(this._id) ? 0 : this._id.GetHashCode(); }
+        public override int GetHashCode() { return string.IsNullOrEmpty(this.id) ? 0 : this.id.GetHashCode(); }
 
         public int CompareTo(Link o) {
             if(o == null) return 1;
-            return string.Compare(this._id, o._id, StringComparison.OrdinalIgnoreCase);
+            return string.Compare(this.id, o.id, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj) {
@@ -180,7 +180,7 @@ namespace Epanet.Network.Structures {
             double realkm = this.Km * Math.Pow(this.Diameter, 4.0) / 0.02517;
             this.Diameter = diameter;
             this.Km = 0.02517 * realkm / Math.Pow(diameter, 4);
-            this.initResistance(net.PropertiesMap.Formflag, net.PropertiesMap.Hexp);
+            this.initResistance(net.PropertiesMap.FormFlag, net.PropertiesMap.HExp);
         }
 
 #if DEBUG // NUCONVERT

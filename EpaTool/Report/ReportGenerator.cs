@@ -24,12 +24,9 @@ using Epanet.MSX.Structures;
 using Epanet.Network;
 using Epanet.Properties;
 using Epanet.Quality;
-using Epanet.Report;
 using Epanet.Util;
-using Constants = Epanet.Constants;
-using Network = Epanet.Network.Network;
 
-namespace EpaTool.Report {
+namespace Epanet.Report {
 
     /// <summary>
     ///     This class handles the XLSX generation from the binary files created by Epanet and MSX simulations, 
@@ -102,18 +99,18 @@ namespace EpaTool.Report {
             public override string ToString() { return this.Name; }
         }
 
-        private readonly XLSXWriter _sheet;
-        private readonly string _xlsxFile;
+        private readonly XLSXWriter sheet;
+        private readonly string xlsxFile;
 
         public ReportGenerator(string xlsxFile) {
-            this._xlsxFile = xlsxFile;
-            this._sheet = new XLSXWriter();
+            this.xlsxFile = xlsxFile;
+            this.sheet = new XLSXWriter();
         }
 
         /// <summary>Set excel cells transposition mode.</summary>
         public bool TransposedMode {
-            set { this._sheet.TransposedMode = value; }
-            get { return this._sheet.TransposedMode; }
+            set { this.sheet.TransposedMode = value; }
+            get { return this.sheet.TransposedMode; }
         }
 
         /// <summary>Get current report time progress.</summary>
@@ -123,20 +120,20 @@ namespace EpaTool.Report {
         /// <param name="hydFile">Abstract representation of the hydraulic simulation output file.</param>
         /// <param name="net">Hydraulic network.</param>
         /// <param name="values">Variables report flag.</param>
-        public void CreateHydReport(string hydFile, Network net, bool[] values) {
+        public void CreateHydReport(string hydFile, Network.Network net, bool[] values) {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(hydFile);
             var nodes = net.Nodes;
             var links = net.Links;
 
             var nodesHead = new object[dseek.Nodes + 1];
-            nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
+            nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
             for(int i = 0; i < nodes.Count; i++)
                 nodesHead[i + 1] = nodes[i].Id;
 
             var linksHead = new object[dseek.Links + 1];
-            linksHead[0] = this._sheet.TransposedMode ? "Link/Time" : "Time/Link";
+            linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
           
             for(int i = 0; i < links.Count; i++)
                 linksHead[i + 1] = links[i].Id;
@@ -145,15 +142,15 @@ namespace EpaTool.Report {
 
             for (int i = 0; i < resultSheets.Length; i++) {
                 if (values != null && !values[i]) continue;
-                resultSheets[i] = this._sheet.NewSpreadsheet(HydVariable.Values[i].Name);
+                resultSheets[i] = this.sheet.NewSpreadsheet(HydVariable.Values[i].Name);
                 resultSheets[i].AddData(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
             }
 
             var nodeRow = new object[dseek.Nodes + 1];
             var linkRow = new object[dseek.Links + 1];
 
-            for(long time = net.PropertiesMap.Rstart; time <= net.PropertiesMap.Duration; time += net.PropertiesMap.Rstep) {
-                var step = dseek.getStep(time);
+            for(long time = net.PropertiesMap.RStart; time <= net.PropertiesMap.Duration; time += net.PropertiesMap.RStep) {
+                var step = dseek.GetStep(time);
                 if (step != null) {
                     nodeRow[0] = time.GetClockTime();
                     linkRow[0] = time.GetClockTime();
@@ -228,13 +225,13 @@ namespace EpaTool.Report {
         /// <param name="links">Show links quality flag.</param>
         /// <throws>IOException</throws>
         /// <throws>ENException</throws>
-        public void CreateQualReport(string qualFile, Network net, bool nodes, bool links) {
+        public void CreateQualReport(string qualFile, Network.Network net, bool nodes, bool links) {
             this.Rtime = 0;
 
             using (QualityReader dseek = new QualityReader(qualFile, net.FieldsMap)) {
 
                 var nodesHead = new object[dseek.Nodes + 1];
-                nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
+                nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
                 var netNodes = net.Nodes;
                 var netLinks = net.Links;
@@ -244,7 +241,7 @@ namespace EpaTool.Report {
                     nodesHead[i + 1] = netNodes[i].Id;
 
                 var linksHead = new object[dseek.Links + 1];
-                linksHead[0] = this._sheet.TransposedMode ? "Link/Time" : "Time/Link";
+                linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
                 for(int i = 0; i < netLinks.Count; i++)
                     linksHead[i + 1] = netLinks[i].Id;
@@ -256,7 +253,7 @@ namespace EpaTool.Report {
                     if ((!v.IsNode || !nodes) && (v.IsNode || !links))
                         continue;
 
-                    resultSheets[v.ID] = this._sheet.NewSpreadsheet(v.Name);
+                    resultSheets[v.ID] = this.sheet.NewSpreadsheet(v.Name);
                     resultSheets[v.ID].AddData(v.IsNode ? nodesHead : linksHead);
                 }
 
@@ -265,9 +262,9 @@ namespace EpaTool.Report {
 
                 
                 using (var qIt = dseek.GetEnumerator())
-                for(long time = net.PropertiesMap.Rstart;
+                for(long time = net.PropertiesMap.RStart;
                     time <= net.PropertiesMap.Duration; 
-                    time += net.PropertiesMap.Rstep)
+                    time += net.PropertiesMap.RStep)
                 {
                     if (!qIt.MoveNext()) break;
 
@@ -303,7 +300,7 @@ namespace EpaTool.Report {
         /// <param name="values">Species report flag.</param>
         /// <throws>IOException</throws>
         /// <throws>ENException</throws>
-        public void CreateMSXReport(string msxBin, Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
+        public void CreateMSXReport(string msxBin, Network.Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
             this.Rtime = 0;
 
             var nodes = netMSX.Network.Node;
@@ -329,10 +326,10 @@ namespace EpaTool.Report {
             reader.Open(msxBin);
 
             var nodesHead = new object[nSpecies.Length + 1];
-            nodesHead[0] = this._sheet.TransposedMode ? "Node/Time" : "Time/Node";
+            nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
             var linksHead = new object[nSpecies.Length + 1];
-            linksHead[0] = this._sheet.TransposedMode ? "Link/Time" : "Time/Link";
+            linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
             int count = 1;
             for (int i = 0; i < nSpecies.Length; i++) {
@@ -348,12 +345,12 @@ namespace EpaTool.Report {
                 if (!nodes[i].Rpt) continue;
 
                 XLSXWriter.Spreadsheet spr =
-                    this._sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
+                    this.sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
                 spr.AddData(nodesHead);
 
-                for (long time = net.PropertiesMap.Rstart, period = 0;
+                for (long time = net.PropertiesMap.RStart, period = 0;
                      time <= net.PropertiesMap.Duration;
-                     time += net.PropertiesMap.Rstep, period++) {
+                     time += net.PropertiesMap.RStep, period++) {
                     
                     nodeRow[0] = time.GetClockTime();
 
@@ -371,13 +368,13 @@ namespace EpaTool.Report {
             for (int i = 1; i < links.Length; i++) {
                 if (!links[i].Rpt) continue;
                 XLSXWriter.Spreadsheet spr =
-                    this._sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
+                    this.sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
                     
                 spr.AddData(linksHead);
 
-                for (long time = net.PropertiesMap.Rstart, period = 0;
+                for (long time = net.PropertiesMap.RStart, period = 0;
                      time <= net.PropertiesMap.Duration;
-                     time += net.PropertiesMap.Rstep, period++) 
+                     time += net.PropertiesMap.RStep, period++) 
                 {
                     linkRow[0] = time.GetClockTime();
 
@@ -396,7 +393,7 @@ namespace EpaTool.Report {
         /// <summary>Write the final worksheet.</summary>
         /// <throws>IOException</throws>
         public void WriteWorksheet() {
-            this._sheet.Save(this._xlsxFile);
+            this.sheet.Save(this.xlsxFile);
         }
 
         /// <summary>Write simulation summary to one worksheet.</summary>
@@ -405,8 +402,8 @@ namespace EpaTool.Report {
         /// <param name="msxFile">MSX file.</param>
         /// <param name="msx">MSX solver.</param>
         /// <throws>IOException</throws>
-        public void WriteSummary(string inpFile, Network net, string msxFile, EpanetMSX msx) {
-            XLSXWriter.Spreadsheet sh = this._sheet.NewSpreadsheet("Summary");
+        public void WriteSummary(string inpFile, Network.Network net, string msxFile, EpanetMSX msx) {
+            XLSXWriter.Spreadsheet sh = this.sheet.NewSpreadsheet("Summary");
 
             try {
                 PropertiesMap pMap = net.PropertiesMap;
@@ -444,16 +441,16 @@ namespace EpaTool.Report {
                 sh.AddData(Text.FMT22, nPipes);
                 sh.AddData(Text.FMT23, nPumps);
                 sh.AddData(Text.FMT24, nValves);
-                sh.AddData(Text.FMT25, pMap.Formflag.ParseStr());
+                sh.AddData(Text.FMT25, pMap.FormFlag.ParseStr());
 
-                sh.AddData(Text.FMT26, pMap.Hstep.GetClockTime());
-                sh.AddData(Text.FMT27, pMap.Hacc);
+                sh.AddData(Text.FMT26, pMap.HStep.GetClockTime());
+                sh.AddData(Text.FMT27, pMap.HAcc);
                 sh.AddData(Text.FMT27a, pMap.CheckFreq);
                 sh.AddData(Text.FMT27b, pMap.MaxCheck);
                 sh.AddData(Text.FMT27c, pMap.DampLimit);
                 sh.AddData(Text.FMT28, pMap.MaxIter);
 
-                switch (pMap.Duration == 0 ? PropertiesMap.QualType.NONE : pMap.Qualflag) {
+                switch (pMap.Duration == 0 ? PropertiesMap.QualType.NONE : pMap.QualFlag) {
                 case PropertiesMap.QualType.NONE:
                         sh.AddData(Text.FMT29, "None");
                         break;
@@ -471,15 +468,15 @@ namespace EpaTool.Report {
                         break;
                 }
 
-                if(pMap.Qualflag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
-                    sh.AddData(Text.FMT33, "Time Step", pMap.Qstep.GetClockTime());
+                if(pMap.QualFlag != PropertiesMap.QualType.NONE && pMap.Duration > 0) {
+                    sh.AddData(Text.FMT33, "Time Step", pMap.QStep.GetClockTime());
                     sh.AddData(Text.FMT34, "Tolerance", fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol), fMap.GetField(FieldsMap.FieldType.QUALITY).Units);
                 }
 
                 sh.AddData(Text.FMT36, pMap.SpGrav);
                 sh.AddData(Text.FMT37a, pMap.Viscos / Constants.VISCOS);
                 sh.AddData(Text.FMT37b, pMap.Diffus / Constants.DIFFUS);
-                sh.AddData(Text.FMT38, pMap.Dmult);
+                sh.AddData(Text.FMT38, pMap.DMult);
                 sh.AddData(Text.FMT39, fMap.RevertUnit(FieldsMap.FieldType.TIME, pMap.Duration), fMap.GetField(FieldsMap.FieldType.TIME).Units);
 
                 if (msxFile != null && msx != null) {

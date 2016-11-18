@@ -21,19 +21,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using Epanet;
 using Epanet.Hydraulic;
 using Epanet.Log;
 using Epanet.MSX;
 using Epanet.Network;
 using Epanet.Network.IO.Input;
 using Epanet.Quality;
-using Epanet.UI;
 using Epanet.Util;
-using Network = Epanet.Network.Network;
 using Utilities = Epanet.Util.Utilities;
 
-namespace EpaTool {
+namespace Epanet.UI {
 
     /// <summary>Configures and executes the epanet (Hydraulic/Quality) and MSX quality simulation through the UI.</summary>
     public sealed partial class ReportOptions : Form {
@@ -50,7 +47,7 @@ namespace EpaTool {
         private readonly TraceSource log;
 
         /// <summary>Loaded INP network.</summary>
-        private readonly Network netInp;
+        private readonly Network.Network netInp;
 
         /// <summary>Hydraulic simulator.</summary>
         private HydraulicSim hydSim;
@@ -88,7 +85,7 @@ namespace EpaTool {
             if (inpFile == null) return;
 
             this.fileInp = inpFile;
-            this.netInp = new Network();
+            this.netInp = new Network.Network();
 
             try {
                 InputParser inpParser;
@@ -182,13 +179,13 @@ namespace EpaTool {
             if (this.netInp != null) {
                 try {
                     PropertiesMap pMap = this.netInp.PropertiesMap;
-                    this.unitsBox.SelectedIndex = pMap.Unitsflag == PropertiesMap.UnitsType.SI ? 0 : 1;
-                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Rstep);
-                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Hstep);
-                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.Qstep);
+                    this.unitsBox.SelectedIndex = pMap.UnitsFlag == PropertiesMap.UnitsType.SI ? 0 : 1;
+                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.RStep);
+                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.HStep);
+                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.QStep);
                     this.textSimulationDuration.Text = pMap.Duration.GetClockTime();
-                    this.textReportStart.Text = pMap.Rstart.GetClockTime();
-                    this.qualityCheckBox.Enabled = pMap.Qualflag != PropertiesMap.QualType.NONE;
+                    this.textReportStart.Text = pMap.RStart.GetClockTime();
+                    this.qualityCheckBox.Enabled = pMap.QualFlag != PropertiesMap.QualType.NONE;
                 }
                 catch (ENException ex) {
                     Debug.Print(ex.ToString());
@@ -236,12 +233,12 @@ namespace EpaTool {
         }
 
         private void textReportStart_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.GetHour(this.textReportStart.Text, null);
+            double val = Utilities.GetHour(this.textReportStart.Text);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
         private void textSimulationDuration_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.GetHour(this.textSimulationDuration.Text, null);
+            double val = Utilities.GetHour(this.textSimulationDuration.Text);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
@@ -276,7 +273,7 @@ namespace EpaTool {
 
             this.hydVariables.Enabled = true;
             try {
-                if (this.netInp.PropertiesMap.Qualflag != PropertiesMap.QualType.NONE) {
+                if (this.netInp.PropertiesMap.QualFlag != PropertiesMap.QualType.NONE) {
                     if (this.qualityCheckBox.Checked) {
                         this.qualityVariables.Enabled = true;
                         this.qualityCheckBox.Enabled = true;
@@ -305,7 +302,7 @@ namespace EpaTool {
                 return;
             }
 
-            if (Utilities.GetHour(this.textSimulationDuration.Text, "") < 0) {
+            if (Utilities.GetHour(this.textSimulationDuration.Text) < 0) {
                 MessageBox.Show(
                     "Invalid time expression for simulation duration",
                     "Error",
@@ -314,7 +311,7 @@ namespace EpaTool {
                 return;
             }
 
-            if (Utilities.GetHour(this.textReportStart.Text, "") < 0) {
+            if (Utilities.GetHour(this.textReportStart.Text) < 0) {
                 MessageBox.Show(
                     this,
                     "Invalid time expression for report start time",
@@ -337,12 +334,12 @@ namespace EpaTool {
             this.Visible = false;
         }
 
-        private bool _simulated;
+        private bool simulated;
 
         private bool Simulated {
-            get { return this._simulated; }
+            get { return this.simulated; }
             set {
-                this._simulated = value;
+                this.simulated = value;
 
                 if (value) {
                     this.LockInterface();
@@ -357,18 +354,18 @@ namespace EpaTool {
             }
         }
 
-        private bool _canselSimulation;
+        private bool canselSimulation;
 
 
         #region threading
 
-        private ReportGenerator _gen;
+        private ReportGenerator gen;
 
         private void RunSimulation(string fileName) {
             TraceListener simHandler = null;
 
             this.Simulated = true;
-            this._canselSimulation = false;
+            this.canselSimulation = false;
 
             this.progressBar.Value = 0;
             this.progressBar.Maximum = 100;
@@ -393,16 +390,16 @@ namespace EpaTool {
                 }
 
                 int reportPeriod = ((TimeStep)this.reportPeriodBox.SelectedItem).Time;
-                int reportStartTime = (int)(Utilities.GetHour(this.textReportStart.Text, "") * 3600);
+                int reportStartTime = (int)(Utilities.GetHour(this.textReportStart.Text) * 3600);
                 int hydTStep = ((TimeStep)this.hydComboBox.SelectedItem).Time;
                 int qualTStep = ((TimeStep)this.qualComboBox.SelectedItem).Time;
-                int durationTime = (int)(Utilities.GetHour(this.textSimulationDuration.Text, "") * 3600);
+                int durationTime = (int)(Utilities.GetHour(this.textSimulationDuration.Text) * 3600);
 
-                pMap.Rstart = reportStartTime;
-                pMap.Rstep = reportPeriod;
-                pMap.Hstep = hydTStep;
+                pMap.RStart = reportStartTime;
+                pMap.RStep = reportPeriod;
+                pMap.HStep = hydTStep;
                 pMap.Duration = durationTime;
-                pMap.Qstep = qualTStep;
+                pMap.QStep = qualTStep;
 
                 this.statusLabel.Text = "Simulating hydraulics";
 
@@ -430,7 +427,7 @@ namespace EpaTool {
                     return;
                 }
 
-                if (this._canselSimulation) return;
+                if (this.canselSimulation) return;
 
 
                 if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
@@ -467,7 +464,7 @@ namespace EpaTool {
                     // netMSX.getReport().MSXrpt_write(new "msxFile.bin");
                 }
 
-                if (this._canselSimulation) return;
+                if (this.canselSimulation) return;
 
                 if (this.qualityCheckBox.Checked) {
                     try {
@@ -494,21 +491,21 @@ namespace EpaTool {
                     }
                 }
 
-                if (this._canselSimulation) return;
+                if (this.canselSimulation) return;
 
                 this.progressBar.Value = 50;
                 this.statusLabel.Text = "Writting XLSX";
 
-                this._gen = new ReportGenerator(fileName);
+                this.gen = new ReportGenerator(fileName);
 
                 //log
                 try {
                     this.log.Information("Starting xlsx write");
-                    if (this.showSummaryCheckBox.Checked) this._gen.writeSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
+                    if (this.showSummaryCheckBox.Checked) this.gen.writeSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
 
-                    if (this._canselSimulation) return;
+                    if (this.canselSimulation) return;
 
-                    if (this.transposeResultsCheckBox.Checked) this._gen.setTransposedMode(true);
+                    if (this.transposeResultsCheckBox.Checked) this.gen.setTransposedMode(true);
 
                     if (this.hydraulicsCheckBox.Checked) {
                         // Write hydraulic spreadsheets
@@ -520,14 +517,14 @@ namespace EpaTool {
                         this.statusLabel.Text = "Writing hydraulic report";
 
                         this.RunThread(
-                            () => this._gen.CreateHydReport("hydFile.bin", this.netInp, values),
+                            () => this.gen.CreateHydReport("hydFile.bin", this.netInp, values),
                             50,
                             60,
-                            () => this._gen.getRtime(),
-                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
+                            () => this.gen.getRtime(),
+                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
                     }
 
-                    if (this._canselSimulation) return;
+                    if (this.canselSimulation) return;
 
                     if (this.qualityCheckBox.Checked) {
                         this.statusLabel.Text = "Writing quality report";
@@ -536,14 +533,14 @@ namespace EpaTool {
                         bool links = this.qualityVariables.GetItemChecked(1);
 
                         this.RunThread(
-                            () => this._gen.createQualReport("qualFile.bin", this.netInp, nodes, links),
+                            () => this.gen.createQualReport("qualFile.bin", this.netInp, nodes, links),
                             60,
                             70,
-                            () => this._gen.getRtime(),
-                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
+                            () => this.gen.getRtime(),
+                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
                     }
 
-                    if (this._canselSimulation) return;
+                    if (this.canselSimulation) return;
 
                     // Write MSX quality spreadsheets
                     if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
@@ -552,7 +549,7 @@ namespace EpaTool {
                             valuesMSX[i] = this.speciesCheckList.GetItemChecked(i);
                         }
 
-                        this._gen.createMSXReport(
+                        this.gen.createMSXReport(
                             "msxFile.bin",
                             this.netInp,
                             this.netMsx,
@@ -561,7 +558,7 @@ namespace EpaTool {
 
                         this.RunThread(
                             () =>
-                                this._gen.createMSXReport(
+                                this.gen.createMSXReport(
                                     "msxFile.bin",
                                     this.netInp,
                                     this.netMsx,
@@ -570,14 +567,14 @@ namespace EpaTool {
                             70,
                             80,
                             () => this.netMsx.QTime,
-                            () => (this._gen.getRtime() - pMap.Rstart) / (double)pMap.Duration);
+                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
 
                     }
 
-                    if (this._canselSimulation) return;
+                    if (this.canselSimulation) return;
 
                     this.statusLabel.Text = "Writing workbook";
-                    this._gen.writeWorksheet();
+                    this.gen.writeWorksheet();
                     this.log.Information("Ending xlsx write");
                 }
                 catch (IOException ex) {
@@ -612,7 +609,7 @@ namespace EpaTool {
                 Debug.Print("Thresd state = {0}", thr.ThreadState);
                 Thread.Sleep(200);
 
-                if (this._canselSimulation) {
+                if (this.canselSimulation) {
                     thr.Abort();
                     break;
                 }
@@ -627,7 +624,7 @@ namespace EpaTool {
 
                 if (getProgress() > 0.9) break;
 
-                if (this._canselSimulation) break;
+                if (this.canselSimulation) break;
 
             }
 
@@ -661,17 +658,17 @@ namespace EpaTool {
             };
 
             private TimeStep(int time, string name) {
-                this._time = time;
-                this._name = name;
+                this.time = time;
+                this.name = name;
             }
 
             /// <summary>Entry timestep duration.</summary>
-            public int Time { get { return this._time; } }
+            public int Time { get { return this.time; } }
 
             /// <summary>Entry name</summary>
-            private readonly string _name;
+            private readonly string name;
 
-            private readonly int _time;
+            private readonly int time;
 
             /// <summary>Get the nearest timestep period.</summary>
             /// <returns>Nearest timestep, if the time is bigger than any timestep returns STEP_12_HOURS.</returns>
@@ -683,7 +680,7 @@ namespace EpaTool {
                 return Values.Length - 1;
             }
 
-            public override string ToString() { return this._name; }
+            public override string ToString() { return this.name; }
 
         }
 

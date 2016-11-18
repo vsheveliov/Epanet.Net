@@ -40,19 +40,19 @@ namespace Epanet.Util {
         public static bool TryParse(string text, out Rule.Varwords result)
         {
             
-            if (text.match(Keywords.wr_DEMAND)) result = Rule.Varwords.r_DEMAND;
-            else if (text.match(Keywords.wr_HEAD)) result = Rule.Varwords.r_HEAD;
-            else if (text.match(Keywords.wr_GRADE)) result = Rule.Varwords.r_GRADE;
-            else if (text.match(Keywords.wr_LEVEL)) result = Rule.Varwords.r_LEVEL;
-            else if (text.match(Keywords.wr_PRESSURE)) result = Rule.Varwords.r_PRESSURE;
-            else if (text.match(Keywords.wr_FLOW)) result = Rule.Varwords.r_FLOW;
-            else if (text.match(Keywords.wr_STATUS)) result = Rule.Varwords.r_STATUS;
-            else if (text.match(Keywords.wr_SETTING)) result = Rule.Varwords.r_SETTING;
-            else if (text.match(Keywords.wr_POWER)) result = Rule.Varwords.r_POWER;
-            else if (text.match(Keywords.wr_TIME)) result = Rule.Varwords.r_CLOCKTIME;
-            else if (text.match(Keywords.wr_CLOCKTIME)) result = Rule.Varwords.r_CLOCKTIME;
-            else if (text.match(Keywords.wr_FILLTIME)) result = Rule.Varwords.r_FILLTIME;
-            else if (text.match(Keywords.wr_DRAINTIME)) result = Rule.Varwords.r_DRAINTIME;
+            if (text.Match(Keywords.wr_DEMAND)) result = Rule.Varwords.r_DEMAND;
+            else if (text.Match(Keywords.wr_HEAD)) result = Rule.Varwords.r_HEAD;
+            else if (text.Match(Keywords.wr_GRADE)) result = Rule.Varwords.r_GRADE;
+            else if (text.Match(Keywords.wr_LEVEL)) result = Rule.Varwords.r_LEVEL;
+            else if (text.Match(Keywords.wr_PRESSURE)) result = Rule.Varwords.r_PRESSURE;
+            else if (text.Match(Keywords.wr_FLOW)) result = Rule.Varwords.r_FLOW;
+            else if (text.Match(Keywords.wr_STATUS)) result = Rule.Varwords.r_STATUS;
+            else if (text.Match(Keywords.wr_SETTING)) result = Rule.Varwords.r_SETTING;
+            else if (text.Match(Keywords.wr_POWER)) result = Rule.Varwords.r_POWER;
+            else if (text.Match(Keywords.wr_TIME)) result = Rule.Varwords.r_CLOCKTIME;
+            else if (text.Match(Keywords.wr_CLOCKTIME)) result = Rule.Varwords.r_CLOCKTIME;
+            else if (text.Match(Keywords.wr_FILLTIME)) result = Rule.Varwords.r_FILLTIME;
+            else if (text.Match(Keywords.wr_DRAINTIME)) result = Rule.Varwords.r_DRAINTIME;
             else {
                 result = (Rule.Varwords)(-1);
                 return false;
@@ -62,10 +62,10 @@ namespace Epanet.Util {
         }
 
         public static bool TryParse(string text, out Rule.Values result) {
-            if (text.match(Keywords.wr_ACTIVE)) result = Rule.Values.IS_ACTIVE;
-            else if (text.match(Keywords.wr_CLOSED)) result = Rule.Values.IS_CLOSED;
+            if (text.Match(Keywords.wr_ACTIVE)) result = Rule.Values.IS_ACTIVE;
+            else if (text.Match(Keywords.wr_CLOSED)) result = Rule.Values.IS_CLOSED;
             // else if (text.match("XXXX")) result = Rule.Values.IS_NUMBER;
-            else if (text.match(Keywords.wr_OPEN)) result = Rule.Values.IS_OPEN;
+            else if (text.Match(Keywords.wr_OPEN)) result = Rule.Values.IS_OPEN;
             else {
                 result = (Rule.Values)(-1);
                 return false;
@@ -356,27 +356,27 @@ namespace Epanet.Util {
             return true;
         }
 
-        public static string ParseStr(this PropertiesMap.TstatType value) {
+        public static string ParseStr(this PropertiesMap.TStatType value) {
             switch (value) {
-            case PropertiesMap.TstatType.AVG:       return Keywords.w_AVG;
-            case PropertiesMap.TstatType.MAX:       return Keywords.w_MAX;
-            case PropertiesMap.TstatType.MIN:       return Keywords.w_MIN;
-            case PropertiesMap.TstatType.RANGE:     return Keywords.w_RANGE;
-            case PropertiesMap.TstatType.SERIES:    return Keywords.w_NONE;
+            case PropertiesMap.TStatType.AVG:       return Keywords.w_AVG;
+            case PropertiesMap.TStatType.MAX:       return Keywords.w_MAX;
+            case PropertiesMap.TStatType.MIN:       return Keywords.w_MIN;
+            case PropertiesMap.TStatType.RANGE:     return Keywords.w_RANGE;
+            case PropertiesMap.TStatType.SERIES:    return Keywords.w_NONE;
             default:                                return null;
             }
             
         }
 
-        public static bool TryParse(string text, out PropertiesMap.TstatType result) {
-            if (text.Match(Keywords.w_NONE)) result = PropertiesMap.TstatType.SERIES;
-            else if (text.Match(Keywords.w_NO)) result = PropertiesMap.TstatType.SERIES;
-            else if (text.Match(Keywords.w_AVG)) result = PropertiesMap.TstatType.AVG;
-            else if (text.Match(Keywords.w_MIN)) result = PropertiesMap.TstatType.MIN;
-            else if (text.Match(Keywords.w_MAX)) result = PropertiesMap.TstatType.MAX;
-            else if (text.Match(Keywords.w_RANGE)) result = PropertiesMap.TstatType.RANGE;
+        public static bool TryParse(string text, out PropertiesMap.TStatType result) {
+            if (text.Match(Keywords.w_NONE)) result = PropertiesMap.TStatType.SERIES;
+            else if (text.Match(Keywords.w_NO)) result = PropertiesMap.TStatType.SERIES;
+            else if (text.Match(Keywords.w_AVG)) result = PropertiesMap.TStatType.AVG;
+            else if (text.Match(Keywords.w_MIN)) result = PropertiesMap.TStatType.MIN;
+            else if (text.Match(Keywords.w_MAX)) result = PropertiesMap.TStatType.MAX;
+            else if (text.Match(Keywords.w_RANGE)) result = PropertiesMap.TStatType.RANGE;
             else {
-                result = (PropertiesMap.TstatType)(-1);
+                result = (PropertiesMap.TStatType)(-1);
                 return false;
             }
 

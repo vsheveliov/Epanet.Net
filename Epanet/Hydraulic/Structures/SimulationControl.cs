@@ -28,16 +28,16 @@ using Epanet.Util;
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationControl {
-        private readonly Control _control;
-        private readonly SimulationLink _link;
-        private readonly SimulationNode _node;
+        private readonly Control control;
+        private readonly SimulationLink link;
+        private readonly SimulationNode node;
 
         public SimulationControl(List<SimulationNode> nodes, List<SimulationLink> links, Control @ref) {
             if (@ref.Node != null) {
                 string nid = @ref.Node.Id;
                 foreach (SimulationNode simulationNode  in  nodes) {
                     if (simulationNode.Id.Equals(nid, StringComparison.OrdinalIgnoreCase)) {
-                        this._node = simulationNode;
+                        this.node = simulationNode;
                         break;
                     }
                 }
@@ -47,28 +47,28 @@ namespace Epanet.Hydraulic.Structures {
                 string linkId = @ref.Link.Id;
                 foreach (SimulationLink simulationLink  in  links) {
                     if (simulationLink.Link.Id.Equals(linkId, StringComparison.OrdinalIgnoreCase)) {
-                        this._link = simulationLink;
+                        this.link = simulationLink;
                         break;
                     }
                 }
             }
 
-            this._control = @ref;
+            this.control = @ref;
         }
 
-        public SimulationLink Link { get { return this._link; } }
+        public SimulationLink Link { get { return this.link; } }
 
-        public SimulationNode Node { get { return this._node; } }
+        public SimulationNode Node { get { return this.node; } }
 
-        public long Time { get { return this._control.Time; } }
+        public long Time { get { return this.control.Time; } }
 
-        public double Grade { get { return this._control.Grade; } }
+        public double Grade { get { return this.control.Grade; } }
 
-        public double Setting { get { return this._control.Setting; } }
+        public double Setting { get { return this.control.Setting; } }
 
-        public Link.StatType Status { get { return this._control.Status; } }
+        public Link.StatType Status { get { return this.control.Status; } }
 
-        public Control.ControlType Type { get { return this._control.Type; } }
+        public Control.ControlType Type { get { return this.control.Type; } }
 
         ///<summary>Get the shortest time step to activate the control.</summary>
         private long GetRequiredTimeStep(FieldsMap fMap, PropertiesMap pMap, long htime, long tstep) {
@@ -81,8 +81,8 @@ namespace Epanet.Hydraulic.Structures {
                 if (!(this.Node is SimulationTank)) // Check if node is a tank
                     return tstep;
 
-                double h = this._node.SimHead; // Current tank grade
-                double q = this._node.SimDemand; // Flow into tank
+                double h = this.node.SimHead; // Current tank grade
+                double q = this.node.SimDemand; // Flow into tank
 
                 if (Math.Abs(q) <= Constants.QZERO)
                     return tstep;
@@ -105,7 +105,7 @@ namespace Epanet.Hydraulic.Structures {
 
             // Time-of-day control
             if (this.Type == Control.ControlType.TIMEOFDAY) {
-                long t1 = (htime + pMap.Tstart) % Constants.SECperDAY;
+                long t1 = (htime + pMap.TStart) % Constants.SECperDAY;
                 long t2 = this.Time;
                 if (t2 >= t1) t = t2 - t1;
                 else t = Constants.SECperDAY - t1 + t2;
@@ -181,7 +181,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 //  Link is time-of-day controlled
                 if (control.Type == Control.ControlType.TIMEOFDAY) {
-                    if ((htime + pMap.Tstart) % Constants.SECperDAY == control.Time)
+                    if ((htime + pMap.TStart) % Constants.SECperDAY == control.Time)
                         reset = true;
                 }
 
@@ -206,7 +206,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (s1 != s2 || k1 != k2) {
                         link.SimStatus = s2;
                         link.SimSetting = k2;
-                        if (pMap.Statflag != PropertiesMap.StatFlag.NO)
+                        if (pMap.Stat_Flag != PropertiesMap.StatFlag.NO)
                             LogControlAction(log, control, htime);
                         setsum++;
                     }
@@ -235,11 +235,11 @@ namespace Epanet.Hydraulic.Structures {
 
                     // Determine if control conditions are satisfied
                     if (control.Type == Control.ControlType.LOWLEVEL
-                        && control.Node.SimHead <= control.Grade + pMap.Htol)
+                        && control.Node.SimHead <= control.Grade + pMap.HTol)
                         reset = true;
 
                     if (control.Type == Control.ControlType.HILEVEL
-                        && control.Node.SimHead >= control.Grade - pMap.Htol)
+                        && control.Node.SimHead >= control.Grade - pMap.HTol)
                         reset = true;
                 }
 
@@ -271,7 +271,7 @@ namespace Epanet.Hydraulic.Structures {
                         link.SimStatus = control.Status;
                         if (link.Type > Network.Structures.Link.LinkType.PIPE)
                             link.SimSetting = control.Setting;
-                        if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
+                        if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
                             LogStatChange(log, fMap, link, s);
 
                         anychange = true;

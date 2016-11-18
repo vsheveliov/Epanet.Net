@@ -21,24 +21,24 @@ namespace Epanet.Network.Structures {
 
     public struct EnPoint {
         public static readonly EnPoint Invalid = new EnPoint(double.NaN, double.NaN);
-        private readonly double _x;
-        private readonly double _y;
+        private readonly double x;
+        private readonly double y;
 
         public EnPoint(double x, double y) {
 
-            this._x = x;
-            this._y = y;
+            this.x = x;
+            this.y = y;
         }
 
-        public bool IsInvalid { get { return double.IsNaN(this._x) || double.IsNaN(this._y); } }
+        public bool IsInvalid { get { return double.IsNaN(this.x) || double.IsNaN(this.y); } }
 
         ///<summary>Absciss coordinate.</summary>
-        public double X { get { return this._x; } }
+        public double X { get { return this.x; } }
 
         ///<summary>Ordinate coordinate.</summary>
-        public double Y { get { return this._y; } }
+        public double Y { get { return this.y; } }
 
-        public override string ToString() { return "Point{" + "x=" + this._x + ", y=" + this._y + '}'; }
+        public override string ToString() { return "Point{" + "x=" + this.x + ", y=" + this.y + '}'; }
     }
 
 }

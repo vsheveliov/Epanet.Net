@@ -70,7 +70,7 @@ namespace Epanet.MSX {
 
         public AwareStep GetStep(int htime) {
             try {
-                return this.dseek.getStep(htime);
+                return this.dseek.GetStep(htime);
             }
             catch (IOException e) {
                 Debug.Print(e.ToString());
@@ -107,7 +107,7 @@ namespace Epanet.MSX {
 
         public EnumTypes.FlowUnitsType ENgetflowunits() {
             try {
-                return (EnumTypes.FlowUnitsType)this.net.PropertiesMap.Flowflag;
+                return (EnumTypes.FlowUnitsType)this.net.PropertiesMap.FlowFlag;
             }
             catch (ENException e) {
                 Debug.Print(e.ToString());
@@ -149,7 +149,7 @@ namespace Epanet.MSX {
 
             case EN_ROUGHNESS:
                 if (link.Type <= Link.LinkType.PIPE) {
-                    v = this.net.PropertiesMap.Formflag == PropertiesMap.FormType.DW
+                    v = this.net.PropertiesMap.FormFlag == PropertiesMap.FormType.DW
                         ? fMap.RevertUnit(FieldsMap.FieldType.ELEV, link.Roughness * 1000.00)
                         : link.Roughness;
                 }
@@ -191,25 +191,25 @@ namespace Epanet.MSX {
                     value = this.net.PropertiesMap.Duration;
                     break;
                 case EN_HYDSTEP:
-                    value = this.net.PropertiesMap.Hstep;
+                    value = this.net.PropertiesMap.HStep;
                     break;
                 case EN_QUALSTEP:
-                    value = this.net.PropertiesMap.Qstep;
+                    value = this.net.PropertiesMap.QStep;
                     break;
                 case EN_PATTERNSTEP:
-                    value = this.net.PropertiesMap.Pstep;
+                    value = this.net.PropertiesMap.PStep;
                     break;
                 case EN_PATTERNSTART:
-                    value = this.net.PropertiesMap.Pstart;
+                    value = this.net.PropertiesMap.PStart;
                     break;
                 case EN_REPORTSTEP:
-                    value = this.net.PropertiesMap.Rstep;
+                    value = this.net.PropertiesMap.RStep;
                     break;
                 case EN_REPORTSTART:
-                    value = this.net.PropertiesMap.Rstart;
+                    value = this.net.PropertiesMap.RStart;
                     break;
                 case EN_STATISTIC:
-                    value = (long)this.net.PropertiesMap.Tstatflag;
+                    value = (long)this.net.PropertiesMap.TStatFlag;
                     break;
                 case EN_PERIODS:
                     throw new NotSupportedException();

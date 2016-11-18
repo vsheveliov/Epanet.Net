@@ -94,14 +94,14 @@ namespace Epanet.Log {
             // this.CanSplitData = true;
 
             string fullPath = Path.GetFullPath(path);
-            this._fileDir = Path.GetDirectoryName(fullPath);
-            this._fileBase = Path.GetFileNameWithoutExtension(fullPath);
-            this._fileExt = Path.GetExtension(fullPath);
+            this.fileDir = Path.GetDirectoryName(fullPath);
+            this.fileBase = Path.GetFileNameWithoutExtension(fullPath);
+            this.fileExt = Path.GetExtension(fullPath);
 
-            this._fileDecimals = 1;
+            this.fileDecimals = 1;
             int decimalBase = 10;
             while(decimalBase < this.MaxFileCount) {
-                ++this._fileDecimals;
+                ++this.fileDecimals;
                 decimalBase *= 10;
             }
 
@@ -121,10 +121,10 @@ namespace Epanet.Log {
             // Position file pointer to the last backup file
             for(int iFile = 0; iFile < this.MaxFileCount; ++iFile) {
                 if(File.Exists(this.GetBackupFileName(iFile)))
-                    this._nextFileIndex = iFile + 1;
+                    this.nextFileIndex = iFile + 1;
             }
-            if(this._nextFileIndex == this.MaxFileCount)
-                this._nextFileIndex = 0;
+            if(this.nextFileIndex == this.MaxFileCount)
+                this.nextFileIndex = 0;
             this.Seek(0, SeekOrigin.End);
             break;
             }
@@ -132,34 +132,34 @@ namespace Epanet.Log {
 
         private void BackupAndResetStream() {
             this.Flush();
-            File.Copy(this.Name, this.GetBackupFileName(this._nextFileIndex), true);
+            File.Copy(this.Name, this.GetBackupFileName(this.nextFileIndex), true);
             this.SetLength(0);
 
-            ++this._nextFileIndex;
-            if(this._nextFileIndex >= this.MaxFileCount)
-                this._nextFileIndex = 0;
+            ++this.nextFileIndex;
+            if(this.nextFileIndex >= this.MaxFileCount)
+                this.nextFileIndex = 0;
         }
 
         private string GetBackupFileName(int index) {
             StringBuilder format = new StringBuilder();
-            format.AppendFormat("D{0}", this._fileDecimals);
+            format.AppendFormat("D{0}", this.fileDecimals);
             StringBuilder sb = new StringBuilder();
-            if(this._fileExt.Length > 0)
-                sb.AppendFormat("{0}{1}{2}", this._fileBase, index.ToString(format.ToString()), this._fileExt);
+            if(this.fileExt.Length > 0)
+                sb.AppendFormat("{0}{1}{2}", this.fileBase, index.ToString(format.ToString()), this.fileExt);
             else
-                sb.AppendFormat("{0}{1}", this._fileBase, index.ToString(format.ToString()));
-            return Path.Combine(this._fileDir, sb.ToString());
+                sb.AppendFormat("{0}{1}", this.fileBase, index.ToString(format.ToString()));
+            return Path.Combine(this.fileDir, sb.ToString());
         }
 
         private static FileMode BaseFileMode(FileMode mode) {
             return mode == FileMode.Append ? FileMode.OpenOrCreate : mode;
         }
 
-        private string _fileDir;
-        private string _fileBase;
-        private string _fileExt;
-        private int _fileDecimals;
-        private int _nextFileIndex;
+        private string fileDir;
+        private string fileBase;
+        private string fileExt;
+        private int fileDecimals;
+        private int nextFileIndex;
 
     }
 }

@@ -62,7 +62,7 @@ namespace Epanet.Network {
         }
 
         /// <summary>Hydraulics solution option.</summary>
-        public enum Hydtype {
+        public enum HydType {
             /// <summary>Use from previous run.</summary>
             USE,
             /// <summary>Save after current run.</summary>
@@ -108,7 +108,7 @@ namespace Epanet.Network {
         }
 
         /// <summary>Time series statistics.</summary>
-        public enum TstatType {
+        public enum TStatType {
             /// <summary>none</summary>
             SERIES,
             /// <summary>time-averages</summary>
@@ -208,17 +208,17 @@ namespace Epanet.Network {
 
         #endregion
         
-        private readonly Dictionary<string, object> _values;
+        private readonly Dictionary<string, object> values;
         
         public PropertiesMap() {
-            this._values = new Dictionary<string, object>(70, System.StringComparer.OrdinalIgnoreCase);
+            this.values = new Dictionary<string, object>(70, System.StringComparer.OrdinalIgnoreCase);
             this.LoadDefaults();
         }
 
         ///<summary>Get objects names in this map.</summary>
         /// <param name="excludeEpanet">Exclude Epanet objects.</param>
         public List<string> GetObjectsNames(bool excludeEpanet) {
-            List<string> allObjs = new List<string>(this._values.Keys);
+            List<string> allObjs = new List<string>(this.values.Keys);
 
             if(excludeEpanet) {
                 foreach(var s in EpanetObjectsNames) {
@@ -234,414 +234,414 @@ namespace Epanet.Network {
         #region properties accessors/mutators
 
         public string AltReport {
-            get { return (string)this._values[ALTREPORT]; }
-            set { this._values[ALTREPORT] = value; }
+            get { return (string)this.values[ALTREPORT]; }
+            set { this.values[ALTREPORT] = value; }
         }
 
         /// <summary>Bulk flow reaction order.</summary>
         public double BulkOrder {
-            get { return (double)this._values[BULKORDER]; }
-            set { this._values[BULKORDER] = value; }
+            get { return (double)this.values[BULKORDER]; }
+            set { this.values[BULKORDER] = value; }
         }
 
         /// <summary>Hydraulics solver parameter.</summary>
         public int CheckFreq {
-            get { return (int)this._values[CHECK_FREQ]; } 
-            set { this._values[CHECK_FREQ] = value; }
+            get { return (int)this.values[CHECK_FREQ]; } 
+            set { this.values[CHECK_FREQ] = value; }
         }
 
         /// <summary>Name of chemical.</summary>
         public string ChemName {
-            get { return (string)this._values[CHEM_NAME]; }
-            set { this._values[CHEM_NAME] = value; }
+            get { return (string)this.values[CHEM_NAME]; }
+            set { this.values[CHEM_NAME] = value; }
         }
 
         /// <summary>Units of chemical.</summary>
         public string ChemUnits {
-            get { return (string)this._values[CHEM_UNITS]; } 
-            set { this._values[CHEM_UNITS] = value; }
+            get { return (string)this.values[CHEM_UNITS]; } 
+            set { this.values[CHEM_UNITS] = value; }
         }
 
         /// <summary>Limiting potential quality.</summary>
-        public double Climit {
-            get { return (double)this._values[CLIMIT]; } 
-            set { this._values[CLIMIT] = value; }
+        public double CLimit {
+            get { return (double)this.values[CLIMIT]; } 
+            set { this.values[CLIMIT] = value; }
         }
 
         /// <summary>Water quality tolerance.</summary>
         public double Ctol {
-            get { return (double)this._values[CTOL]; } 
-            set { this._values[CTOL] = value; }
+            get { return (double)this.values[CTOL]; } 
+            set { this.values[CTOL] = value; }
         }
 
         /// <summary>Solution damping threshold.</summary>
         public double DampLimit {
-            get { return (double)this._values[DAMP_LIMIT]; } 
-            set { this._values[DAMP_LIMIT] = value; }
+            get { return (double)this.values[DAMP_LIMIT]; } 
+            set { this.values[DAMP_LIMIT] = value; }
         }
 
         /// <summary>Energy demand charge/kw/day.</summary>
-        public double Dcost {
-            get { return (double)this._values[DCOST]; } 
-            set { this._values[DCOST] = value; }
+        public double DCost {
+            get { return (double)this.values[DCOST]; } 
+            set { this.values[DCOST] = value; }
         }
 
         /// <summary>Default demand pattern ID.</summary>
         public string DefPatId {
-            get { return (string)this._values[DEF_PAT_ID]; } 
-            set { this._values[DEF_PAT_ID] = value; }
+            get { return (string)this.values[DEF_PAT_ID]; } 
+            set { this.values[DEF_PAT_ID] = value; }
         }
 
         /// <summary>Diffusivity (sq ft/sec).</summary>
         public double Diffus {
-            get { return (double)this._values[DIFFUS]; } 
-            set { this._values[DIFFUS] = value; }
+            get { return (double)this.values[DIFFUS]; } 
+            set { this.values[DIFFUS] = value; }
         }
 
         /// <summary>Demand multiplier.</summary>
-        public double Dmult {
-            get { return (double)this._values[DMULT]; }
-            set { this._values[DMULT] = value; }
+        public double DMult {
+            get { return (double)this.values[DMULT]; }
+            set { this.values[DMULT] = value; }
         }
 
         /// <summary>Duration of simulation (sec).</summary>
         public long Duration {
-            get { return (long)this._values[DUR]; } 
-            set { this._values[DUR] = value; }
+            get { return (long)this.values[DUR]; } 
+            set { this.values[DUR] = value; }
         }
 
         /// <summary>Base energy cost per kwh.</summary>
-        public double Ecost {
-            get { return (double)this._values[ECOST]; } 
-            set { this._values[ECOST] = value; }
+        public double ECost {
+            get { return (double)this.values[ECOST]; } 
+            set { this.values[ECOST] = value; }
         }
 
         /// <summary>Peak energy usage.</summary>
-        public double Emax {
-            get { return (double)this._values[EMAX]; } 
-            set { this._values[EMAX] = value; }
+        public double EMax {
+            get { return (double)this.values[EMAX]; } 
+            set { this.values[EMAX] = value; }
         }
 
         /// <summary>Energy report flag.</summary>
-        public bool Energyflag {
-            get { return (bool)this._values[ENERGYFLAG]; } 
-            set { this._values[ENERGYFLAG] = value; }
+        public bool EnergyFlag {
+            get { return (bool)this.values[ENERGYFLAG]; } 
+            set { this.values[ENERGYFLAG] = value; }
         }
 
         /// <summary>Energy cost time pattern.</summary>
-        public string EpatId {
-            get { return (string)this._values[EPAT_ID]; }
-            set { this._values[EPAT_ID] = value; }
+        public string EPatId {
+            get { return (string)this.values[EPAT_ID]; }
+            set { this.values[EPAT_ID] = value; }
         }
 
         /// <summary>Global pump efficiency.</summary>
-        public double Epump {
-            get { return (double)this._values[EPUMP]; } 
-            set { this._values[EPUMP] = value; }
+        public double EPump {
+            get { return (double)this.values[EPUMP]; } 
+            set { this.values[EPUMP] = value; }
         }
 
         /// <summary>Extra hydraulic trials.</summary>
         public int ExtraIter {
-            get { return (int)this._values[EXTRA_ITER]; }
-            set { this._values[EXTRA_ITER] = value; }
+            get { return (int)this.values[EXTRA_ITER]; }
+            set { this.values[EXTRA_ITER] = value; }
         }
 
         /// <summary>Flow units flag.</summary>
-        public FlowUnitsType Flowflag {
-            get { return (FlowUnitsType)this._values[FLOWFLAG]; }
-            set { this._values[FLOWFLAG] = value; }
+        public FlowUnitsType FlowFlag {
+            get { return (FlowUnitsType)this.values[FLOWFLAG]; }
+            set { this.values[FLOWFLAG] = value; }
         }
 
         /// <summary>Hydraulic formula flag.</summary>
-        public FormType Formflag {
-            get { return (FormType)this._values[FORMFLAG]; } 
-            set { this._values[FORMFLAG] = value; }
+        public FormType FormFlag {
+            get { return (FormType)this.values[FORMFLAG]; } 
+            set { this.values[FORMFLAG] = value; }
         }
 
         /// <summary>Hydraulics solution accuracy.</summary>
-        public double Hacc {
-            get { return (double)this._values[HACC]; } 
-            set { this._values[HACC] = value; }
+        public double HAcc {
+            get { return (double)this.values[HACC]; } 
+            set { this.values[HACC] = value; }
         }
 
         /// <summary>Exponent in headloss formula.</summary>
-        public double Hexp {
-            get { return (double)this._values[HEXP]; }
-            set { this._values[HEXP] = value; }
+        public double HExp {
+            get { return (double)this.values[HEXP]; }
+            set { this.values[HEXP] = value; }
         }
 
         /// <summary>Nominal hyd. time step (sec).</summary>
-        public long Hstep {
-            get { return (long)this._values[HSTEP]; } 
-            set { this._values[HSTEP] = value; }
+        public long HStep {
+            get { return (long)this.values[HSTEP]; } 
+            set { this.values[HSTEP] = value; }
         }
 
         /// <summary>Hydraulic head tolerance.</summary>
-        public double Htol {
-            get { return (double)this._values[HTOL]; }
-            set { this._values[HTOL] = value; }
+        public double HTol {
+            get { return (double)this.values[HTOL]; }
+            set { this.values[HTOL] = value; }
         }
 
         /// <summary>Hydraulics flag.</summary>
-        public Hydtype Hydflag {
-            get { return (Hydtype)this._values[HYDFLAG]; } 
-            set { this._values[HYDFLAG] = value; }
+        public HydType HydFlag {
+            get { return (HydType)this.values[HYDFLAG]; } 
+            set { this.values[HYDFLAG] = value; }
         }
 
         /// <summary>Hydraulics file name.</summary>
         public string HydFname {
-            get { return (string)this._values[HYD_FNAME]; } 
-            set { this._values[HYD_FNAME] = value; }
+            get { return (string)this.values[HYD_FNAME]; } 
+            set { this.values[HYD_FNAME] = value; }
         }
 
         /// <summary>Global bulk reaction coeff.</summary>
-        public double Kbulk {
-            get { return (double)this._values[KBULK]; }
-            set { this._values[KBULK] = value; }
+        public double KBulk {
+            get { return (double)this.values[KBULK]; }
+            set { this.values[KBULK] = value; }
         }
 
         /// <summary>Global wall reaction coeff.</summary>
-        public double Kwall {
-            get { return (double)this._values[KWALL]; }
-            set { this._values[KWALL] = value; }
+        public double KWall {
+            get { return (double)this.values[KWALL]; }
+            set { this.values[KWALL] = value; }
         }
 
         /// <summary>Link report flag.</summary>
-        public ReportFlag Linkflag {
-            get { return (ReportFlag)this._values[LINKFLAG]; } 
-            set { this._values[LINKFLAG] = value; }
+        public ReportFlag LinkFlag {
+            get { return (ReportFlag)this.values[LINKFLAG]; } 
+            set { this.values[LINKFLAG] = value; }
         }
 
         /// <summary>Map file name.</summary>
         public string MapFname {
-            get { return (string)this._values[MAP_FNAME]; }
-            set { this._values[MAP_FNAME] = value; }
+            get { return (string)this.values[MAP_FNAME]; }
+            set { this.values[MAP_FNAME] = value; }
         }
 
         /// <summary>Hydraulics solver parameter.</summary>
         public int MaxCheck {
-            get { return (int)this._values[MAXCHECK]; }
-            set { this._values[MAXCHECK] = value; }
+            get { return (int)this.values[MAXCHECK]; }
+            set { this.values[MAXCHECK] = value; }
         }
 
         /// <summary>Max. hydraulic trials.</summary>
         public int MaxIter {
-            get { return (int)this._values[MAXITER]; }
-            set { this._values[MAXITER] = value; }
+            get { return (int)this.values[MAXITER]; }
+            set { this.values[MAXITER] = value; }
         }
 
         /// <summary>Error/warning message flag.</summary>
-        public bool Messageflag {
-            get { return (bool)this._values[MESSAGEFLAG]; } 
-            set { this._values[MESSAGEFLAG] = value; }
+        public bool MessageFlag {
+            get { return (bool)this.values[MESSAGEFLAG]; } 
+            set { this.values[MESSAGEFLAG] = value; }
         }
 
         /// <summary>Node report flag.</summary>
-        public ReportFlag Nodeflag {
-            get { return (ReportFlag)this._values[NODEFLAG]; } 
-            set { this._values[NODEFLAG] = value; }
+        public ReportFlag NodeFlag {
+            get { return (ReportFlag)this.values[NODEFLAG]; } 
+            set { this.values[NODEFLAG] = value; }
         }
 
         /// <summary>Lines/page in output report.</summary>
         public int PageSize {
-            get { return (int)this._values[PAGE_SIZE]; } 
-            set { this._values[PAGE_SIZE] = value; }
+            get { return (int)this.values[PAGE_SIZE]; } 
+            set { this.values[PAGE_SIZE] = value; }
         }
 
         /// <summary>Pressure units flag.</summary>
-        public PressUnitsType Pressflag {
-            get { return (PressUnitsType)this._values[PRESSFLAG]; }
-            set { this._values[PRESSFLAG] = value; }
+        public PressUnitsType PressFlag {
+            get { return (PressUnitsType)this.values[PRESSFLAG]; }
+            set { this.values[PRESSFLAG] = value; }
         }
 
         /// <summary>Starting pattern time (sec).</summary>
-        public long Pstart {
-            get { return (long)this._values[PSTART]; }
-            set { this._values[PSTART] = value; }
+        public long PStart {
+            get { return (long)this.values[PSTART]; }
+            set { this.values[PSTART] = value; }
         }
 
         /// <summary>Time pattern time step (sec).</summary>
-        public long Pstep {
-            get { return (long)this._values[PSTEP]; } 
-            set { this._values[PSTEP] = value; }
+        public long PStep {
+            get { return (long)this.values[PSTEP]; } 
+            set { this.values[PSTEP] = value; }
         }
 
         /// <summary>Exponent in orifice formula.</summary>
-        public double Qexp {
-            get { return (double)this._values[QEXP]; } 
-            set { this._values[QEXP] = value; }
+        public double QExp {
+            get { return (double)this.values[QEXP]; } 
+            set { this.values[QEXP] = value; }
         }
 
         /// <summary>Quality time step (sec).</summary>
-        public long Qstep {
-            get { return (long)this._values[QSTEP]; } 
-            set { this._values[QSTEP] = value; }
+        public long QStep {
+            get { return (long)this.values[QSTEP]; } 
+            set { this.values[QSTEP] = value; }
         }
 
         /// <summary>Flow rate tolerance.</summary>
-        public double Qtol {
-            get { return (double)this._values[QTOL]; } 
-            set { this._values[QTOL] = value; }
+        public double QTol {
+            get { return (double)this.values[QTOL]; } 
+            set { this.values[QTOL] = value; }
         }
 
         /// <summary>Water quality flag.</summary>
-        public QualType Qualflag {
-            get { return (QualType)this._values[QUALFLAG]; } 
-            set { this._values[QUALFLAG] = value; }
+        public QualType QualFlag {
+            get { return (QualType)this.values[QUALFLAG]; } 
+            set { this.values[QUALFLAG] = value; }
         }
 
         /// <summary>Roughness-reaction factor.</summary>
-        public double Rfactor {
-            get { return (double)this._values[RFACTOR]; } 
-            set { this._values[RFACTOR] = value; }
+        public double RFactor {
+            get { return (double)this.values[RFACTOR]; } 
+            set { this.values[RFACTOR] = value; }
         }
 
         /// <summary>Flow resistance tolerance.</summary>
         public double RQtol {
-            get { return (double)this._values[RQTOL]; }
-            set { this._values[RQTOL] = value; }
+            get { return (double)this.values[RQTOL]; }
+            set { this.values[RQTOL] = value; }
         }
 
         /// <summary>Time when reporting starts.</summary>
-        public long Rstart {
-            get { return (long)this._values[RSTART]; }
-            set { this._values[RSTART] = value; }
+        public long RStart {
+            get { return (long)this.values[RSTART]; }
+            set { this.values[RSTART] = value; }
         }
 
         /// <summary>Reporting time step (sec).</summary>
-        public long Rstep {
-            get { return (long)this._values[RSTEP]; } 
-            set { this._values[RSTEP] = value; }
+        public long RStep {
+            get { return (long)this.values[RSTEP]; } 
+            set { this.values[RSTEP] = value; }
         }
 
         /// <summary>Rule evaluation time step.</summary>
-        public long Rulestep {
-            get { return (long)this._values[RULESTEP]; }
-            set { this._values[RULESTEP] = value; }
+        public long RuleStep {
+            get { return (long)this.values[RULESTEP]; }
+            set { this.values[RULESTEP] = value; }
         }
 
         /// <summary>Specific gravity.</summary>
         public double SpGrav {
-            get { return (double)this._values[SPGRAV]; } 
-            set { this._values[SPGRAV] = value; }
+            get { return (double)this.values[SPGRAV]; } 
+            set { this.values[SPGRAV] = value; }
         }
 
         /// <summary>Status report flag.</summary>
-        public StatFlag Statflag {
-            get { return (StatFlag)this._values[STATFLAG]; } 
-            set { this._values[STATFLAG] = value; }
+        public StatFlag Stat_Flag {
+            get { return (StatFlag)this.values[STATFLAG]; } 
+            set { this.values[STATFLAG] = value; }
         }
 
         /// <summary>Report summary flag.</summary>
-        public bool Summaryflag {
-            get { return (bool)this._values[SUMMARYFLAG]; } 
-            set { this._values[SUMMARYFLAG] = value; }
+        public bool SummaryFlag {
+            get { return (bool)this.values[SUMMARYFLAG]; } 
+            set { this.values[SUMMARYFLAG] = value; }
         }
 
         /// <summary>Tank reaction order.</summary>
         public double TankOrder {
-            get { return (double)this._values[TANKORDER]; }
-            set { this._values[TANKORDER] = value; }
+            get { return (double)this.values[TANKORDER]; }
+            set { this.values[TANKORDER] = value; }
         }
 
         /// <summary>Source node for flow tracing.</summary>
         public string TraceNode {
-            get { return (string)this._values[TRACE_NODE]; } 
-            set { this._values[TRACE_NODE] = value; }
+            get { return (string)this.values[TRACE_NODE]; } 
+            set { this.values[TRACE_NODE] = value; }
         }
 
         /// <summary>Starting time of day (sec).</summary>
-        public long Tstart {
-            get { return (long)this._values[TSTART]; } 
-            set { this._values[TSTART] = value; }
+        public long TStart {
+            get { return (long)this.values[TSTART]; } 
+            set { this.values[TSTART] = value; }
         }
 
         /// <summary>Time statistics flag.</summary>
-        public TstatType Tstatflag {
-            get { return (TstatType)this._values[TSTATFLAG]; }
-            set { this._values[TSTATFLAG] = value; }
+        public TStatType TStatFlag {
+            get { return (TStatType)this.values[TSTATFLAG]; }
+            set { this.values[TSTATFLAG] = value; }
         }
 
         /// <summary>Unit system flag.</summary>
-        public UnitsType Unitsflag {
-            get { return (UnitsType)this._values[UNITSFLAG]; }
-            set { this._values[UNITSFLAG] = value; }
+        public UnitsType UnitsFlag {
+            get { return (UnitsType)this.values[UNITSFLAG]; }
+            set { this.values[UNITSFLAG] = value; }
         }
 
         /// <summary>Kin. viscosity (sq ft/sec).</summary>
         public double Viscos {
-            get { return (double)this._values[VISCOS]; } 
-            set { this._values[VISCOS] = value; }
+            get { return (double)this.values[VISCOS]; } 
+            set { this.values[VISCOS] = value; }
         }
 
         /// <summary>Pipe wall reaction order.</summary>
         public double WallOrder {
-            get { return (double)this._values[WALLORDER]; }
-            set { this._values[WALLORDER] = value; }
+            get { return (double)this.values[WALLORDER]; }
+            set { this.values[WALLORDER] = value; }
         }
 
 #endregion
 
         ///<summary>Init properties with default value.</summary>
         private void LoadDefaults() {
-            this._values[BULKORDER] = 1.0d; // 1st-order bulk reaction rate
-            this._values[TANKORDER] = 1.0d; // 1st-order tank reaction rate
-            this._values[WALLORDER] = 1.0d; // 1st-order wall reaction rate
-            this._values[RFACTOR] = 1.0d; // No roughness-reaction factor
-            this._values[CLIMIT] = 0.0d; // No limiting potential quality
-            this._values[KBULK] = 0.0d; // No global bulk reaction
-            this._values[KWALL] = 0.0d; // No global wall reaction
-            this._values[DCOST] = 0.0d; // Zero energy demand charge
-            this._values[ECOST] = 0.0d; // Zero unit energy cost
-            this._values[EPAT_ID] = ""; // No energy price pattern
-            this._values[EPUMP] = Constants.EPUMP; // Default pump efficiency
-            this._values[PAGE_SIZE] = Constants.PAGESIZE;
-            this._values[STATFLAG] = StatFlag.NO;
-            this._values[SUMMARYFLAG] = true;
-            this._values[MESSAGEFLAG] = true;
-            this._values[ENERGYFLAG] = false;
-            this._values[NODEFLAG] = ReportFlag.FALSE;
-            this._values[LINKFLAG] = ReportFlag.FALSE;
-            this._values[TSTATFLAG] = TstatType.SERIES; // Generate time series output
-            this._values[HSTEP] = 3600L; // 1 hr hydraulic time step
-            this._values[DUR] = 0L; // 0 sec duration (steady state)
-            this._values[QSTEP] = 0L; // No pre-set quality time step
-            this._values[RULESTEP] = 0L; // No pre-set rule time step
-            this._values[PSTEP] = 3600L; // 1 hr time pattern period
-            this._values[PSTART] = 0L; // Starting pattern period
-            this._values[RSTEP] = 3600L; // 1 hr reporting period
-            this._values[RSTART] = 0L; // Start reporting at time 0
-            this._values[TSTART] = 0L; // Starting time of day
-            this._values[FLOWFLAG] = FlowUnitsType.GPM; // Flow units are gpm
-            this._values[PRESSFLAG] = PressUnitsType.PSI; // Pressure units are psi
-            this._values[FORMFLAG] = FormType.HW; // Use Hazen-Williams formula
-            this._values[HYDFLAG] = Hydtype.SCRATCH; // No external hydraulics file
-            this._values[QUALFLAG] = QualType.NONE; // No quality simulation
-            this._values[UNITSFLAG] = UnitsType.US; // US unit system
-            this._values[HYD_FNAME] = "";
-            this._values[CHEM_NAME] = Keywords.t_CHEMICAL;
-            this._values[CHEM_UNITS] = Keywords.u_MGperL; // mg/L
-            this._values[DEF_PAT_ID] = Constants.DEFPATID; // Default demand pattern index
-            this._values[MAP_FNAME] = "";
-            this._values[ALTREPORT] = "";
-            this._values[TRACE_NODE] = ""; // No source tracing
-            this._values[EXTRA_ITER] = -1; // Stop if network unbalanced
-            this._values[CTOL] = Constants.MISSING; // No pre-set quality tolerance
-            this._values[DIFFUS] = Constants.MISSING; // Temporary diffusivity
-            this._values[DAMP_LIMIT] = Constants.DAMPLIMIT;
-            this._values[VISCOS] = Constants.MISSING; // Temporary viscosity
-            this._values[SPGRAV] = Constants.SPGRAV; // Default specific gravity
-            this._values[MAXITER] = Constants.MAXITER; // Default max. hydraulic trials
-            this._values[HACC] = Constants.HACC; // Default hydraulic accuracy
-            this._values[HTOL] = Constants.HTOL; // Default head tolerance
-            this._values[QTOL] = Constants.QTOL; // Default flow tolerance
-            this._values[RQTOL] = Constants.RQTOL; // Default hydraulics parameters
-            this._values[HEXP] = 0.0d;
-            this._values[QEXP] = 2.0d; // Flow exponent for emitters
-            this._values[CHECK_FREQ] = Constants.CHECKFREQ;
-            this._values[MAXCHECK] = Constants.MAXCHECK;
-            this._values[DMULT] = 1.0d; // Demand multiplier
-            this._values[EMAX] = 0.0d; // Zero peak energy usage
+            this.values[BULKORDER] = 1.0d; // 1st-order bulk reaction rate
+            this.values[TANKORDER] = 1.0d; // 1st-order tank reaction rate
+            this.values[WALLORDER] = 1.0d; // 1st-order wall reaction rate
+            this.values[RFACTOR] = 1.0d; // No roughness-reaction factor
+            this.values[CLIMIT] = 0.0d; // No limiting potential quality
+            this.values[KBULK] = 0.0d; // No global bulk reaction
+            this.values[KWALL] = 0.0d; // No global wall reaction
+            this.values[DCOST] = 0.0d; // Zero energy demand charge
+            this.values[ECOST] = 0.0d; // Zero unit energy cost
+            this.values[EPAT_ID] = ""; // No energy price pattern
+            this.values[EPUMP] = Constants.EPUMP; // Default pump efficiency
+            this.values[PAGE_SIZE] = Constants.PAGESIZE;
+            this.values[STATFLAG] = StatFlag.NO;
+            this.values[SUMMARYFLAG] = true;
+            this.values[MESSAGEFLAG] = true;
+            this.values[ENERGYFLAG] = false;
+            this.values[NODEFLAG] = ReportFlag.FALSE;
+            this.values[LINKFLAG] = ReportFlag.FALSE;
+            this.values[TSTATFLAG] = TStatType.SERIES; // Generate time series output
+            this.values[HSTEP] = 3600L; // 1 hr hydraulic time step
+            this.values[DUR] = 0L; // 0 sec duration (steady state)
+            this.values[QSTEP] = 0L; // No pre-set quality time step
+            this.values[RULESTEP] = 0L; // No pre-set rule time step
+            this.values[PSTEP] = 3600L; // 1 hr time pattern period
+            this.values[PSTART] = 0L; // Starting pattern period
+            this.values[RSTEP] = 3600L; // 1 hr reporting period
+            this.values[RSTART] = 0L; // Start reporting at time 0
+            this.values[TSTART] = 0L; // Starting time of day
+            this.values[FLOWFLAG] = FlowUnitsType.GPM; // Flow units are gpm
+            this.values[PRESSFLAG] = PressUnitsType.PSI; // Pressure units are psi
+            this.values[FORMFLAG] = FormType.HW; // Use Hazen-Williams formula
+            this.values[HYDFLAG] = HydType.SCRATCH; // No external hydraulics file
+            this.values[QUALFLAG] = QualType.NONE; // No quality simulation
+            this.values[UNITSFLAG] = UnitsType.US; // US unit system
+            this.values[HYD_FNAME] = "";
+            this.values[CHEM_NAME] = Keywords.t_CHEMICAL;
+            this.values[CHEM_UNITS] = Keywords.u_MGperL; // mg/L
+            this.values[DEF_PAT_ID] = Constants.DEFPATID; // Default demand pattern index
+            this.values[MAP_FNAME] = "";
+            this.values[ALTREPORT] = "";
+            this.values[TRACE_NODE] = ""; // No source tracing
+            this.values[EXTRA_ITER] = -1; // Stop if network unbalanced
+            this.values[CTOL] = Constants.MISSING; // No pre-set quality tolerance
+            this.values[DIFFUS] = Constants.MISSING; // Temporary diffusivity
+            this.values[DAMP_LIMIT] = Constants.DAMPLIMIT;
+            this.values[VISCOS] = Constants.MISSING; // Temporary viscosity
+            this.values[SPGRAV] = Constants.SPGRAV; // Default specific gravity
+            this.values[MAXITER] = Constants.MAXITER; // Default max. hydraulic trials
+            this.values[HACC] = Constants.HACC; // Default hydraulic accuracy
+            this.values[HTOL] = Constants.HTOL; // Default head tolerance
+            this.values[QTOL] = Constants.QTOL; // Default flow tolerance
+            this.values[RQTOL] = Constants.RQTOL; // Default hydraulics parameters
+            this.values[HEXP] = 0.0d;
+            this.values[QEXP] = 2.0d; // Flow exponent for emitters
+            this.values[CHECK_FREQ] = Constants.CHECKFREQ;
+            this.values[MAXCHECK] = Constants.MAXCHECK;
+            this.values[DMULT] = 1.0d; // Demand multiplier
+            this.values[EMAX] = 0.0d; // Zero peak energy usage
 
 
         }
@@ -655,9 +655,9 @@ namespace Epanet.Network {
         public object this[string name] {
             get {
                 object value;
-                return this._values.TryGetValue(name, out value) ? value : null;
+                return this.values.TryGetValue(name, out value) ? value : null;
             }
-            set { this._values[name] = value; }
+            set { this.values[name] = value; }
         }
 
 

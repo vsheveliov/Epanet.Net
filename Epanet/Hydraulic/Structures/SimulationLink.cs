@@ -29,8 +29,6 @@ namespace Epanet.Hydraulic.Structures {
 
 
     public class SimulationLink {
-
-
         protected readonly SimulationNode first;
         protected readonly SimulationNode second;
         protected readonly Link link;
@@ -108,7 +106,7 @@ namespace Epanet.Hydraulic.Structures {
             this.status = this.link.Status;
         }
 
-        #region Indexed link methods
+#region Indexed link methods
 
         public SimulationNode First { get { return this.first; } }
 
@@ -118,9 +116,9 @@ namespace Epanet.Hydraulic.Structures {
 
         public int Index { get { return this.index; } }
 
-        #endregion
+#endregion
 
-        #region Network link Getters
+#region Network link Getters
 
         public double[] C0 { get { return this.link.C0; } }
 
@@ -134,9 +132,9 @@ namespace Epanet.Hydraulic.Structures {
 
         public Link.LinkType Type { get { return this.link.Type; } }
 
-        #endregion
+#endregion
 
-        #region Simulation getters & setters
+#region Simulation getters & setters
 
         /// <summary>Epanet 'S[k]', link current status</summary>
         public Link.StatType SimStatus { get { return this.status; } set { this.status = value; } }
@@ -155,9 +153,9 @@ namespace Epanet.Hydraulic.Structures {
 
         public Link.StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
 
-        #endregion
+#endregion
 
-        // Simulation Methods
+#region Simulation Methods
 
         /// <summary>Sets link status to OPEN(true) or CLOSED(false).</summary>
         public void SetLinkStatus(bool value) {
@@ -230,7 +228,7 @@ namespace Epanet.Hydraulic.Structures {
         private void ComputeMatrixCoeff(
             FieldsMap fMap,
             PropertiesMap pMap,
-            PipeHeadModel hlModel,
+            PipeHeadModelCalculators.Compute hlModel,
             IList<Curve> curves,
             SparseMatrix smat,
             LSVariables ls) {
@@ -254,7 +252,7 @@ namespace Epanet.Hydraulic.Structures {
             case Link.LinkType.PSV:
                 // If valve status fixed then treat as pipe
                 // otherwise ignore the valve for now.
-                if (!((SimulationValve)this).computeValveCoeff(fMap, pMap, curves))
+                if (!((SimulationValve)this).ComputeValveCoeff(fMap, pMap, curves))
                     return;
                 break;
             default:
@@ -264,29 +262,29 @@ namespace Epanet.Hydraulic.Structures {
             int n1 = this.first.Index;
             int n2 = this.second.Index;
 
-            ls.addNodalInFlow(n1, -this.flow);
-            ls.addNodalInFlow(n2, +this.flow);
+            ls.AddNodalInFlow(n1, -this.flow);
+            ls.AddNodalInFlow(n2, +this.flow);
 
-            ls.addAij(smat.getNdx(this.Index), -this.invHeadLoss);
+            ls.AddAij(smat.GetNdx(this.Index), -this.invHeadLoss);
 
             if (!(this.first is SimulationTank)) {
-                ls.addAii(smat.getRow(n1), +this.invHeadLoss);
-                ls.addRHSCoeff(smat.getRow(n1), +this.flowCorrection);
+                ls.AddAii(smat.GetRow(n1), +this.invHeadLoss);
+                ls.AddRhsCoeff(smat.GetRow(n1), +this.flowCorrection);
             }
             else
-                ls.addRHSCoeff(smat.getRow(n2), +(this.invHeadLoss * this.first.SimHead));
+                ls.AddRhsCoeff(smat.GetRow(n2), +(this.invHeadLoss * this.first.SimHead));
 
             if (!(this.second is SimulationTank)) {
-                ls.addAii(smat.getRow(n2), +this.invHeadLoss);
-                ls.addRHSCoeff(smat.getRow(n2), -this.flowCorrection);
+                ls.AddAii(smat.GetRow(n2), +this.invHeadLoss);
+                ls.AddRhsCoeff(smat.GetRow(n2), -this.flowCorrection);
             }
             else
-                ls.addRHSCoeff(smat.getRow(n1), +(this.invHeadLoss * this.second.SimHead));
+                ls.AddRhsCoeff(smat.GetRow(n1), +(this.invHeadLoss * this.second.SimHead));
 
         }
 
-        // Computes P & Y coefficients for pipe k
-        private void ComputePipeCoeff(PropertiesMap pMap, PipeHeadModel hlModel) {
+        /// <summary>Computes P & Y coefficients for pipe k.</summary>
+        private void ComputePipeCoeff(PropertiesMap pMap, PipeHeadModelCalculators.Compute hlModel) {
             // For closed pipe use headloss formula: h = CBIG*q
             if (this.status <= Link.StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
@@ -294,13 +292,11 @@ namespace Epanet.Hydraulic.Structures {
                 return;
             }
 
-            PipeHeadModel.LinkCoeffs coeffs = hlModel.compute(pMap, this);
-            this.invHeadLoss = coeffs.InvHeadLoss;
-            this.flowCorrection = coeffs.FlowCorrection;
+            hlModel(pMap, this, out this.invHeadLoss, out this.flowCorrection);
         }
 
 
-        // Closes link flowing into full or out of empty tank
+        /// <summary>Closes link flowing into full or out of empty tank.</summary>
         private void TankStatus(PropertiesMap pMap) {
             double q = this.flow;
             SimulationNode n1 = this.First;
@@ -326,7 +322,7 @@ namespace Epanet.Hydraulic.Structures {
                 return;
 
             // If tank full, then prevent flow into it
-            if (tank.SimHead >= tank.Hmax - pMap.Htol) {
+            if (tank.SimHead >= tank.Hmax - pMap.HTol) {
                 //Case 1: Link is a pump discharging into tank
                 if (this.Type == Link.LinkType.PUMP) {
                     if (this.Second == n1)
@@ -338,7 +334,7 @@ namespace Epanet.Hydraulic.Structures {
             }
 
             // If tank empty, then prevent flow out of it
-            if (tank.SimHead <= tank.Hmin + pMap.Htol) {
+            if (tank.SimHead <= tank.Hmin + pMap.HTol) {
                 // Case 1: Link is a pump discharging from tank
                 if (this.Type == Link.LinkType.PUMP) {
                     if (this.First == n1)
@@ -352,16 +348,16 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a check valve.</summary>
         private static Link.StatType CvStatus(PropertiesMap pMap, Link.StatType s, double dh, double q) {
-            if (Math.Abs(dh) > pMap.Htol) {
-                if (dh < -pMap.Htol)
+            if (Math.Abs(dh) > pMap.HTol) {
+                if (dh < -pMap.HTol)
                     return (Link.StatType.CLOSED);
-                else if (q < -pMap.Qtol)
+                else if (q < -pMap.QTol)
                     return (Link.StatType.CLOSED);
                 else
                     return (Link.StatType.OPEN);
             }
             else {
-                if (q < -pMap.Qtol)
+                if (q < -pMap.QTol)
                     return (Link.StatType.CLOSED);
                 else
                     return (s);
@@ -386,14 +382,14 @@ namespace Epanet.Hydraulic.Structures {
                 this.status = ((SimulationPump)this).PumpStatus(pMap, -dh);
 
             if (this.Type == Link.LinkType.FCV && this.setting != Constants.MISSING)
-                this.status = ((SimulationValve)this).fcvStatus(pMap, tStatus);
+                this.status = ((SimulationValve)this).FcvStatus(pMap, tStatus);
 
             if (this.first is SimulationTank || this.second is SimulationTank)
                 this.TankStatus(pMap);
 
             if (tStatus != this.status) {
                 change = true;
-                if (pMap.Statflag == PropertiesMap.StatFlag.FULL)
+                if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
                     LogStatChange(fMap, log, this, tStatus, this.status);
             }
 
@@ -466,7 +462,7 @@ namespace Epanet.Hydraulic.Structures {
         public static void ComputeMatrixCoeffs(
             FieldsMap fMap,
             PropertiesMap pMap,
-            PipeHeadModel hlModel,
+            PipeHeadModelCalculators.Compute hlModel,
             List<SimulationLink> links,
             IList<Curve> curves,
             SparseMatrix smat,
@@ -476,6 +472,9 @@ namespace Epanet.Hydraulic.Structures {
                 link.ComputeMatrixCoeff(fMap, pMap, hlModel, curves, smat, ls);
             }
         }
+
+#endregion
+
     }
 
 }
