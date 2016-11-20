@@ -25,15 +25,15 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Init links flow resistance values.</summary>
         public void initResistance(PropertiesMap.FormType formflag, double hexp) {
-            double e, d, L;
             this.FlowResistance = Constants.CSMALL;
 
             switch (this.Type) {
             case LinkType.CV:
             case LinkType.PIPE:
-                e = this.Roughness;
-                d = this.Diameter;
-                L = this.Lenght;
+                double e = this.Roughness;
+                double d = this.Diameter;
+                double L = this.Lenght;
+
                 switch (formflag) {
                 case PropertiesMap.FormType.HW:
                     this.FlowResistance = 4.727 * L / Math.Pow(e, hexp) / Math.Pow(d, 4.871);

@@ -22,19 +22,6 @@ namespace Epanet.Network.Structures {
 
     ///<summary>2D graph used to map volume, pump, efficiency and head loss curves.</summary>
     public class Curve {
-
-        ///<summary>Computed curve coefficients.</summary>
-        public class Coeffs {
-            public readonly double h0; // head at zero flow (y-intercept)
-
-            public readonly double r; // dHead/dFlow (slope)
-
-            public Coeffs(double h0, double r) {
-                this.h0 = h0;
-                this.r = r;
-            }
-        }
-
         /// <summary>Type of curve</summary>
         public enum CurveType {
             /// <summary>volume curve</summary>
@@ -50,84 +37,70 @@ namespace Epanet.Network.Structures {
             H_CURVE = 3
         }
 
-        
+
         private readonly string id;
-        private readonly List<double> x = new List<double>();
-        private readonly List<double> y = new List<double>();
+        private readonly List<EnPoint> points = new List<EnPoint>();
 
         public Curve(string id) { this.id = id; }
 
         /// <summary>Computes intercept and slope of head v. flow curve at current flow.</summary>
         /// <param name="fMap"></param>
         /// <param name="q">Flow value.</param>
-        public Coeffs getCoeff(FieldsMap fMap, double q) {
-            double h0;
-            double r;
-            int k1, k2, npts;
-
+        /// <param name="h0">Head at zero flow (y-intercept).</param>
+        /// <param name="r">dHead/dFlow (slope).</param>
+        public void GetCoeff(FieldsMap fMap, double q, out double h0, out double r) {
             q *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
 
-            npts = this.Npts;
+            int npts = this.points.Count;
 
-            k2 = 0;
-            while (k2 < npts && this.x[k2] < q) k2++;
+            var k2 = 0;
+            while (k2 < npts && this.points[k2].X < q) k2++;
+
             if (k2 == 0) k2++;
             else if (k2 == npts) k2--;
-            k1 = k2 - 1;
+            
+            int k1 = k2 - 1;
 
-            r = (this.y[k2] - this.y[k1])/(this.x[k2] - this.x[k1]);
-            h0 = this.y[k1] - (r)*this.x[k1];
+            r = (this.points[k2].Y - this.points[k1].Y) / (this.points[k2].X - this.points[k1].X);
+            h0 = this.points[k1].Y - r * this.points[k1].X;
 
-            h0 = (h0)/fMap.GetUnits(FieldsMap.FieldType.HEAD);
-            r = (r)*fMap.GetUnits(FieldsMap.FieldType.FLOW)/fMap.GetUnits(FieldsMap.FieldType.HEAD);
+            h0 = h0 / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+            r = r * fMap.GetUnits(FieldsMap.FieldType.FLOW) / fMap.GetUnits(FieldsMap.FieldType.HEAD);
 
-            return new Coeffs(h0, r);
         }
 
         ///<summary>Curve name.</summary>
         public string Id { get { return this.id; } }
 
-        /// <summary>Get the number of points.</summary>
-        /// <value>
-        ///   If the abscissa points count differ from the ordinate it returns -1, otherwise,
-        ///   it returns the abscissa point count.
-        /// </value>
-        public int Npts { get { return this.x.Count != this.y.Count ? -1 : this.x.Count; } }
-
         ///<summary>Curve type.</summary>
         public CurveType Type { get; set; }
 
-        ///<summary>Curve abscissa values.</summary>
-        public List<double> X { get { return this.x; } }
+        public List<EnPoint> Points { get { return this.points; } }
 
-        ///<summary>Curve ordinate values.</summary>
-        public List<double> Y { get { return this.y; } }
-
-  
         /// <summary>Compute the linear interpolation of a 2d cartesian graph.</summary>
-        /// <param name="xx">The abscissa value.</param>
+        /// <param name="x">The abscissa value.</param>
         /// <returns>The interpolated value.</returns>
-        public double LinearInterpolator(double xx) {
-            var x = this.x;
-            var y = this.y;
-            var n = this.Npts;
+        public double this[double x] {
+            get {
+                var p = this.points;
+                int m = this.points.Count - 1;
 
-            int    k,m;
-            double  dx,dy;
+                if (x <= p[0].X) return p[0].Y;
 
-            m = n - 1;
-            if (xx <= x[0]) return y[0];
-            for (k=1; k<=m; k++)
-            {
-                if (x[k] >= xx)
-                {
-                    dx = x[k]-x[k-1];
-                    dy = y[k]-y[k-1];
-                    if (Math.Abs(dx) < Constants.TINY) return y[k];
-                    else return y[k] - (x[k]-xx)*dy/dx;
+                for (int i = 1; i <= m; i++) {
+                    if (p[i].X >= x) {
+                        double dx = p[i].X - p[i - 1].X;
+                        double dy = p[i].Y - p[i - 1].Y;
+                        if (Math.Abs(dx) < Constants.TINY) return p[i].Y;
+                        else return p[i].Y - (p[i].X - x) * dy / dx;
+                    }
                 }
+
+                return p[m].Y;
             }
-            return y[m];
         }
+
+        public void Add(double x, double y) { this.points.Add(new EnPoint(x, y)); }
     }
+
 }

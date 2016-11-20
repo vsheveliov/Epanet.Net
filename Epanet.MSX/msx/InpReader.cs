@@ -105,7 +105,7 @@ namespace Epanet.MSX {
                 if (tok.Length == 0 || tok[0].Length > 0 && tok[0][0] == ';') continue;
 
                 EnumTypes.SectionType sectTemp;
-                if (this.GetNewSection(tok[0], Constants.MsxSectWords, out sectTemp) != 0) {
+                if (GetNewSection(tok[0], Constants.MsxSectWords, out sectTemp) != 0) {
                     sect = sectTemp;
                     continue;
                 }
@@ -121,7 +121,7 @@ namespace Epanet.MSX {
 
 
                 if (errcode != 0) {
-                    this.WriteInpErrMsg(errcode, Constants.MsxSectWords[(int)sect], line, (int)lineCount);
+                    WriteInpErrMsg(errcode, Constants.MsxSectWords[(int)sect], line, (int)lineCount);
                     errsum++;
                     if (errsum >= MAXERRS) break;
                 }
@@ -259,14 +259,14 @@ namespace Epanet.MSX {
                 if (tok.Length == 0) continue;
 
                 InpErrorCodes inperr; // input error code
-                if (this.GetLineLength(line) >= Constants.MAXLINE) {
+                if (GetLineLength(line) >= Constants.MAXLINE) {
                     inperr = InpErrorCodes.ERR_LINE_LENGTH;
-                    this.WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
+                    WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
                     errsum++;
                 }
 
                 EnumTypes.SectionType sectTmp;
-                if (this.GetNewSection(tok[0], Constants.MsxSectWords, out sectTmp) != 0) {
+                if (GetNewSection(tok[0], Constants.MsxSectWords, out sectTmp) != 0) {
                     sect = sectTmp;
                     continue;
                 }
@@ -275,7 +275,7 @@ namespace Epanet.MSX {
 
                 if (inperr > 0) {
                     errsum++;
-                    this.WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
+                    WriteInpErrMsg(inperr, Constants.MsxSectWords[(int)sect], line, lineCount);
                 }
 
                 // Stop if reach end of file or max. error count
@@ -301,18 +301,14 @@ namespace Epanet.MSX {
         }
 
         /// <summary>Determines number of characters of data in a line of input.</summary>
-        private int GetLineLength(string line) {
+        private static int GetLineLength(string line) {
             int index = line.IndexOf(';');
 
-            if (index != -1) {
-                return line.Substring(0, index).Length;
-            }
-
-            return line.Length;
+            return index != -1 ? line.Substring(0, index).Length : line.Length;
         }
 
         /// <summary>Checks if a line begins a new section in the input file.</summary>
-        private int GetNewSection(string tok, string[] sectWords, out EnumTypes.SectionType sect) {
+        private static int GetNewSection(string tok, string[] sectWords, out EnumTypes.SectionType sect) {
             sect = (EnumTypes.SectionType)(-1);
             if (tok.Length == 0)
                 return 0;
@@ -993,7 +989,7 @@ namespace Epanet.MSX {
             return -1;
         }
 
-        private void WriteInpErrMsg(InpErrorCodes errcode, string sect, string line, int lineCount) {
+        private static void WriteInpErrMsg(InpErrorCodes errcode, string sect, string line, int lineCount) {
 
             if (errcode >= InpErrorCodes.INP_ERR_LAST || errcode <= InpErrorCodes.INP_ERR_FIRST) {
                 Console.Error.WriteLine("Error Code = {0}", (int)errcode);

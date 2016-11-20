@@ -43,15 +43,15 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Hmax { get { return ((Pump)this.link).Hmax; } }
 
-        public Curve Hcurve { get { return ((Pump)this.link).Hcurve; } }
+        public Curve Hcurve { get { return ((Pump)this.link).HCurve; } }
 
-        public Curve Ecurve { get { return ((Pump)this.link).Ecurve; } }
+        public Curve Ecurve { get { return ((Pump)this.link).ECurve; } }
 
-        public Pattern Upat { get { return ((Pump)this.link).Upat; } }
+        public Pattern Upat { get { return ((Pump)this.link).UPat; } }
 
-        public Pattern Epat { get { return ((Pump)this.link).Epat; } }
+        public Pattern Epat { get { return ((Pump)this.link).EPat; } }
 
-        public double Ecost { get { return ((Pump)this.link).Ecost; } }
+        public double Ecost { get { return ((Pump)this.link).ECost; } }
 
         // Simulation getters and setters
         public double[] Energy { get { return this.energy; } }
@@ -84,7 +84,7 @@ namespace Epanet.Hydraulic.Structures {
 
             if (this.Ecurve != null) {
                 Curve curve = this.Ecurve;
-                e = curve.LinearInterpolator(q * fMap.GetUnits(FieldsMap.FieldType.FLOW));
+                e = curve[q * fMap.GetUnits(FieldsMap.FieldType.FLOW)];
             }
 
             e = Math.Min(e, 100.0);
@@ -135,28 +135,26 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes P and Y coeffs. for pump in the link.</summary>
         public void ComputePumpCoeff(FieldsMap fMap, PropertiesMap pMap) {
-            double h0, q, r, n;
-
             if (this.status <= Link.StatType.CLOSED || this.setting == 0.0) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
                 this.flowCorrection = this.flow;
                 return;
             }
 
-            q = Math.Max(Math.Abs(this.flow), Constants.TINY);
+            double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
 
             if (this.Ptype == Pump.PumpType.CUSTOM) {
+                double hh0, rr;
+                this.Hcurve.GetCoeff(fMap, q / this.setting, out hh0, out rr);
 
-                Curve.Coeffs coeffs = this.Hcurve.getCoeff(fMap, q / this.setting);
-
-                this.H0 = -coeffs.h0;
-                this.FlowCoefficient = -coeffs.r;
+                this.H0 = -hh0;
+                this.FlowCoefficient = -rr;
                 this.N = 1.0;
             }
 
-            h0 = this.setting * this.setting * this.H0;
-            n = this.N;
-            r = this.FlowCoefficient * Math.Pow(this.setting, 2.0 - n);
+            double h0 = this.setting * this.setting * this.H0;
+            double n = this.N;
+            double r = this.FlowCoefficient * Math.Pow(this.setting, 2.0 - n);
             if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
 
             this.invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);

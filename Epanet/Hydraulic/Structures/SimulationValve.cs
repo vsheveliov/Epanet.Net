@@ -86,7 +86,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes P & Y coeffs. for pressure breaker valve.</summary>
         private void PbvCoeff(PropertiesMap pMap) {
-            if (this.setting == Constants.MISSING || this.setting == 0.0)
+            if (this.setting.IsMissing() || this.setting == 0.0)
                 this.ValveCoeff(pMap);
             else if (this.Km * (this.flow * this.flow) > this.setting)
                 this.ValveCoeff(pMap);
@@ -100,7 +100,7 @@ namespace Epanet.Hydraulic.Structures {
         private void TcvCoeff(PropertiesMap pMap) {
             double km = this.Km;
 
-            if (this.setting != Constants.MISSING)
+            if (!this.setting.IsMissing())
                 km = 0.02517 * this.setting / Math.Pow(this.Diameter, 4);
 
             this.ValveCoeff(pMap, km);
@@ -112,9 +112,10 @@ namespace Epanet.Hydraulic.Structures {
                 this.ValveCoeff(pMap);
             else {
                 double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
-                Curve.Coeffs coeffs = curves[(int)Math.Round(this.setting)].getCoeff(fMap, q);
-                this.invHeadLoss = 1.0 / Math.Max(coeffs.r, pMap.RQtol);
-                this.flowCorrection = this.invHeadLoss * (coeffs.h0 + coeffs.r * q) * Utilities.GetSignal(this.flow);
+                double h0, r;
+                curves[(int)Math.Round(this.setting)].GetCoeff(fMap, q, out h0, out r);
+                this.invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);
+                this.flowCorrection = this.invHeadLoss * (h0 + r * q) * Utilities.GetSignal(this.flow);
             }
         }
 
@@ -257,7 +258,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure reducing valve.</summary>
         private Link.StatType PrvStatus(PropertiesMap pMap, double hset) {
-            if (this.setting == Constants.MISSING)
+            if (this.setting.IsMissing())
                 return this.status;
 
             double htol = pMap.HTol;
@@ -306,7 +307,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure sustaining valve.</summary>
         private Link.StatType PsvStatus(PropertiesMap pMap, double hset) {
-            if (this.setting == Constants.MISSING)
+            if (this.setting.IsMissing())
                 return this.status;
 
             double h1 = this.first.SimHead;
@@ -371,7 +372,7 @@ namespace Epanet.Hydraulic.Structures {
             case Link.LinkType.PRV:
             case Link.LinkType.PSV:
 
-                if (this.SimSetting == Constants.MISSING)
+                if (this.SimSetting.IsMissing())
                     this.ValveCoeff(pMap);
                 else
                     return false;
@@ -392,7 +393,7 @@ namespace Epanet.Hydraulic.Structures {
 
             foreach (SimulationValve v  in  valves) {
 
-                if (v.setting == Constants.MISSING) continue;
+                if (v.setting.IsMissing()) continue;
 
                 Link.StatType s = v.status;
 
@@ -434,7 +435,7 @@ namespace Epanet.Hydraulic.Structures {
             SparseMatrix smat,
             List<SimulationValve> valves) {
             foreach (SimulationValve valve  in  valves) {
-                if (valve.SimSetting == Constants.MISSING)
+                if (valve.SimSetting.IsMissing())
                     continue;
 
                 switch (valve.Type) {

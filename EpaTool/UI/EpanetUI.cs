@@ -192,11 +192,12 @@ namespace Epanet.UI {
         private void SaveEvent(object sender, EventArgs e) {
             if (this.Net == null) return;
 
-            string initialDirectory = Path.GetDirectoryName(Path.GetFullPath(this.inpFile)) ?? string.Empty;
+            // string initialDirectory = Path.GetDirectoryName(Path.GetFullPath(this.inpFile)) ?? string.Empty;
 
             var dlg = new SaveFileDialog {
-                InitialDirectory = initialDirectory,
+                // InitialDirectory = initialDirectory,
                 OverwritePrompt = true,
+                FileName = Path.GetFileNameWithoutExtension(this.inpFile),
                 Filter =
                     "Epanet XLSX network file (*.xlsx)|*.xlsx|" + "Epanet XML network file (*.xml)|*.xml|"
                     + "Epanet GZIP'ped XML network file (*.xml.gz)|*.xml.gz|" + "Epanet INP network file (*.inp)|*.inp"
@@ -259,6 +260,7 @@ namespace Epanet.UI {
         //<summary>Show the open dialog and open the INP/XLSX and XML files.</summary>
         private void OpenEvent(object sender, EventArgs e) {
             //fileChooser = new FileDialog(frame);
+
             var fileChooser = new OpenFileDialog {
                 Multiselect = false,
                 Filter =

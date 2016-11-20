@@ -36,15 +36,15 @@ namespace Epanet.Network.Structures {
         public Pump(string id):base(id) { }
 
         ///<summary>Unit energy cost.</summary>
-        public double Ecost { get; set; }
+        public double ECost { get; set; }
 
         ///<summary>Effic. v. flow curve reference.</summary>
-        public Curve Ecurve { get; set; }
+        public Curve ECurve { get; set; }
 
         public double[] Energy { get { return this.energy; } }
 
         ///<summary>Energy cost pattern.</summary>
-        public Pattern Epat { get; set; }
+        public Pattern EPat { get; set; }
 
         ///<summary>Flow coefficient.</summary>
         public double FlowCoefficient { get; set; }
@@ -53,7 +53,7 @@ namespace Epanet.Network.Structures {
         public double H0 { get; set; }
 
         ///<summary>Head v. flow curve reference.</summary>
-        public Curve Hcurve { get; set; }
+        public Curve HCurve { get; set; }
 
         ///<summary>Maximum head (feet)</summary>
         public double Hmax { get; set; }
@@ -71,7 +71,7 @@ namespace Epanet.Network.Structures {
         public double Qmax { get; set; }
 
         ///<summary>Utilization pattern reference.</summary>
-        public Pattern Upat { get; set; }
+        public Pattern UPat { get; set; }
 
 #if DEBUG // NUCONVERT
 

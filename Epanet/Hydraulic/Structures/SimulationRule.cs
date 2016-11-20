@@ -328,7 +328,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 case Rule.Varwords.r_SETTING:
 
-                    if (link.SimSetting == Constants.MISSING)
+                    if (link.SimSetting.IsMissing())
                         return false;
 
                     x = link.SimSetting;
@@ -445,10 +445,10 @@ namespace Epanet.Hydraulic.Structures {
                         throw new ENException(ErrorCode.Err202);
                 }
 
-                if (x != Constants.MISSING && linkRef.Type == Link.LinkType.GPV)
+                if (!x.IsMissing() && linkRef.Type == Link.LinkType.GPV)
                     throw new ENException(ErrorCode.Err202);
 
-                if (x != Constants.MISSING && linkRef.Type == Link.LinkType.PIPE) {
+                if (!x.IsMissing() && linkRef.Type == Link.LinkType.PIPE) {
                     s = x == 0.0 ? Rule.Values.IS_CLOSED : Rule.Values.IS_OPEN;
                     x = Constants.MISSING;
                 }
@@ -480,7 +480,7 @@ namespace Epanet.Hydraulic.Structures {
                     this.link.SetLinkStatus(false);
                     flag = true;
                 }
-                else if (x != Constants.MISSING) {
+                else if (!x.IsMissing()) {
                     // Change link's setting
                     switch (this.link.Type) {
                     case Link.LinkType.PRV:

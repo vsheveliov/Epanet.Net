@@ -21,13 +21,13 @@ namespace Epanet.Network.Structures {
     public class Control {
         ///<summary>Control condition type</summary>
         public enum ControlType {
-            /// <summary>act when grade above set level</summary>
-            LOWLEVEL = 0,
             /// <summary>act when grade below set level</summary>
-            HILEVEL = 1, 
-            /// <summary>act when time of day occurs</summary>
-            TIMER = 2, 
+            LOWLEVEL = 0,
+            /// <summary>act when grade above set level</summary>
+            HILEVEL = 1,
             /// <summary>act when set time reached</summary>
+            TIMER = 2,
+            /// <summary>act when time of day occurs</summary>
             TIMEOFDAY = 3, 
         }
 

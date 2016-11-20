@@ -121,8 +121,8 @@ namespace Epanet.Quality {
                 else
                     this.sc = 0.0;
 
-                this.bucf = this.GetUcf(this.pMap.BulkOrder);
-                this.tucf = this.GetUcf(this.pMap.TankOrder);
+                this.bucf = GetUcf(this.pMap.BulkOrder);
+                this.tucf = GetUcf(this.pMap.TankOrder);
 
                 this.reactflag = this.GetReactflag();
             }
@@ -312,14 +312,9 @@ namespace Epanet.Quality {
         }
 
         ///<summary>Local method to compute unit conversion factor for bulk reaction rates.</summary>
-        private double GetUcf(double order) {
-            if (order < 0.0)
-                order = 0.0;
-
-            if (order == 1.0)
-                return (1.0);
-            else
-                return (1.0 / Math.Pow(Constants.LperFT3, (order - 1.0)));
+        private static double GetUcf(double order) {
+            if (order < 0.0) order = 0.0;
+            return order == 1.0 ? 1.0 : 1.0 / Math.Pow(Constants.LperFT3, (order - 1.0));
         }
 
         ///<summary>Initializes water quality segments.</summary>
@@ -774,13 +769,11 @@ namespace Epanet.Quality {
         /// <param name="tank">Tank to be updated.</param>
         /// <param name="dt">Step duration in seconds.</param>  
         private void Tankmix2(QualityTank tank, long dt) {
-            QualitySegment seg1, seg2;
-
             if (tank.Segments.Count == 0)
                 return;
 
-            seg1 = tank.Segments.Last.Value;
-            seg2 = tank.Segments.First.Value;
+            QualitySegment seg1 = tank.Segments.Last.Value;
+            QualitySegment seg2 = tank.Segments.First.Value;
 
             seg1.C = this.Tankreact(seg1.C, seg1.V, ((Tank)tank.Node).Kb, dt);
             seg2.C = this.Tankreact(seg2.C, seg2.V, ((Tank)tank.Node).Kb, dt);
@@ -1025,10 +1018,10 @@ namespace Epanet.Quality {
 
         ///<summary>Transports constituent mass through pipe network under a period of constant hydraulic conditions.</summary>
         private void Transport(long tstep) {
-            long qtime = 0, dt;
-            while (qtime < tstep) {
-                dt = Math.Min(this.pMap.QStep, tstep - qtime);
-                qtime += dt;
+            long qt = 0;
+            while (qt < tstep) {
+                long dt = Math.Min(this.pMap.QStep, tstep - qt);
+                qt += dt;
                 if (this.reactflag) this.Updatesegs(dt);
                 this.Accumulate(dt);
                 this.Updatenodes(dt);

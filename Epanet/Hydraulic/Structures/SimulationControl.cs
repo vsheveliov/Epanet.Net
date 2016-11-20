@@ -262,7 +262,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (link.Type >= Network.Structures.Link.LinkType.PRV) {
                         if (link.SimSetting != control.Setting)
                             change = true;
-                        else if (link.SimSetting == Constants.MISSING &&
+                        else if (link.SimSetting.IsMissing() &&
                                  s != control.Status) change = true;
                     }
 

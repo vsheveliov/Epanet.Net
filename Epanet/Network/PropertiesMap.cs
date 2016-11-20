@@ -15,14 +15,14 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
 using System.Collections.Generic;
 using Epanet.Network.IO;
-using Epanet.Util;
 
 namespace Epanet.Network {
 
-    ///<summary>Simulation configuration properties map.</summary>
-    public class PropertiesMap {
+    /// <summary>Simulation configuration configuration.</summary>
+    public sealed class PropertiesMap {
 
         #region enums
         // ReSharper disable InconsistentNaming
@@ -133,534 +133,337 @@ namespace Epanet.Network {
         // ReSharper restore InconsistentNaming
 
         #endregion
-        
-        #region constants
-        
-        private const string ALTREPORT = "AltReport";
-        private const string BULKORDER = "BulkOrder";
-        private const string CHECK_FREQ = "CheckFreq";
-        private const string CHEM_NAME = "ChemName";
-        private const string CHEM_UNITS = "ChemUnits";
-        private const string CLIMIT = "Climit";
-        private const string CTOL = "Ctol";
-        private const string DAMP_LIMIT = "DampLimit";
-        private const string DCOST = "Dcost";
-        private const string DEF_PAT_ID = "DefPatID";
-        private const string DIFFUS = "Diffus";
-        private const string DMULT = "Dmult";
-        private const string DUR = "Dur";
-        private const string ECOST = "Ecost";
-        private const string EMAX = "Emax";
-        private const string ENERGYFLAG = "Energyflag";
-        private const string EPAT_ID = "EpatID";
-        private const string EPUMP = "Epump";
-        private const string EXTRA_ITER = "ExtraIter";
-        private const string FLOWFLAG = "Flowflag";
-        private const string FORMFLAG = "Formflag";
-        private const string HACC = "Hacc";
-        private const string HEXP = "Hexp";
-        private const string HSTEP = "Hstep";
-        private const string HTOL = "Htol";
-        private const string HYD_FNAME = "HydFname";
-        private const string HYDFLAG = "Hydflag";
-        private const string KBULK = "Kbulk";
-        private const string KWALL = "Kwall";
-        private const string LINKFLAG = "Linkflag";
-        private const string MAP_FNAME = "MapFname";
-        private const string MAXCHECK = "MaxCheck";
-        private const string MAXITER = "MaxIter";
-        private const string MESSAGEFLAG = "Messageflag";
-        private const string NODEFLAG = "Nodeflag";
-        private const string PAGE_SIZE = "PageSize";
-        private const string PRESSFLAG = "Pressflag";
-        private const string PSTART = "Pstart";
-        private const string PSTEP = "Pstep";
-        private const string QEXP = "Qexp";
-        private const string QSTEP = "Qstep";
-        private const string QTOL = "Qtol";
-        private const string QUALFLAG = "Qualflag";
-        private const string RFACTOR = "Rfactor";
-        private const string RQTOL = "RQtol";
-        private const string RSTART = "Rstart";
-        private const string RSTEP = "Rstep";
-        private const string RULESTEP = "Rulestep";
-        private const string SPGRAV = "SpGrav";
-        private const string STATFLAG = "Statflag";
-        private const string SUMMARYFLAG = "Summaryflag";
-        private const string TANKORDER = "TankOrder";
-        private const string TRACE_NODE = "TraceNode";
-        private const string TSTART = "Tstart";
-        private const string TSTATFLAG = "Tstatflag";
-        private const string UNITSFLAG = "Unitsflag";
-        private const string VISCOS = "Viscos";
 
-        private const string WALLORDER = "WallOrder";
+        private Dictionary<string, string> extraOptions;
 
-        private static readonly string[] EpanetObjectsNames = {
-            TSTATFLAG, HSTEP, DUR, QSTEP, CHECK_FREQ,
-            MAXCHECK, DMULT, ALTREPORT, QEXP, HEXP, RQTOL, QTOL, BULKORDER, TANKORDER, WALLORDER,
-            RFACTOR, CLIMIT, KBULK, KWALL, DCOST, ECOST, EPAT_ID, EPUMP, PAGE_SIZE, STATFLAG, SUMMARYFLAG,
-            MESSAGEFLAG, ENERGYFLAG, NODEFLAG, LINKFLAG, RULESTEP, PSTEP, PSTART, RSTEP, RSTART, TSTART,
-            FLOWFLAG, PRESSFLAG, FORMFLAG, HYDFLAG, QUALFLAG, UNITSFLAG, HYD_FNAME, CHEM_NAME, CHEM_UNITS,
-            DEF_PAT_ID, MAP_FNAME, TRACE_NODE, EXTRA_ITER, CTOL, DIFFUS, DAMP_LIMIT, VISCOS, SPGRAV, MAXITER,
-            HACC, HTOL, EMAX
-        };
-
-        #endregion
-        
-        private readonly Dictionary<string, object> values;
-        
-        public PropertiesMap() {
-            this.values = new Dictionary<string, object>(70, System.StringComparer.OrdinalIgnoreCase);
-            this.LoadDefaults();
-        }
-
-        ///<summary>Get objects names in this map.</summary>
-        /// <param name="excludeEpanet">Exclude Epanet objects.</param>
-        public List<string> GetObjectsNames(bool excludeEpanet) {
-            List<string> allObjs = new List<string>(this.values.Keys);
-
-            if(excludeEpanet) {
-                foreach(var s in EpanetObjectsNames) {
-                    allObjs.Remove(s);
-                }
-            }
-
-            return allObjs;
-        }
-
-
+        public PropertiesMap() { this.LoadDefaults(); }
 
         #region properties accessors/mutators
 
-        public string AltReport {
-            get { return (string)this.values[ALTREPORT]; }
-            set { this.values[ALTREPORT] = value; }
-        }
+        [System.ComponentModel.DefaultValue(null)]
+        public string AltReport { get; set; }
 
-        /// <summary>Bulk flow reaction order.</summary>
-        public double BulkOrder {
-            get { return (double)this.values[BULKORDER]; }
-            set { this.values[BULKORDER] = value; }
-        }
+        /// <summary>Bulk flow reaction order</summary>
+        [System.ComponentModel.DefaultValue(0.0)] // 1st-order bulk reaction rate
+        public double BulkOrder { get; set; }
 
         /// <summary>Hydraulics solver parameter.</summary>
-        public int CheckFreq {
-            get { return (int)this.values[CHECK_FREQ]; } 
-            set { this.values[CHECK_FREQ] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.CHECKFREQ)]
+        public int CheckFreq { get; set; }
 
         /// <summary>Name of chemical.</summary>
-        public string ChemName {
-            get { return (string)this.values[CHEM_NAME]; }
-            set { this.values[CHEM_NAME] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Keywords.t_CHEMICAL)]
+        public string ChemName { get; set; }
 
         /// <summary>Units of chemical.</summary>
-        public string ChemUnits {
-            get { return (string)this.values[CHEM_UNITS]; } 
-            set { this.values[CHEM_UNITS] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Keywords.u_MGperL)]
+        public string ChemUnits { get; set; }
 
         /// <summary>Limiting potential quality.</summary>
-        public double CLimit {
-            get { return (double)this.values[CLIMIT]; } 
-            set { this.values[CLIMIT] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)] // No limiting potential quality
+        public double CLimit { get; set; }
 
         /// <summary>Water quality tolerance.</summary>
-        public double Ctol {
-            get { return (double)this.values[CTOL]; } 
-            set { this.values[CTOL] = value; }
-        }
+        [System.ComponentModel.DefaultValue(double.NaN)] // No pre-set quality tolerance
+        public double Ctol { get; set; }
 
         /// <summary>Solution damping threshold.</summary>
-        public double DampLimit {
-            get { return (double)this.values[DAMP_LIMIT]; } 
-            set { this.values[DAMP_LIMIT] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.DAMPLIMIT)]
+        public double DampLimit { get; set; }
 
         /// <summary>Energy demand charge/kw/day.</summary>
-        public double DCost {
-            get { return (double)this.values[DCOST]; } 
-            set { this.values[DCOST] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)] // Zero energy demand charge
+        public double DCost { get; set; }
 
         /// <summary>Default demand pattern ID.</summary>
-        public string DefPatId {
-            get { return (string)this.values[DEF_PAT_ID]; } 
-            set { this.values[DEF_PAT_ID] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.DEFPATID)]
+        public string DefPatId { get; set; }
 
         /// <summary>Diffusivity (sq ft/sec).</summary>
-        public double Diffus {
-            get { return (double)this.values[DIFFUS]; } 
-            set { this.values[DIFFUS] = value; }
-        }
+        [System.ComponentModel.DefaultValue(double.NaN)]
+        public double Diffus { get; set; }
 
         /// <summary>Demand multiplier.</summary>
-        public double DMult {
-            get { return (double)this.values[DMULT]; }
-            set { this.values[DMULT] = value; }
-        }
+        [System.ComponentModel.DefaultValue(1.0)]
+        public double DMult { get; set; }
 
         /// <summary>Duration of simulation (sec).</summary>
-        public long Duration {
-            get { return (long)this.values[DUR]; } 
-            set { this.values[DUR] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // 0 sec duration (steady state)
+        public long Duration { get; set; }
 
         /// <summary>Base energy cost per kwh.</summary>
-        public double ECost {
-            get { return (double)this.values[ECOST]; } 
-            set { this.values[ECOST] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)] // Zero unit energy cost
+        public double ECost { get; set; }
 
         /// <summary>Peak energy usage.</summary>
-        public double EMax {
-            get { return (double)this.values[EMAX]; } 
-            set { this.values[EMAX] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)]
+        public double EMax { get; set; }
 
         /// <summary>Energy report flag.</summary>
-        public bool EnergyFlag {
-            get { return (bool)this.values[ENERGYFLAG]; } 
-            set { this.values[ENERGYFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(false)]
+        public bool EnergyFlag { get; set; }
 
         /// <summary>Energy cost time pattern.</summary>
-        public string EPatId {
-            get { return (string)this.values[EPAT_ID]; }
-            set { this.values[EPAT_ID] = value; }
-        }
+        [System.ComponentModel.DefaultValue("")] // No energy price pattern
+        public string EPatId { get; set; }
 
         /// <summary>Global pump efficiency.</summary>
-        public double EPump {
-            get { return (double)this.values[EPUMP]; } 
-            set { this.values[EPUMP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.EPUMP)] // Default pump efficiency
+        public double EPump { get; set; }
 
         /// <summary>Extra hydraulic trials.</summary>
-        public int ExtraIter {
-            get { return (int)this.values[EXTRA_ITER]; }
-            set { this.values[EXTRA_ITER] = value; }
-        }
+        [System.ComponentModel.DefaultValue(-1)] // Stop if network unbalanced
+        public int ExtraIter { get; set; }
 
         /// <summary>Flow units flag.</summary>
-        public FlowUnitsType FlowFlag {
-            get { return (FlowUnitsType)this.values[FLOWFLAG]; }
-            set { this.values[FLOWFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(FlowUnitsType.GPM)]
+        public FlowUnitsType FlowFlag { get; set; }
 
         /// <summary>Hydraulic formula flag.</summary>
-        public FormType FormFlag {
-            get { return (FormType)this.values[FORMFLAG]; } 
-            set { this.values[FORMFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(FormType.HW)] // Use Hazen-Williams formula
+        public FormType FormFlag { get; set; }
 
         /// <summary>Hydraulics solution accuracy.</summary>
-        public double HAcc {
-            get { return (double)this.values[HACC]; } 
-            set { this.values[HACC] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.HACC)]
+        public double HAcc { get; set; }
 
         /// <summary>Exponent in headloss formula.</summary>
-        public double HExp {
-            get { return (double)this.values[HEXP]; }
-            set { this.values[HEXP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)]
+        public double HExp { get; set; }
 
         /// <summary>Nominal hyd. time step (sec).</summary>
-        public long HStep {
-            get { return (long)this.values[HSTEP]; } 
-            set { this.values[HSTEP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(3600)] // 1 hr hydraulic time step
+        public long HStep { get; set; }
 
         /// <summary>Hydraulic head tolerance.</summary>
-        public double HTol {
-            get { return (double)this.values[HTOL]; }
-            set { this.values[HTOL] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.HTOL)]
+        public double HTol { get; set; }
 
         /// <summary>Hydraulics flag.</summary>
-        public HydType HydFlag {
-            get { return (HydType)this.values[HYDFLAG]; } 
-            set { this.values[HYDFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(HydType.SCRATCH)] // No external hydraulics file
+        public HydType HydFlag { get; set; }
 
         /// <summary>Hydraulics file name.</summary>
-        public string HydFname {
-            get { return (string)this.values[HYD_FNAME]; } 
-            set { this.values[HYD_FNAME] = value; }
-        }
+        [System.ComponentModel.DefaultValue(null)]
+        public string HydFname { get; set; }
 
         /// <summary>Global bulk reaction coeff.</summary>
-        public double KBulk {
-            get { return (double)this.values[KBULK]; }
-            set { this.values[KBULK] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)] // No global bulk reaction
+        public double KBulk { get; set; }
 
         /// <summary>Global wall reaction coeff.</summary>
-        public double KWall {
-            get { return (double)this.values[KWALL]; }
-            set { this.values[KWALL] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0.0)] // No global wall reaction
+        public double KWall { get; set; }
 
         /// <summary>Link report flag.</summary>
-        public ReportFlag LinkFlag {
-            get { return (ReportFlag)this.values[LINKFLAG]; } 
-            set { this.values[LINKFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(ReportFlag.FALSE)]
+        public ReportFlag LinkFlag { get; set; }
 
         /// <summary>Map file name.</summary>
-        public string MapFname {
-            get { return (string)this.values[MAP_FNAME]; }
-            set { this.values[MAP_FNAME] = value; }
-        }
+        [System.ComponentModel.DefaultValue(null)]
+        public string MapFname { get; set; }
 
         /// <summary>Hydraulics solver parameter.</summary>
-        public int MaxCheck {
-            get { return (int)this.values[MAXCHECK]; }
-            set { this.values[MAXCHECK] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.MAXCHECK)]
+        public int MaxCheck { get; set; }
 
         /// <summary>Max. hydraulic trials.</summary>
-        public int MaxIter {
-            get { return (int)this.values[MAXITER]; }
-            set { this.values[MAXITER] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.MAXITER)]
+        public int MaxIter { get; set; }
 
         /// <summary>Error/warning message flag.</summary>
-        public bool MessageFlag {
-            get { return (bool)this.values[MESSAGEFLAG]; } 
-            set { this.values[MESSAGEFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(true)]
+        public bool MessageFlag { get; set; }
 
         /// <summary>Node report flag.</summary>
-        public ReportFlag NodeFlag {
-            get { return (ReportFlag)this.values[NODEFLAG]; } 
-            set { this.values[NODEFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(ReportFlag.FALSE)]
+        public ReportFlag NodeFlag { get; set; }
 
         /// <summary>Lines/page in output report.</summary>
-        public int PageSize {
-            get { return (int)this.values[PAGE_SIZE]; } 
-            set { this.values[PAGE_SIZE] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.PAGESIZE)]
+        public int PageSize { get; set; }
 
         /// <summary>Pressure units flag.</summary>
-        public PressUnitsType PressFlag {
-            get { return (PressUnitsType)this.values[PRESSFLAG]; }
-            set { this.values[PRESSFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(PressUnitsType.PSI)]
+        public PressUnitsType PressFlag { get; set; }
 
         /// <summary>Starting pattern time (sec).</summary>
-        public long PStart {
-            get { return (long)this.values[PSTART]; }
-            set { this.values[PSTART] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // Starting pattern period
+        public long PStart { get; set; }
 
         /// <summary>Time pattern time step (sec).</summary>
-        public long PStep {
-            get { return (long)this.values[PSTEP]; } 
-            set { this.values[PSTEP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(3600)] // 1 hr time pattern period
+        public long PStep { get; set; }
 
         /// <summary>Exponent in orifice formula.</summary>
-        public double QExp {
-            get { return (double)this.values[QEXP]; } 
-            set { this.values[QEXP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(2.0)] // Flow exponent for emitters
+        public double QExp { get; set; }
 
         /// <summary>Quality time step (sec).</summary>
-        public long QStep {
-            get { return (long)this.values[QSTEP]; } 
-            set { this.values[QSTEP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // No pre-set quality time step
+        public long QStep { get; set; }
 
         /// <summary>Flow rate tolerance.</summary>
-        public double QTol {
-            get { return (double)this.values[QTOL]; } 
-            set { this.values[QTOL] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.QTOL)]
+        public double QTol { get; set; }
 
         /// <summary>Water quality flag.</summary>
-        public QualType QualFlag {
-            get { return (QualType)this.values[QUALFLAG]; } 
-            set { this.values[QUALFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(QualType.NONE)]
+        public QualType QualFlag { get; set; }
 
         /// <summary>Roughness-reaction factor.</summary>
-        public double RFactor {
-            get { return (double)this.values[RFACTOR]; } 
-            set { this.values[RFACTOR] = value; }
-        }
+        [System.ComponentModel.DefaultValue(1.0)] // No roughness-reaction factor
+        public double RFactor { get; set; }
 
         /// <summary>Flow resistance tolerance.</summary>
-        public double RQtol {
-            get { return (double)this.values[RQTOL]; }
-            set { this.values[RQTOL] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.RQTOL)]
+        public double RQtol { get; set; }
 
         /// <summary>Time when reporting starts.</summary>
-        public long RStart {
-            get { return (long)this.values[RSTART]; }
-            set { this.values[RSTART] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // Start reporting at time 0
+        public long RStart { get; set; }
 
         /// <summary>Reporting time step (sec).</summary>
-        public long RStep {
-            get { return (long)this.values[RSTEP]; } 
-            set { this.values[RSTEP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(3600)] // 1 hr reporting period
+        public long RStep { get; set; }
 
         /// <summary>Rule evaluation time step.</summary>
-        public long RuleStep {
-            get { return (long)this.values[RULESTEP]; }
-            set { this.values[RULESTEP] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // No pre-set rule time step
+        public long RuleStep { get; set; }
 
         /// <summary>Specific gravity.</summary>
-        public double SpGrav {
-            get { return (double)this.values[SPGRAV]; } 
-            set { this.values[SPGRAV] = value; }
-        }
+        [System.ComponentModel.DefaultValue(Constants.SPGRAV)]
+        public double SpGrav { get; set; }
 
         /// <summary>Status report flag.</summary>
-        public StatFlag Stat_Flag {
-            get { return (StatFlag)this.values[STATFLAG]; } 
-            set { this.values[STATFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(StatFlag.NO)]
+        public StatFlag Stat_Flag { get; set; }
 
         /// <summary>Report summary flag.</summary>
-        public bool SummaryFlag {
-            get { return (bool)this.values[SUMMARYFLAG]; } 
-            set { this.values[SUMMARYFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(true)]
+        public bool SummaryFlag { get; set; }
 
         /// <summary>Tank reaction order.</summary>
-        public double TankOrder {
-            get { return (double)this.values[TANKORDER]; }
-            set { this.values[TANKORDER] = value; }
-        }
+        [System.ComponentModel.DefaultValue(1.0)] // 1st-order tank reaction rate
+        public double TankOrder { get; set; }
 
         /// <summary>Source node for flow tracing.</summary>
-        public string TraceNode {
-            get { return (string)this.values[TRACE_NODE]; } 
-            set { this.values[TRACE_NODE] = value; }
-        }
+        [System.ComponentModel.DefaultValue(null)] // No source tracing
+        public string TraceNode { get; set; }
 
         /// <summary>Starting time of day (sec).</summary>
-        public long TStart {
-            get { return (long)this.values[TSTART]; } 
-            set { this.values[TSTART] = value; }
-        }
+        [System.ComponentModel.DefaultValue(0)] // Starting time of day
+        public long TStart { get; set; }
 
         /// <summary>Time statistics flag.</summary>
-        public TStatType TStatFlag {
-            get { return (TStatType)this.values[TSTATFLAG]; }
-            set { this.values[TSTATFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(TStatType.SERIES)] // Generate time series output
+        public TStatType TStatFlag { get; set; }
 
         /// <summary>Unit system flag.</summary>
-        public UnitsType UnitsFlag {
-            get { return (UnitsType)this.values[UNITSFLAG]; }
-            set { this.values[UNITSFLAG] = value; }
-        }
+        [System.ComponentModel.DefaultValue(UnitsType.US)] // US unit system
+        public UnitsType UnitsFlag { get; set; }
 
         /// <summary>Kin. viscosity (sq ft/sec).</summary>
-        public double Viscos {
-            get { return (double)this.values[VISCOS]; } 
-            set { this.values[VISCOS] = value; }
-        }
+        [System.ComponentModel.DefaultValue(double.NaN)]
+        public double Viscos { get; set; }
 
         /// <summary>Pipe wall reaction order.</summary>
-        public double WallOrder {
-            get { return (double)this.values[WALLORDER]; }
-            set { this.values[WALLORDER] = value; }
-        }
+        [System.ComponentModel.DefaultValue(1.0)] // 1st-order wall reaction rate
+        public double WallOrder { get; set; }
 
-#endregion
+        #endregion
 
-        ///<summary>Init properties with default value.</summary>
-        private void LoadDefaults() {
-            this.values[BULKORDER] = 1.0d; // 1st-order bulk reaction rate
-            this.values[TANKORDER] = 1.0d; // 1st-order tank reaction rate
-            this.values[WALLORDER] = 1.0d; // 1st-order wall reaction rate
-            this.values[RFACTOR] = 1.0d; // No roughness-reaction factor
-            this.values[CLIMIT] = 0.0d; // No limiting potential quality
-            this.values[KBULK] = 0.0d; // No global bulk reaction
-            this.values[KWALL] = 0.0d; // No global wall reaction
-            this.values[DCOST] = 0.0d; // Zero energy demand charge
-            this.values[ECOST] = 0.0d; // Zero unit energy cost
-            this.values[EPAT_ID] = ""; // No energy price pattern
-            this.values[EPUMP] = Constants.EPUMP; // Default pump efficiency
-            this.values[PAGE_SIZE] = Constants.PAGESIZE;
-            this.values[STATFLAG] = StatFlag.NO;
-            this.values[SUMMARYFLAG] = true;
-            this.values[MESSAGEFLAG] = true;
-            this.values[ENERGYFLAG] = false;
-            this.values[NODEFLAG] = ReportFlag.FALSE;
-            this.values[LINKFLAG] = ReportFlag.FALSE;
-            this.values[TSTATFLAG] = TStatType.SERIES; // Generate time series output
-            this.values[HSTEP] = 3600L; // 1 hr hydraulic time step
-            this.values[DUR] = 0L; // 0 sec duration (steady state)
-            this.values[QSTEP] = 0L; // No pre-set quality time step
-            this.values[RULESTEP] = 0L; // No pre-set rule time step
-            this.values[PSTEP] = 3600L; // 1 hr time pattern period
-            this.values[PSTART] = 0L; // Starting pattern period
-            this.values[RSTEP] = 3600L; // 1 hr reporting period
-            this.values[RSTART] = 0L; // Start reporting at time 0
-            this.values[TSTART] = 0L; // Starting time of day
-            this.values[FLOWFLAG] = FlowUnitsType.GPM; // Flow units are gpm
-            this.values[PRESSFLAG] = PressUnitsType.PSI; // Pressure units are psi
-            this.values[FORMFLAG] = FormType.HW; // Use Hazen-Williams formula
-            this.values[HYDFLAG] = HydType.SCRATCH; // No external hydraulics file
-            this.values[QUALFLAG] = QualType.NONE; // No quality simulation
-            this.values[UNITSFLAG] = UnitsType.US; // US unit system
-            this.values[HYD_FNAME] = "";
-            this.values[CHEM_NAME] = Keywords.t_CHEMICAL;
-            this.values[CHEM_UNITS] = Keywords.u_MGperL; // mg/L
-            this.values[DEF_PAT_ID] = Constants.DEFPATID; // Default demand pattern index
-            this.values[MAP_FNAME] = "";
-            this.values[ALTREPORT] = "";
-            this.values[TRACE_NODE] = ""; // No source tracing
-            this.values[EXTRA_ITER] = -1; // Stop if network unbalanced
-            this.values[CTOL] = Constants.MISSING; // No pre-set quality tolerance
-            this.values[DIFFUS] = Constants.MISSING; // Temporary diffusivity
-            this.values[DAMP_LIMIT] = Constants.DAMPLIMIT;
-            this.values[VISCOS] = Constants.MISSING; // Temporary viscosity
-            this.values[SPGRAV] = Constants.SPGRAV; // Default specific gravity
-            this.values[MAXITER] = Constants.MAXITER; // Default max. hydraulic trials
-            this.values[HACC] = Constants.HACC; // Default hydraulic accuracy
-            this.values[HTOL] = Constants.HTOL; // Default head tolerance
-            this.values[QTOL] = Constants.QTOL; // Default flow tolerance
-            this.values[RQTOL] = Constants.RQTOL; // Default hydraulics parameters
-            this.values[HEXP] = 0.0d;
-            this.values[QEXP] = 2.0d; // Flow exponent for emitters
-            this.values[CHECK_FREQ] = Constants.CHECKFREQ;
-            this.values[MAXCHECK] = Constants.MAXCHECK;
-            this.values[DMULT] = 1.0d; // Demand multiplier
-            this.values[EMAX] = 0.0d; // Zero peak energy usage
-
-
-        }
-
-        /// <summary>
-        /// Insert an object into the map. / Get an object from the map.
-        /// </summary>
-        /// <param name="name">Object name.</param>
-        /// <returns>Object refernce.</returns>
-        /// <remarks>Throws <see cref="ENException"/> if object name not found.</remarks>
-        public object this[string name] {
+        public Dictionary<string, string> ExtraOptions {
             get {
-                object value;
-                return this.values.TryGetValue(name, out value) ? value : null;
+                return this.extraOptions ?? (this.extraOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
             }
-            set { this.values[name] = value; }
         }
 
+#if false
 
-    }
+        /// <summary>Init properties with default value.</summary>
+        private void LoadDefaults() {
+            var props = typeof(PropertiesMap).GetProperties(System.Reflection.BindingFlags.Instance 
+                                                          | System.Reflection.BindingFlags.Public
+                                                          | System.Reflection.BindingFlags.DeclaredOnly);
+
+            foreach(System.Reflection.PropertyInfo pi in props) {
+                var attrs = pi.GetCustomAttributes(false);
+                foreach(object att in attrs) {
+                    var dv = att as System.ComponentModel.DefaultValueAttribute;
+                    if(dv == null)
+                        continue;
+                    pi.SetValue(this, dv.Value, null);
+                    break;
+                }
+            }
+        }
+
+#else
+        /// <summary>Init properties with default value.</summary>
+        private void LoadDefaults() {
+            this.BulkOrder = 1.0d; // 1st-order bulk reaction rate
+            this.TankOrder = 1.0d; // 1st-order tank reaction rate
+            this.WallOrder = 1.0d; // 1st-order wall reaction rate
+            this.RFactor = 1.0d; // No roughness-reaction factor
+            this.CLimit = 0.0d; // No limiting potential quality
+            this.KBulk = 0.0d; // No global bulk reaction
+            this.KWall = 0.0d; // No global wall reaction
+            this.DCost = 0.0d; // Zero energy demand charge
+            this.ECost = 0.0d; // Zero unit energy cost
+            this.EPatId = string.Empty; // No energy price pattern
+            this.EPump = Constants.EPUMP; // Default pump efficiency
+            this.PageSize = Constants.PAGESIZE;
+            this.Stat_Flag = StatFlag.NO;
+            this.SummaryFlag = true;
+            this.MessageFlag = true;
+            this.EnergyFlag = false;
+            this.NodeFlag = ReportFlag.FALSE;
+            this.LinkFlag = ReportFlag.FALSE;
+            this.TStatFlag = TStatType.SERIES; // Generate time series output
+            this.HStep = 3600L; // 1 hr hydraulic time step
+            this.Duration = 0L; // 0 sec duration (steady state)
+            this.QStep = 0L; // No pre-set quality time step
+            this.RuleStep = 0L; // No pre-set rule time step
+            this.PStep = 3600L; // 1 hr time pattern period
+            this.PStart = 0L; // Starting pattern period
+            this.RStep = 3600L; // 1 hr reporting period
+            this.RStart = 0L; // Start reporting at time 0
+            this.TStart = 0L; // Starting time of day
+            this.FlowFlag = FlowUnitsType.GPM; // Flow units are gpm
+            this.PressFlag = PressUnitsType.PSI; // Pressure units are psi
+            this.FormFlag = FormType.HW; // Use Hazen-Williams formula
+            this.HydFlag = HydType.SCRATCH; // No external hydraulics file
+            this.QualFlag = QualType.NONE; // No quality simulation
+            this.UnitsFlag = UnitsType.US; // US unit system
+            this.HydFname = "";
+            this.ChemName = Keywords.t_CHEMICAL;
+            this.ChemUnits = Keywords.u_MGperL; // mg/L
+            this.DefPatId = Constants.DEFPATID; // Default demand pattern index
+            this.MapFname = "";
+            this.AltReport = "";
+            this.TraceNode = ""; // No source tracing
+            this.ExtraIter = -1; // Stop if network unbalanced
+            this.Ctol = double.NaN; // No pre-set quality tolerance
+            this.Diffus = double.NaN; // Temporary diffusivity
+            this.DampLimit = Constants.DAMPLIMIT;
+            this.Viscos = double.NaN; // Temporary viscosity
+            this.SpGrav = Constants.SPGRAV; // Default specific gravity
+            this.MaxIter = Constants.MAXITER; // Default max. hydraulic trials
+            this.HAcc = Constants.HACC; // Default hydraulic accuracy
+            this.HTol = Constants.HTOL; // Default head tolerance
+            this.QTol = Constants.QTOL; // Default flow tolerance
+            this.RQtol = Constants.RQTOL; // Default hydraulics parameters
+            this.HExp = 0.0d;
+            this.QExp = 2.0d; // Flow exponent for emitters
+            this.CheckFreq = Constants.CHECKFREQ;
+            this.MaxCheck = Constants.MAXCHECK;
+            this.DMult = 1.0d; // Demand multiplier
+            this.EMax = 0.0d; // Zero peak energy usage
+        }
+
+#endif
+
+    }    
 
 }

@@ -36,10 +36,9 @@ namespace Epanet.Network.IO.Input {
 
         private static readonly string[] OptionValueKeywords = {
             Keywords.w_TOLERANCE, Keywords.w_DIFFUSIVITY, Keywords.w_DAMPLIMIT, Keywords.w_VISCOSITY,
-            Keywords.w_SPECGRAV,
-            Keywords.w_TRIALS, Keywords.w_ACCURACY, Keywords.w_HTOL, Keywords.w_QTOL, Keywords.w_RQTOL,
-            Keywords.w_CHECKFREQ,
-            Keywords.w_MAXCHECK, Keywords.w_EMITTER, Keywords.w_DEMAND
+            Keywords.w_SPECGRAV,  Keywords.w_TRIALS,      Keywords.w_ACCURACY,  Keywords.w_HTOL,
+            Keywords.w_QTOL,      Keywords.w_RQTOL,       Keywords.w_CHECKFREQ, Keywords.w_MAXCHECK, 
+            Keywords.w_EMITTER,   Keywords.w_DEMAND
         };
 
         public InpParser(TraceSource log):base(log) {
@@ -57,7 +56,7 @@ namespace Epanet.Network.IO.Input {
                 err,
                 this.lineNumber,
                 this.FileName,
-                section.reportStr(),
+                section.ReportStr(),
                 arg);
 
             base.Errors.Add(parseException);
@@ -191,7 +190,7 @@ namespace Epanet.Network.IO.Input {
                     try {
 
                         if (tokens[0].IndexOf('[') >= 0) {
-                            Network.SectType type = this.FindSectionType(tokens[0]);
+                            Network.SectType type = FindSectionType(tokens[0]);
                             if (type >= 0)
                                 sectionType = type;
                             else {
@@ -535,7 +534,7 @@ namespace Epanet.Network.IO.Input {
             if ((j1 = net.GetNode(tok[1])) == null || (j2 = net.GetNode(tok[2])) == null)
                 throw new ENException(ErrorCode.Err203);
 
-            if (Equals(j1, j2)) throw new ENException(ErrorCode.Err222);
+            if (j1.Equals(j2)) throw new ENException(ErrorCode.Err222);
 
             // Link attributes
             pump.FirstNode = j1;
@@ -552,11 +551,11 @@ namespace Epanet.Network.IO.Input {
 
             // Pump attributes
             pump.Ptype = Pump.PumpType.NOCURVE;
-            pump.Hcurve = null;
-            pump.Ecurve = null;
-            pump.Upat = null;
-            pump.Ecost = 0.0d;
-            pump.Epat = null;
+            pump.HCurve = null;
+            pump.ECurve = null;
+            pump.UPat = null;
+            pump.ECost = 0.0d;
+            pump.EPat = null;
 
             if (comment.Length > 0) pump.Comment = comment;
 
@@ -567,7 +566,7 @@ namespace Epanet.Network.IO.Input {
                     if (!tok[j].ToDouble(out x[m])) throw new ENException(ErrorCode.Err202);
                     m++;
                 }
-                this.Getpumpcurve(tok, pump, m, x);
+                GetPumpCurve(tok, pump, m, x);
                 return;
                     /* If 4-th token is a number then input follows Version 1.x format  so retrieve pump curve parameters */
 
@@ -584,12 +583,12 @@ namespace Epanet.Network.IO.Input {
                 else if (tok[m - 1].Match(Keywords.w_HEAD)) {
                     Curve t = net.GetCurve(tok[m]);
                     if (t == null) throw new ENException(ErrorCode.Err206);
-                    pump.Hcurve = t;
+                    pump.HCurve = t;
                 }
                 else if (tok[m - 1].Match(Keywords.w_PATTERN)) {
                     Pattern p = net.GetPattern(tok[m]);
                     if (p == null) throw new ENException(ErrorCode.Err205);
-                    pump.Upat = p;
+                    pump.UPat = p;
                 }
                 else if (tok[m - 1].Match(Keywords.w_SPEED)) {
                     double y;
@@ -624,32 +623,21 @@ namespace Epanet.Network.IO.Input {
                 (j2 = net.GetNode(tok[2])) == null
             ) throw new ENException(ErrorCode.Err203);
 
-            if (j1 == j2)
+            if (j1.Equals(j2))
                 throw new ENException(ErrorCode.Err222);
-
-            //if (Utilities.match(Tok[4], Keywords.w_PRV)) type = LinkType.PRV;
-            //else if (Utilities.match(Tok[4], Keywords.w_PSV)) type = LinkType.PSV;
-            //else if (Utilities.match(Tok[4], Keywords.w_PBV)) type = LinkType.PBV;
-            //else if (Utilities.match(Tok[4], Keywords.w_FCV)) type = LinkType.FCV;
-            //else if (Utilities.match(Tok[4], Keywords.w_TCV)) type = LinkType.TCV;
-            //else if (Utilities.match(Tok[4], Keywords.w_GPV)) type = LinkType.GPV;
 
             if (!EnumsTxt.TryParse(tok[4], out type))
                 throw new ENException(ErrorCode.Err201);
 
-            if (!tok[3].ToDouble(out diam)) {
+            if(!tok[3].ToDouble(out diam) || diam <= 0.0) {
                 throw new ENException(ErrorCode.Err202);
             }
 
-            if (diam <= 0.0) throw new ENException(ErrorCode.Err202);
-
             if (type == Link.LinkType.GPV) {
-                Curve t;
-                if ((t = net.GetCurve(tok[5])) == null)
-                    throw new ENException(ErrorCode.Err206);
+                Curve t = net.GetCurve(tok[5]);
+                if (t == null) throw new ENException(ErrorCode.Err206);
 
-                List<Curve> curv = new List<Curve>(net.Curves);
-                setting = curv.IndexOf(t);
+                setting = net.Curves.IndexOf(t);
                 this.Log.Warning("GPV Valve, index as roughness !");
                 valve.Curve = t;
                 status = Link.StatType.OPEN;
@@ -658,18 +646,17 @@ namespace Epanet.Network.IO.Input {
                 throw new ENException(ErrorCode.Err202);
             }
 
-            if (n >= 7)
-
+            if (n >= 7) {
                 if (!tok[6].ToDouble(out lcoeff)) {
                     throw new ENException(ErrorCode.Err202);
                 }
-
+            }
 
             if ((j1 is Tank || j2 is Tank) &&
                 (type == Link.LinkType.PRV || type == Link.LinkType.PSV || type == Link.LinkType.FCV))
                 throw new ENException(ErrorCode.Err219);
 
-            if (!this.Valvecheck(net, type, j1, j2))
+            if (!Valvecheck(net, type, j1, j2))
                 throw new ENException(ErrorCode.Err220);
 
 
@@ -688,7 +675,7 @@ namespace Epanet.Network.IO.Input {
                 valve.Comment = comment;
         }
 
-        private bool Valvecheck(Network net, Link.LinkType type, Node j1, Node j2) {
+        private static bool Valvecheck(Network net, Link.LinkType type, Node j1, Node j2) {
             // Examine each existing valve
             foreach (Valve vk  in  net.Valves) {
                 Node vj1 = vk.FirstNode;
@@ -719,8 +706,8 @@ namespace Epanet.Network.IO.Input {
             return (true);
         }
 
-        private void Getpumpcurve(string[] tok, Pump pump, int n, double[] x) {
-            double h0, h1, h2, q1, q2;
+        private static void GetPumpCurve(string[] tok, Pump pump, int n, double[] x) {
+            
 
             if (n == 1) {
                 if (x[0] <= 0.0) throw new ENException(ErrorCode.Err202);
@@ -728,6 +715,8 @@ namespace Epanet.Network.IO.Input {
                 pump.Km = x[0];
             }
             else {
+                double h0, h1, h2, q1, q2;
+
                 if (n == 2) {
                     q1 = x[1];
                     h1 = x[0];
@@ -742,9 +731,12 @@ namespace Epanet.Network.IO.Input {
                     h2 = x[3];
                     q2 = x[4];
                 }
-                else throw new ENException(ErrorCode.Err202);
+                else 
+                    throw new ENException(ErrorCode.Err202);
+
                 pump.Ptype = Pump.PumpType.POWER_FUNC;
                 double a, b, c;
+              
                 if (!Utilities.GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
                     throw new ENException(ErrorCode.Err206);
 
@@ -788,8 +780,7 @@ namespace Epanet.Network.IO.Input {
             if (!tok[1].ToDouble(out x) || !tok[2].ToDouble(out y))
                 throw new ENException(ErrorCode.Err202);
 
-            cur.X.Add(x);
-            cur.Y.Add(y);
+            cur.Add(x, y);
         }
 
         protected void ParseCoordinate(Network net, string[] tok) {
@@ -884,7 +875,7 @@ namespace Epanet.Network.IO.Input {
                 throw new ENException(ErrorCode.Err202);
 
             if (ltype == Link.LinkType.PUMP || ltype == Link.LinkType.PIPE) {
-                if (setting != Constants.MISSING) {
+                if (!setting.IsMissing()) {
                     if (setting < 0.0) throw new ENException(ErrorCode.Err202);
                     else if (setting == 0.0) status = Link.StatType.CLOSED;
                     else status = Link.StatType.OPEN;
@@ -1335,7 +1326,7 @@ namespace Epanet.Network.IO.Input {
                 if (pumpRef == null)
                     net.PropertiesMap.ECost = y;
                 else
-                    pumpRef.Ecost = y;
+                    pumpRef.ECost = y;
 
                 return;
             }
@@ -1348,7 +1339,7 @@ namespace Epanet.Network.IO.Input {
                 if (pumpRef == null)
                     net.PropertiesMap.EPatId = t.Id;
                 else
-                    pumpRef.Epat = t;
+                    pumpRef.EPat = t;
                 return;
             }
             else if (tok[n - 2].Match(Keywords.w_EFFIC)) {
@@ -1362,7 +1353,7 @@ namespace Epanet.Network.IO.Input {
                 else {
                     Curve t = net.GetCurve(tok[n - 1]);
                     if (t == null) throw new ENException(ErrorCode.Err217);
-                    pumpRef.Ecurve = t;
+                    pumpRef.ECurve = t;
                 }
                 return;
             }
@@ -1505,7 +1496,7 @@ namespace Epanet.Network.IO.Input {
             if (notHandled)
                 notHandled = this.OptionValue(net, tok, n);
             if (notHandled) {
-                net.PropertiesMap[tok[0]] = tok[1];
+                net.PropertiesMap.ExtraOptions[tok[0]] = tok[1];
             }
         }
 
@@ -1533,26 +1524,33 @@ namespace Epanet.Network.IO.Input {
             }
             else if (tok[0].Match(Keywords.w_PRESSURE)) {
                 if (n < 1) return false;
-                else if (tok[1].Match(Keywords.w_PSI)) map.PressFlag = PropertiesMap.PressUnitsType.PSI;
-                else if (tok[1].Match(Keywords.w_KPA)) map.PressFlag = PropertiesMap.PressUnitsType.KPA;
-                else if (tok[1].Match(Keywords.w_METERS)) map.PressFlag = PropertiesMap.PressUnitsType.METERS;
-                else
+                PropertiesMap.PressUnitsType value;
+
+                if (!EnumsTxt.TryParse(tok[1], out value)) {
                     throw new ENException(ErrorCode.Err201);
+                }
+
+                map.PressFlag = value;
             }
             else if (tok[0].Match(Keywords.w_HEADLOSS)) {
                 if (n < 1) return false;
-                else if (tok[1].Match(Keywords.w_HW)) map.FormFlag = PropertiesMap.FormType.HW;
-                else if (tok[1].Match(Keywords.w_DW)) map.FormFlag = PropertiesMap.FormType.DW;
-                else if (tok[1].Match(Keywords.w_CM)) map.FormFlag = PropertiesMap.FormType.CM;
-                else throw new ENException(ErrorCode.Err201);
+                PropertiesMap.FormType value;
+
+                if (!EnumsTxt.TryParse(tok[1], out value)) {
+                    throw new ENException(ErrorCode.Err201);
+                }
+                
+                map.FormFlag = value;
             }
             else if (tok[0].Match(Keywords.w_HYDRAULIC)) {
-                if (n < 2)
-                    return false;
-                else if (tok[1].Match(Keywords.w_USE)) map.HydFlag = PropertiesMap.HydType.USE;
-                else if (tok[1].Match(Keywords.w_SAVE)) map.HydFlag = PropertiesMap.HydType.SAVE;
-                else
+                if (n < 2) return false;
+                PropertiesMap.HydType value;
+
+                if (!EnumsTxt.TryParse(tok[1], out value)) {
                     throw new ENException(ErrorCode.Err201);
+                }
+
+                map.HydFlag = value;
                 map.HydFname = tok[2];
             }
             else if (tok[0].Match(Keywords.w_QUALITY)) {
@@ -1562,10 +1560,6 @@ namespace Epanet.Network.IO.Input {
                     return false;
                 else if (EnumsTxt.TryParse(tok[1], out type))
                     map.QualFlag = type;
-                //else if (Utilities.match(Tok[1], Keywords.w_NONE)) net.setQualflag(QualType.NONE);
-                //else if (Utilities.match(Tok[1], Keywords.w_CHEM)) net.setQualflag(QualType.CHEM);
-                //else if (Utilities.match(Tok[1], Keywords.w_AGE)) net.setQualflag(QualType.AGE);
-                //else if (Utilities.match(Tok[1], Keywords.w_TRACE)) net.setQualflag(QualType.TRACE);
                 else {
                     map.QualFlag = PropertiesMap.QualType.CHEM;
                     map.ChemName = tok[1];
@@ -1702,14 +1696,13 @@ namespace Epanet.Network.IO.Input {
                 throw new ENException(ErrorCode.Err201);
 
             if (tok[0].Match(Keywords.w_STATISTIC)) {
-                if (tok[n].Match(Keywords.w_NONE)) map.TStatFlag = PropertiesMap.TStatType.SERIES;
-                else if (tok[n].Match(Keywords.w_NO)) map.TStatFlag = PropertiesMap.TStatType.SERIES;
-                else if (tok[n].Match(Keywords.w_AVG)) map.TStatFlag = PropertiesMap.TStatType.AVG;
-                else if (tok[n].Match(Keywords.w_MIN)) map.TStatFlag = PropertiesMap.TStatType.MIN;
-                else if (tok[n].Match(Keywords.w_MAX)) map.TStatFlag = PropertiesMap.TStatType.MAX;
-                else if (tok[n].Match(Keywords.w_RANGE)) map.TStatFlag = PropertiesMap.TStatType.RANGE;
-                else
+                PropertiesMap.TStatType type;
+
+                if (!EnumsTxt.TryParse(tok[n], out type))
                     throw new ENException(ErrorCode.Err201);
+
+                map.TStatFlag = type;
+    
                 return;
             }
 
@@ -1719,6 +1712,7 @@ namespace Epanet.Network.IO.Input {
                         throw new ENException(ErrorCode.Err213);
                 }
             }
+
             var t = (long)(3600.0 * y);
 
             if (tok[0].Match(Keywords.w_DURATION))
@@ -1753,7 +1747,7 @@ namespace Epanet.Network.IO.Input {
 
         }
 
-        private Network.SectType FindSectionType(string line) {
+        private static Network.SectType FindSectionType(string line) {
             if (string.IsNullOrEmpty(line))
                 return (Network.SectType)(-1);
 
@@ -1808,7 +1802,7 @@ namespace Epanet.Network.IO.Input {
             if (nodeRef.Demand.Count > 0)
                 demand = nodeRef.Demand[0];
 
-            if (demand != null && nodeRef.InitDemand != Constants.MISSING) {
+            if (demand != null && !nodeRef.InitDemand.IsMissing()) {
                 demand.Base = y;
                 demand.Pattern = pat;
                 nodeRef.InitDemand = Constants.MISSING;

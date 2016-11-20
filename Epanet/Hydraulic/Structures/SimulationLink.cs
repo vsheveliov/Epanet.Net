@@ -194,7 +194,7 @@ namespace Epanet.Hydraulic.Structures {
                 this.status = Link.StatType.ACTIVE;
             }
             else {
-                if (this.setting == Constants.MISSING && this.status <= Link.StatType.CLOSED)
+                if (this.setting.IsMissing() && this.status <= Link.StatType.CLOSED)
                     this.status = Link.StatType.OPEN;
 
                 this.setting = value;
@@ -381,7 +381,7 @@ namespace Epanet.Hydraulic.Structures {
             if (this is SimulationPump && this.status >= Link.StatType.OPEN && this.setting > 0.0)
                 this.status = ((SimulationPump)this).PumpStatus(pMap, -dh);
 
-            if (this.Type == Link.LinkType.FCV && this.setting != Constants.MISSING)
+            if (this.Type == Link.LinkType.FCV && !this.setting.IsMissing())
                 this.status = ((SimulationValve)this).FcvStatus(pMap, tStatus);
 
             if (this.first is SimulationTank || this.second is SimulationTank)

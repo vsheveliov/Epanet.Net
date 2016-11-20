@@ -178,6 +178,10 @@ namespace Epanet.Util {
                 out result);
         }
 
+        public static bool IsMissing(this double value) {
+            return value == Constants.MISSING;
+        }
+
     }
 
 }
