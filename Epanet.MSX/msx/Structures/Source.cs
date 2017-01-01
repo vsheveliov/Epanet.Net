@@ -31,10 +31,10 @@ namespace Epanet.MSX.Structures {
         public double MassRate { get; set; }
 
         ///<summary>sourceType</summary>
-        public EnumTypes.SourceType Type { get; set; }
+        public SourceType Type { get; set; }
 
         public Source() {
-            this.Type = EnumTypes.SourceType.CONCEN;
+            this.Type = SourceType.CONCEN;
             this.Species = 0;
             this.C0 = 0;
             this.Pattern = 0;

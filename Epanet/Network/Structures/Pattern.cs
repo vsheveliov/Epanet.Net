@@ -20,7 +20,7 @@ using System.Collections.Generic;
 namespace Epanet.Network.Structures {
 
     ///<summary>Temporal pattern.</summary>
-    public class Pattern {
+    public class Pattern:IStringKeyed {
         ///<summary>Pattern factors list.</summary>
         private readonly List<double> factors = new List<double>();
 

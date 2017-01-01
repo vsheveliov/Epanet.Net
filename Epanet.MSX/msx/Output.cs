@@ -86,10 +86,10 @@ namespace Epanet.MSX {
             this.outStream = new BinaryWriter(output);
 
 
-            this.nodeBytesPerPeriod = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]
-                                      * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] * 4;
-            _linkBytesPerPeriod = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]
-                                  * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES] * 4;
+            this.nodeBytesPerPeriod = this.msx.Nobjects[(int)ObjectTypes.NODE]
+                                      * this.msx.Nobjects[(int)ObjectTypes.SPECIES] * 4;
+            _linkBytesPerPeriod = this.msx.Nobjects[(int)ObjectTypes.LINK]
+                                  * this.msx.Nobjects[(int)ObjectTypes.SPECIES] * 4;
 
             return 0;
         }
@@ -103,12 +103,12 @@ namespace Epanet.MSX {
         /// values were specified as the reported statistic, which is the
         /// default case).
         /// </summary>
-        public EnumTypes.ErrorCodeType MSXout_saveResults() {
+        public ErrorCodeType MSXout_saveResults() {
 
             double x;
             //DataOutputStream dout = (DataOutputStream)MSX.TmpOutFile.getFileIO();
-            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE]; j++) {
+            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.SPECIES]; i++) {
+                for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++) {
                     x = this.quality.MSXqual_getNodeQual(j, i);
                     //if(j==462){
                     //    System.out.println("462 : " + x);
@@ -122,8 +122,8 @@ namespace Epanet.MSX {
                     catch (IOException) {}
                 }
             }
-            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES]; i++) {
-                for (int j = 1; j <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; j++) {
+            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.SPECIES]; i++) {
+                for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++) {
                     x = this.quality.MSXqual_getLinkQual(j, i);
                     try {
                         this.outStream.Write((float)x); //fwrite(&x, sizeof(REAL4), 1, MSX.TmpOutFile.file);
@@ -143,9 +143,9 @@ namespace Epanet.MSX {
         ///     <item>the Magic Number to indicate that the file is complete.</item> 
         /// </list>
         /// </summary>
-        public EnumTypes.ErrorCodeType MSXout_saveFinalResults() {
+        public ErrorCodeType MSXout_saveFinalResults() {
             int magic = Constants.MAGICNUMBER;
-            EnumTypes.ErrorCodeType err = 0;
+            ErrorCodeType err = 0;
 
             // Save statistical results to the file
             //if ( MSX.Statflag != TstatType.SERIES )
@@ -169,7 +169,7 @@ namespace Epanet.MSX {
         public float MSXout_getNodeQual(BinaryReader raf, int k, int j, int m) {
             float c = 0.0f;
             long bp = this.ResultsOffset + k * (this.nodeBytesPerPeriod + _linkBytesPerPeriod);
-            bp += ((m - 1) * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.NODE] + (j - 1)) * 4;
+            bp += ((m - 1) * this.msx.Nobjects[(int)ObjectTypes.NODE] + (j - 1)) * 4;
 
             try {
                 raf.BaseStream.Seek(bp, SeekOrigin.Begin);
@@ -184,7 +184,7 @@ namespace Epanet.MSX {
         public float MSXout_getLinkQual(BinaryReader raf, int k, int j, int m) {
             float c = 0.0f;
             long bp = this.ResultsOffset + ((k + 1) * this.nodeBytesPerPeriod) + (k * _linkBytesPerPeriod);
-            bp += ((m - 1) * this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + (j - 1)) * 4;
+            bp += ((m - 1) * this.msx.Nobjects[(int)ObjectTypes.LINK] + (j - 1)) * 4;
 
             try {
                 raf.BaseStream.Position = bp;

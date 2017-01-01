@@ -50,12 +50,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="Enums\_enums.cs" />
     <Compile Include="ErrorCode.cs" />
     <Compile Include="Log\EpanetTraceListener.cs" />
     <Compile Include="Log\InvariantStreamWriter.cs" />
     <Compile Include="Log\RollingFileStream.cs" />
     <Compile Include="Log\TraceExtensions.cs" />
-    <Compile Include="Network\Collections.cs" />
     <Compile Include="Network\IO\Input\ParseException.cs" />
     <Compile Include="Hydraulic\HydraulicSim.cs" />
     <Compile Include="Hydraulic\IO\AwareStep.cs" />
@@ -76,13 +76,15 @@
     <Compile Include="Network\IO\Input\InputParser.cs" />
     <Compile Include="Network\IO\Input\NullParser.cs" />
     <Compile Include="Network\IO\Input\XMLParser.cs" />
-    <Compile Include="Network\IO\Keywords.cs" />
+    <Compile Include="Enums\Keywords.cs" />
     <Compile Include="Network\IO\Output\ExcelComposer.cs" />
     <Compile Include="Network\IO\Output\InpComposer.cs" />
     <Compile Include="Network\IO\Output\OutputComposer.cs" />
     <Compile Include="Network\IO\Output\XMLComposer.cs" />
+    <Compile Include="Network\IStringKeyed.cs" />
     <Compile Include="Network\Network.cs" />
     <Compile Include="Network\PropertiesMap.cs" />
+    <Compile Include="Network\StringKeyedCollection.cs" />
     <Compile Include="Network\Structures\Control.cs" />
     <Compile Include="Network\Structures\Curve.cs" />
     <Compile Include="Network\Structures\Demand.cs" />
@@ -116,7 +118,7 @@
     <Compile Include="Quality\Structures\QualitySegment.cs" />
     <Compile Include="Quality\Structures\QualityTank.cs" />
     <Compile Include="Util\ENException.cs" />
-    <Compile Include="Util\EnumsTxt.cs" />
+    <Compile Include="Enums\EnumsTxt.cs" />
     <Compile Include="Util\Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -160,6 +162,7 @@
     <EmbeddedResource Include="Properties\Text.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Text.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

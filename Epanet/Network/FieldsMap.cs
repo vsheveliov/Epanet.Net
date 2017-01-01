@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
+using Epanet.Enums;
 using Epanet.Network.IO;
 using Epanet.Network.Structures;
 using Epanet.Util;
@@ -26,55 +28,6 @@ namespace Epanet.Network {
 
     ///<summary>Units report properties & conversion support class</summary>
     public class FieldsMap {
-
-        /// <summary>Network variables</summary>
-        public enum FieldType {
-            ///<summary>nodal elevation</summary>
-            ELEV = 0,
-            ///<summary>nodal demand flow</summary>
-            DEMAND = 1,
-            ///<summary>nodal hydraulic head</summary>
-            HEAD = 2,
-            ///<summary>nodal pressure</summary>
-            PRESSURE = 3,
-            ///<summary>nodal water quality</summary>
-            QUALITY = 4,
-
-            ///<summary>link length</summary>
-            LENGTH = 5,
-            ///<summary>link diameter</summary>
-            DIAM = 6,
-            ///<summary>link flow rate</summary>
-            FLOW = 7,
-            ///<summary>link flow velocity</summary>
-            VELOCITY = 8,
-            ///<summary>link head loss</summary>
-            HEADLOSS = 9,
-            ///<summary>avg. water quality in link</summary>
-            LINKQUAL = 10,
-            ///<summary>link status</summary>
-            STATUS = 11,
-            ///<summary>pump/valve setting</summary>
-            SETTING = 12,
-            ///<summary>avg. reaction rate in link</summary>
-            REACTRATE = 13,
-            ///<summary>link friction factor</summary>
-            FRICTION = 14,
-
-            ///<summary>pump power output</summary>
-            POWER = 15,
-            ///<summary>simulation time</summary>
-            TIME = 16,
-            ///<summary>tank volume</summary>
-            VOLUME = 17,
-            ///<summary>simulation time of day</summary>
-            CLOCKTIME = 18,
-            ///<summary>time to fill a tank</summary>
-            FILLTIME = 19,
-            ///<summary>time to drain a tank</summary>
-            DRAINTIME = 20
-        }
-
         ///<summary>Report fields properties.</summary>
         private readonly Dictionary<FieldType, Field> fields;
 
@@ -88,9 +41,9 @@ namespace Epanet.Network {
                 this.units = new Dictionary<FieldType, double>();
 
                 foreach (FieldType type in Enum.GetValues(typeof(FieldType)))
-                    this.SetField(type, new Field(type.ParseStr()));
+                    this.fields[type] = new Field(type.ParseStr());
 
-                this.GetField(FieldType.FRICTION).SetPrecision(3);
+                this.GetField(FieldType.FRICTION).Precision = 3;
 
                 for (var i = FieldType.DEMAND; i <= FieldType.QUALITY; i++)
                     this.GetField(i).Enabled = true;
@@ -111,12 +64,12 @@ namespace Epanet.Network {
         /// If specified type not found.
         /// </remarks>
         public Field GetField(FieldType fieldType) {
-            object obj = this.fields[fieldType];
+            Field value;
 
-            if (obj == null)
+            if (!this.fields.TryGetValue(fieldType, out value))
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
-            else
-                return (Field)obj;
+
+            return value;
         }
 
         ///<summary>Get conversion value from field type.</summary>
@@ -126,23 +79,24 @@ namespace Epanet.Network {
         /// Throws <see cref="ENException"/> If specified type not found.
         /// </remarks>
         public double GetUnits(FieldType fieldType) {
-            object obj = this.units[fieldType];
-            if (obj == null)
+            double value;
+            if (!this.units.TryGetValue(fieldType, out value))
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
-            else
-                return (double)obj;
+
+            return value;
         }
 
         ///<summary>Update fields and units, after loading the INP.</summary>
 
         public void Prepare(
-            PropertiesMap.UnitsType targetUnits,
-            PropertiesMap.FlowUnitsType flowFlag,
-            PropertiesMap.PressUnitsType pressFlag,
-            PropertiesMap.QualType qualFlag,
+            UnitsType targetUnits,
+            FlowUnitsType flowFlag,
+            PressUnitsType pressFlag,
+            QualType qualFlag,
             string chemUnits,
             double spGrav,
             long hstep) {
+
             double dcf,
                    ccf,
                    qcf,
@@ -150,12 +104,13 @@ namespace Epanet.Network {
                    pcf,
                    wcf;
 
-            if (targetUnits == PropertiesMap.UnitsType.SI) {
+            if (targetUnits == UnitsType.SI) {
+
                 this.GetField(FieldType.DEMAND).Units = flowFlag.ToString();
                 this.GetField(FieldType.ELEV).Units = Keywords.u_METERS;
                 this.GetField(FieldType.HEAD).Units = Keywords.u_METERS;
 
-                this.GetField(FieldType.PRESSURE).Units = pressFlag == PropertiesMap.PressUnitsType.METERS
+                this.GetField(FieldType.PRESSURE).Units = pressFlag == PressUnitsType.METERS
                     ? Keywords.u_METERS
                     : Keywords.u_KPA;
 
@@ -169,12 +124,12 @@ namespace Epanet.Network {
 
                 dcf = 1000.0 * Constants.MperFT;
                 qcf = Constants.LPSperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.LPM) qcf = Constants.LPMperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.MLD) qcf = Constants.MLDperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.CMH) qcf = Constants.CMHperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.CMD) qcf = Constants.CMDperCFS;
+                if (flowFlag == FlowUnitsType.LPM) qcf = Constants.LPMperCFS;
+                if (flowFlag == FlowUnitsType.MLD) qcf = Constants.MLDperCFS;
+                if (flowFlag == FlowUnitsType.CMH) qcf = Constants.CMHperCFS;
+                if (flowFlag == FlowUnitsType.CMD) qcf = Constants.CMDperCFS;
                 hcf = Constants.MperFT;
-                if (pressFlag == PropertiesMap.PressUnitsType.METERS) pcf = Constants.MperFT * spGrav;
+                if (pressFlag == PressUnitsType.METERS) pcf = Constants.MperFT * spGrav;
                 else pcf = Constants.KPAperPSI * Constants.PSIperFT * spGrav;
                 wcf = Constants.KWperHP;
             }
@@ -195,24 +150,24 @@ namespace Epanet.Network {
 
                 dcf = 12.0;
                 qcf = 1.0;
-                if (flowFlag == PropertiesMap.FlowUnitsType.GPM) qcf = Constants.GPMperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.MGD) qcf = Constants.MGDperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.IMGD) qcf = Constants.IMGDperCFS;
-                if (flowFlag == PropertiesMap.FlowUnitsType.AFD) qcf = Constants.AFDperCFS;
+                if (flowFlag == FlowUnitsType.GPM) qcf = Constants.GPMperCFS;
+                if (flowFlag == FlowUnitsType.MGD) qcf = Constants.MGDperCFS;
+                if (flowFlag == FlowUnitsType.IMGD) qcf = Constants.IMGDperCFS;
+                if (flowFlag == FlowUnitsType.AFD) qcf = Constants.AFDperCFS;
                 hcf = 1.0;
                 pcf = Constants.PSIperFT * spGrav;
                 wcf = 1.0;
             }
             this.GetField(FieldType.QUALITY).Units = "";
             ccf = 1.0;
-            if (qualFlag == PropertiesMap.QualType.CHEM) {
+            if (qualFlag == QualType.CHEM) {
                 ccf = 1.0 / Constants.LperFT3;
                 this.GetField(FieldType.QUALITY).Units = chemUnits;
                 this.GetField(FieldType.REACTRATE).Units = chemUnits + Keywords.t_PERDAY;
             }
-            else if (qualFlag == PropertiesMap.QualType.AGE)
+            else if (qualFlag == QualType.AGE)
                 this.GetField(FieldType.QUALITY).Units = Keywords.u_HOURS;
-            else if (qualFlag == PropertiesMap.QualType.TRACE)
+            else if (qualFlag == QualType.TRACE)
                 this.GetField(FieldType.QUALITY).Units = Keywords.u_PERCENT;
 
             this.SetUnits(FieldType.DEMAND, qcf);
@@ -246,18 +201,13 @@ namespace Epanet.Network {
         /// <param name="value">Value to be converted.</param>
         /// <returns>Value in user units.</returns>
         public double RevertUnit(FieldType fieldType, double value) {
-            return fieldType != (FieldType)(-1) ? value * this.GetUnits(fieldType) : value;
+            return fieldType == (FieldType)(-1)
+                ? value 
+                : value * this.GetUnits(fieldType);
         }
 
         public double ConvertUnitToSystem(FieldType fieldType, double value) {
             return value / this.GetUnits(fieldType);
-        }
-
-        ///<summary>Set field properties.</summary>
-        /// <param name="fieldType">Field type.</param>
-        /// <param name="value">Report field reference.</param>
-        private void SetField(FieldType fieldType, Field value) {
-            this.fields[fieldType] = value;
         }
 
         ///<summary>Set conversion value from field type.</summary>

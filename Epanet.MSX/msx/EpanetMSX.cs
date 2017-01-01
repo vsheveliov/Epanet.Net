@@ -95,16 +95,16 @@ namespace Epanet.MSX {
 
         public Output Output { get { return this.output; } }
 
-        public EnumTypes.ErrorCodeType Load(string msxFile) {
-            EnumTypes.ErrorCodeType err = 0;
+        public ErrorCodeType Load(string msxFile) {
+            ErrorCodeType err = 0;
             err = Utilities.Call(err, this.project.MSXproj_open(msxFile));
             err = Utilities.Call(err, this.quality.MSXqual_open());
             return err;
         }
 
 
-        public EnumTypes.ErrorCodeType Run(string outFile) {
-            EnumTypes.ErrorCodeType err = 0;
+        public ErrorCodeType Run(string outFile) {
+            ErrorCodeType err = 0;
             bool halted = false;
             if (this.running) throw new InvalidOperationException("Already running");
 

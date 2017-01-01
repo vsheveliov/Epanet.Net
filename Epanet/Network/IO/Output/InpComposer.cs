@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
+using Epanet.Enums;
 using Epanet.Network.Structures;
 using Epanet.Util;
 
@@ -77,7 +79,7 @@ namespace Epanet.Network.IO.Output {
                 this.ComposeVertices(net);
                 this.ComposeRules(net);
 
-                this.buffer.WriteLine(Network.SectType.END.ParseStr());
+                this.buffer.WriteLine(SectType.END.ParseStr());
                 this.buffer.Close();
             }
             catch (IOException) {}
@@ -87,7 +89,7 @@ namespace Epanet.Network.IO.Output {
             if (net.TitleText.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.TITLE.ParseStr());
+            this.buffer.WriteLine(SectType.TITLE.ParseStr());
 
             foreach (string str  in  net.TitleText) {
                 this.buffer.WriteLine(str);
@@ -104,18 +106,18 @@ namespace Epanet.Network.IO.Output {
             if (!net.Junctions.Any())
                 return;
 
-            this.buffer.WriteLine(Network.SectType.JUNCTIONS.ParseStr());
+            this.buffer.WriteLine(SectType.JUNCTIONS.ParseStr());
             this.buffer.WriteLine(JUNCS_SUBTITLE);
 
             foreach (Node node in net.Junctions) {
-                this.buffer.Write(" {0}\t{1}", node.Id, fMap.RevertUnit(FieldsMap.FieldType.ELEV, node.Elevation));
+                this.buffer.Write(" {0}\t{1}", node.Id, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
 
                 //if(node.getDemand()!=null && node.getDemand().size()>0 && !node.getDemand()[0].getPattern().getId().equals(""))
                 //    buffer.write("\t"+node.getDemand()[0].getPattern().getId());
 
                 if (node.Demand.Count > 0) {
                     Demand d = node.Demand[0];
-                    this.buffer.Write("\t{0}", fMap.RevertUnit(FieldsMap.FieldType.DEMAND, d.Base));
+                    this.buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, d.Base));
 
                     if (!string.IsNullOrEmpty(d.Pattern.Id)
                         && !pMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
@@ -146,11 +148,11 @@ namespace Epanet.Network.IO.Output {
             if (reservoirs.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.RESERVOIRS.ParseStr());
+            this.buffer.WriteLine(SectType.RESERVOIRS.ParseStr());
             this.buffer.WriteLine(RESERVOIRS_SUBTITLE);
 
             foreach (Tank r  in  reservoirs) {
-                this.buffer.Write(" {0}\t{1}", r.Id, fMap.RevertUnit(FieldsMap.FieldType.ELEV, r.Elevation));
+                this.buffer.Write(" {0}\t{1}", r.Id, fMap.RevertUnit(FieldType.ELEV, r.Elevation));
 
 
                 if (r.Pattern != null)
@@ -179,7 +181,7 @@ namespace Epanet.Network.IO.Output {
             if (tanks.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.TANKS.ParseStr());
+            this.buffer.WriteLine(SectType.TANKS.ParseStr());
             this.buffer.WriteLine(TANK_SUBTITLE);
 
             foreach (Tank tank  in  tanks) {
@@ -190,12 +192,12 @@ namespace Epanet.Network.IO.Output {
                 this.buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
                         tank.Id,
-                        fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Elevation),
-                        fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.H0 - tank.Elevation),
-                        fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmin - tank.Elevation),
-                        fMap.RevertUnit(FieldsMap.FieldType.ELEV, tank.Hmax - tank.Elevation),
-                        fMap.RevertUnit(FieldsMap.FieldType.ELEV, 2 * Math.Sqrt(tank.Area / Math.PI)),
-                        fMap.RevertUnit(FieldsMap.FieldType.VOLUME, vmin));
+                        fMap.RevertUnit(FieldType.ELEV, tank.Elevation),
+                        fMap.RevertUnit(FieldType.ELEV, tank.H0 - tank.Elevation),
+                        fMap.RevertUnit(FieldType.ELEV, tank.Hmin - tank.Elevation),
+                        fMap.RevertUnit(FieldType.ELEV, tank.Hmax - tank.Elevation),
+                        fMap.RevertUnit(FieldType.ELEV, 2 * Math.Sqrt(tank.Area / Math.PI)),
+                        fMap.RevertUnit(FieldType.VOLUME, vmin));
 
                 if (tank.Vcurve != null)
                     this.buffer.Write(" " + tank.Vcurve.Id);
@@ -217,18 +219,18 @@ namespace Epanet.Network.IO.Output {
 
             List<Link> pipes = new List<Link>();
             foreach (Link link  in  net.Links)
-                if (link.Type == Link.LinkType.PIPE || link.Type == Link.LinkType.CV)
+                if (link.Type == LinkType.PIPE || link.Type == LinkType.CV)
                     pipes.Add(link);
 
 
-            this.buffer.WriteLine(Network.SectType.PIPES.ParseStr());
+            this.buffer.WriteLine(SectType.PIPES.ParseStr());
             this.buffer.WriteLine(PIPES_SUBTITLE);
 
             foreach (Link link  in  pipes) {
                 double d = link.Diameter;
                 double kc = link.Roughness;
-                if (pMap.FormFlag == PropertiesMap.FormType.DW)
-                    kc = fMap.RevertUnit(FieldsMap.FieldType.ELEV, kc * 1000.0);
+                if (pMap.FormFlag == FormType.DW)
+                    kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
 
@@ -237,17 +239,17 @@ namespace Epanet.Network.IO.Output {
                         link.Id,
                         link.FirstNode.Id,
                         link.SecondNode.Id,
-                        fMap.RevertUnit(FieldsMap.FieldType.LENGTH, link.Lenght),
-                        fMap.RevertUnit(FieldsMap.FieldType.DIAM, d));
+                        fMap.RevertUnit(FieldType.LENGTH, link.Lenght),
+                        fMap.RevertUnit(FieldType.DIAM, d));
 
                 //if (pMap.getFormflag() == FormType.DW)
                 this.buffer.Write(" {0}\t{1}", kc, km);
 
-                if (link.Type == Link.LinkType.CV)
+                if (link.Type == LinkType.CV)
                     this.buffer.Write(" CV");
-                else if (link.Status == Link.StatType.CLOSED)
+                else if (link.Status == StatType.CLOSED)
                     this.buffer.Write(" CLOSED");
-                else if (link.Status == Link.StatType.OPEN)
+                else if (link.Status == StatType.OPEN)
                     this.buffer.Write(" OPEN");
 
                 if (!string.IsNullOrEmpty(link.Comment))
@@ -265,7 +267,7 @@ namespace Epanet.Network.IO.Output {
             if (!net.Pumps.Any())
                 return;
 
-            this.buffer.WriteLine(Network.SectType.PUMPS.ParseStr());
+            this.buffer.WriteLine(SectType.PUMPS.ParseStr());
             this.buffer.WriteLine(PUMPS_SUBTITLE);
 
             foreach (Pump pump in net.Pumps) {
@@ -277,7 +279,7 @@ namespace Epanet.Network.IO.Output {
 
 
                 // Pump has constant power
-                if (pump.Ptype == Pump.PumpType.CONST_HP)
+                if (pump.Ptype == PumpType.CONST_HP)
                     this.buffer.Write(" POWER " + pump.Km);
                 // Pump has a head curve
                 else if (pump.HCurve != null)
@@ -286,12 +288,12 @@ namespace Epanet.Network.IO.Output {
                 else {
                     this.buffer.Write(
                             " {0}\t{1}\t{2}\t0.0\t{3}",
-                            fMap.RevertUnit(FieldsMap.FieldType.HEAD, -pump.H0),
+                            fMap.RevertUnit(FieldType.HEAD, -pump.H0),
                             fMap.RevertUnit(
-                                FieldsMap.FieldType.HEAD,
+                                FieldType.HEAD,
                                 -pump.H0 - pump.FlowCoefficient * Math.Pow(pump.Q0, pump.N)),
-                            fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Q0),
-                            fMap.RevertUnit(FieldsMap.FieldType.FLOW, pump.Qmax));
+                            fMap.RevertUnit(FieldType.FLOW, pump.Q0),
+                            fMap.RevertUnit(FieldType.FLOW, pump.Qmax));
 
                     continue;
                 }
@@ -318,7 +320,7 @@ namespace Epanet.Network.IO.Output {
             if (!net.Valves.Any())
                 return;
 
-            this.buffer.WriteLine(Network.SectType.VALVES.ParseStr());
+            this.buffer.WriteLine(SectType.VALVES.ParseStr());
             this.buffer.WriteLine(VALVES_SUBTITLE);
             
             foreach (Valve valve in net.Valves) {
@@ -328,13 +330,13 @@ namespace Epanet.Network.IO.Output {
                     kc = 0.0;
 
                 switch (valve.Type) {
-                case Link.LinkType.FCV:
-                    kc = fMap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
+                case LinkType.FCV:
+                    kc = fMap.RevertUnit(FieldType.FLOW, kc);
                     break;
-                case Link.LinkType.PRV:
-                case Link.LinkType.PSV:
-                case Link.LinkType.PBV:
-                    kc = fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
+                case LinkType.PRV:
+                case LinkType.PSV:
+                case LinkType.PBV:
+                    kc = fMap.RevertUnit(FieldType.PRESSURE, kc);
                     break;
                 }
 
@@ -345,10 +347,10 @@ namespace Epanet.Network.IO.Output {
                         valve.Id,
                         valve.FirstNode.Id,
                         valve.SecondNode.Id,
-                        fMap.RevertUnit(FieldsMap.FieldType.DIAM, d),
+                        fMap.RevertUnit(FieldType.DIAM, d),
                         valve.Type.ParseStr());
 
-                if (valve.Type == Link.LinkType.GPV && valve.Curve != null)
+                if (valve.Type == LinkType.GPV && valve.Curve != null)
                     this.buffer.Write(" {0}\t{1}", valve.Curve.Id, km);
                 else
                     this.buffer.Write(" {0}\t{1}", kc, km);
@@ -367,10 +369,10 @@ namespace Epanet.Network.IO.Output {
             if (!net.Junctions.Any())
                 return;
 
-            this.buffer.WriteLine(Network.SectType.DEMANDS.ParseStr());
+            this.buffer.WriteLine(SectType.DEMANDS.ParseStr());
             this.buffer.WriteLine(DEMANDS_SUBTITLE);
 
-            double ucf = fMap.GetUnits(FieldsMap.FieldType.DEMAND);
+            double ucf = fMap.GetUnits(FieldType.DEMAND);
 
             foreach (Node node in net.Junctions) {
                 if (node.Demand.Count > 1)
@@ -392,11 +394,11 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.EMITTERS.ParseStr());
+            this.buffer.WriteLine(SectType.EMITTERS.ParseStr());
             this.buffer.WriteLine(EMITTERS_SUBTITLE);
 
-            double uflow = net.FieldsMap.GetUnits(FieldsMap.FieldType.FLOW);
-            double upressure = net.FieldsMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+            double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
+            double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
             double qexp = net.PropertiesMap.QExp;
 
             foreach (Node node  in  net.Junctions) {
@@ -413,30 +415,30 @@ namespace Epanet.Network.IO.Output {
             if (net.Links.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.STATUS.ParseStr());
+            this.buffer.WriteLine(SectType.STATUS.ParseStr());
             this.buffer.WriteLine(STATUS_SUBTITLE);
 
             foreach (Link link  in  net.Links) {
-                if (link.Type <= Link.LinkType.PUMP) {
-                    if (link.Status == Link.StatType.CLOSED)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, Link.StatType.CLOSED.ParseStr());
+                if (link.Type <= LinkType.PUMP) {
+                    if (link.Status == StatType.CLOSED)
+                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.CLOSED.ParseStr());
 
                     // Write pump speed here for pumps with old-style pump curve input
-                    else if (link.Type == Link.LinkType.PUMP) {
+                    else if (link.Type == LinkType.PUMP) {
                         Pump pump = (Pump)link;
                         if (pump.HCurve == null &&
-                            pump.Ptype != Pump.PumpType.CONST_HP &&
+                            pump.Ptype != PumpType.CONST_HP &&
                             pump.Roughness != 1.0)
                             this.buffer.WriteLine(" {0}\t{1}", link.Id, link.Roughness);
                     }
                 }
                 // Write fixed-status PRVs & PSVs (setting = MISSING)
                 else if(link.Roughness.IsMissing()) {
-                    if (link.Status == Link.StatType.OPEN)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, Link.StatType.OPEN.ParseStr());
+                    if (link.Status == StatType.OPEN)
+                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.OPEN.ParseStr());
 
-                    if (link.Status == Link.StatType.CLOSED)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, Link.StatType.CLOSED.ParseStr());
+                    if (link.Status == StatType.CLOSED)
+                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.CLOSED.ParseStr());
 
                 }
 
@@ -452,7 +454,7 @@ namespace Epanet.Network.IO.Output {
             if (pats.Count <= 1)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.PATTERNS.ParseStr());
+            this.buffer.WriteLine(SectType.PATTERNS.ParseStr());
             this.buffer.WriteLine(PATTERNS_SUBTITLE);
 
             for (int i = 1; i < pats.Count; i++) {
@@ -480,7 +482,7 @@ namespace Epanet.Network.IO.Output {
             if (curves.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.CURVES.ParseStr());
+            this.buffer.WriteLine(SectType.CURVES.ParseStr());
             this.buffer.WriteLine(CURVE_SUBTITLE);
 
             foreach (Curve c  in  curves) {
@@ -499,7 +501,7 @@ namespace Epanet.Network.IO.Output {
             if (controls.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.CONTROLS.ParseStr());
+            this.buffer.WriteLine(SectType.CONTROLS.ParseStr());
 
             foreach (Control control  in  controls) {
                 // Check that controlled link exists
@@ -511,13 +513,13 @@ namespace Epanet.Network.IO.Output {
                 else {
                     double kc = control.Setting;
                     switch (control.Link.Type) {
-                    case Link.LinkType.PRV:
-                    case Link.LinkType.PSV:
-                    case Link.LinkType.PBV:
-                        kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
+                    case LinkType.PRV:
+                    case LinkType.PSV:
+                    case LinkType.PBV:
+                        kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
                         break;
-                    case Link.LinkType.FCV:
-                        kc = fmap.RevertUnit(FieldsMap.FieldType.FLOW, kc);
+                    case LinkType.FCV:
+                        kc = fmap.RevertUnit(FieldType.FLOW, kc);
                         break;
                     }
                     this.buffer.Write(" LINK {0} {1} ", control.Link.Id, kc);
@@ -526,13 +528,13 @@ namespace Epanet.Network.IO.Output {
 
                 switch (control.Type) {
                 // Print level control
-                case Control.ControlType.LOWLEVEL:
-                case Control.ControlType.HILEVEL:
+                case ControlType.LOWLEVEL:
+                case ControlType.HILEVEL:
                     double kc = control.Grade - control.Node.Elevation;
                     if (control.Node is Tank)
-                        kc = fmap.RevertUnit(FieldsMap.FieldType.HEAD, kc);
+                        kc = fmap.RevertUnit(FieldType.HEAD, kc);
                     else
-                        kc = fmap.RevertUnit(FieldsMap.FieldType.PRESSURE, kc);
+                        kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
 
                     this.buffer.Write(
                             " IF NODE {0} {1} {2}",
@@ -543,19 +545,19 @@ namespace Epanet.Network.IO.Output {
                     break;
 
                 // Print timer control
-                case Control.ControlType.TIMER:
+                case ControlType.TIMER:
                     this.buffer.Write(
                             " AT {0} {1} HOURS",
-                            Control.ControlType.TIMER.ParseStr(),
+                            ControlType.TIMER.ParseStr(),
                             control.Time / 3600.0f);
 
                     break;
 
                 // Print time-of-day control
-                case Control.ControlType.TIMEOFDAY:
+                case ControlType.TIMEOFDAY:
                     this.buffer.Write(
                             " AT {0} {1}",
-                            Control.ControlType.TIMEOFDAY.ParseStr(),
+                            ControlType.TIMEOFDAY.ParseStr(),
                             control.Time.GetClockTime());
 
                     break;
@@ -571,17 +573,14 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.QUALITY.ParseStr());
+            this.buffer.WriteLine(SectType.QUALITY.ParseStr());
             this.buffer.WriteLine(QUALITY_SUBTITLE);
 
             foreach (Node node  in  net.Nodes) {
-                if (node.C0.Length == 1) {
-                    if (node.C0[0] == 0.0) continue;
-                    this.buffer.Write(" {0}\t{1}", node.Id, fmap.RevertUnit(FieldsMap.FieldType.QUALITY, node.C0[0]));
-                }
-
-                this.buffer.WriteLine();
+                if (node.C0 == 0.0) continue;
+                this.buffer.WriteLine(" {0}\t{1}", node.Id, fmap.RevertUnit(FieldType.QUALITY, node.C0));
             }
+
             this.buffer.WriteLine();
         }
 
@@ -590,7 +589,7 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(Network.SectType.SOURCES.ParseStr());
+            this.buffer.WriteLine(SectType.SOURCES.ParseStr());
             this.buffer.WriteLine(SOURCE_SUBTITLE);
 
 
@@ -619,7 +618,7 @@ namespace Epanet.Network.IO.Output {
             if (!net.Tanks.Any())
                 return;
 
-            this.buffer.WriteLine(Network.SectType.MIXING.ParseStr());
+            this.buffer.WriteLine(SectType.MIXING.ParseStr());
             this.buffer.WriteLine(MIXING_SUBTITLE);
 
             foreach (Tank tank in net.Tanks) {
@@ -637,7 +636,7 @@ namespace Epanet.Network.IO.Output {
         private void ComposeReaction(Network net) {
             PropertiesMap pMap = net.PropertiesMap;
 
-            this.buffer.WriteLine(Network.SectType.REACTIONS.ParseStr());
+            this.buffer.WriteLine(SectType.REACTIONS.ParseStr());
             this.buffer.WriteLine(REACTIONS_SUBTITLE);
 
             this.buffer.WriteLine("ORDER BULK {0}", pMap.BulkOrder);
@@ -654,7 +653,7 @@ namespace Epanet.Network.IO.Output {
 
 
             foreach (Link link  in  net.Links) {
-                if (link.Type > Link.LinkType.PIPE)
+                if (link.Type > LinkType.PIPE)
                     continue;
 
                 if (link.Kb != pMap.KBulk)
@@ -675,7 +674,7 @@ namespace Epanet.Network.IO.Output {
         private void ComposeEnergy(Network net) {
             PropertiesMap pMap = net.PropertiesMap;
 
-            this.buffer.WriteLine(Network.SectType.ENERGY.ParseStr());
+            this.buffer.WriteLine(SectType.ENERGY.ParseStr());
 
             if (pMap.ECost != 0.0)
                 this.buffer.WriteLine("GLOBAL PRICE {0}", pMap.ECost);
@@ -703,7 +702,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeTimes(Network net) {
             PropertiesMap pMap = net.PropertiesMap;
-            this.buffer.WriteLine(Network.SectType.TIMES.ParseStr());
+            this.buffer.WriteLine(SectType.TIMES.ParseStr());
             this.buffer.WriteLine("DURATION {0}", pMap.Duration.GetClockTime());
             this.buffer.WriteLine("HYDRAULIC TIMESTEP {0}", pMap.HStep.GetClockTime());
             this.buffer.WriteLine("QUALITY TIMESTEP {0}", pMap.QStep.GetClockTime());
@@ -721,7 +720,7 @@ namespace Epanet.Network.IO.Output {
             PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
 
-            this.buffer.WriteLine(Network.SectType.OPTIONS.ParseStr());
+            this.buffer.WriteLine(SectType.OPTIONS.ParseStr());
             this.buffer.WriteLine("UNITS               " + pMap.FlowFlag);
             this.buffer.WriteLine("PRESSURE            " + pMap.PressFlag);
             this.buffer.WriteLine("HEADLOSS            " + pMap.FormFlag);
@@ -729,10 +728,10 @@ namespace Epanet.Network.IO.Output {
             if (!string.IsNullOrEmpty(pMap.DefPatId))
                 this.buffer.WriteLine("PATTERN             " + pMap.DefPatId);
 
-            if (pMap.HydFlag == PropertiesMap.HydType.USE)
+            if (pMap.HydFlag == HydType.USE)
                 this.buffer.WriteLine("HYDRAULICS USE      " + pMap.HydFname);
 
-            if (pMap.HydFlag == PropertiesMap.HydType.SAVE)
+            if (pMap.HydFlag == HydType.SAVE)
                 this.buffer.WriteLine("HYDRAULICS SAVE     " + pMap.HydFname);
 
             if (pMap.ExtraIter == -1)
@@ -742,16 +741,16 @@ namespace Epanet.Network.IO.Output {
                 this.buffer.WriteLine("UNBALANCED          CONTINUE " + pMap.ExtraIter);
 
             switch (pMap.QualFlag) {
-            case PropertiesMap.QualType.CHEM:
+            case QualType.CHEM:
                 this.buffer.WriteLine("QUALITY             {0} {1}", pMap.ChemName, pMap.ChemUnits);
                 break;
-            case PropertiesMap.QualType.TRACE:
+            case QualType.TRACE:
                 this.buffer.WriteLine("QUALITY             TRACE " + pMap.TraceNode);
                 break;
-            case PropertiesMap.QualType.AGE:
+            case QualType.AGE:
                 this.buffer.WriteLine("QUALITY             AGE");
                 break;
-            case PropertiesMap.QualType.NONE:
+            case QualType.NONE:
                 this.buffer.WriteLine("QUALITY             NONE");
                 break;
             }
@@ -763,7 +762,7 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine("SPECIFIC GRAVITY  {0}", pMap.SpGrav);
             this.buffer.WriteLine("TRIALS            {0}", pMap.MaxIter);
             this.buffer.WriteLine("ACCURACY          {0}", pMap.HAcc);
-            this.buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldsMap.FieldType.QUALITY, pMap.Ctol));
+            this.buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, pMap.Ctol));
             this.buffer.WriteLine("CHECKFREQ         {0}", pMap.CheckFreq);
             this.buffer.WriteLine("MAXCHECK          {0}", pMap.MaxCheck);
             this.buffer.WriteLine("DAMPLIMIT         {0}", pMap.DampLimit);
@@ -785,7 +784,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeReport(Network net) {
 
-            this.buffer.WriteLine(Network.SectType.REPORT.ParseStr());
+            this.buffer.WriteLine(SectType.REPORT.ParseStr());
 
             PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
@@ -795,13 +794,13 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine("ENERGY         " + (pMap.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
             switch (pMap.NodeFlag) {
-            case PropertiesMap.ReportFlag.FALSE:
+            case ReportFlag.FALSE:
                 this.buffer.WriteLine("NODES NONE");
                 break;
-            case PropertiesMap.ReportFlag.TRUE:
+            case ReportFlag.TRUE:
                 this.buffer.WriteLine("NODES ALL");
                 break;
-            case PropertiesMap.ReportFlag.SOME: {
+            case ReportFlag.SOME: {
                 int j = 0;
                 foreach (Node node  in  net.Nodes) {
                     if (node.RptFlag) {
@@ -821,13 +820,13 @@ namespace Epanet.Network.IO.Output {
             }
 
             switch (pMap.LinkFlag) {
-            case PropertiesMap.ReportFlag.FALSE:
+            case ReportFlag.FALSE:
                 this.buffer.WriteLine("LINKS NONE");
                 break;
-            case PropertiesMap.ReportFlag.TRUE:
+            case ReportFlag.TRUE:
                 this.buffer.WriteLine("LINKS ALL");
                 break;
-            case PropertiesMap.ReportFlag.SOME: {
+            case ReportFlag.SOME: {
                 int j = 0;
                 foreach (Link link  in  net.Links) {
                     if (link.RptFlag) {
@@ -845,7 +844,7 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            for (FieldsMap.FieldType i = 0; i < FieldsMap.FieldType.FRICTION; i++) {
+            for (FieldType i = 0; i < FieldType.FRICTION; i++) {
                 Field f = fMap.GetField(i);
 
                 if (!f.Enabled) {
@@ -855,18 +854,18 @@ namespace Epanet.Network.IO.Output {
 
                 this.buffer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
 
-                if (f.GetRptLim(Field.RangeType.LOW) < Constants.BIG)
-                    this.buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(Field.RangeType.LOW));
+                if (f.GetRptLim(RangeType.LOW) < Constants.BIG)
+                    this.buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(RangeType.LOW));
 
-                if (f.GetRptLim(Field.RangeType.HI) > -Constants.BIG)
-                    this.buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(Field.RangeType.HI));
+                if (f.GetRptLim(RangeType.HI) > -Constants.BIG)
+                    this.buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(RangeType.HI));
             }
 
             this.buffer.WriteLine();
         }
 
         private void ComposeCoordinates(Network net) {
-            this.buffer.WriteLine(Network.SectType.COORDINATES.ParseStr());
+            this.buffer.WriteLine(SectType.COORDINATES.ParseStr());
             this.buffer.WriteLine(COORDINATES_SUBTITLE);
 
             foreach (Node node  in  net.Nodes) {
@@ -883,7 +882,7 @@ namespace Epanet.Network.IO.Output {
 
 
         private void ComposeLabels(Network net) {
-            this.buffer.WriteLine(Network.SectType.LABELS.ParseStr());
+            this.buffer.WriteLine(SectType.LABELS.ParseStr());
             this.buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
 
             foreach (Label label  in  net.Labels) {
@@ -901,7 +900,7 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeVertices(Network net) {
-            this.buffer.WriteLine(Network.SectType.VERTICES.ParseStr());
+            this.buffer.WriteLine(SectType.VERTICES.ParseStr());
             this.buffer.WriteLine(";Link\tX-Coord\tY-Coord");
 
             foreach (Link link  in  net.Links) {
@@ -917,7 +916,7 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeRules(Network net) {
-            this.buffer.WriteLine(Network.SectType.RULES.ParseStr());
+            this.buffer.WriteLine(SectType.RULES.ParseStr());
             this.buffer.WriteLine();
 
             foreach (Rule r  in  net.Rules) {

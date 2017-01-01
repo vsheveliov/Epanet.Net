@@ -17,30 +17,21 @@
 
 using System;
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic tank structure.</summary>
     public class Tank:Node {
-
-        /// <summary>Tank mixing regimes.</summary>
-        public enum MixType {
-            /// <summary>1-compartment model</summary>
-            MIX1 = 0,
-            /// <summary>2-compartment model</summary>
-            MIX2 = 1,
-            /// <summary>First in, first out model</summary>
-            FIFO = 2,
-            /// <summary> Last in, first out model</summary>
-            LIFO = 3,
-        }
-
         public Tank(string id):base(id) { }
+
+        public override NodeType Type { get { return NodeType.TANK; } }
 
         ///<summary>Tank area (feet^2).</summary>
         public double Area { get; set; }
 
         ///<summary>Species concentration.</summary>
-        public double[] Concentration { get; set; }
+        public double Concentration { get; set; }
 
         ///<summary>Initial water elev.</summary>
         public double H0 { get; set; }
@@ -77,7 +68,7 @@ namespace Epanet.Network.Structures {
 
         public bool IsReservoir { get { return Math.Abs(this.Area) < double.Epsilon * 10; } }
 
-#if DEBUG // NUCONVERT
+#if NUCONVERT
 
         public double GetNuArea(PropertiesMap.UnitsType type) { return NUConvert.revertArea(type, this.Area); }
 

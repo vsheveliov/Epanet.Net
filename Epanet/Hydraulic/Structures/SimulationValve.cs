@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
+using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network;
 using Epanet.Network.Structures;
@@ -36,7 +38,7 @@ namespace Epanet.Hydraulic.Structures {
         /// </summary>
         private void ValveCoeff(PropertiesMap pMap) {
             // Valve is closed. Use a very small matrix coeff.
-            if (this.status <= Link.StatType.CLOSED) {
+            if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
                 this.flowCorrection = this.flow;
                 return;
@@ -63,7 +65,7 @@ namespace Epanet.Hydraulic.Structures {
         /// </summary>
         private void ValveCoeff(PropertiesMap pMap, double km) {
             // Valve is closed. Use a very small matrix coeff.
-            if (this.status <= Link.StatType.CLOSED) {
+            if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
                 this.flowCorrection = this.flow;
                 return;
@@ -108,7 +110,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes P & Y coeffs. for general purpose valve.</summary>
         private void GpvCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
-            if (this.status == Link.StatType.CLOSED)
+            if (this.status == StatType.CLOSED)
                 this.ValveCoeff(pMap);
             else {
                 double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
@@ -120,11 +122,11 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Updates status of a flow control valve.</summary>
-        public Link.StatType FcvStatus(PropertiesMap pMap, Link.StatType s) {
-            Link.StatType stat = s;
-            if (this.First.SimHead - this.Second.SimHead < -pMap.HTol) stat = Link.StatType.XFCV;
-            else if (this.flow < -pMap.QTol) stat = Link.StatType.XFCV;
-            else if (s == Link.StatType.XFCV && this.flow >= this.setting) stat = Link.StatType.ACTIVE;
+        public StatType FcvStatus(PropertiesMap pMap, StatType s) {
+            StatType stat = s;
+            if (this.First.SimHead - this.Second.SimHead < -pMap.HTol) stat = StatType.XFCV;
+            else if (this.flow < -pMap.QTol) stat = StatType.XFCV;
+            else if (s == StatType.XFCV && this.flow >= this.setting) stat = StatType.ACTIVE;
             return stat;
         }
 
@@ -137,7 +139,7 @@ namespace Epanet.Hydraulic.Structures {
 
             double hset = this.second.Elevation + this.setting;
 
-            if (this.status == Link.StatType.ACTIVE) {
+            if (this.status == StatType.ACTIVE) {
 
                 this.invHeadLoss = 0.0;
                 this.flowCorrection = this.flow + ls.GetNodalInFlow(this.second);
@@ -166,7 +168,7 @@ namespace Epanet.Hydraulic.Structures {
             int n2 = smat.GetRow(this.second.Index);
             double hset = this.first.Elevation + this.setting;
 
-            if (this.status == Link.StatType.ACTIVE) {
+            if (this.status == StatType.ACTIVE) {
                 this.invHeadLoss = 0.0;
                 this.flowCorrection = this.flow - ls.GetNodalInFlow(this.first);
                 ls.AddRhsCoeff(n1, +(hset * Constants.CBIG));
@@ -193,7 +195,7 @@ namespace Epanet.Hydraulic.Structures {
             // If valve active, break network at valve and treat
             // flow setting as external demand at upstream node
             // and external supply at downstream node.
-            if (this.status == Link.StatType.ACTIVE) {
+            if (this.status == StatType.ACTIVE) {
                 ls.AddNodalInFlow(this.first.Index, -q);
                 ls.AddRhsCoeff(n1, -q);
                 ls.AddNodalInFlow(this.second.Index, +q);
@@ -231,16 +233,16 @@ namespace Epanet.Hydraulic.Structures {
                 SimulationNode n1 = link.First;
                 SimulationNode n2 = link.Second;
                 if (n == n1.Index || n == n2.Index) {
-                    if (link.Type == Link.LinkType.PRV || link.Type == Link.LinkType.PSV
-                        || link.Type == Link.LinkType.FCV) {
-                        if (link.status == Link.StatType.ACTIVE) {
-                            if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL) {
+                    if (link.Type == LinkType.PRV || link.Type == LinkType.PSV
+                        || link.Type == LinkType.FCV) {
+                        if (link.status == StatType.ACTIVE) {
+                            if (pMap.Stat_Flag == StatFlag.FULL) {
                                 LogBadValve(log, link, htime);
                             }
 
-                            link.status = link.Type == Link.LinkType.FCV
-                                ? Link.StatType.XFCV
-                                : Link.StatType.XPRESSURE;
+                            link.status = link.Type == LinkType.FCV
+                                ? StatType.XFCV
+                                : StatType.XPRESSURE;
 
                             return true;
                         }
@@ -253,11 +255,11 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         private static void LogBadValve(TraceSource log, SimulationLink link, long htime) {
-            log.Warning(Properties.Text.ResourceManager.GetString("FMT61"), htime.GetClockTime(), link.Link.Id);
+            log.Warning(Properties.Text.FMT61, htime.GetClockTime(), link.Link.Id);
         }
 
         /// <summary>Updates status of a pressure reducing valve.</summary>
-        private Link.StatType PrvStatus(PropertiesMap pMap, double hset) {
+        private StatType PrvStatus(PropertiesMap pMap, double hset) {
             if (this.setting.IsMissing())
                 return this.status;
 
@@ -266,39 +268,39 @@ namespace Epanet.Hydraulic.Structures {
             double h1 = this.first.SimHead;
             double h2 = this.second.SimHead;
 
-            Link.StatType stat = this.status;
+            StatType stat = this.status;
 
             switch (this.status) {
-            case Link.StatType.ACTIVE:
+            case StatType.ACTIVE:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 else if (h1 - hml < hset - htol)
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 else
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 break;
 
-            case Link.StatType.OPEN:
+            case StatType.OPEN:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 else if (h2 >= hset + htol)
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 else
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 break;
 
-            case Link.StatType.CLOSED:
+            case StatType.CLOSED:
                 if (h1 >= hset + htol && h2 < hset - htol)
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 else if (h1 < hset - htol && h1 > h2 + htol)
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 else
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 break;
 
-            case Link.StatType.XPRESSURE:
+            case StatType.XPRESSURE:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 break;
             }
 
@@ -306,7 +308,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Updates status of a pressure sustaining valve.</summary>
-        private Link.StatType PsvStatus(PropertiesMap pMap, double hset) {
+        private StatType PsvStatus(PropertiesMap pMap, double hset) {
             if (this.setting.IsMissing())
                 return this.status;
 
@@ -314,39 +316,39 @@ namespace Epanet.Hydraulic.Structures {
             double h2 = this.second.SimHead;
             double htol = pMap.HTol;
             double hml = this.Km * (this.flow * this.flow);
-            Link.StatType stat = this.status;
+            StatType stat = this.status;
 
             switch (this.status) {
-            case Link.StatType.ACTIVE:
+            case StatType.ACTIVE:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 else if (h2 + hml > hset + htol)
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 else
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 break;
 
-            case Link.StatType.OPEN:
+            case StatType.OPEN:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 else if (h1 < hset - htol)
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 else
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 break;
 
-            case Link.StatType.CLOSED:
+            case StatType.CLOSED:
                 if (h2 > hset + htol && h1 > h2 + htol)
-                    stat = Link.StatType.OPEN;
+                    stat = StatType.OPEN;
                 else if (h1 >= hset + htol && h1 > h2 + htol)
-                    stat = Link.StatType.ACTIVE;
+                    stat = StatType.ACTIVE;
                 else
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 break;
 
-            case Link.StatType.XPRESSURE:
+            case StatType.XPRESSURE:
                 if (this.flow < -pMap.QTol)
-                    stat = Link.StatType.CLOSED;
+                    stat = StatType.CLOSED;
                 break;
             }
 
@@ -356,21 +358,21 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Compute P & Y coefficients for PBV,TCV,GPV valves.</summary>
         public bool ComputeValveCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
             switch (this.Type) {
-            case Link.LinkType.PBV:
+            case LinkType.PBV:
                 this.PbvCoeff(pMap);
                 break;
 
-            case Link.LinkType.TCV:
+            case LinkType.TCV:
                 this.TcvCoeff(pMap);
                 break;
 
-            case Link.LinkType.GPV:
+            case LinkType.GPV:
                 this.GpvCoeff(fMap, pMap, curves);
                 break;
 
-            case Link.LinkType.FCV:
-            case Link.LinkType.PRV:
-            case Link.LinkType.PSV:
+            case LinkType.FCV:
+            case LinkType.PRV:
+            case LinkType.PSV:
 
                 if (this.SimSetting.IsMissing())
                     this.ValveCoeff(pMap);
@@ -395,16 +397,16 @@ namespace Epanet.Hydraulic.Structures {
 
                 if (v.setting.IsMissing()) continue;
 
-                Link.StatType s = v.status;
+                StatType s = v.status;
 
                 switch (v.Type) {
-                case Link.LinkType.PRV: {
+                case LinkType.PRV: {
                     double hset = v.second.Elevation + v.setting;
                     v.status = v.PrvStatus(pMap, hset);
                     break;
                 }
 
-                case Link.LinkType.PSV: {
+                case LinkType.PSV: {
                     double hset = v.first.Elevation + v.setting;
                     v.status = v.PsvStatus(pMap, hset);
                     break;
@@ -415,7 +417,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (s != v.status) {
-                    if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
+                    if (pMap.Stat_Flag == StatFlag.FULL)
                         LogStatChange(fMap, log, v, s, v.status);
                     change = true;
                 }
@@ -439,13 +441,13 @@ namespace Epanet.Hydraulic.Structures {
                     continue;
 
                 switch (valve.Type) {
-                case Link.LinkType.PRV:
+                case LinkType.PRV:
                     valve.PrvCoeff(pMap, ls, smat);
                     break;
-                case Link.LinkType.PSV:
+                case LinkType.PSV:
                     valve.PsvCoeff(pMap, ls, smat);
                     break;
-                case Link.LinkType.FCV:
+                case LinkType.FCV:
                     valve.FcvCoeff(pMap, ls, smat);
                     break;
                 }

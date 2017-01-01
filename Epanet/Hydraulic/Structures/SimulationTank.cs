@@ -17,6 +17,8 @@
 
 using System;
 using System.Collections.Generic;
+
+using Epanet.Enums;
 using Epanet.Network;
 using Epanet.Network.Structures;
 
@@ -29,7 +31,7 @@ namespace Epanet.Hydraulic.Structures {
             // Init
             this.head = ((Tank)this.node).H0;
             this.demand = 0.0;
-            this.OldStat = Link.StatType.TEMPCLOSED;
+            this.OldStat = StatType.TEMPCLOSED;
         }
 
         // public Tank Node { get { return (Tank)this.node; } }
@@ -58,9 +60,9 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Kb { get { return ((Tank)this.node).Kb; } }
 
-        public double[] Concentration { get { return ((Tank)this.node).Concentration; } }
+        public double Concentration { get { return ((Tank)this.node).Concentration; } }
 
-        public Tank.MixType MixModel { get { return ((Tank)this.node).MixModel; } }
+        public MixType MixModel { get { return ((Tank)this.node).MixModel; } }
 
         public double V1Max { get { return ((Tank)this.node).V1Max; } }
 
@@ -71,7 +73,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public bool IsReservoir { get { return ((Tank)this.node).Area == 0; } }
 
-        public Link.StatType OldStat { get; set; }
+        public StatType OldStat { get; set; }
 
         /// Simulation methods
 
@@ -83,8 +85,8 @@ namespace Epanet.Hydraulic.Structures {
                 return this.Vmin + (h - this.Hmin) * this.Area;
             else {
                 return
-                    curve[(h - this.Elevation) * fMap.GetUnits(FieldsMap.FieldType.HEAD)
-                          / fMap.GetUnits(FieldsMap.FieldType.VOLUME)];
+                    curve[(h - this.Elevation) * fMap.GetUnits(FieldType.HEAD)
+                          / fMap.GetUnits(FieldType.VOLUME)];
             }
 
         }
@@ -115,8 +117,8 @@ namespace Epanet.Hydraulic.Structures {
                 return this.Hmin + (this.volume - this.Vmin) / this.Area;
             else
                 return this.Elevation
-                       + curve[this.volume * fMap.GetUnits(FieldsMap.FieldType.VOLUME)]
-                       / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                       + curve[this.volume * fMap.GetUnits(FieldType.VOLUME)]
+                       / fMap.GetUnits(FieldType.HEAD);
         }
 
         /// <summary>Get the required time step based to fill or drain a tank.</summary>

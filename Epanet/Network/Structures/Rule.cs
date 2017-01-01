@@ -20,74 +20,9 @@ using System.Collections.Generic;
 namespace Epanet.Network.Structures {
 
     ///<summary>Rule source code class.</summary>
-    public class Rule {
+    public class Rule:IStringKeyed {
 
         #region enums
-
-        ///<summary>Rule object types.</summary>
-        public enum Objects {
-            r_JUNC,
-            r_LINK,
-            r_NODE,
-            r_PIPE,
-            r_PUMP,
-            r_RESERV,
-            r_SYSTEM,
-            r_TANK,
-            r_VALVE
-        }
-
-        ///<summary>Rule operators.</summary>
-        public enum Operators {
-            ABOVE,
-            BELOW,
-            EQ,
-            GE,
-            GT,
-            IS,
-            LE,
-            LT,
-            NE,
-            NOT
-        }
-
-        ///<summary>Rule statements.</summary>
-        public enum Rulewords {
-            r_AND,
-            r_ELSE,
-            r_ERROR,
-            r_IF,
-            r_OR,
-            r_PRIORITY,
-            r_RULE,
-            r_THEN
-        }
-
-        ///<summary>Rule values types.</summary>
-        public enum Values {
-            IS_NUMBER = 0,
-            IS_OPEN = 1,
-            IS_CLOSED = 2,
-            IS_ACTIVE = 3
-
-        }
-
-        ///<summary>Rule variables.</summary>
-        public enum Varwords {
-            r_CLOCKTIME,
-            r_DEMAND,
-            r_DRAINTIME,
-            r_FILLTIME,
-            r_FLOW,
-            r_GRADE,
-            r_HEAD,
-            r_LEVEL,
-            r_POWER,
-            r_PRESSURE,
-            r_SETTING,
-            r_STATUS,
-            r_TIME
-        }
 
         #endregion
 
@@ -99,6 +34,10 @@ namespace Epanet.Network.Structures {
         public List<string> Code { get { return this.code; } }
 
         public string Label { get { return this.label; } }
+
+        string IStringKeyed.Id { get { return this.label; } }
+
+        
     }
 
 }

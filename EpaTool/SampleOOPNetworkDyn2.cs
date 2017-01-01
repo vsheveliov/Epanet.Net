@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+
+using Epanet.Enums;
 using Epanet.Hydraulic;
 using Epanet.Hydraulic.Structures;
 using Epanet.Network;
@@ -72,7 +74,7 @@ namespace Epanet {
 
             //Prepare Network
             TraceSource log = new TraceSource(typeof(SampleOOPNetwork2).FullName, SourceLevels.All);
-            NullParser nP = (NullParser)InputParser.Create(Network.Network.FileType.NULL_FILE, log);
+            NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE, log);
             Debug.Assert(nP != null);
             nP.Parse(network, null);
 
@@ -90,7 +92,7 @@ namespace Epanet {
                 long l1 = base.NextHyd();
                 Console.Write("Time : " + l1.GetClockTime() + ", nodes heads : ");
                 foreach (SimulationNode node in base.Nodes) {
-                    double H = base.fMap.RevertUnit(FieldsMap.FieldType.HEAD, node.SimHead);
+                    double H = base.fMap.RevertUnit(FieldType.HEAD, node.SimHead);
                     Console.Write("{0:f2}\t", H);
                 }
                 Console.WriteLine();

@@ -21,13 +21,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+
+using Epanet.Enums;
 using Epanet.Hydraulic;
 using Epanet.Log;
 using Epanet.MSX;
 using Epanet.Network;
 using Epanet.Network.IO.Input;
 using Epanet.Quality;
+using Epanet.Report;
 using Epanet.Util;
+
+using UnitsType = Epanet.Enums.UnitsType;
 using Utilities = Epanet.Util.Utilities;
 
 namespace Epanet.UI {
@@ -132,7 +137,7 @@ namespace Epanet.UI {
             this.netMsx = new EpanetMSX(this.epanetTk);
 
             try {
-                EnumTypes.ErrorCodeType ret = this.netMsx.Load(this.fileMsx);
+                ErrorCodeType ret = this.netMsx.Load(this.fileMsx);
                 if (ret != 0) {
                     MessageBox.Show("MSX parsing error " + ret, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this.fileMsx = null;
@@ -179,13 +184,13 @@ namespace Epanet.UI {
             if (this.netInp != null) {
                 try {
                     PropertiesMap pMap = this.netInp.PropertiesMap;
-                    this.unitsBox.SelectedIndex = pMap.UnitsFlag == PropertiesMap.UnitsType.SI ? 0 : 1;
+                    this.unitsBox.SelectedIndex = pMap.UnitsFlag == UnitsType.SI ? 0 : 1;
                     this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.RStep);
                     this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.HStep);
                     this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.QStep);
                     this.textSimulationDuration.Text = pMap.Duration.GetClockTime();
                     this.textReportStart.Text = pMap.RStart.GetClockTime();
-                    this.qualityCheckBox.Enabled = pMap.QualFlag != PropertiesMap.QualType.NONE;
+                    this.qualityCheckBox.Enabled = pMap.QualFlag != QualType.NONE;
                 }
                 catch (ENException ex) {
                     Debug.Print(ex.ToString());
@@ -273,7 +278,7 @@ namespace Epanet.UI {
 
             this.hydVariables.Enabled = true;
             try {
-                if (this.netInp.PropertiesMap.QualFlag != PropertiesMap.QualType.NONE) {
+                if (this.netInp.PropertiesMap.QualFlag != QualType.NONE) {
                     if (this.qualityCheckBox.Checked) {
                         this.qualityVariables.Enabled = true;
                         this.qualityCheckBox.Enabled = true;
@@ -501,11 +506,11 @@ namespace Epanet.UI {
                 //log
                 try {
                     this.log.Information("Starting xlsx write");
-                    if (this.showSummaryCheckBox.Checked) this.gen.writeSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
+                    if (this.showSummaryCheckBox.Checked) this.gen.WriteSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
 
                     if (this.canselSimulation) return;
 
-                    if (this.transposeResultsCheckBox.Checked) this.gen.setTransposedMode(true);
+                    if (this.transposeResultsCheckBox.Checked) this.gen.TransposedMode = true;
 
                     if (this.hydraulicsCheckBox.Checked) {
                         // Write hydraulic spreadsheets
@@ -514,14 +519,16 @@ namespace Epanet.UI {
                             values[i] = this.hydVariables.GetItemChecked(i);
                         }
 
+
+
                         this.statusLabel.Text = "Writing hydraulic report";
 
                         this.RunThread(
                             () => this.gen.CreateHydReport("hydFile.bin", this.netInp, values),
                             50,
                             60,
-                            () => this.gen.getRtime(),
-                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
+                            () => this.gen.Rtime,
+                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
                     }
 
                     if (this.canselSimulation) return;
@@ -533,11 +540,11 @@ namespace Epanet.UI {
                         bool links = this.qualityVariables.GetItemChecked(1);
 
                         this.RunThread(
-                            () => this.gen.createQualReport("qualFile.bin", this.netInp, nodes, links),
+                            () => this.gen.CreateQualReport("qualFile.bin", this.netInp, nodes, links),
                             60,
                             70,
-                            () => this.gen.getRtime(),
-                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
+                            () => this.gen.Rtime,
+                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
                     }
 
                     if (this.canselSimulation) return;
@@ -567,7 +574,7 @@ namespace Epanet.UI {
                             70,
                             80,
                             () => this.netMsx.QTime,
-                            () => (this.gen.getRtime() - pMap.RStart) / (double)pMap.Duration);
+                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
 
                     }
 

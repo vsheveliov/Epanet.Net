@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+
+using Epanet.Enums;
 using Epanet.Hydraulic.IO;
 using Epanet.Network;
 using Epanet.Network.Structures;
@@ -105,9 +107,9 @@ namespace Epanet.MSX {
             return tmp == 0 ? 204 : 0;
         }
 
-        public EnumTypes.FlowUnitsType ENgetflowunits() {
+        public FlowUnitsType ENgetflowunits() {
             try {
-                return (EnumTypes.FlowUnitsType)this.net.PropertiesMap.FlowFlag;
+                return (FlowUnitsType)this.net.PropertiesMap.FlowFlag;
             }
             catch (ENException e) {
                 Debug.Print(e.ToString());
@@ -137,20 +139,19 @@ namespace Epanet.MSX {
 
             switch (code) {
             case EN_DIAMETER:
-                if (link is Pump)
-                    v = 0.0;
-                else
-                    v = fMap.RevertUnit(FieldsMap.FieldType.DIAM, link.Diameter);
+                v = link is Pump
+                    ? 0.0 
+                    : fMap.RevertUnit(FieldType.DIAM, link.Diameter);
                 break;
 
             case EN_LENGTH:
-                v = fMap.RevertUnit(FieldsMap.FieldType.ELEV, link.Lenght);
+                v = fMap.RevertUnit(FieldType.ELEV, link.Lenght);
                 break;
 
             case EN_ROUGHNESS:
-                if (link.Type <= Link.LinkType.PIPE) {
-                    v = this.net.PropertiesMap.FormFlag == PropertiesMap.FormType.DW
-                        ? fMap.RevertUnit(FieldsMap.FieldType.ELEV, link.Roughness * 1000.00)
+                if (link.Type <= LinkType.PIPE) {
+                    v = this.net.PropertiesMap.FormFlag == FormType.DW
+                        ? fMap.RevertUnit(FieldType.ELEV, link.Roughness * 1000.00)
                         : link.Roughness;
                 }
                 else
@@ -234,11 +235,11 @@ namespace Epanet.MSX {
                 v = 0.0;
                 tank = this.nodes[index - 1] as Tank;
                 if (tank != null)
-                    v = fMap.RevertUnit(FieldsMap.FieldType.VOLUME, tank.V0);
+                    v = fMap.RevertUnit(FieldType.VOLUME, tank.V0);
                 break;
 
             case EN_MIXMODEL:
-                v = (double)Tank.MixType.MIX1;
+                v = (double)Enums.MixType.MIX1;
                 tank = this.nodes[index - 1] as Tank;
                 if (tank != null)
                     v = (double)tank.MixModel;
@@ -249,7 +250,7 @@ namespace Epanet.MSX {
                 v = 0.0;
                 tank = this.nodes[index - 1] as Tank;
                 if (tank != null)
-                    v = fMap.RevertUnit(FieldsMap.FieldType.VOLUME, tank.V1Max);
+                    v = fMap.RevertUnit(FieldType.VOLUME, tank.V1Max);
                 break;
 
             default:

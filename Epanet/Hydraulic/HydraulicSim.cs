@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+
+using Epanet.Enums;
 using Epanet.Hydraulic.IO;
 using Epanet.Hydraulic.Models;
 using Epanet.Hydraulic.Structures;
@@ -41,17 +43,6 @@ namespace Epanet.Hydraulic {
         private Thread runningThread;
 
         protected HydraulicSim() { }
-
-        ///<summary>Step solving result</summary>
-        protected class NetSolveStep {
-            public NetSolveStep(int iter, double relerr) {
-                this.Iter = iter;
-                this.Relerr = relerr;
-            }
-
-            public int Iter;
-            public double Relerr;
-        }
 
         ///<summary>Event logger reference.</summary>
         private readonly TraceSource logger;
@@ -166,13 +157,13 @@ namespace Epanet.Hydraulic {
 
             switch (this.pMap.FormFlag) {
 
-            case PropertiesMap.FormType.HW:
+            case FormType.HW:
                 this.pHlModel = PipeHeadModelCalculators.HWModelCalculator;
                 break;
-            case PropertiesMap.FormType.DW:
+            case FormType.DW:
                 this.pHlModel = PipeHeadModelCalculators.DwModelCalculator;
                 break;
-            case PropertiesMap.FormType.CM:
+            case FormType.CM:
                 this.pHlModel = PipeHeadModelCalculators.CMModelCalculator;
                 break;
             }
@@ -188,14 +179,14 @@ namespace Epanet.Hydraulic {
 
             foreach (SimulationLink link  in  this.links) {
 
-                if ((link.Type == Link.LinkType.PRV ||
-                     link.Type == Link.LinkType.PSV ||
-                     link.Type == Link.LinkType.FCV)
+                if ((link.Type == LinkType.PRV ||
+                     link.Type == LinkType.PSV ||
+                     link.Type == LinkType.FCV)
                     && !link.Roughness.IsMissing())
-                    link.SimStatus = Link.StatType.ACTIVE;
+                    link.SimStatus = StatType.ACTIVE;
 
 
-                if (link.SimStatus <= Link.StatType.CLOSED)
+                if (link.SimStatus <= StatType.CLOSED)
                     link.SimFlow = Constants.QZERO;
                 else if (Math.Abs(link.SimFlow) <= Constants.QZERO)
                     link.InitLinkFlow(link.SimStatus, link.SimSetting);
@@ -333,33 +324,36 @@ namespace Epanet.Hydraulic {
             this.ComputeControls();
 
             // Solve network hydraulic equations
-            NetSolveStep nss = this.NetSolve();
+            double Relerr;
+            int Iter;
+            this.NetSolve(out Iter, out Relerr);
 
             // Report new status & save results
-            if (this.pMap.Stat_Flag != PropertiesMap.StatFlag.NO)
-                this.LogHydStat(nss);
+            if (this.pMap.Stat_Flag != StatFlag.NO)
+                this.LogHydStat(Iter, Relerr);
 
             // If system unbalanced and no extra trials
             // allowed, then activate the Haltflag.
-            if (nss.Relerr > this.pMap.HAcc && this.pMap.ExtraIter == -1) {
+            if (Relerr > this.pMap.HAcc && this.pMap.ExtraIter == -1) {
                 this.Htime = this.pMap.Duration;
                 return false;
             }
 
-            this.LogHydWarn(nss);
+            this.LogHydWarn(Iter, Relerr);
 
             return true;
         }
 
         ///<summary>Solve the linear equation system to compute the links flows and nodes heads.</summary>
         /// <returns>Solver steps and relative error.</returns>
-        protected NetSolveStep NetSolve() {
-            NetSolveStep ret = new NetSolveStep(0, 0);
+        protected void NetSolve(out int iter, out double relerr) {
+            iter = 0;
+            relerr = 0.0;
 
             int nextCheck = this.pMap.CheckFreq;
 
-            if (this.pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
-                this.LogRelErr(ret);
+            if (this.pMap.Stat_Flag == StatFlag.FULL)
+                this.LogRelErr(iter, relerr);
 
             int maxTrials = this.pMap.MaxIter;
 
@@ -368,9 +362,9 @@ namespace Epanet.Hydraulic {
 
             double relaxFactor = 1.0;
             int errcode = 0;
-            ret.Iter = 1;
+            iter = 1;
 
-            while (ret.Iter <= maxTrials) {
+            while (iter <= maxTrials) {
                 //Compute coefficient matrices A & F and solve A*H = F
                 // where H = heads, A = Jacobian coeffs. derived from
                 // head loss gradients, & F = flow correction terms.
@@ -396,7 +390,8 @@ namespace Epanet.Hydraulic {
                         this.Htime,
                         this.smat.GetOrder(errcode)))
                         continue;
-                    else break;
+
+                    break;
                 }
 
                 // Update current solution.
@@ -406,11 +401,11 @@ namespace Epanet.Hydraulic {
                 }
 
                 // Update flows
-                ret.Relerr = this.NewFlows(relaxFactor);
+                relerr = this.NewFlows(relaxFactor);
 
                 // Write convergence error to status report if called for
-                if (this.pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
-                    this.LogRelErr(ret);
+                if (this.pMap.Stat_Flag == StatFlag.FULL)
+                    this.LogRelErr(iter, relerr);
 
                 relaxFactor = 1.0;
 
@@ -418,7 +413,7 @@ namespace Epanet.Hydraulic {
 
                 //  Apply solution damping & check for change in valve status
                 if (this.pMap.DampLimit > 0.0) {
-                    if (ret.Relerr <= this.pMap.DampLimit) {
+                    if (relerr <= this.pMap.DampLimit) {
                         relaxFactor = 0.6;
                         valveChange = SimulationValve.ValveStatus(this.fMap, this.pMap, this.logger, this.valves);
                     }
@@ -427,10 +422,10 @@ namespace Epanet.Hydraulic {
                     valveChange = SimulationValve.ValveStatus(this.fMap, this.pMap, this.logger, this.valves);
 
                 // Check for convergence
-                if (ret.Relerr <= this.pMap.HAcc) {
+                if (relerr <= this.pMap.HAcc) {
 
                     //  We have convergence. Quit if we are into extra iterations.
-                    if (ret.Iter > this.pMap.MaxIter)
+                    if (iter > this.pMap.MaxIter)
                         break;
 
                     //  Quit if no status changes occur.
@@ -446,16 +441,16 @@ namespace Epanet.Hydraulic {
                         break;
 
                     //  We have a status change so continue the iterations
-                    nextCheck = ret.Iter + this.pMap.CheckFreq;
+                    nextCheck = iter + this.pMap.CheckFreq;
                 }
-                else if (ret.Iter <= this.pMap.MaxCheck && ret.Iter == nextCheck) {
+                else if (iter <= this.pMap.MaxCheck && iter == nextCheck) {
                     // No convergence yet. See if its time for a periodic status
                     // check  on pumps, CV's, and pipes connected to tanks.
                     SimulationLink.LinkStatus(this.pMap, this.fMap, this.logger, this.links);
                     nextCheck += this.pMap.CheckFreq;
                 }
 
-                ret.Iter++;
+                iter++;
             }
 
 
@@ -465,14 +460,13 @@ namespace Epanet.Hydraulic {
             if (errcode > 0) {
                 this.LogHydErr(this.smat.GetOrder(errcode));
                 errcode = 110;
-                return ret;
+                return;
             }
 
             if (errcode != 0)
                 throw new ENException((ErrorCode)errcode);
-
-            return ret;
         }
+
 
 
         ///<summary>Computes coefficients of linearized network eqns.</summary>
@@ -492,8 +486,8 @@ namespace Epanet.Hydraulic {
                 this.curves,
                 this.smat,
                 this.lsv); // Compute link coeffs.
-            SimulationNode.ComputeEmitterCoeffs(this.pMap, this.junctions, this.smat, this.lsv);
-                // Compute emitter coeffs.
+
+            SimulationNode.ComputeEmitterCoeffs(this.pMap, this.junctions, this.smat, this.lsv); // Compute emitter coeffs.
             SimulationNode.ComputeNodeCoeffs(this.junctions, this.smat, this.lsv); // Compute node coeffs.
             SimulationValve.ComputeMatrixCoeffs(this.pMap, this.lsv, this.smat, this.valves); // Compute valve coeffs.
         }
@@ -517,7 +511,7 @@ namespace Epanet.Hydraulic {
                 dq *= relaxFactor;
 
                 if (link is SimulationPump) {
-                    if (((SimulationPump)link).Ptype == Pump.PumpType.CONST_HP && dq > link.SimFlow)
+                    if (((SimulationPump)link).Ptype == PumpType.CONST_HP && dq > link.SimFlow)
                         dq = link.SimFlow / 2.0;
                 }
 
@@ -526,7 +520,7 @@ namespace Epanet.Hydraulic {
                 qsum += Math.Abs(link.SimFlow);
                 dqsum += Math.Abs(dq);
 
-                if (link.SimStatus > Link.StatType.CLOSED) {
+                if (link.SimStatus > StatType.CLOSED) {
                     if (n1 is SimulationTank)
                         n1.SimDemand = n1.SimDemand - link.SimFlow;
                     if (n2 is SimulationTank)
@@ -580,7 +574,7 @@ namespace Epanet.Hydraulic {
 
             // Update head at fixed grade nodes with time patterns
             foreach (SimulationTank tank  in  this.tanks) {
-                if (tank.Area == 0.0) {
+                if (tank.IsReservoir) {
                     Pattern pat = tank.Pattern;
                     if (pat != null) {
                         List<double> factors = pat.FactorsList;
@@ -686,7 +680,7 @@ namespace Epanet.Hydraulic {
                     bb.Write((float)node.SimHead);
 
                 foreach (SimulationLink link  in  this.links)
-                    if (link.SimStatus <= Link.StatType.CLOSED)
+                    if (link.SimStatus <= StatType.CLOSED)
                         bb.Write((float)0.0);
 
                     else
@@ -707,7 +701,6 @@ namespace Epanet.Hydraulic {
         }
 
         /// <summary>Report hydraulic warning.</summary>
-        /// <param name="nss"></param>
         /// <remarks>
         /// Note: Warning conditions checked in following order:
         /// <list type="number">
@@ -719,15 +712,15 @@ namespace Epanet.Hydraulic {
         /// <item>6. System unbalanced</item> 
         /// </list>
         /// </remarks>
-        private void LogHydWarn(NetSolveStep nss) {
+        private void LogHydWarn(int iter, double relerr) {
             try {
                 int flag;
 
                 string atime = this.Htime.GetClockTime();
 
-                if (nss.Iter > this.pMap.MaxIter && nss.Relerr <= this.pMap.HAcc) {
+                if (iter > this.pMap.MaxIter && relerr <= this.pMap.HAcc) {
                     if (this.pMap.MessageFlag)
-                        this.logger.Warning(Error.ResourceManager.GetString("WARN02"), atime);
+                        this.logger.Warning(Error.WARN02, atime);
                     flag = 2;
                 }
 
@@ -735,7 +728,7 @@ namespace Epanet.Hydraulic {
                 foreach (SimulationNode node  in  this.junctions) {
                     if (node.SimHead < node.Elevation && node.SimDemand > 0.0) {
                         if (this.pMap.MessageFlag)
-                            this.logger.Warning(Error.ResourceManager.GetString("WARN06"), atime);
+                            this.logger.Warning(Error.WARN06, atime);
                         flag = 6;
                         break;
                     }
@@ -744,10 +737,10 @@ namespace Epanet.Hydraulic {
                 // Check for abnormal valve condition
                 foreach (SimulationValve valve  in  this.valves) {
                     int j = valve.Index;
-                    if (valve.SimStatus >= Link.StatType.XFCV) {
+                    if (valve.SimStatus >= StatType.XFCV) {
                         if (this.pMap.MessageFlag)
                             this.logger.Warning(
-                                    Error.ResourceManager.GetString("WARN05"),
+                                    Error.WARN05,
                                     valve.Type.ParseStr(),
                                     valve.Link.Id,
                                     valve.SimStatus.ReportStr(),
@@ -758,18 +751,18 @@ namespace Epanet.Hydraulic {
 
                 // Check for abnormal pump condition
                 foreach (SimulationPump pump  in  this.pumps) {
-                    Link.StatType s = pump.SimStatus;
-                    if (pump.SimStatus >= Link.StatType.OPEN) {
+                    StatType s = pump.SimStatus;
+                    if (pump.SimStatus >= StatType.OPEN) {
                         if (pump.SimFlow > pump.SimSetting * pump.Qmax)
-                            s = Link.StatType.XFLOW;
+                            s = StatType.XFLOW;
                         if (pump.SimFlow < 0.0)
-                            s = Link.StatType.XHEAD;
+                            s = StatType.XHEAD;
                     }
 
-                    if (s == Link.StatType.XHEAD || s == Link.StatType.XFLOW) {
+                    if (s == StatType.XHEAD || s == StatType.XFLOW) {
                         if (this.pMap.MessageFlag)
                             this.logger.Warning(
-                                    Error.ResourceManager.GetString("WARN04"),
+                                    Error.WARN04,
                                     pump.Link.Id,
                                     pump.SimStatus.ReportStr(),
                                     atime);
@@ -778,8 +771,8 @@ namespace Epanet.Hydraulic {
                 }
 
                 // Check if system is unbalanced
-                if (nss.Iter > this.pMap.MaxIter && nss.Relerr > this.pMap.HAcc) {
-                    string str = string.Format(Error.ResourceManager.GetString("WARN01"), atime);
+                if (iter > this.pMap.MaxIter && relerr > this.pMap.HAcc) {
+                    string str = string.Format(Error.WARN01, atime);
 
                     if (this.pMap.ExtraIter == -1)
                         str += Keywords.t_HALTED;
@@ -790,45 +783,45 @@ namespace Epanet.Hydraulic {
                     flag = 1;
                 }
             }
-            catch (ENException e) {}
+            catch (ENException) {}
         }
 
         /// <summary>Report hydraulic status.</summary>
-        private void LogHydStat(NetSolveStep nss) {
+        private void LogHydStat(int iter, double relerr) {
             try {
                 string atime = this.Htime.GetClockTime();
-                if (nss.Iter > 0) {
-                    if (nss.Relerr <= this.pMap.HAcc)
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT58"), atime, nss.Iter);
+                if (iter > 0) {
+                    if (relerr <= this.pMap.HAcc)
+                        this.logger.Warning(Text.FMT58, atime, iter);
                     else
-                        this.logger.Warning(Text.ResourceManager.GetString("FMT59"), atime, nss.Iter, nss.Relerr);
+                        this.logger.Warning(Text.FMT59, atime, iter, relerr);
                 }
 
                 foreach (SimulationTank tank  in  this.tanks) {
-                    Link.StatType newstat;
+                    StatType newstat;
 
                     if (Math.Abs(tank.SimDemand) < 0.001)
-                        newstat = Link.StatType.CLOSED;
+                        newstat = StatType.CLOSED;
                     else if (tank.SimDemand > 0.0)
-                        newstat = Link.StatType.FILLING;
+                        newstat = StatType.FILLING;
                     else if (tank.SimDemand < 0.0)
-                        newstat = Link.StatType.EMPTYING;
+                        newstat = StatType.EMPTYING;
                     else
                         newstat = tank.OldStat;
 
                     if (newstat != tank.OldStat) {
                         if (!tank.IsReservoir)
                             this.logger.Warning(
-                                    Text.ResourceManager.GetString("FMT50"),
+                                    Text.FMT50,
                                     atime,
                                     tank.Id,
                                     newstat.ReportStr(),
-                                    (tank.SimHead - tank.Elevation) * this.fMap.GetUnits(FieldsMap.FieldType.HEAD),
-                                    this.fMap.GetField(FieldsMap.FieldType.HEAD).Units);
+                                    (tank.SimHead - tank.Elevation) * this.fMap.GetUnits(FieldType.HEAD),
+                                    this.fMap.GetField(FieldType.HEAD).Units);
 
                         else
                             this.logger.Warning(
-                                    Text.ResourceManager.GetString("FMT51"),
+                                    Text.FMT51,
                                     atime,
                                     tank.Id,
                                     newstat.ReportStr());
@@ -841,14 +834,14 @@ namespace Epanet.Hydraulic {
                     if (link.SimStatus != link.SimOldStatus) {
                         if (this.Htime == 0)
                             this.logger.Warning(
-                                    Text.ResourceManager.GetString("FMT52"),
+                                    Text.FMT52,
                                     atime,
                                     link.Type.ParseStr(),
                                     link.Link.Id,
                                     link.SimStatus.ReportStr());
                         else
                             this.logger.Warning(
-                                    Text.ResourceManager.GetString("FMT53"),
+                                    Text.FMT53,
                                     atime,
                                     link.Type.ParseStr(),
                                     link.Link.Id,
@@ -861,13 +854,12 @@ namespace Epanet.Hydraulic {
             catch (ENException) {}
         }
 
-
-        private void LogRelErr(NetSolveStep ret) {
-            if (ret.Iter == 0) {
-                this.logger.Warning(Text.ResourceManager.GetString("FMT64"), this.Htime.GetClockTime());
+        private void LogRelErr(int iter, double relerr) {
+            if (iter == 0) {
+                this.logger.Warning(Text.FMT64, this.Htime.GetClockTime());
             }
             else {
-                this.logger.Warning(Text.ResourceManager.GetString("FMT65"), ret.Iter, ret.Relerr);
+                this.logger.Warning(Text.FMT65, iter, relerr);
             }
         }
 
@@ -875,12 +867,12 @@ namespace Epanet.Hydraulic {
             try {
                 if (this.pMap.MessageFlag)
                     this.logger.Warning(
-                            Text.ResourceManager.GetString("FMT62"),
+                            Text.FMT62,
                             this.Htime.GetClockTime(),
                             this.nodes[order].Id);
             }
             catch (ENException) {}
-            this.LogHydStat(new NetSolveStep(0, 0));
+            this.LogHydStat(0, 0.0);
         }
 
         public List<SimulationNode> Nodes { get { return this.nodes; } }

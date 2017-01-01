@@ -17,122 +17,13 @@
 
 using System;
 using System.Collections.Generic;
-using Epanet.Network.IO;
+
+using Epanet.Enums;
 
 namespace Epanet.Network {
 
     /// <summary>Simulation configuration configuration.</summary>
     public sealed class PropertiesMap {
-
-        #region enums
-        // ReSharper disable InconsistentNaming
-
-        /// <summary>Flow units.</summary>
-        public enum FlowUnitsType {
-            /// <summary>cubic feet per second</summary>
-            CFS = 0,
-            /// <summary>gallons per minute</summary>
-            GPM = 1,
-            /// <summary>million gallons per day</summary>
-            MGD = 2,
-            /// <summary>imperial million gal. per day</summary>
-            IMGD = 3,
-            /// <summary>acre-feet per day</summary>
-            AFD = 4,
-            /// <summary>liters per second</summary>
-            LPS = 5,
-            /// <summary>liters per minute</summary>
-            LPM = 6,
-            /// <summary>megaliters per day</summary>
-            MLD = 7,
-            /// <summary>cubic meters per hour</summary>
-            CMH = 8,
-            /// <summary>cubic meters per day</summary>
-            CMD = 9
-        }
-
-        /// <summary>Head loss formula.</summary>
-        public enum FormType {
-            /// <summary>Hazen-Williams</summary>
-            HW,
-            /// <summary>Darcy-Weisbach</summary>
-            DW,
-            /// <summary>Chezy-Manning</summary>
-            CM,
-        }
-
-        /// <summary>Hydraulics solution option.</summary>
-        public enum HydType {
-            /// <summary>Use from previous run.</summary>
-            USE,
-            /// <summary>Save after current run.</summary>
-            SAVE,
-            /// <summary>Use temporary file.</summary>
-            SCRATCH
-        }
-
-        /// <summary>Pressure units.</summary>
-        public enum PressUnitsType {
-            /// <summary>pounds per square inch</summary>
-            PSI,
-            /// <summary>kiloPascals</summary>
-            KPA,
-            /// <summary>meters</summary>
-            METERS
-        }
-
-        /// <summary>Water quality analysis option.</summary>
-        public enum QualType {
-            /// <summary>No quality analysis.</summary>
-            NONE = 0,
-            /// <summary>Analyze a chemical.</summary>
-            CHEM = 1,
-            /// <summary>Analyze water age.</summary>
-            AGE = 2,
-            /// <summary>Trace % of flow from a source</summary>
-            TRACE = 3
-        }
-
-        /// <summary>Reporting flag.</summary>
-        public enum ReportFlag {
-            FALSE = 0,
-            SOME = 2,
-            TRUE = 1
-        }
-
-        /// <summary>Status report options.</summary>
-        public enum StatFlag {
-            NO = 0,
-            YES = 1,
-            FULL = 2
-        }
-
-        /// <summary>Time series statistics.</summary>
-        public enum TStatType {
-            /// <summary>none</summary>
-            SERIES,
-            /// <summary>time-averages</summary>
-            AVG,
-            /// <summary>minimum values</summary>
-            MIN,
-            /// <summary>maximum values</summary>
-            MAX,
-            /// <summary>max - min values</summary>
-            RANGE
-        }
-
-
-        /// <summary>Unit system.</summary>
-        public enum UnitsType {
-            /// <summary>SI (metric)</summary>
-            SI,
-            /// <summary>US</summary>
-            US
-        }
-
-        // ReSharper restore InconsistentNaming
-
-        #endregion
 
         private Dictionary<string, string> extraOptions;
 
@@ -140,235 +31,177 @@ namespace Epanet.Network {
 
         #region properties accessors/mutators
 
-        [System.ComponentModel.DefaultValue(null)]
         public string AltReport { get; set; }
 
         /// <summary>Bulk flow reaction order</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // 1st-order bulk reaction rate
         public double BulkOrder { get; set; }
 
         /// <summary>Hydraulics solver parameter.</summary>
-        [System.ComponentModel.DefaultValue(Constants.CHECKFREQ)]
         public int CheckFreq { get; set; }
 
         /// <summary>Name of chemical.</summary>
-        [System.ComponentModel.DefaultValue(Keywords.t_CHEMICAL)]
         public string ChemName { get; set; }
 
         /// <summary>Units of chemical.</summary>
-        [System.ComponentModel.DefaultValue(Keywords.u_MGperL)]
         public string ChemUnits { get; set; }
 
         /// <summary>Limiting potential quality.</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // No limiting potential quality
         public double CLimit { get; set; }
 
         /// <summary>Water quality tolerance.</summary>
-        [System.ComponentModel.DefaultValue(double.NaN)] // No pre-set quality tolerance
         public double Ctol { get; set; }
 
         /// <summary>Solution damping threshold.</summary>
-        [System.ComponentModel.DefaultValue(Constants.DAMPLIMIT)]
         public double DampLimit { get; set; }
 
         /// <summary>Energy demand charge/kw/day.</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // Zero energy demand charge
         public double DCost { get; set; }
 
         /// <summary>Default demand pattern ID.</summary>
-        [System.ComponentModel.DefaultValue(Constants.DEFPATID)]
         public string DefPatId { get; set; }
 
         /// <summary>Diffusivity (sq ft/sec).</summary>
-        [System.ComponentModel.DefaultValue(double.NaN)]
         public double Diffus { get; set; }
 
         /// <summary>Demand multiplier.</summary>
-        [System.ComponentModel.DefaultValue(1.0)]
         public double DMult { get; set; }
 
         /// <summary>Duration of simulation (sec).</summary>
-        [System.ComponentModel.DefaultValue(0)] // 0 sec duration (steady state)
         public long Duration { get; set; }
 
         /// <summary>Base energy cost per kwh.</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // Zero unit energy cost
         public double ECost { get; set; }
 
         /// <summary>Peak energy usage.</summary>
-        [System.ComponentModel.DefaultValue(0.0)]
         public double EMax { get; set; }
 
         /// <summary>Energy report flag.</summary>
-        [System.ComponentModel.DefaultValue(false)]
         public bool EnergyFlag { get; set; }
 
         /// <summary>Energy cost time pattern.</summary>
-        [System.ComponentModel.DefaultValue("")] // No energy price pattern
         public string EPatId { get; set; }
 
         /// <summary>Global pump efficiency.</summary>
-        [System.ComponentModel.DefaultValue(Constants.EPUMP)] // Default pump efficiency
         public double EPump { get; set; }
 
         /// <summary>Extra hydraulic trials.</summary>
-        [System.ComponentModel.DefaultValue(-1)] // Stop if network unbalanced
         public int ExtraIter { get; set; }
 
         /// <summary>Flow units flag.</summary>
-        [System.ComponentModel.DefaultValue(FlowUnitsType.GPM)]
         public FlowUnitsType FlowFlag { get; set; }
 
         /// <summary>Hydraulic formula flag.</summary>
-        [System.ComponentModel.DefaultValue(FormType.HW)] // Use Hazen-Williams formula
         public FormType FormFlag { get; set; }
 
         /// <summary>Hydraulics solution accuracy.</summary>
-        [System.ComponentModel.DefaultValue(Constants.HACC)]
         public double HAcc { get; set; }
 
         /// <summary>Exponent in headloss formula.</summary>
-        [System.ComponentModel.DefaultValue(0.0)]
         public double HExp { get; set; }
 
         /// <summary>Nominal hyd. time step (sec).</summary>
-        [System.ComponentModel.DefaultValue(3600)] // 1 hr hydraulic time step
         public long HStep { get; set; }
 
         /// <summary>Hydraulic head tolerance.</summary>
-        [System.ComponentModel.DefaultValue(Constants.HTOL)]
         public double HTol { get; set; }
 
         /// <summary>Hydraulics flag.</summary>
-        [System.ComponentModel.DefaultValue(HydType.SCRATCH)] // No external hydraulics file
         public HydType HydFlag { get; set; }
 
         /// <summary>Hydraulics file name.</summary>
-        [System.ComponentModel.DefaultValue(null)]
         public string HydFname { get; set; }
 
         /// <summary>Global bulk reaction coeff.</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // No global bulk reaction
         public double KBulk { get; set; }
 
         /// <summary>Global wall reaction coeff.</summary>
-        [System.ComponentModel.DefaultValue(0.0)] // No global wall reaction
         public double KWall { get; set; }
 
         /// <summary>Link report flag.</summary>
-        [System.ComponentModel.DefaultValue(ReportFlag.FALSE)]
         public ReportFlag LinkFlag { get; set; }
 
         /// <summary>Map file name.</summary>
-        [System.ComponentModel.DefaultValue(null)]
         public string MapFname { get; set; }
 
         /// <summary>Hydraulics solver parameter.</summary>
-        [System.ComponentModel.DefaultValue(Constants.MAXCHECK)]
         public int MaxCheck { get; set; }
 
         /// <summary>Max. hydraulic trials.</summary>
-        [System.ComponentModel.DefaultValue(Constants.MAXITER)]
         public int MaxIter { get; set; }
 
         /// <summary>Error/warning message flag.</summary>
-        [System.ComponentModel.DefaultValue(true)]
         public bool MessageFlag { get; set; }
 
         /// <summary>Node report flag.</summary>
-        [System.ComponentModel.DefaultValue(ReportFlag.FALSE)]
         public ReportFlag NodeFlag { get; set; }
 
         /// <summary>Lines/page in output report.</summary>
-        [System.ComponentModel.DefaultValue(Constants.PAGESIZE)]
         public int PageSize { get; set; }
 
         /// <summary>Pressure units flag.</summary>
-        [System.ComponentModel.DefaultValue(PressUnitsType.PSI)]
         public PressUnitsType PressFlag { get; set; }
 
         /// <summary>Starting pattern time (sec).</summary>
-        [System.ComponentModel.DefaultValue(0)] // Starting pattern period
         public long PStart { get; set; }
 
         /// <summary>Time pattern time step (sec).</summary>
-        [System.ComponentModel.DefaultValue(3600)] // 1 hr time pattern period
         public long PStep { get; set; }
 
         /// <summary>Exponent in orifice formula.</summary>
-        [System.ComponentModel.DefaultValue(2.0)] // Flow exponent for emitters
         public double QExp { get; set; }
 
         /// <summary>Quality time step (sec).</summary>
-        [System.ComponentModel.DefaultValue(0)] // No pre-set quality time step
         public long QStep { get; set; }
 
         /// <summary>Flow rate tolerance.</summary>
-        [System.ComponentModel.DefaultValue(Constants.QTOL)]
         public double QTol { get; set; }
 
         /// <summary>Water quality flag.</summary>
-        [System.ComponentModel.DefaultValue(QualType.NONE)]
         public QualType QualFlag { get; set; }
 
         /// <summary>Roughness-reaction factor.</summary>
-        [System.ComponentModel.DefaultValue(1.0)] // No roughness-reaction factor
         public double RFactor { get; set; }
 
         /// <summary>Flow resistance tolerance.</summary>
-        [System.ComponentModel.DefaultValue(Constants.RQTOL)]
         public double RQtol { get; set; }
 
         /// <summary>Time when reporting starts.</summary>
-        [System.ComponentModel.DefaultValue(0)] // Start reporting at time 0
         public long RStart { get; set; }
 
         /// <summary>Reporting time step (sec).</summary>
-        [System.ComponentModel.DefaultValue(3600)] // 1 hr reporting period
         public long RStep { get; set; }
 
         /// <summary>Rule evaluation time step.</summary>
-        [System.ComponentModel.DefaultValue(0)] // No pre-set rule time step
         public long RuleStep { get; set; }
 
         /// <summary>Specific gravity.</summary>
-        [System.ComponentModel.DefaultValue(Constants.SPGRAV)]
         public double SpGrav { get; set; }
 
         /// <summary>Status report flag.</summary>
-        [System.ComponentModel.DefaultValue(StatFlag.NO)]
         public StatFlag Stat_Flag { get; set; }
 
         /// <summary>Report summary flag.</summary>
-        [System.ComponentModel.DefaultValue(true)]
         public bool SummaryFlag { get; set; }
 
         /// <summary>Tank reaction order.</summary>
-        [System.ComponentModel.DefaultValue(1.0)] // 1st-order tank reaction rate
         public double TankOrder { get; set; }
 
         /// <summary>Source node for flow tracing.</summary>
-        [System.ComponentModel.DefaultValue(null)] // No source tracing
         public string TraceNode { get; set; }
 
         /// <summary>Starting time of day (sec).</summary>
-        [System.ComponentModel.DefaultValue(0)] // Starting time of day
         public long TStart { get; set; }
 
         /// <summary>Time statistics flag.</summary>
-        [System.ComponentModel.DefaultValue(TStatType.SERIES)] // Generate time series output
         public TStatType TStatFlag { get; set; }
 
         /// <summary>Unit system flag.</summary>
-        [System.ComponentModel.DefaultValue(UnitsType.US)] // US unit system
         public UnitsType UnitsFlag { get; set; }
 
         /// <summary>Kin. viscosity (sq ft/sec).</summary>
-        [System.ComponentModel.DefaultValue(double.NaN)]
         public double Viscos { get; set; }
 
         /// <summary>Pipe wall reaction order.</summary>
-        [System.ComponentModel.DefaultValue(1.0)] // 1st-order wall reaction rate
         public double WallOrder { get; set; }
 
         #endregion
@@ -379,27 +212,7 @@ namespace Epanet.Network {
             }
         }
 
-#if false
 
-        /// <summary>Init properties with default value.</summary>
-        private void LoadDefaults() {
-            var props = typeof(PropertiesMap).GetProperties(System.Reflection.BindingFlags.Instance 
-                                                          | System.Reflection.BindingFlags.Public
-                                                          | System.Reflection.BindingFlags.DeclaredOnly);
-
-            foreach(System.Reflection.PropertyInfo pi in props) {
-                var attrs = pi.GetCustomAttributes(false);
-                foreach(object att in attrs) {
-                    var dv = att as System.ComponentModel.DefaultValueAttribute;
-                    if(dv == null)
-                        continue;
-                    pi.SetValue(this, dv.Value, null);
-                    break;
-                }
-            }
-        }
-
-#else
         /// <summary>Init properties with default value.</summary>
         private void LoadDefaults() {
             this.BulkOrder = 1.0d; // 1st-order bulk reaction rate
@@ -462,8 +275,8 @@ namespace Epanet.Network {
             this.EMax = 0.0d; // Zero peak energy usage
         }
 
-#endif
 
-    }    
+
+    }
 
 }

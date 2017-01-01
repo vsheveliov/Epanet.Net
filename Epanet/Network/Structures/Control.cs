@@ -15,22 +15,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Control statement</summary>
     public class Control {
-        ///<summary>Control condition type</summary>
-        public enum ControlType {
-            /// <summary>act when grade below set level</summary>
-            LOWLEVEL = 0,
-            /// <summary>act when grade above set level</summary>
-            HILEVEL = 1,
-            /// <summary>act when set time reached</summary>
-            TIMER = 2,
-            /// <summary>act when time of day occurs</summary>
-            TIMEOFDAY = 3, 
-        }
-
         ///<summary>Control grade.</summary>
         public double Grade { get; set; }
 
@@ -44,7 +34,7 @@ namespace Epanet.Network.Structures {
         public double Setting { get; set; }
 
         ///<summary>New link status.</summary>
-        public Link.StatType Status { get; set; }
+        public StatType Status { get; set; }
 
         ///<summary>Control time (in seconds).</summary>
         public long Time { get; set; }

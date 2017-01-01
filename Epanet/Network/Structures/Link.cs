@@ -18,13 +18,15 @@
 using System;
 using System.Collections.Generic;
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic link structure (pipe)</summary>
-    public class Link:IComparable<Link> {
+    public class Link:IComparable<Link>, IStringKeyed {
 
         ///<summary>Init links flow resistance values.</summary>
-        public void initResistance(PropertiesMap.FormType formflag, double hexp) {
+        public void initResistance(FormType formflag, double hexp) {
             this.FlowResistance = Constants.CSMALL;
 
             switch (this.Type) {
@@ -35,13 +37,13 @@ namespace Epanet.Network.Structures {
                 double L = this.Lenght;
 
                 switch (formflag) {
-                case PropertiesMap.FormType.HW:
+                case FormType.HW:
                     this.FlowResistance = 4.727 * L / Math.Pow(e, hexp) / Math.Pow(d, 4.871);
                     break;
-                case PropertiesMap.FormType.DW:
+                case FormType.DW:
                     this.FlowResistance = L / 2.0 / 32.2 / d / Math.Pow(Math.PI * Math.Pow(d, 2) / 4.0, 2);
                     break;
-                case PropertiesMap.FormType.CM:
+                case FormType.CM:
                     this.FlowResistance = Math.Pow(4.0 * e / (1.49 * Math.PI * d * d), 2) *
                                           Math.Pow((d / 4.0), -1.333) * L;
                     break;
@@ -52,52 +54,6 @@ namespace Epanet.Network.Structures {
                 this.FlowResistance = Constants.CBIG;
                 break;
             }
-        }
-
-        /// <summary>Type of link</summary>
-        public enum LinkType {
-            /// <summary>Pipe with check valve.</summary>
-            CV = 0,
-            /// <summary>Regular pipe.</summary>
-            PIPE = 1,
-            /// <summary>Pump.</summary>
-            PUMP = 2,
-            /// <summary>Pressure reducing valve.</summary>
-            PRV = 3,
-            /// <summary>Pressure sustaining valve.</summary>
-            PSV = 4,
-            /// <summary>Pressure breaker valve.</summary>
-            PBV = 5,
-            /// <summary>Flow control valve.</summary>
-            FCV = 6,
-            /// <summary>Throttle control valve.</summary>
-            TCV = 7,
-            /// <summary>General purpose valve.</summary>
-            GPV = 8
-        }
-
-        ///<summary>Link/Tank/Pump status</summary>
-        public enum StatType {
-            /// <summary>Pump cannot deliver head (closed).</summary>
-            XHEAD = 0,
-            /// <summary>Temporarily closed.</summary>
-            TEMPCLOSED = 1,
-            /// <summary>Closed.</summary>
-            CLOSED = 2,
-            /// <summary>Open.</summary>
-            OPEN = 3,
-            /// <summary>Valve active (partially open).</summary>
-            ACTIVE = 4,
-            /// <summary>Pump exceeds maximum flow.</summary>
-            XFLOW = 5,
-            /// <summary>FCV cannot supply flow.</summary>
-            XFCV = 6,
-            /// <summary>Valve cannot supply pressure.</summary>
-            XPRESSURE = 7,
-            /// <summary>Tank filling.</summary>
-            FILLING = 8,
-            /// <summary>Tank emptying.</summary>
-            EMPTYING = 9,
         }
 
         private readonly string id;
@@ -169,12 +125,14 @@ namespace Epanet.Network.Structures {
             return string.Compare(this.id, o.id, StringComparison.OrdinalIgnoreCase);
         }
 
+        /*
         public override bool Equals(object obj) {
             Link o = obj as Link;
             if(o == null) return false;
 
             return string.Equals(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
         }
+        */
 
         public void SetDiameterAndUpdate(double diameter, Network net) {
             double realkm = this.Km * Math.Pow(this.Diameter, 4.0) / 0.02517;
@@ -183,7 +141,7 @@ namespace Epanet.Network.Structures {
             this.initResistance(net.PropertiesMap.FormFlag, net.PropertiesMap.HExp);
         }
 
-#if DEBUG // NUCONVERT
+#if NUCONVERT
         public double GetNuDiameter(PropertiesMap.UnitsType utype) {
             return NUConvert.revertDiameter(utype, this.Diameter);
         }

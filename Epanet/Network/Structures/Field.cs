@@ -15,25 +15,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Report field properties.</summary>
     public class Field {
-        ///<summary>Range limits.</summary>
-        public enum RangeType {
-            ///<summary>upper limit</summary>
-            HI = 1,
-
-            ///<summary>lower limit</summary>
-            LOW = 0,
-
-            ///<summary>precision</summary>
-            PREC = 2
-        }
-
-        ///<summary>Number of decimal places.</summary>
-        private int precision;
-
         ///<summary>Lower/upper report limits.</summary>
         private readonly double[] rptLim = {0d, 0d, 0d};
 
@@ -42,7 +29,7 @@ namespace Epanet.Network.Structures {
         public Field(string name) {
             this.Name = name;
             this.Enabled = false;
-            this.precision = 2;
+            this.Precision = 2;
             this.SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
             this.SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
         }
@@ -50,7 +37,8 @@ namespace Epanet.Network.Structures {
         ///<summary>Name of reported variable.</summary>
         public string Name { get; private set; }
 
-        public int Precision { get { return this.precision; } }
+        ///<summary>Number of decimal places.</summary>
+        public int Precision { get; set; }
 
         public double GetRptLim(RangeType type) { return this.rptLim[(int)type]; }
 
@@ -59,8 +47,6 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Enabled if in table.</summary>
         public bool Enabled { get; set; }
-
-        public void SetPrecision(int value) { this.precision = value; }
 
         public void SetRptLim(RangeType type, double value) { this.rptLim[(int)type] = value; }
     }

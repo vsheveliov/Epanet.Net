@@ -89,7 +89,6 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Compile Include="Report\ReportGenerator.cs" />
     <Compile Include="SampleOOPNetwork2.cs" />
     <Compile Include="SampleOOPNetworkDyn2.cs" />
     <Compile Include="UI\EpanetUI.cs">
@@ -101,7 +100,7 @@
     <Compile Include="UI\NetworkPanel.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="UI\ReportGenerator.cs" />
+    <Compile Include="Report\ReportGenerator.cs" />
     <Compile Include="UI\ReportOptions.cs">
       <SubType>Form</SubType>
     </Compile>

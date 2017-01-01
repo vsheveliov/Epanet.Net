@@ -30,11 +30,14 @@ namespace Epanet.Network.Structures {
         ///<summary>Pattern reference.</summary>
         public Pattern Pattern { get; set; }
 
+#if NUCONVERT
         public double GetBaseNu(PropertiesMap.FlowUnitsType units) { return NUConvert.revertFlow(units, this.Base); }
 
         public void SetBaseNu(PropertiesMap.FlowUnitsType units, double value) {
             this.Base = NUConvert.convertFlow(units, value);
         }
+#endif
+
     }
 
 }

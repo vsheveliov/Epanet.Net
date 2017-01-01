@@ -66,7 +66,7 @@ namespace Epanet.MSX.Solvers {
             double[] atol,
             double[] rtol,
             JacobianInterface jInt,
-            JacobianInterface.Operation op) {
+            Operation op) {
             double UROUND = 2.3e-16;
             double g, ghinv, ghinv1, dghinv, ytol;
             double h, hold, hmin, hmax, tplus;

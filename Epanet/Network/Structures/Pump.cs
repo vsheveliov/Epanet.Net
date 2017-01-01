@@ -15,21 +15,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic pump structure.</summary>
     public class Pump:Link {
-        ///<summary>Type of pump curve.</summary>
-        public enum PumpType {
-            ///<summary>Constant horsepower.</summary>
-            CONST_HP = 0,
-            ///<summary>Power function.</summary>
-            POWER_FUNC = 1,
-            ///<summary>User-defined custom curve.</summary>
-            CUSTOM = 2,
-            NOCURVE = 3
-        }
-
         ///<summary>Energy usage statistics.</summary>
         private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
@@ -73,7 +64,7 @@ namespace Epanet.Network.Structures {
         ///<summary>Utilization pattern reference.</summary>
         public Pattern UPat { get; set; }
 
-#if DEBUG // NUCONVERT
+#if NUCONVERT
 
         public double GetNuFlowCoefficient(PropertiesMap.UnitsType utype) {
             return NUConvert.revertPower(utype, this.FlowCoefficient);

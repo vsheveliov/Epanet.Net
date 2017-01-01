@@ -49,7 +49,7 @@
     <Compile Include="MSX\Chemical.cs" />
     <Compile Include="MSX\Constants.cs" />
     <Compile Include="MSX\ENToolkit2.cs" />
-    <Compile Include="MSX\EnumTypes.cs" />
+    <Compile Include="MSX\_enums.cs" />
     <Compile Include="MSX\EpanetMSX.cs" />
     <Compile Include="MSX\InpReader.cs" />
     <Compile Include="MSX\MsxReader.cs" />

@@ -18,26 +18,12 @@
 using System;
 using System.Collections.Generic;
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>2D graph used to map volume, pump, efficiency and head loss curves.</summary>
-    public class Curve {
-        /// <summary>Type of curve</summary>
-        public enum CurveType {
-            /// <summary>volume curve</summary>
-            V_CURVE = 0,
-
-            /// <summary>pump curve</summary>
-            P_CURVE = 1,
-
-            /// <summary>efficiency curve</summary>
-            E_CURVE = 2,
-
-            /// <summary>head loss curve</summary>
-            H_CURVE = 3
-        }
-
-
+    public class Curve:IStringKeyed {
         private readonly string id;
         private readonly List<EnPoint> points = new List<EnPoint>();
 
@@ -49,7 +35,7 @@ namespace Epanet.Network.Structures {
         /// <param name="h0">Head at zero flow (y-intercept).</param>
         /// <param name="r">dHead/dFlow (slope).</param>
         public void GetCoeff(FieldsMap fMap, double q, out double h0, out double r) {
-            q *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
+            q *= fMap.GetUnits(FieldType.FLOW);
 
             int npts = this.points.Count;
 
@@ -64,8 +50,8 @@ namespace Epanet.Network.Structures {
             r = (this.points[k2].Y - this.points[k1].Y) / (this.points[k2].X - this.points[k1].X);
             h0 = this.points[k1].Y - r * this.points[k1].X;
 
-            h0 = h0 / fMap.GetUnits(FieldsMap.FieldType.HEAD);
-            r = r * fMap.GetUnits(FieldsMap.FieldType.FLOW) / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+            h0 = h0 / fMap.GetUnits(FieldType.HEAD);
+            r = r * fMap.GetUnits(FieldType.FLOW) / fMap.GetUnits(FieldType.HEAD);
 
         }
 

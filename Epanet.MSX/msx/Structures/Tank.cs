@@ -39,7 +39,7 @@ namespace Epanet.MSX.Structures {
         public double V { get; set; }
     
         ///<summary>type of mixing model</summary>
-        public EnumTypes.MixType MixModel { get; set; }
+        public MixType MixModel { get; set; }
      
         ///<summary>mixing compartment size</summary>
         public double VMix { get; set; }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-namespace Epanet.Network.IO
+namespace Epanet.Enums
 {
 
     ///<summary>Parse and report keywords.</summary>

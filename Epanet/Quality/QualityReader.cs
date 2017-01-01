@@ -19,6 +19,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+
+using Epanet.Enums;
 using Epanet.Network;
 
 namespace Epanet.Quality {
@@ -180,12 +182,12 @@ namespace Epanet.Quality {
             /// <summary>Get link quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Species concentration, trace or age value in user units.</returns>
-            public float GetLinkQuality(int id) { return (float)this.fld.RevertUnit(FieldsMap.FieldType.QUALITY, this.linkQ[id]); }
+            public float GetLinkQuality(int id) { return (float)this.fld.RevertUnit(FieldType.QUALITY, this.linkQ[id]); }
 
             /// <summary>Get node quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Specie concentration, trace or age value in user units.</returns>
-            public float GetNodeQuality(int id) { return (float)this.fld.RevertUnit(FieldsMap.FieldType.QUALITY, this.nodeQ[id]); }
+            public float GetNodeQuality(int id) { return (float)this.fld.RevertUnit(FieldType.QUALITY, this.nodeQ[id]); }
 
             /// <summary> Read quality data from file stream.</summary>
             internal void Read() {

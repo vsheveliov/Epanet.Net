@@ -20,7 +20,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
+
+using Epanet.Enums;
 using Epanet.Hydraulic;
 using Epanet.Hydraulic.IO;
 using Epanet.Network;
@@ -60,31 +63,24 @@ namespace Epanet {
 
         }
 
-        private static FieldsMap.FieldType ToFieldType(NodeVariableType value) {
-            return (FieldsMap.FieldType)((int)value & ~0x1000);
+        private static FieldType ToFieldType(NodeVariableType value) {
+            return (FieldType)((int)value & ~0x1000);
         }
 
         private static double GetNodeValue(NodeVariableType type, FieldsMap fmap, AwareStep step, Node node, int index) {
             switch (type) {
             case NodeVariableType.BASEDEMAND: {
-                double dsum = 0;
-                foreach (var demand in node.Demand) {
-                    dsum += demand.Base;
-                }
-                return fmap.RevertUnit((FieldsMap.FieldType)type, dsum);
+                double dsum = node.Demand.Sum(demand => demand.Base);
+                return fmap.RevertUnit((FieldType)type, dsum);
             }
             case NodeVariableType.ELEVATION:
-                return fmap.RevertUnit((FieldsMap.FieldType)type, node.Elevation);
+                return fmap.RevertUnit((FieldType)type, node.Elevation);
             case NodeVariableType.DEMAND:
                 return step != null ? step.GetNodeDemand(index, node, fmap) : 0;
             case NodeVariableType.HEAD:
                 return step != null ? step.GetNodeHead(index, node, fmap) : 0;
-            case NodeVariableType.INITQUALITY: {
-                double dsum = 0;
-                foreach (double d in node.C0) dsum += d;
-
-                return fmap.RevertUnit((FieldsMap.FieldType)type, dsum);
-            }
+            case NodeVariableType.INITQUALITY:
+                return fmap.RevertUnit((FieldType)type, node.C0);
             case NodeVariableType.PRESSURE:
                 return step != null ? step.GetNodePressure(index, node, fmap) : 0;
             case NodeVariableType.QUALITY:
@@ -95,44 +91,52 @@ namespace Epanet {
         }
 
         private enum LinkVariableType {
-            LENGHT = FieldsMap.FieldType.LENGTH,
-            DIAMETER = FieldsMap.FieldType.DIAM,
+            LENGHT = FieldType.LENGTH,
+            DIAMETER = FieldType.DIAM,
             ROUGHNESS = -1,
-            FLOW = FieldsMap.FieldType.FLOW,
-            VELOCITY = FieldsMap.FieldType.VELOCITY,
-            UNITHEADLOSS = FieldsMap.FieldType.HEADLOSS,
-            FRICTIONFACTOR = FieldsMap.FieldType.FRICTION,
-            QUALITY = FieldsMap.FieldType.QUALITY
+            FLOW = FieldType.FLOW,
+            VELOCITY = FieldType.VELOCITY,
+            UNITHEADLOSS = FieldType.HEADLOSS,
+            FRICTIONFACTOR = FieldType.FRICTION,
+            QUALITY = FieldType.QUALITY
         }
 
 
         private static double GetLinkValue(
             LinkVariableType type,
-            PropertiesMap.FormType formType,
+            FormType formType,
             FieldsMap fmap,
             AwareStep step,
             Link link,
             int index) {
+
             switch (type) {
             case LinkVariableType.LENGHT:
-                return fmap.RevertUnit((FieldsMap.FieldType)type, link.Lenght);
+                return fmap.RevertUnit((FieldType)type, link.Lenght);
+        
             case LinkVariableType.DIAMETER:
-                return fmap.RevertUnit((FieldsMap.FieldType)type, link.Diameter);
+                return fmap.RevertUnit((FieldType)type, link.Diameter);
+         
             case LinkVariableType.ROUGHNESS:
-                return link.Type == Link.LinkType.PIPE && formType == PropertiesMap.FormType.DW
-                    ? fmap.RevertUnit(FieldsMap.FieldType.DIAM, link.Roughness)
+                return link.Type == LinkType.PIPE && formType == FormType.DW
+                    ? fmap.RevertUnit(FieldType.DIAM, link.Roughness)
                     : link.Roughness;
 
             case LinkVariableType.FLOW:
                 return step != null ? Math.Abs(step.GetLinkFlow(index, link, fmap)) : 0;
+         
             case LinkVariableType.VELOCITY:
                 return step != null ? Math.Abs(step.GetLinkVelocity(index, link, fmap)) : 0;
+          
             case LinkVariableType.UNITHEADLOSS:
                 return step != null ? step.GetLinkHeadLoss(index, link, fmap) : 0;
+          
             case LinkVariableType.FRICTIONFACTOR:
                 return step != null ? step.GetLinkFriction(index, link, fmap) : 0;
+        
             case LinkVariableType.QUALITY:
-                return step != null ? fmap.RevertUnit((FieldsMap.FieldType)type, step.GetLinkAvrQuality(index)) : 0;
+                return step != null ? fmap.RevertUnit((FieldType)type, step.GetLinkAvrQuality(index)) : 0;
+         
             default:
                 return 0.0;
             }
@@ -195,7 +199,7 @@ namespace Epanet {
             }
 
             try {
-                InputParser parserINP = InputParser.Create(Network.Network.FileType.INP_FILE, log);
+                InputParser parserINP = InputParser.Create(FileType.INP_FILE, log);
                 parserINP.Parse(net, inFile);
                 PropertiesMap pMap = net.PropertiesMap;
 
@@ -226,14 +230,14 @@ namespace Epanet {
                 nodesVariables.Add(NodeVariableType.ELEVATION);
                 nodesVariables.Add(NodeVariableType.BASEDEMAND);
 
-                if (pMap.QualFlag != PropertiesMap.QualType.NONE)
+                if (pMap.QualFlag != QualType.NONE)
                     nodesVariables.Add(NodeVariableType.INITQUALITY);
 
                 nodesVariables.Add(NodeVariableType.PRESSURE);
                 nodesVariables.Add(NodeVariableType.HEAD);
                 nodesVariables.Add(NodeVariableType.DEMAND);
 
-                if (pMap.QualFlag != (PropertiesMap.QualType.NONE))
+                if (pMap.QualFlag != (QualType.NONE))
                     nodesVariables.Add(NodeVariableType.QUALITY);
 
                 linksVariables.Add(LinkVariableType.LENGHT);
@@ -244,7 +248,7 @@ namespace Epanet {
                 linksVariables.Add(LinkVariableType.UNITHEADLOSS);
                 linksVariables.Add(LinkVariableType.FRICTIONFACTOR);
 
-                if (pMap.QualFlag != PropertiesMap.QualType.NONE)
+                if (pMap.QualFlag != QualType.NONE)
                     linksVariables.Add(LinkVariableType.QUALITY);
 
                 hydFile = Path.GetTempFileName(); // "hydSim.bin"
@@ -255,7 +259,7 @@ namespace Epanet {
                 hydSim.Simulate(hydFile);
 
 
-                if (net.PropertiesMap.QualFlag != (PropertiesMap.QualType.NONE)) {
+                if (net.PropertiesMap.QualFlag != (QualType.NONE)) {
                     qualFile = Path.GetTempFileName(); // "qualSim.bin"
 
                     QualitySim q = new QualitySim(net, log);
@@ -304,7 +308,7 @@ namespace Epanet {
                         if (linkVar < 0) {
                             continue;
                         }
-                        linksTextWriter.Write(net.FieldsMap.GetField((FieldsMap.FieldType)linkVar).Units);
+                        linksTextWriter.Write(net.FieldsMap.GetField((FieldType)linkVar).Units);
                     }
                     linksTextWriter.Write('\n');
                 }

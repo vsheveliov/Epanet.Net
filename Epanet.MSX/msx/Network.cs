@@ -28,19 +28,19 @@ namespace Epanet.MSX {
         ///<summary>Numbers of each type of object [MAX_OBJECTS]</summary>
         public readonly int[] Nobjects;
         ///<summary>Unit system flag</summary>
-        public EnumTypes.UnitSystemType Unitsflag;
+        public UnitSystemType Unitsflag;
         ///<summary>Flow units flag</summary>
-        public EnumTypes.FlowUnitsType Flowflag;
+        public FlowUnitsType Flowflag;
         ///<summary>Report results flag</summary>
         public bool Rptflag;
         ///<summary>Degree of coupling for solving DAE's</summary>
-        public EnumTypes.CouplingType Coupling;
+        public CouplingType Coupling;
         ///<summary>Surface area units</summary>
-        public EnumTypes.AreaUnitsType AreaUnits;
+        public AreaUnitsType AreaUnits;
         ///<summary>Reaction rate time units</summary>
-        public EnumTypes.RateUnitsType RateUnits;
+        public RateUnitsType RateUnits;
         ///<summary>Choice of ODE solver</summary>
-        public EnumTypes.SolverType Solver;
+        public SolverType Solver;
 
         ///<summary>Lines per page in report</summary>
         public int PageSize;
@@ -67,7 +67,7 @@ namespace Epanet.MSX {
         public long Qtime;
 
         ///<summary>Reporting statistic flag</summary>
-        public EnumTypes.TstatType Statflag;
+        public TstatType Statflag;
         ///<summary>Duration of simulation (sec)</summary>
         public long Dur;
 
@@ -114,8 +114,8 @@ namespace Epanet.MSX {
 
 
         public Network() {
-            this.Nobjects = new int[(int)EnumTypes.ObjectTypes.MAX_OBJECTS];
-            this.Ucf = new double[(int)EnumTypes.UnitsType.MAX_UNIT_TYPES];
+            this.Nobjects = new int[(int)ObjectTypes.MAX_OBJECTS];
+            this.Ucf = new double[(int)UnitsType.MAX_UNIT_TYPES];
 
         }
 
@@ -124,18 +124,18 @@ namespace Epanet.MSX {
             this.Title = "";
             this.Rptflag = false;
             
-            for (int i = 0; i < (int)EnumTypes.ObjectTypes.MAX_OBJECTS; i++)
+            for (int i = 0; i < (int)ObjectTypes.MAX_OBJECTS; i++)
                 this.Nobjects[i] = 0;
 
-            this.Unitsflag = EnumTypes.UnitSystemType.US;
-            this.Flowflag = EnumTypes.FlowUnitsType.GPM;
-            this.Statflag = EnumTypes.TstatType.SERIES;
+            this.Unitsflag = UnitSystemType.US;
+            this.Flowflag = FlowUnitsType.GPM;
+            this.Statflag = TstatType.SERIES;
             this.DefRtol = 0.001;
             this.DefAtol = 0.01;
-            this.Solver = EnumTypes.SolverType.EUL;
-            this.Coupling = EnumTypes.CouplingType.NO_COUPLING;
-            this.AreaUnits = EnumTypes.AreaUnitsType.FT2;
-            this.RateUnits = EnumTypes.RateUnitsType.DAYS;
+            this.Solver = SolverType.EUL;
+            this.Coupling = CouplingType.NO_COUPLING;
+            this.AreaUnits = AreaUnitsType.FT2;
+            this.RateUnits = RateUnitsType.DAYS;
             this.Qstep = 300;
             this.Rstep = 3600;
             this.Rstart = 0;

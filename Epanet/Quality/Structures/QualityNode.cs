@@ -33,7 +33,7 @@ namespace Epanet.Quality.Structures {
         ///<summary>Init quality node properties.</summary>
         protected QualityNode(Node node) {
             this.node = node;
-            this.Quality = node.C0[0];
+            this.Quality = node.C0;
             if (this.node.Source != null)
                 this.MassRate = 0.0;
         }

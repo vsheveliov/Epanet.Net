@@ -29,7 +29,7 @@ namespace Epanet.Quality.Structures {
         public QualityTank(Node node):base(node) {
             this.segments = new LinkedList<QualitySegment>();
             this.Volume = ((Tank)node).V0;
-            this.Concentration = node.C0[0];
+            this.Concentration = node.C0;
         }
 
         ///<summary>Get/set species concentration.</summary>

@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
+using Epanet.Enums;
 using Epanet.Hydraulic.Models;
 using Epanet.Log;
 using Epanet.Network;
@@ -35,7 +37,7 @@ namespace Epanet.Hydraulic.Structures {
         protected readonly int index;
 
         /// <summary>Epanet 'S[k]', link current status</summary>
-        protected Link.StatType status;
+        protected StatType status;
 
         /// <summary>Epanet 'Q[k]', link flow value</summary>
         protected double flow;
@@ -49,7 +51,7 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Epanet 'K[k]', Link setting</summary>
         protected double setting;
 
-        protected Link.StatType oldStatus;
+        protected StatType oldStatus;
 
 
         public static SimulationLink CreateIndexedLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
@@ -130,14 +132,14 @@ namespace Epanet.Hydraulic.Structures {
 
         public double FlowResistance { get { return this.link.FlowResistance; } }
 
-        public Link.LinkType Type { get { return this.link.Type; } }
+        public LinkType Type { get { return this.link.Type; } }
 
 #endregion
 
 #region Simulation getters & setters
 
         /// <summary>Epanet 'S[k]', link current status</summary>
-        public Link.StatType SimStatus { get { return this.status; } set { this.status = value; } }
+        public StatType SimStatus { get { return this.status; } set { this.status = value; } }
 
         /// <summary>Epanet 'Q[k]', link flow value</summary>
         public double SimFlow { get { return this.flow; } set { this.flow = value; } }
@@ -151,7 +153,7 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Epanet 'Y[k]', Flow correction factors</summary>
         public double SimFlowCorrection { get { return this.flowCorrection; } set { this.flowCorrection = value; } }
 
-        public Link.StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
+        public StatType SimOldStatus { get { return this.oldStatus; } set { this.oldStatus = value; } }
 
 #endregion
 
@@ -163,18 +165,18 @@ namespace Epanet.Hydraulic.Structures {
                 if (this is SimulationPump)
                     this.setting = 1.0;
 
-                else if (this.Type != Link.LinkType.GPV)
+                else if (this.Type != LinkType.GPV)
                     this.setting = Constants.MISSING;
 
-                this.status = Link.StatType.OPEN;
+                this.status = StatType.OPEN;
             }
             else {
                 if (this is SimulationPump)
                     this.setting = 0.0;
-                else if (this.Type != Link.LinkType.GPV)
+                else if (this.Type != LinkType.GPV)
                     this.setting = Constants.MISSING;
 
-                this.status = Link.StatType.CLOSED;
+                this.status = StatType.CLOSED;
             }
         }
 
@@ -182,20 +184,20 @@ namespace Epanet.Hydraulic.Structures {
         public void SetLinkSetting(double value) {
             if (this is SimulationPump) {
                 this.setting = value;
-                if (value > 0 && this.status <= Link.StatType.CLOSED)
-                    this.status = Link.StatType.OPEN;
+                if (value > 0 && this.status <= StatType.CLOSED)
+                    this.status = StatType.OPEN;
 
-                if (value == 0 && this.status > Link.StatType.CLOSED)
-                    this.status = Link.StatType.CLOSED;
+                if (value == 0 && this.status > StatType.CLOSED)
+                    this.status = StatType.CLOSED;
 
             }
-            else if (this.Type == Link.LinkType.FCV) {
+            else if (this.Type == LinkType.FCV) {
                 this.setting = value;
-                this.status = Link.StatType.ACTIVE;
+                this.status = StatType.ACTIVE;
             }
             else {
-                if (this.setting.IsMissing() && this.status <= Link.StatType.CLOSED)
-                    this.status = Link.StatType.OPEN;
+                if (this.setting.IsMissing() && this.status <= StatType.CLOSED)
+                    this.status = StatType.OPEN;
 
                 this.setting = value;
             }
@@ -207,7 +209,7 @@ namespace Epanet.Hydraulic.Structures {
         /// or to flow at velocity of 1 fps for other links.
         /// </summary>
         public void InitLinkFlow() {
-            if (this.SimStatus == Link.StatType.CLOSED)
+            if (this.SimStatus == StatType.CLOSED)
                 this.flow = Constants.QZERO;
             else if (this is SimulationPump)
                 this.flow = this.Roughness * ((SimulationPump)this).Q0;
@@ -215,8 +217,8 @@ namespace Epanet.Hydraulic.Structures {
                 this.flow = Math.PI * Math.Pow(this.Diameter, 2) / 4.0;
         }
 
-        public void InitLinkFlow(Link.StatType type, double kc) {
-            if (type == Link.StatType.CLOSED)
+        public void InitLinkFlow(StatType type, double kc) {
+            if (type == StatType.CLOSED)
                 this.flow = Constants.QZERO;
             else if (this is SimulationPump)
                 this.flow = kc * ((SimulationPump)this).Q0;
@@ -235,21 +237,21 @@ namespace Epanet.Hydraulic.Structures {
 
             switch (this.Type) {
             // Pipes
-            case Link.LinkType.CV:
-            case Link.LinkType.PIPE:
+            case LinkType.CV:
+            case LinkType.PIPE:
                 this.ComputePipeCoeff(pMap, hlModel);
                 break;
             // Pumps
-            case Link.LinkType.PUMP:
+            case LinkType.PUMP:
                 ((SimulationPump)this).ComputePumpCoeff(fMap, pMap);
                 break;
             // Valves
-            case Link.LinkType.PBV:
-            case Link.LinkType.TCV:
-            case Link.LinkType.GPV:
-            case Link.LinkType.FCV:
-            case Link.LinkType.PRV:
-            case Link.LinkType.PSV:
+            case LinkType.PBV:
+            case LinkType.TCV:
+            case LinkType.GPV:
+            case LinkType.FCV:
+            case LinkType.PRV:
+            case LinkType.PSV:
                 // If valve status fixed then treat as pipe
                 // otherwise ignore the valve for now.
                 if (!((SimulationValve)this).ComputeValveCoeff(fMap, pMap, curves))
@@ -286,7 +288,7 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Computes P & Y coefficients for pipe k.</summary>
         private void ComputePipeCoeff(PropertiesMap pMap, PipeHeadModelCalculators.Compute hlModel) {
             // For closed pipe use headloss formula: h = CBIG*q
-            if (this.status <= Link.StatType.CLOSED) {
+            if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
                 this.flowCorrection = this.flow;
                 return;
@@ -318,47 +320,47 @@ namespace Epanet.Hydraulic.Structures {
             SimulationTank tank = (SimulationTank)n1;
 
             // Skip reservoirs & closed links
-            if (tank.Area == 0.0 || this.status <= Link.StatType.CLOSED)
+            if (tank.Area == 0.0 || this.status <= StatType.CLOSED)
                 return;
 
             // If tank full, then prevent flow into it
             if (tank.SimHead >= tank.Hmax - pMap.HTol) {
                 //Case 1: Link is a pump discharging into tank
-                if (this.Type == Link.LinkType.PUMP) {
+                if (this.Type == LinkType.PUMP) {
                     if (this.Second == n1)
-                        this.status = Link.StatType.TEMPCLOSED;
+                        this.status = StatType.TEMPCLOSED;
                 }
-                else if (CvStatus(pMap, Link.StatType.OPEN, h, q) == Link.StatType.CLOSED)
+                else if (CvStatus(pMap, StatType.OPEN, h, q) == StatType.CLOSED)
                     //  Case 2: Downstream head > tank head
-                    this.status = Link.StatType.TEMPCLOSED;
+                    this.status = StatType.TEMPCLOSED;
             }
 
             // If tank empty, then prevent flow out of it
             if (tank.SimHead <= tank.Hmin + pMap.HTol) {
                 // Case 1: Link is a pump discharging from tank
-                if (this.Type == Link.LinkType.PUMP) {
+                if (this.Type == LinkType.PUMP) {
                     if (this.First == n1)
-                        this.status = Link.StatType.TEMPCLOSED;
+                        this.status = StatType.TEMPCLOSED;
                 }
                 // Case 2: Tank head > downstream head
-                else if (CvStatus(pMap, Link.StatType.CLOSED, h, q) == Link.StatType.OPEN)
-                    this.status = Link.StatType.TEMPCLOSED;
+                else if (CvStatus(pMap, StatType.CLOSED, h, q) == StatType.OPEN)
+                    this.status = StatType.TEMPCLOSED;
             }
         }
 
         /// <summary>Updates status of a check valve.</summary>
-        private static Link.StatType CvStatus(PropertiesMap pMap, Link.StatType s, double dh, double q) {
+        private static StatType CvStatus(PropertiesMap pMap, StatType s, double dh, double q) {
             if (Math.Abs(dh) > pMap.HTol) {
                 if (dh < -pMap.HTol)
-                    return (Link.StatType.CLOSED);
+                    return (StatType.CLOSED);
                 else if (q < -pMap.QTol)
-                    return (Link.StatType.CLOSED);
+                    return (StatType.CLOSED);
                 else
-                    return (Link.StatType.OPEN);
+                    return (StatType.OPEN);
             }
             else {
                 if (q < -pMap.QTol)
-                    return (Link.StatType.CLOSED);
+                    return (StatType.CLOSED);
                 else
                     return (s);
             }
@@ -370,18 +372,18 @@ namespace Epanet.Hydraulic.Structures {
 
             double dh = this.first.SimHead - this.second.SimHead;
 
-            Link.StatType tStatus = this.status;
+            StatType tStatus = this.status;
 
-            if (tStatus == Link.StatType.XHEAD || tStatus == Link.StatType.TEMPCLOSED)
-                this.status = Link.StatType.OPEN;
+            if (tStatus == StatType.XHEAD || tStatus == StatType.TEMPCLOSED)
+                this.status = StatType.OPEN;
 
-            if (this.Type == Link.LinkType.CV)
+            if (this.Type == LinkType.CV)
                 this.status = CvStatus(pMap, this.status, dh, this.flow);
 
-            if (this is SimulationPump && this.status >= Link.StatType.OPEN && this.setting > 0.0)
+            if (this is SimulationPump && this.status >= StatType.OPEN && this.setting > 0.0)
                 this.status = ((SimulationPump)this).PumpStatus(pMap, -dh);
 
-            if (this.Type == Link.LinkType.FCV && !this.setting.IsMissing())
+            if (this.Type == LinkType.FCV && !this.setting.IsMissing())
                 this.status = ((SimulationValve)this).FcvStatus(pMap, tStatus);
 
             if (this.first is SimulationTank || this.second is SimulationTank)
@@ -389,7 +391,7 @@ namespace Epanet.Hydraulic.Structures {
 
             if (tStatus != this.status) {
                 change = true;
-                if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
+                if (pMap.Stat_Flag == StatFlag.FULL)
                     LogStatChange(fMap, log, this, tStatus, this.status);
             }
 
@@ -400,46 +402,46 @@ namespace Epanet.Hydraulic.Structures {
             FieldsMap fMap,
             TraceSource logger,
             SimulationLink link,
-            Link.StatType s1,
-            Link.StatType s2) {
+            StatType s1,
+            StatType s2) {
 
             if (s1 == s2) {
 
                 switch (link.Type) {
-                case Link.LinkType.PRV:
-                case Link.LinkType.PSV:
-                case Link.LinkType.PBV:
-                    link.setting *= fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                case LinkType.PRV:
+                case LinkType.PSV:
+                case LinkType.PBV:
+                    link.setting *= fMap.GetUnits(FieldType.PRESSURE);
                     break;
-                case Link.LinkType.FCV:
-                    link.setting *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                case LinkType.FCV:
+                    link.setting *= fMap.GetUnits(FieldType.FLOW);
                     break;
                 }
                 logger.Verbose(
-                    Text.ResourceManager.GetString("FMT56"),
+                    Text.FMT56,
                     link.Type.ParseStr(),
                     link.Link.Id,
                     link.setting);
                 return;
             }
 
-            Link.StatType j1, j2;
+            StatType j1, j2;
 
-            if (s1 == Link.StatType.ACTIVE)
-                j1 = Link.StatType.ACTIVE;
-            else if (s1 <= Link.StatType.CLOSED)
-                j1 = Link.StatType.CLOSED;
+            if (s1 == StatType.ACTIVE)
+                j1 = StatType.ACTIVE;
+            else if (s1 <= StatType.CLOSED)
+                j1 = StatType.CLOSED;
             else
-                j1 = Link.StatType.OPEN;
-            if (s2 == Link.StatType.ACTIVE) j2 = Link.StatType.ACTIVE;
-            else if (s2 <= Link.StatType.CLOSED)
-                j2 = Link.StatType.CLOSED;
+                j1 = StatType.OPEN;
+            if (s2 == StatType.ACTIVE) j2 = StatType.ACTIVE;
+            else if (s2 <= StatType.CLOSED)
+                j2 = StatType.CLOSED;
             else
-                j2 = Link.StatType.OPEN;
+                j2 = StatType.OPEN;
 
             if (j1 != j2) {
                 logger.Verbose(
-                    Text.ResourceManager.GetString("FMT57"),
+                    Text.FMT57,
                     link.Type.ParseStr(),
                     link.Link.Id,
                     j1.ReportStr(),

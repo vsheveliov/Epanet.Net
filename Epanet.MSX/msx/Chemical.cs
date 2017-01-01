@@ -79,14 +79,14 @@ namespace Epanet.MSX {
 
 
         ///<summary>opens the multi-species chemistry system.</summary>
-        public EnumTypes.ErrorCodeType MSXchem_open() {
+        public ErrorCodeType MSXchem_open() {
             int numWallSpecies;
             int numBulkSpecies;
             int numTankExpr;
             int numPipeExpr;
 
-            this.hydVar = new double[(int)EnumTypes.HydVarType.MAX_HYD_VARS];
-            this.lastIndex = new int[(int)EnumTypes.ObjectTypes.MAX_OBJECTS];
+            this.hydVar = new double[(int)HydVarType.MAX_HYD_VARS];
+            this.lastIndex = new int[(int)ObjectTypes.MAX_OBJECTS];
 
             this.pipeRateSpecies = null;
             this.tankRateSpecies = null;
@@ -96,7 +96,7 @@ namespace Epanet.MSX {
             this.rtol = null;
             this.yrate = null;
             this.yequil = null;
-            this.numSpecies = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES];
+            this.numSpecies = this.msx.Nobjects[(int)ObjectTypes.SPECIES];
             int size = this.numSpecies + 1;
             this.pipeRateSpecies = new int[size];
             this.tankRateSpecies = new int[size];
@@ -122,11 +122,11 @@ namespace Epanet.MSX {
             numWallSpecies = 0;
             numBulkSpecies = 0;
             for (int i = 1; i <= this.numSpecies; i++) {
-                if (this.msx.Species[i].Type == EnumTypes.SpeciesType.WALL) numWallSpecies++;
-                if (this.msx.Species[i].Type == EnumTypes.SpeciesType.BULK) numBulkSpecies++;
+                if (this.msx.Species[i].Type == SpeciesType.WALL) numWallSpecies++;
+                if (this.msx.Species[i].Type == SpeciesType.BULK) numBulkSpecies++;
             }
-            if (numPipeExpr != this.numSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_PIPE_EXPR;
-            if (numTankExpr != numBulkSpecies) return EnumTypes.ErrorCodeType.ERR_NUM_TANK_EXPR;
+            if (numPipeExpr != this.numSpecies) return ErrorCodeType.ERR_NUM_PIPE_EXPR;
+            if (numTankExpr != numBulkSpecies) return ErrorCodeType.ERR_NUM_TANK_EXPR;
 
             // Open the ODE solver;
             // arguments are max. number of ODE's,
@@ -134,11 +134,11 @@ namespace Epanet.MSX {
             // 1 if automatic step sizing used (or 0 if not used)
 
             switch (this.msx.Solver) {
-            case EnumTypes.SolverType.RK5:
+            case SolverType.RK5:
                 this.rk5Solver = new rk5();
                 this.rk5Solver.rk5_open(this.numSpecies, 1000, 1);
                 break;
-            case EnumTypes.SolverType.ROS2:
+            case SolverType.ROS2:
                 this.ros2Solver = new ros2();
                 this.ros2Solver.ros2_open(this.numSpecies, 1);
                 break;
@@ -150,23 +150,23 @@ namespace Epanet.MSX {
             this.newton.newton_open(m);
 
             // Assign entries to LastIndex array
-            this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES] = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.SPECIES];
-            this.lastIndex[(int)EnumTypes.ObjectTypes.TERM] = this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]
-                                                              + this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TERM];
-            this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER] = this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]
+            this.lastIndex[(int)ObjectTypes.SPECIES] = this.msx.Nobjects[(int)ObjectTypes.SPECIES];
+            this.lastIndex[(int)ObjectTypes.TERM] = this.lastIndex[(int)ObjectTypes.SPECIES]
+                                                              + this.msx.Nobjects[(int)ObjectTypes.TERM];
+            this.lastIndex[(int)ObjectTypes.PARAMETER] = this.lastIndex[(int)ObjectTypes.TERM]
                                                                    + this.msx.Nobjects[
-                                                                             (int)EnumTypes.ObjectTypes.PARAMETER];
-            this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT] = this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]
+                                                                             (int)ObjectTypes.PARAMETER];
+            this.lastIndex[(int)ObjectTypes.CONSTANT] = this.lastIndex[(int)ObjectTypes.PARAMETER]
                                                                   + this.msx.Nobjects[
-                                                                            (int)EnumTypes.ObjectTypes.CONSTANT];
+                                                                            (int)ObjectTypes.CONSTANT];
 
             return 0;
         }
 
         ///<summary>computes reactions in all pipes and tanks.</summary>
-        public EnumTypes.ErrorCodeType MSXchem_react(long dt) {
+        public ErrorCodeType MSXchem_react(long dt) {
 
-            EnumTypes.ErrorCodeType errcode = 0;
+            ErrorCodeType errcode = 0;
 
             // Save tolerances of pipe rate species
             for (int i = 1; i <= this.numPipeRateSpecies; i++) {
@@ -176,7 +176,7 @@ namespace Epanet.MSX {
             }
 
             // Examine each link
-            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK]; i++) {
+            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.LINK]; i++) {
                 // Skip non-pipe links
                 if (this.msx.Link[i].Len == 0.0) continue;
 
@@ -196,7 +196,7 @@ namespace Epanet.MSX {
             }
 
             // Examine each tank
-            for (int i = 1; i <= this.msx.Nobjects[(int)EnumTypes.ObjectTypes.TANK]; i++) {
+            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.TANK]; i++) {
                 // Skip reservoirs
                 if (this.msx.Tank[i].A == 0.0) continue;
 
@@ -209,13 +209,13 @@ namespace Epanet.MSX {
 
 
         /// <summary>Computes equilibrium concentrations for a set of chemical species.</summary>
-        public EnumTypes.ErrorCodeType MSXchem_equil(EnumTypes.ObjectTypes zone, double[] c) {
-            EnumTypes.ErrorCodeType errcode = 0;
-            if (zone == EnumTypes.ObjectTypes.LINK) {
+        public ErrorCodeType MSXchem_equil(ObjectTypes zone, double[] c) {
+            ErrorCodeType errcode = 0;
+            if (zone == ObjectTypes.LINK) {
                 if (this.numPipeEquilSpecies > 0) errcode = this.EvalPipeEquil(c);
                 this.EvalPipeFormulas(c);
             }
-            if (zone == EnumTypes.ObjectTypes.NODE) {
+            if (zone == ObjectTypes.NODE) {
                 if (this.numTankEquilSpecies > 0) errcode = this.EvalTankEquil(c);
                 this.EvalTankFormulas(c);
             }
@@ -232,31 +232,31 @@ namespace Epanet.MSX {
             this.numTankEquilSpecies = 0;
             for (int i = 1; i <= this.numSpecies; i++) {
                 switch (this.msx.Species[i].PipeExprType) {
-                case EnumTypes.ExpressionType.RATE:
+                case ExpressionType.RATE:
                     this.numPipeRateSpecies++;
                     this.pipeRateSpecies[this.numPipeRateSpecies] = i;
                     break;
 
-                case EnumTypes.ExpressionType.FORMULA:
+                case ExpressionType.FORMULA:
                     this.numPipeFormulaSpecies++;
                     break;
 
-                case EnumTypes.ExpressionType.EQUIL:
+                case ExpressionType.EQUIL:
                     this.numPipeEquilSpecies++;
                     this.pipeEquilSpecies[this.numPipeEquilSpecies] = i;
                     break;
                 }
                 switch (this.msx.Species[i].TankExprType) {
-                case EnumTypes.ExpressionType.RATE:
+                case ExpressionType.RATE:
                     this.numTankRateSpecies++;
                     this.tankRateSpecies[this.numTankRateSpecies] = i;
                     break;
 
-                case EnumTypes.ExpressionType.FORMULA:
+                case ExpressionType.FORMULA:
                     this.numTankFormulaSpecies++;
                     break;
 
-                case EnumTypes.ExpressionType.EQUIL:
+                case ExpressionType.EQUIL:
                     this.numTankEquilSpecies++;
                     this.tankEquilSpecies[this.numTankEquilSpecies] = i;
                     break;
@@ -293,58 +293,58 @@ namespace Epanet.MSX {
             double av; // area per unit volume
 
             //  pipe diameter in user's units (ft or m)
-            this.hydVar[(int)EnumTypes.HydVarType.DIAMETER] = diam * this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
+            this.hydVar[(int)HydVarType.DIAMETER] = diam * this.msx.Ucf[(int)UnitsType.LENGTH_UNITS];
 
             //  flow rate in user's units
-            this.hydVar[(int)EnumTypes.HydVarType.FLOW] = Math.Abs(this.msx.Q[k])
-                                                          * this.msx.Ucf[(int)EnumTypes.UnitsType.FLOW_UNITS];
+            this.hydVar[(int)HydVarType.FLOW] = Math.Abs(this.msx.Q[k])
+                                                          * this.msx.Ucf[(int)UnitsType.FLOW_UNITS];
 
             //  flow velocity in ft/sec
-            if (diam == 0.0) this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] = 0.0;
+            if (diam == 0.0) this.hydVar[(int)HydVarType.VELOCITY] = 0.0;
             else
-                this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] = Math.Abs(this.msx.Q[k]) * 4.0 / Constants.PI
+                this.hydVar[(int)HydVarType.VELOCITY] = Math.Abs(this.msx.Q[k]) * 4.0 / Constants.PI
                                                                   / (diam * diam);
 
             //  Reynolds number
-            this.hydVar[(int)EnumTypes.HydVarType.REYNOLDS] = this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] * diam
+            this.hydVar[(int)HydVarType.REYNOLDS] = this.hydVar[(int)HydVarType.VELOCITY] * diam
                                                               / Constants.VISCOS;
 
             //  flow velocity in user's units (ft/sec or m/sec)
-            this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] *= this.msx.Ucf[(int)EnumTypes.UnitsType.LENGTH_UNITS];
+            this.hydVar[(int)HydVarType.VELOCITY] *= this.msx.Ucf[(int)UnitsType.LENGTH_UNITS];
 
             //  Darcy Weisbach friction factor
-            if (this.msx.Link[k].Len == 0.0) this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 0.0;
+            if (this.msx.Link[k].Len == 0.0) this.hydVar[(int)HydVarType.FRICTION] = 0.0;
             else {
                 dh = Math.Abs(this.msx.H[this.msx.Link[k].N1] - this.msx.H[this.msx.Link[k].N2]);
-                this.hydVar[(int)EnumTypes.HydVarType.FRICTION] = 39.725 * dh * Math.Pow(diam, 5)
+                this.hydVar[(int)HydVarType.FRICTION] = 39.725 * dh * Math.Pow(diam, 5)
                                                                   / this.msx.Link[k].Len
                                                                   / (this.msx.Q[k] * this.msx.Q[k]);
             }
 
             // Shear velocity in user's units (ft/sec or m/sec)
-            this.hydVar[(int)EnumTypes.HydVarType.SHEAR] = this.hydVar[(int)EnumTypes.HydVarType.VELOCITY] *
+            this.hydVar[(int)HydVarType.SHEAR] = this.hydVar[(int)HydVarType.VELOCITY] *
                                                            Math.Sqrt(
-                                                               this.hydVar[(int)EnumTypes.HydVarType.FRICTION] / 8.0);
+                                                               this.hydVar[(int)HydVarType.FRICTION] / 8.0);
 
             // Pipe surface area / volume in area_units/L
-            this.hydVar[(int)EnumTypes.HydVarType.AREAVOL] = 1.0;
+            this.hydVar[(int)HydVarType.AREAVOL] = 1.0;
             if (diam > 0.0) {
                 av = 4.0 / diam; // ft2/ft3
-                av *= this.msx.Ucf[(int)EnumTypes.UnitsType.AREA_UNITS]; // area_units/ft3
+                av *= this.msx.Ucf[(int)UnitsType.AREA_UNITS]; // area_units/ft3
                 av /= Constants.LperFT3; // area_units/L
-                this.hydVar[(int)EnumTypes.HydVarType.AREAVOL] = av;
+                this.hydVar[(int)HydVarType.AREAVOL] = av;
             }
 
-            this.hydVar[(int)EnumTypes.HydVarType.ROUGHNESS] = this.msx.Link[k].Roughness;
+            this.hydVar[(int)HydVarType.ROUGHNESS] = this.msx.Link[k].Roughness;
                 //Feng Shang, Bug ID 8,  01/29/2008
         }
 
 
         ///<summary>Updates species concentrations in each WQ segment of a pipe after reactions occur over time step dt.</summary>
-        private EnumTypes.ErrorCodeType EvalPipeReactions(int k, long dt) {
-            EnumTypes.ErrorCodeType errcode = 0;
+        private ErrorCodeType EvalPipeReactions(int k, long dt) {
+            ErrorCodeType errcode = 0;
             int ierr;
-            double tstep = (double)dt / this.msx.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
+            double tstep = (double)dt / this.msx.Ucf[(int)UnitsType.RATE_UNITS];
             double c, dc;
             double[] dh = new double[1];
             // Start with the most downstream pipe segment
@@ -361,7 +361,7 @@ namespace Epanet.MSX {
 
                 if (dt > 0.0) {
                     // Euler integrator
-                    if (this.msx.Solver == EnumTypes.SolverType.EUL) {
+                    if (this.msx.Solver == SolverType.EUL) {
                         for (int i = 1; i <= this.numPipeRateSpecies; i++) {
                             int m = this.pipeRateSpecies[i];
 
@@ -391,7 +391,7 @@ namespace Epanet.MSX {
                         // integrate the set of rate equations
 
                         // Runge-Kutta integrator
-                        if (this.msx.Solver == EnumTypes.SolverType.RK5)
+                        if (this.msx.Solver == SolverType.RK5)
                             ierr = this.rk5Solver.rk5_integrate(
                                            this.yrate,
                                            this.numPipeRateSpecies,
@@ -408,7 +408,7 @@ namespace Epanet.MSX {
                         //});
 
                         // Rosenbrock integrator
-                        if (this.msx.Solver == EnumTypes.SolverType.ROS2)
+                        if (this.msx.Solver == SolverType.ROS2)
                             ierr = this.ros2Solver.ros2_integrate(
                                            this.yrate,
                                            this.numPipeRateSpecies,
@@ -436,12 +436,12 @@ namespace Epanet.MSX {
                         this.theSeg.Hstep = dh[0];
                     }
                     if (ierr < 0)
-                        return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
+                        return ErrorCodeType.ERR_INTEGRATOR;
                 }
 
                 // Compute new equilibrium concentrations within segment
 
-                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.theSeg.C);
+                errcode = this.MSXchem_equil(ObjectTypes.LINK, this.theSeg.C);
 
                 if (errcode != 0)
                     return errcode;
@@ -454,16 +454,16 @@ namespace Epanet.MSX {
         }
 
         ///<summary>Updates species concentrations in a given storage tank after reactions occur over time step dt.</summary>
-        private EnumTypes.ErrorCodeType EvalTankReactions(int k, long dt) {
-            EnumTypes.ErrorCodeType errcode = 0;
-            double tstep = ((double)dt) / this.msx.Ucf[(int)EnumTypes.UnitsType.RATE_UNITS];
+        private ErrorCodeType EvalTankReactions(int k, long dt) {
+            ErrorCodeType errcode = 0;
+            double tstep = ((double)dt) / this.msx.Ucf[(int)UnitsType.RATE_UNITS];
             double c, dc;
             double[] dh = new double[1];
 
             // evaluate each volume segment in the tank
 
             this.theNode = this.msx.Tank[k].Node;
-            int i = this.msx.Nobjects[(int)EnumTypes.ObjectTypes.LINK] + k;
+            int i = this.msx.Nobjects[(int)ObjectTypes.LINK] + k;
             //TheSeg = MSX.Segments[i];
             //while ( TheSeg )
             foreach (Pipe seg  in  this.msx.Segments[i]) {
@@ -476,7 +476,7 @@ namespace Epanet.MSX {
 
                 // react each reacting species over the time step
                 if (dt > 0.0) {
-                    if (this.msx.Solver == EnumTypes.SolverType.EUL) {
+                    if (this.msx.Solver == SolverType.EUL) {
                         for (i = 1; i <= this.numTankRateSpecies; i++) {
                             int j = this.tankRateSpecies[i];
                             //dc = tstep * mathexpr_eval(MSX.Species[m].getTankExpr(),
@@ -499,7 +499,7 @@ namespace Epanet.MSX {
                         }
                         dh[0] = this.msx.Tank[k].Hstep;
 
-                        if (this.msx.Solver == EnumTypes.SolverType.RK5)
+                        if (this.msx.Solver == SolverType.RK5)
                             ierr = this.rk5Solver.rk5_integrate(
                                            this.yrate,
                                            this.numTankRateSpecies,
@@ -515,7 +515,7 @@ namespace Epanet.MSX {
                         //    public void solve(double t, double[] y, int n, double[] f, int off) {getTankDcDt(t,y,n,f,off);}
                         //} );
 
-                        if (this.msx.Solver == EnumTypes.SolverType.ROS2)
+                        if (this.msx.Solver == SolverType.ROS2)
                             ierr = this.ros2Solver.ros2_integrate(
                                            this.yrate,
                                            this.numTankRateSpecies,
@@ -539,11 +539,11 @@ namespace Epanet.MSX {
                         this.theSeg.Hstep = dh[0];
                     }
                     if (ierr < 0)
-                        return EnumTypes.ErrorCodeType.ERR_INTEGRATOR;
+                        return ErrorCodeType.ERR_INTEGRATOR;
                 }
 
                 // compute new equilibrium concentrations within segment
-                errcode = this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.theSeg.C);
+                errcode = this.MSXchem_equil(ObjectTypes.NODE, this.theSeg.C);
 
                 if (errcode != 0)
                     return errcode;
@@ -552,7 +552,7 @@ namespace Epanet.MSX {
         }
 
         ///<summary>computes equilibrium concentrations for water in a pipe segment.</summary>
-        private EnumTypes.ErrorCodeType EvalPipeEquil(double[] c) {
+        private ErrorCodeType EvalPipeEquil(double[] c) {
             for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
 
             for (int i = 1; i <= this.numPipeEquilSpecies; i++) {
@@ -568,7 +568,7 @@ namespace Epanet.MSX {
                                   this,
                                   Operation.PIPES_EQUIL);
 
-            if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
+            if (errcode < 0) return ErrorCodeType.ERR_NEWTON;
             for (int i = 1; i <= this.numPipeEquilSpecies; i++) {
                 int j = this.pipeEquilSpecies[i];
                 c[j] = this.yequil[i];
@@ -579,7 +579,7 @@ namespace Epanet.MSX {
 
 
         ///<summary>computes equilibrium concentrations for water in a tank.</summary>
-        private EnumTypes.ErrorCodeType EvalTankEquil(double[] c) {
+        private ErrorCodeType EvalTankEquil(double[] c) {
 
             for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
             for (int i = 1; i <= this.numTankEquilSpecies; i++) {
@@ -599,7 +599,7 @@ namespace Epanet.MSX {
             //        System.out.println("Jacobian Unused");}
             //});
 
-            if (errcode < 0) return EnumTypes.ErrorCodeType.ERR_NEWTON;
+            if (errcode < 0) return ErrorCodeType.ERR_NEWTON;
 
             for (int i = 1; i <= this.numTankEquilSpecies; i++) {
                 int j = this.tankEquilSpecies[i];
@@ -617,7 +617,7 @@ namespace Epanet.MSX {
             for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
 
             for (int i = 1; i <= this.numSpecies; i++) {
-                if (this.msx.Species[i].PipeExprType == EnumTypes.ExpressionType.FORMULA) {
+                if (this.msx.Species[i].PipeExprType == ExpressionType.FORMULA) {
                     c[i] = this.msx.Species[i].PipeExpr.EvaluatePipeExp(this);
                     //c[m] = MSX.Species[m].getPipeExpr().evaluate( new VariableInterface(){
                     //    public double getValue(int id){return getPipeVariableValue(id);}
@@ -636,7 +636,7 @@ namespace Epanet.MSX {
             for (int i = 1; i <= this.numSpecies; i++) this.msx.C1[i] = c[i];
 
             for (int i = 1; i <= this.numSpecies; i++) {
-                if (this.msx.Species[i].TankExprType == EnumTypes.ExpressionType.FORMULA) {
+                if (this.msx.Species[i].TankExprType == ExpressionType.FORMULA) {
                     c[i] = this.msx.Species[i].PipeExpr.EvaluateTankExp(this);
                     //c[m] = MSX.Species[m].getPipeExpr().evaluate(new VariableInterface(){
                     //    public double getValue(int id){return getTankVariableValue(id);}
@@ -650,9 +650,9 @@ namespace Epanet.MSX {
         public double GetPipeVariableValue(int i) {
             // WQ species have index i between 1 & # of species
             // and their current values are stored in vector MSX.C1
-            if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
+            if (i <= this.lastIndex[(int)ObjectTypes.SPECIES]) {
                 // If species represented by a formula then evaluate it
-                if (this.msx.Species[i].PipeExprType == EnumTypes.ExpressionType.FORMULA) {
+                if (this.msx.Species[i].PipeExprType == ExpressionType.FORMULA) {
                     return this.msx.Species[i].PipeExpr.EvaluatePipeExp(this);
                     //return MSX.Species[i].getPipeExpr().evaluate(new VariableInterface(){
                     //    public double getValue(int id){return getPipeVariableValue(id);}
@@ -662,29 +662,29 @@ namespace Epanet.MSX {
                 else // otherwise return the current concentration
                     return this.msx.C1[i];
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // intermediate term expressions come next
+            else if (i <= this.lastIndex[(int)ObjectTypes.TERM]) // intermediate term expressions come next
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
+                i -= this.lastIndex[(int)ObjectTypes.TERM - 1];
                 return this.msx.Term[i].Expr.EvaluatePipeExp(this);
                 //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id){return getPipeVariableValue(id);}
                 //    public int getIndex(string id){return 0;}
                 //});
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER]) // reaction parameter indexes come after that
+            else if (i <= this.lastIndex[(int)ObjectTypes.PARAMETER]) // reaction parameter indexes come after that
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
+                i -= this.lastIndex[(int)ObjectTypes.PARAMETER - 1];
                 return this.msx.Link[this.theLink].Param[i];
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // followed by constants
+            else if (i <= this.lastIndex[(int)ObjectTypes.CONSTANT]) // followed by constants
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
+                i -= this.lastIndex[(int)ObjectTypes.CONSTANT - 1];
                 return this.msx.Const[i].Value;
             }
             else // and finally by hydraulic variables
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT];
-                if (i < (int)EnumTypes.HydVarType.MAX_HYD_VARS) return this.hydVar[i];
+                i -= this.lastIndex[(int)ObjectTypes.CONSTANT];
+                if (i < (int)HydVarType.MAX_HYD_VARS) return this.hydVar[i];
                 else return 0.0;
             }
         }
@@ -692,9 +692,9 @@ namespace Epanet.MSX {
         ///<summary>Finds the value of a species, a parameter, or a constant for the current node being analyzed.</summary>
         public double GetTankVariableValue(int i) {
             // WQ species have index i between 1 & # of species and their current values are stored in vector MSX.C1
-            if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.SPECIES]) {
+            if (i <= this.lastIndex[(int)ObjectTypes.SPECIES]) {
                 // If species represented by a formula then evaluate it
-                if (this.msx.Species[i].TankExprType == EnumTypes.ExpressionType.FORMULA) {
+                if (this.msx.Species[i].TankExprType == ExpressionType.FORMULA) {
                     return this.msx.Species[i].TankExpr.EvaluateTankExp(this);
                     //return MSX.Species[i].getTankExpr().evaluate(new VariableInterface() {
                     //    public double getValue(int id) {return getTankVariableValue(id);}
@@ -703,19 +703,19 @@ namespace Epanet.MSX {
                 else // Otherwise return the current concentration
                     return this.msx.C1[i];
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM]) // Intermediate term expressions come next
+            else if (i <= this.lastIndex[(int)ObjectTypes.TERM]) // Intermediate term expressions come next
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.TERM - 1];
+                i -= this.lastIndex[(int)ObjectTypes.TERM - 1];
                 return this.msx.Term[i].Expr.EvaluateTankExp(this);
                 //return MSX.Term[i].getExpr().evaluate(new VariableInterface(){
                 //    public double getValue(int id) {return getTankVariableValue(id);}
                 //    public int getIndex(string id) {return 0;}
                 //});
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER])
+            else if (i <= this.lastIndex[(int)ObjectTypes.PARAMETER])
                 // Next come reaction parameters associated with Tank nodes
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.PARAMETER - 1];
+                i -= this.lastIndex[(int)ObjectTypes.PARAMETER - 1];
                 int j = this.msx.Node[this.theNode].Tank;
                 if (j > 0) {
                     return this.msx.Tank[j].Param[i];
@@ -723,9 +723,9 @@ namespace Epanet.MSX {
                 else
                     return 0.0;
             }
-            else if (i <= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT]) // and then come constants
+            else if (i <= this.lastIndex[(int)ObjectTypes.CONSTANT]) // and then come constants
             {
-                i -= this.lastIndex[(int)EnumTypes.ObjectTypes.CONSTANT - 1];
+                i -= this.lastIndex[(int)ObjectTypes.CONSTANT - 1];
                 return this.msx.Const[i].Value;
             }
             else
@@ -744,8 +744,8 @@ namespace Epanet.MSX {
             }
 
             // Update equilibrium species if full coupling in use
-            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
-                if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
+            if (this.msx.Coupling == CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
                 {
                     for (int i = 1; i <= n; i++) deriv[i] = 0.0;
                     return;
@@ -775,8 +775,8 @@ namespace Epanet.MSX {
 
             // Update equilibrium species if full coupling in use
 
-            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
-                if (this.MSXchem_equil(EnumTypes.ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
+            if (this.msx.Coupling == CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(ObjectTypes.LINK, this.msx.C1) > 0) // check for error condition
                 {
                     for (int i = 1; i <= n; i++) deriv[i + off] = 0.0;
                     return;
@@ -806,8 +806,8 @@ namespace Epanet.MSX {
             }
 
             // Update equilibrium species if full coupling in use
-            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
-                if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
+            if (this.msx.Coupling == CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
                 {
                     for (int i = 1; i <= n; i++) deriv[i] = 0.0;
                     return;
@@ -836,8 +836,8 @@ namespace Epanet.MSX {
             }
 
             // Update equilibrium species if full coupling in use
-            if (this.msx.Coupling == EnumTypes.CouplingType.FULL_COUPLING) {
-                if (this.MSXchem_equil(EnumTypes.ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
+            if (this.msx.Coupling == CouplingType.FULL_COUPLING) {
+                if (this.MSXchem_equil(ObjectTypes.NODE, this.msx.C1) > 0) // check for error condition
                 {
                     for (int i = 1; i <= n; i++) deriv[i + off] = 0.0;
                     return;

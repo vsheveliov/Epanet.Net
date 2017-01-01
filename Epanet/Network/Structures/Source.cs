@@ -15,26 +15,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Water quality object, source quality.</summary>
     public class Source {
-
-        ///<summary>Source type</summary>
-        public enum SourceType {
-            ///<summary>Inflow concentration.</summary>
-            CONCEN = 0,
-
-            ///<summary>Flow paced booster.</summary>
-            FLOWPACED = 3,
-
-            ///<summary>Mass inflow booster.</summary>
-            MASS = 1,
-
-            ///<summary>Setpoint booster.</summary>
-            SETPOINT = 2
-        }
-
         ///<summary>Base concentration.</summary>
         public double C0 { get; set; }
 

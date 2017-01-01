@@ -16,6 +16,8 @@
  */
 
 using System;
+
+using Epanet.Enums;
 using Epanet.Hydraulic.Structures;
 using Epanet.Network;
 using Epanet.Network.Structures;
@@ -62,7 +64,7 @@ namespace Epanet.Hydraulic.Models {
             double flowResistance = link.FlowResistance; // Resistance coeff.
             double roughness = link.Roughness;
             double diameter = link.Diameter;
-            bool isOne = sL.Type > Link.LinkType.PIPE;
+            bool isOne = sL.Type > LinkType.PIPE;
 
             double resistance;
 

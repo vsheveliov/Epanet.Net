@@ -18,21 +18,13 @@
 using System;
 using System.Collections.Generic;
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic node structure  (junction)</summary>
 
-    public class Node:IComparable<Node> {
-        /// <summary>Type of node.</summary>
-        public enum NodeType {
-            /// <summary>junction</summary>
-            JUNC = 0,
-            /// <summary>reservoir</summary>
-            RESERV = 1,
-            /// <summary>tank</summary>
-            TANK = 2
-        }
-
+    public class Node:IComparable<Node>, IStringKeyed {
         private readonly string id;
         private readonly List<Demand> demand = new List<Demand>();
 
@@ -41,10 +33,9 @@ namespace Epanet.Network.Structures {
         
         public Node(string id) {
             this.id = id;
-            this.C0 = new double[1];
+            this.C0 = 0.0;
             this.Comment = "";
             this.initDemand = 0;
-            this.Type = NodeType.JUNC;
             this.Position = EnPoint.Invalid;
         }
 
@@ -53,7 +44,7 @@ namespace Epanet.Network.Structures {
 
         public double InitDemand { get { return this.initDemand; } set { this.initDemand = value; } }
 
-        public NodeType Type { get; set; }
+        public virtual NodeType Type { get { return NodeType.JUNC; } }
 
         ///<summary>Node position.</summary>
         public EnPoint Position { get; set; }
@@ -71,7 +62,7 @@ namespace Epanet.Network.Structures {
         public Source Source { get; set; }
 
         ///<summary>Initial species concentrations.</summary>
-        public double[] C0 { get; set; }
+        public double C0 { get; set; }
 
         ///<summary>Emitter coefficient.</summary>
         public double Ke { get; set; }
@@ -86,14 +77,16 @@ namespace Epanet.Network.Structures {
             return string.Compare(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
         }
 
+        /*
         public override bool Equals(object obj) {
             Node o = obj as Node;
             if (o == null) return false;
 
             return string.Equals(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
         }
+        */
 
-#if DEBUG // NUCONVERT
+#if NUCONVERT
 
         public double GetNuElevation(PropertiesMap.UnitsType units) {
             return NUConvert.revertDistance(units, this.Elevation);

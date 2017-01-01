@@ -15,6 +15,8 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.IO.Output {
 
     ///<summary>Abstract class with factory for INP and XLSX composers.</summary>
@@ -23,12 +25,12 @@ namespace Epanet.Network.IO.Output {
         ///<summary>Composer creation method.</summary>
         /// <param name="type">Composer type.</param>
         /// <returns>Composer reference.</returns>
-        public static OutputComposer Create(Network.FileType type) {
+        public static OutputComposer Create(FileType type) {
             switch (type) {
-            case Network.FileType.INP_FILE:       return new InpComposer();
-            case Network.FileType.EXCEL_FILE:     return new ExcelComposer();
-            case Network.FileType.XML_FILE:       return new XMLComposer(false);
-            case Network.FileType.XML_GZ_FILE:    return new XMLComposer(true);
+            case FileType.INP_FILE:       return new InpComposer();
+            case FileType.EXCEL_FILE:     return new ExcelComposer();
+            case FileType.XML_FILE:       return new XMLComposer(false);
+            case FileType.XML_GZ_FILE:    return new XMLComposer(true);
             }
             return null;
         }

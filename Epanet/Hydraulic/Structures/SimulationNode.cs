@@ -17,6 +17,8 @@
 
 using System;
 using System.Collections.Generic;
+
+using Epanet.Enums;
 using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
@@ -55,7 +57,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public string Id { get { return this.node.Id; } }
 
-        public Node.NodeType Type { get { return this.node.Type; } }
+        public NodeType Type { get { return this.node.Type; } }
 
         public double Elevation { get { return this.node.Elevation; } }
 
@@ -63,7 +65,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public Source Source { get { return this.node.Source; } }
 
-        public double[] C0 { get { return this.node.C0; } }
+        public double C0 { get { return this.node.C0; } }
 
         public double Ke { get { return this.node.Ke; } }
 

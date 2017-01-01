@@ -17,6 +17,8 @@
 
 using System;
 using System.Collections.Generic;
+
+using Epanet.Enums;
 using Epanet.Network;
 using Epanet.Network.Structures;
 
@@ -35,7 +37,7 @@ namespace Epanet.Hydraulic.Structures {
 
         private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
-        public Pump.PumpType Ptype { get { return ((Pump)this.link).Ptype; } }
+        public PumpType Ptype { get { return ((Pump)this.link).Ptype; } }
 
         public double Q0 { get { return ((Pump)this.link).Q0; } }
 
@@ -73,7 +75,7 @@ namespace Epanet.Hydraulic.Structures {
         private void GetFlowEnergy(PropertiesMap pMap, FieldsMap fMap, out double power, out double efficiency) {
             power = efficiency = 0.0;
 
-            if (this.status <= Link.StatType.CLOSED) {
+            if (this.status <= StatType.CLOSED) {
                 return;
             }
 
@@ -84,7 +86,7 @@ namespace Epanet.Hydraulic.Structures {
 
             if (this.Ecurve != null) {
                 Curve curve = this.Ecurve;
-                e = curve[q * fMap.GetUnits(FieldsMap.FieldType.FLOW)];
+                e = curve[q * fMap.GetUnits(FieldType.FLOW)];
             }
 
             e = Math.Min(e, 100.0);
@@ -105,7 +107,7 @@ namespace Epanet.Hydraulic.Structures {
             double f0,
             double dt) {
             //Skip closed pumps
-            if (this.status <= Link.StatType.CLOSED) return 0.0;
+            if (this.status <= StatType.CLOSED) return 0.0;
             double q = Math.Max(Constants.QZERO, Math.Abs(this.flow));
 
             // Find pump-specific energy cost
@@ -135,7 +137,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes P and Y coeffs. for pump in the link.</summary>
         public void ComputePumpCoeff(FieldsMap fMap, PropertiesMap pMap) {
-            if (this.status <= Link.StatType.CLOSED || this.setting == 0.0) {
+            if (this.status <= StatType.CLOSED || this.setting == 0.0) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
                 this.flowCorrection = this.flow;
                 return;
@@ -143,7 +145,7 @@ namespace Epanet.Hydraulic.Structures {
 
             double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
 
-            if (this.Ptype == Pump.PumpType.CUSTOM) {
+            if (this.Ptype == PumpType.CUSTOM) {
                 double hh0, rr;
                 this.Hcurve.GetCoeff(fMap, q / this.setting, out hh0, out rr);
 
@@ -165,18 +167,18 @@ namespace Epanet.Hydraulic.Structures {
         /// <param name="pMap"></param>
         /// <param name="dh">head gain</param>
         /// <returns></returns>
-        public Link.StatType PumpStatus(PropertiesMap pMap, double dh) {
+        public StatType PumpStatus(PropertiesMap pMap, double dh) {
             double hmax;
 
-            if (this.Ptype == Pump.PumpType.CONST_HP)
+            if (this.Ptype == PumpType.CONST_HP)
                 hmax = Constants.BIG;
             else
                 hmax = this.setting * this.setting * this.Hmax;
 
             if (dh > hmax + pMap.HTol)
-                return Link.StatType.XHEAD;
+                return StatType.XHEAD;
 
-            return Link.StatType.OPEN;
+            return StatType.OPEN;
         }
 
         /// <summary>Update pumps energy.</summary>

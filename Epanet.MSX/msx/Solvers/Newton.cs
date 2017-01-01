@@ -57,7 +57,7 @@ namespace Epanet.MSX.Solvers {
             int maxit,
             int numsig,
             JacobianInterface jint,
-            JacobianInterface.Operation op) {
+            Operation op) {
             double errx, errmax, cscal, relconvg = Math.Pow(10.0, -numsig);
 
             // check that system was sized adequetely

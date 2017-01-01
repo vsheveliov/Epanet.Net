@@ -17,6 +17,7 @@
 
 namespace Epanet.Network.Structures {
 
+#if NUCONVERT
     public static class NUConvert {
         public static double convertArea(PropertiesMap.UnitsType type, double value) {
             if (type == PropertiesMap.UnitsType.SI)
@@ -158,5 +159,7 @@ namespace Epanet.Network.Structures {
 
 
     }
+
+#endif
 
 }

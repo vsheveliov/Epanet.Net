@@ -66,7 +66,7 @@ namespace Epanet.Util {
                 string name = "ERR" + (int)this.codeID;
 
                 try {
-                    str = Epanet.Properties.Error.ResourceManager.GetString(name);
+                    str = Properties.Error.ResourceManager.GetString(name);
                 }
                 catch (Exception) {
                     str = null;

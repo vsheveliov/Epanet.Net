@@ -21,6 +21,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+
+using Epanet.Enums;
 using Epanet.Util;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -32,7 +34,7 @@ namespace Epanet.Network.IO.Input {
 
         public ExcelParser(TraceSource logger):base(logger) { }
 
-        private string ConvertCell(ICell cell, Network.SectType section) {
+        private string ConvertCell(ICell cell, SectType section) {
             switch (cell.CellType) {
             case CellType.Numeric:
                 return this.timeStyles.Contains(cell.CellStyle)
@@ -152,7 +154,7 @@ namespace Epanet.Network.IO.Input {
 
                 bool lastRowNull = true;
                 bool lastRowHeader = false;
-                Network.SectType lastType = (Network.SectType)(-1);
+                SectType lastType = (SectType)(-1);
 
                 for (int rowCount = 0, tRowId = 0; rowCount < sheet.PhysicalNumberOfRows; tRowId++) {
                     IRow row = sheet.GetRow(tRowId);
@@ -220,92 +222,92 @@ namespace Epanet.Network.IO.Input {
             return errSum;
         }
 
-        private void ParseSect(Network net, Network.SectType type, string comments, string[] tokens) {
+        private void ParseSect(Network net, SectType type, string comments, string[] tokens) {
             switch (type) {
 
-            case Network.SectType.TITLE:
+            case SectType.TITLE:
                 break;
-            case Network.SectType.JUNCTIONS:
-                this.ParseJunction(net, tokens, comments);
+            case SectType.JUNCTIONS:
+                ParseJunction(net, tokens, comments);
                 break;
-            case Network.SectType.RESERVOIRS:
-            case Network.SectType.TANKS:
-                this.ParseTank(net, tokens, comments);
+            case SectType.RESERVOIRS:
+            case SectType.TANKS:
+                ParseTank(net, tokens, comments);
                 break;
-            case Network.SectType.PIPES:
+            case SectType.PIPES:
                 this.ParsePipe(net, tokens, comments);
                 break;
-            case Network.SectType.PUMPS:
+            case SectType.PUMPS:
                 this.ParsePump(net, tokens, comments);
                 break;
-            case Network.SectType.VALVES:
+            case SectType.VALVES:
                 this.ParseValve(net, tokens, comments);
                 break;
-            case Network.SectType.CONTROLS:
+            case SectType.CONTROLS:
                 this.ParseControl(net, tokens);
                 break;
-            case Network.SectType.RULES: {
+            case SectType.RULES: {
                 string line = "";
                 foreach (string t  in  tokens)
                     line += t;
                 this.ParseRule(net, tokens, line);
                 break;
             }
-            case Network.SectType.DEMANDS:
+            case SectType.DEMANDS:
                 this.ParseDemand(net, tokens);
                 break;
-            case Network.SectType.SOURCES:
+            case SectType.SOURCES:
                 this.ParseSource(net, tokens);
                 break;
-            case Network.SectType.EMITTERS:
+            case SectType.EMITTERS:
                 this.ParseEmitter(net, tokens);
                 break;
-            case Network.SectType.PATTERNS:
+            case SectType.PATTERNS:
                 this.ParsePattern(net, tokens);
                 break;
-            case Network.SectType.CURVES:
+            case SectType.CURVES:
                 this.ParseCurve(net, tokens);
                 break;
-            case Network.SectType.QUALITY:
-                this.ParseQuality(net, tokens);
+            case SectType.QUALITY:
+                ParseQuality(net, tokens);
                 break;
-            case Network.SectType.STATUS:
+            case SectType.STATUS:
                 this.ParseStatus(net, tokens);
                 break;
-            case Network.SectType.ROUGHNESS:
+            case SectType.ROUGHNESS:
                 break;
-            case Network.SectType.ENERGY:
+            case SectType.ENERGY:
                 this.ParseEnergy(net, tokens);
                 break;
-            case Network.SectType.REACTIONS:
+            case SectType.REACTIONS:
                 this.ParseReact(net, tokens);
                 break;
-            case Network.SectType.MIXING:
+            case SectType.MIXING:
                 this.ParseMixing(net, tokens);
                 break;
-            case Network.SectType.REPORT:
+            case SectType.REPORT:
                 this.ParseReport(net, tokens);
                 break;
-            case Network.SectType.TIMES:
+            case SectType.TIMES:
                 this.ParseTime(net, tokens);
                 break;
-            case Network.SectType.OPTIONS:
+            case SectType.OPTIONS:
                 this.ParseOption(net, tokens);
                 break;
-            case Network.SectType.COORDINATES:
+            case SectType.COORDINATES:
                 this.ParseCoordinate(net, tokens);
                 break;
-            case Network.SectType.VERTICES:
+            case SectType.VERTICES:
                 this.ParseVertice(net, tokens);
                 break;
-            case Network.SectType.LABELS:
+            case SectType.LABELS:
                 this.ParseLabel(net, tokens);
                 break;
-            case Network.SectType.BACKDROP:
+            case SectType.BACKDROP:
                 break;
-            case Network.SectType.TAGS:
+            case SectType.TAGS:
                 break;
-            case Network.SectType.END:
+            case SectType.END:
                 break;
             }
         }

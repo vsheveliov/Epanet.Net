@@ -18,7 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Epanet.Network.IO;
+
+using Epanet.Enums;
 
 namespace Epanet.Util {
 
@@ -111,49 +112,12 @@ namespace Epanet.Util {
             return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
         }
 
-        /// <summary>Computes coeffs. for pump curve.</summary>
-        ///  <param name="h0">shutoff head</param>
-        /// <param name="h1">design head</param>
-        /// <param name="h2">head at max. flow</param>
-        /// <param name="q1">design flow</param>
-        /// <param name="q2">max. flow</param>
-        /// <param name="a">pump curve coeffs. (H = a-bQ^c)</param>
-        /// <param name="b">pump curve coeffs. (H = a-bQ^c)</param>
-        /// <param name="c">pump curve coeffs. (H = a-bQ^c)</param>
-        ///  <returns>Returns true if sucessful, false otherwise.</returns>
-        public static bool GetPowerCurve(
-            double h0,
-            double h1,
-            double h2,
-            double q1,
-            double q2,
-            out double a,
-            out double b,
-            out double c) {
-            a = b = c = 0;
-
-            if (
-                h0 < Constants.TINY ||
-                h0 - h1 < Constants.TINY ||
-                h1 - h2 < Constants.TINY ||
-                q1 < Constants.TINY ||
-                q2 - q1 < Constants.TINY
-            ) return false;
-
-            a = h0;
-            double h4 = h0 - h1;
-            double h5 = h0 - h2;
-            c = Math.Log(h5 / h4) / Math.Log(q2 / q1);
-            if (c <= 0.0 || c > 20.0) return false;
-            b = -h4 / Math.Pow(q1, c);
-
-            return !(b >= 0.0);
-        }
-
         ///<summary>Get value signal, if bigger than 0 returns 1, -1 otherwise.</summary>
         /// <param name="val">Any real number.</param>
         /// <returns>-1 or 1</returns>
-        public static double GetSignal(double val) { return val < 0 ? -1d : 1d; }
+        public static double GetSignal(double val) {
+            return val < 0 ? -1d : 1d;
+        }
 
         public static void Reverse<T>(this LinkedList<T> linkedList) {
             if (linkedList == null || linkedList.Count < 2) return;

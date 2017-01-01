@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,8 +22,8 @@ namespace Epanet.MSX {
 
     public static class Utilities {
 
-        public static EnumTypes.ErrorCodeType Call(EnumTypes.ErrorCodeType err, EnumTypes.ErrorCodeType f) {
-            return err > (EnumTypes.ErrorCodeType)100 ? err : f;
+        public static ErrorCodeType Call(ErrorCodeType err, ErrorCodeType f) {
+            return err > (ErrorCodeType)100 ? err : f;
         }
 
         /// <summary>Finds a match between a string and an array of keyword strings.</summary>
@@ -139,7 +139,7 @@ namespace Epanet.MSX {
             double[] w,
             double[,] a,
             JacobianInterface jint,
-            JacobianInterface.Operation op) {
+            Operation op) {
             double eps = 1.0e-7;
 
             for (int j = 1; j <= n; j++) {

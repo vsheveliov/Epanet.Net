@@ -16,6 +16,8 @@
  */
 
 using System.Collections.Generic;
+
+using Epanet.Enums;
 using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
@@ -90,7 +92,7 @@ namespace Epanet.Quality.Structures {
                    msum = 0.0;
 
             try {
-                if (pMap != null && pMap.QualFlag == PropertiesMap.QualType.NONE)
+                if (pMap != null && pMap.QualFlag == QualType.NONE)
                     return 0.0;
             }
             catch (ENException) {

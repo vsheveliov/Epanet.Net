@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
+using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network;
 using Epanet.Network.IO;
@@ -66,9 +68,9 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Setting { get { return this.control.Setting; } }
 
-        public Link.StatType Status { get { return this.control.Status; } }
+        public StatType Status { get { return this.control.Status; } }
 
-        public Control.ControlType Type { get { return this.control.Type; } }
+        public ControlType Type { get { return this.control.Type; } }
 
         ///<summary>Get the shortest time step to activate the control.</summary>
         private long GetRequiredTimeStep(FieldsMap fMap, PropertiesMap pMap, long htime, long tstep) {
@@ -87,8 +89,8 @@ namespace Epanet.Hydraulic.Structures {
                 if (Math.Abs(q) <= Constants.QZERO)
                     return tstep;
 
-                if ((h < this.Grade && this.Type == Control.ControlType.HILEVEL && q > 0.0) // Tank below hi level & filling
-                    || (h > this.Grade && this.Type == Control.ControlType.LOWLEVEL && q < 0.0))
+                if ((h < this.Grade && this.Type == ControlType.HILEVEL && q > 0.0) // Tank below hi level & filling
+                    || (h > this.Grade && this.Type == ControlType.LOWLEVEL && q < 0.0))
                     // Tank above low level & emptying
                 {
                     SimulationTank tank = ((SimulationTank)this.Node);
@@ -98,13 +100,13 @@ namespace Epanet.Hydraulic.Structures {
             }
 
             // Time control
-            if (this.Type == Control.ControlType.TIMER) {
+            if (this.Type == ControlType.TIMER) {
                 if (this.Time > htime)
                     t = this.Time - htime;
             }
 
             // Time-of-day control
-            if (this.Type == Control.ControlType.TIMEOFDAY) {
+            if (this.Type == ControlType.TIMEOFDAY) {
                 long t1 = (htime + pMap.TStart) % Constants.SECperDAY;
                 long t2 = this.Time;
                 if (t2 >= t1) t = t2 - t1;
@@ -117,7 +119,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 // Check if rule actually changes link status or setting
                 if (link != null
-                    && (link.Type > Network.Structures.Link.LinkType.PIPE && link.SimSetting != this.Setting)
+                    && (link.Type > LinkType.PIPE && link.SimSetting != this.Setting)
                     || (link.SimStatus != this.Status))
                     tstep = t;
             }
@@ -167,46 +169,46 @@ namespace Epanet.Hydraulic.Structures {
                     double v1 = tank.FindVolume(fMap, h);
                     double v2 = tank.FindVolume(fMap, control.Grade);
 
-                    if (control.Type == Control.ControlType.LOWLEVEL && v1 <= v2 + vplus)
+                    if (control.Type == ControlType.LOWLEVEL && v1 <= v2 + vplus)
                         reset = true;
-                    if (control.Type == Control.ControlType.HILEVEL && v1 >= v2 - vplus)
+                    if (control.Type == ControlType.HILEVEL && v1 >= v2 - vplus)
                         reset = true;
                 }
 
                 // Link is time-controlled
-                if (control.Type == Control.ControlType.TIMER) {
+                if (control.Type == ControlType.TIMER) {
                     if (control.Time == htime)
                         reset = true;
                 }
 
                 //  Link is time-of-day controlled
-                if (control.Type == Control.ControlType.TIMEOFDAY) {
+                if (control.Type == ControlType.TIMEOFDAY) {
                     if ((htime + pMap.TStart) % Constants.SECperDAY == control.Time)
                         reset = true;
                 }
 
                 // Update link status & pump speed or valve setting
                 if (reset) {
-                    Link.StatType s1, s2;
+                    StatType s1, s2;
                     SimulationLink link = control.Link;
 
-                    if (link.SimStatus <= Network.Structures.Link.StatType.CLOSED)
-                        s1 = Network.Structures.Link.StatType.CLOSED;
+                    if (link.SimStatus <= StatType.CLOSED)
+                        s1 = StatType.CLOSED;
                     else
-                        s1 = Network.Structures.Link.StatType.OPEN;
+                        s1 = StatType.OPEN;
 
                     s2 = control.Status;
 
                     double k1 = link.SimSetting;
                     double k2 = k1;
 
-                    if (control.Link.Type > Network.Structures.Link.LinkType.PIPE)
+                    if (control.Link.Type > LinkType.PIPE)
                         k2 = control.Setting;
 
                     if (s1 != s2 || k1 != k2) {
                         link.SimStatus = s2;
                         link.SimSetting = k2;
-                        if (pMap.Stat_Flag != PropertiesMap.StatFlag.NO)
+                        if (pMap.Stat_Flag != StatFlag.NO)
                             LogControlAction(log, control, htime);
                         setsum++;
                     }
@@ -234,11 +236,11 @@ namespace Epanet.Hydraulic.Structures {
                 if (control.Node != null && !(control.Node is SimulationTank)) {
 
                     // Determine if control conditions are satisfied
-                    if (control.Type == Control.ControlType.LOWLEVEL
+                    if (control.Type == ControlType.LOWLEVEL
                         && control.Node.SimHead <= control.Grade + pMap.HTol)
                         reset = true;
 
-                    if (control.Type == Control.ControlType.HILEVEL
+                    if (control.Type == ControlType.HILEVEL
                         && control.Node.SimHead >= control.Grade - pMap.HTol)
                         reset = true;
                 }
@@ -249,17 +251,17 @@ namespace Epanet.Hydraulic.Structures {
                 if (reset) {
                     bool change = false;
 
-                    Link.StatType s = link.SimStatus;
+                    StatType s = link.SimStatus;
 
-                    if (link.Type == Network.Structures.Link.LinkType.PIPE) {
+                    if (link.Type == LinkType.PIPE) {
                         if (s != control.Status) change = true;
                     }
 
-                    if (link.Type == Network.Structures.Link.LinkType.PUMP) {
+                    if (link.Type == LinkType.PUMP) {
                         if (link.SimSetting != control.Setting) change = true;
                     }
 
-                    if (link.Type >= Network.Structures.Link.LinkType.PRV) {
+                    if (link.Type >= LinkType.PRV) {
                         if (link.SimSetting != control.Setting)
                             change = true;
                         else if (link.SimSetting.IsMissing() &&
@@ -269,9 +271,9 @@ namespace Epanet.Hydraulic.Structures {
                     // If a change occurs, update status & setting
                     if (change) {
                         link.SimStatus = control.Status;
-                        if (link.Type > Network.Structures.Link.LinkType.PIPE)
+                        if (link.Type > LinkType.PIPE)
                             link.SimSetting = control.Setting;
-                        if (pMap.Stat_Flag == PropertiesMap.StatFlag.FULL)
+                        if (pMap.Stat_Flag == StatFlag.FULL)
                             LogStatChange(log, fMap, link, s);
 
                         anychange = true;
@@ -287,14 +289,14 @@ namespace Epanet.Hydraulic.Structures {
             string msg;
             switch (control.Type) {
 
-            case Control.ControlType.LOWLEVEL:
-            case Control.ControlType.HILEVEL: {
+            case ControlType.LOWLEVEL:
+            case ControlType.HILEVEL: {
                 string type = Keywords.w_JUNC; //  NodeType type= NodeType.JUNC;
                 if (n is SimulationTank) {
                     type = ((SimulationTank)n).IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
                 }
                 msg = string.Format(
-                    Text.ResourceManager.GetString("FMT54"),
+                    Text.FMT54,
                     htime.GetClockTime(),
                     l.Type.ParseStr(),
                     l.Link.Id,
@@ -302,10 +304,10 @@ namespace Epanet.Hydraulic.Structures {
                     n.Id);
                 break;
             }
-            case Control.ControlType.TIMER:
-            case Control.ControlType.TIMEOFDAY:
+            case ControlType.TIMER:
+            case ControlType.TIMEOFDAY:
                 msg = string.Format(
-                    Text.ResourceManager.GetString("FMT55"),
+                    Text.FMT55,
                     htime.GetClockTime(),
                     l.Type.ParseStr(),
                     l.Link.Id);
@@ -316,49 +318,49 @@ namespace Epanet.Hydraulic.Structures {
             log.Warning(msg);
         }
 
-        private static void LogStatChange(TraceSource log, FieldsMap fMap, SimulationLink link, Link.StatType oldstatus) {
-            Link.StatType s1 = oldstatus;
-            Link.StatType s2 = link.SimStatus;
+        private static void LogStatChange(TraceSource log, FieldsMap fMap, SimulationLink link, StatType oldstatus) {
+            StatType s1 = oldstatus;
+            StatType s2 = link.SimStatus;
             try {
                 if (s2 == s1) {
                     double setting = link.SimSetting;
                     switch (link.Type) {
-                    case Network.Structures.Link.LinkType.PRV:
-                    case Network.Structures.Link.LinkType.PSV:
-                    case Network.Structures.Link.LinkType.PBV:
-                        setting *= fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                    case LinkType.PRV:
+                    case LinkType.PSV:
+                    case LinkType.PBV:
+                        setting *= fMap.GetUnits(FieldType.PRESSURE);
                         break;
-                    case Network.Structures.Link.LinkType.FCV:
-                        setting *= fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                    case LinkType.FCV:
+                        setting *= fMap.GetUnits(FieldType.FLOW);
                         break;
                     }
 
                     log.Warning(
                         string.Format(
-                            Text.ResourceManager.GetString("FMT56"),
+                            Text.FMT56,
                             link.Type.ParseStr(),
                             link.Link.Id,
                             setting));
                     return;
                 }
 
-                Link.StatType j1, j2;
+                StatType j1, j2;
 
-                if (s1 == Network.Structures.Link.StatType.ACTIVE)
-                    j1 = Network.Structures.Link.StatType.ACTIVE;
-                else if (s1 <= Network.Structures.Link.StatType.CLOSED)
-                    j1 = Network.Structures.Link.StatType.CLOSED;
+                if (s1 == StatType.ACTIVE)
+                    j1 = StatType.ACTIVE;
+                else if (s1 <= StatType.CLOSED)
+                    j1 = StatType.CLOSED;
                 else
-                    j1 = Network.Structures.Link.StatType.OPEN;
-                if (s2 == Network.Structures.Link.StatType.ACTIVE) j2 = Network.Structures.Link.StatType.ACTIVE;
-                else if (s2 <= Network.Structures.Link.StatType.CLOSED)
-                    j2 = Network.Structures.Link.StatType.CLOSED;
+                    j1 = StatType.OPEN;
+                if (s2 == StatType.ACTIVE) j2 = StatType.ACTIVE;
+                else if (s2 <= StatType.CLOSED)
+                    j2 = StatType.CLOSED;
                 else
-                    j2 = Network.Structures.Link.StatType.OPEN;
+                    j2 = StatType.OPEN;
 
                 if (j1 != j2) {
                     log.Warning(
-                        Text.ResourceManager.GetString("FMT57"),
+                        Text.FMT57,
                         link.Type.ParseStr(),
                         link.Link.Id,
                         j1.ReportStr(),

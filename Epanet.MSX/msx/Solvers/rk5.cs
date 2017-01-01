@@ -74,7 +74,7 @@ namespace Epanet.MSX.Solvers {
             double[] atol,
             double[] rtol,
             JacobianInterface jInt,
-            JacobianInterface.Operation op) {
+            Operation op) {
             double c2 = 0.20, c3 = 0.30, c4 = 0.80, c5 = 8.0 / 9.0;
             double a21 = 0.20,
                    a31 = 3.0 / 40.0,

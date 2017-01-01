@@ -27,8 +27,8 @@ namespace Epanet.MSX.Structures {
             this.units = "";
             this.PipeExpr = null;
             this.TankExpr = null;
-            this.PipeExprType = EnumTypes.ExpressionType.NO_EXPR;
-            this.TankExprType = EnumTypes.ExpressionType.NO_EXPR;
+            this.PipeExprType = ExpressionType.NO_EXPR;
+            this.TankExprType = ExpressionType.NO_EXPR;
             this.Precision = 2;
             this.Rpt = 0;
         }
@@ -53,13 +53,13 @@ namespace Epanet.MSX.Structures {
         public double RTol { get; set; }
 
         ///<summary>BULK or WALL</summary>
-        public EnumTypes.SpeciesType Type { get; set; }
+        public SpeciesType Type { get; set; }
 
         ///<summary>type of pipe chemistry</summary>
-        public EnumTypes.ExpressionType PipeExprType { get; set; }
+        public ExpressionType PipeExprType { get; set; }
 
         ///<summary>type of tank chemistry</summary>
-        public EnumTypes.ExpressionType TankExprType { get; set; }
+        public ExpressionType TankExprType { get; set; }
 
         ///<summary>reporting precision</summary>
         public int Precision { get; set; }

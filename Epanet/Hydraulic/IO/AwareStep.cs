@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+
+using Epanet.Enums;
 using Epanet.Hydraulic.Structures;
 using Epanet.Network;
 using Epanet.Network.Structures;
@@ -78,6 +80,7 @@ namespace Epanet.Hydraulic.IO {
                 Rstep = @in.ReadInt64(),
                 Duration = @in.ReadInt64()
             };
+
             return headerInfo;
         }
 
@@ -99,7 +102,7 @@ namespace Epanet.Hydraulic.IO {
             }
 
             foreach (SimulationLink link  in  links) {
-                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
                 outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
                 outStream.Write((double)0.0);
             }
@@ -132,7 +135,7 @@ namespace Epanet.Hydraulic.IO {
 
             count = 0;
             foreach (SimulationLink link  in  links) {
-                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
                 outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
                 outStream.Write((double)(qualitySim != null ? qLinks[count++].GetAverageQuality(null) : 0));
             }
@@ -167,7 +170,7 @@ namespace Epanet.Hydraulic.IO {
 
             count = 0;
             foreach (SimulationLink link  in  links) {
-                outStream.Write((double)(link.SimStatus <= Link.StatType.CLOSED ? 0d : link.SimFlow));
+                outStream.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
                 outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
                 outStream.Write((double)qL[count++]);
             }
@@ -217,7 +220,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetNodeDemand(int id, Node node, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.DEMAND, this.d[id]) : this.d[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.DEMAND, this.d[id]) : this.d[id];
             }
             catch (ENException) {
                 return 0;
@@ -226,7 +229,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetNodeHead(int id, Node node, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEAD, this.h[id]) : this.h[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.HEAD, this.h[id]) : this.h[id];
             }
             catch (ENException) {
                 return 0;
@@ -237,7 +240,7 @@ namespace Epanet.Hydraulic.IO {
             try {
                 double p = (this.GetNodeHead(id, node, null) - node.Elevation);
 
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.PRESSURE, p) : p;
+                return fMap != null ? fMap.RevertUnit(FieldType.PRESSURE, p) : p;
             }
             catch (ENException) {
                 return 0;
@@ -246,7 +249,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetLinkFlow(int id, Link link, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FLOW, this.q[id]) : this.q[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.FLOW, this.q[id]) : this.q[id];
             }
             catch (ENException) {
                 return 0;
@@ -263,7 +266,7 @@ namespace Epanet.Hydraulic.IO {
                 else
                     v = (Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0));
 
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.VELOCITY, v) : v;
+                return fMap != null ? fMap.RevertUnit(FieldType.VELOCITY, v) : v;
             }
             catch (ENException) {
                 return 0;
@@ -280,10 +283,10 @@ namespace Epanet.Hydraulic.IO {
                     if (!(link is Pump))
                         hh = Math.Abs(hh);
 
-                    if (link.Type <= Link.LinkType.PIPE)
+                    if (link.Type <= LinkType.PIPE)
                         return (1000 * hh / link.Lenght);
                     else
-                        return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.HEADLOSS, hh) : hh;
+                        return fMap != null ? fMap.RevertUnit(FieldType.HEADLOSS, hh) : hh;
                 }
             }
             catch (ENException) {
@@ -297,7 +300,7 @@ namespace Epanet.Hydraulic.IO {
                 double f;
 
                 double flow = this.GetLinkFlow(id, link, null);
-                if (link.Type <= Link.LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
+                if (link.Type <= LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
 
 
                     double hh = Math.Abs(this.dh[id]);
@@ -307,7 +310,7 @@ namespace Epanet.Hydraulic.IO {
                 else
                     f = 0;
 
-                return fMap != null ? fMap.RevertUnit(FieldsMap.FieldType.FRICTION, f) : f;
+                return fMap != null ? fMap.RevertUnit(FieldType.FRICTION, f) : f;
             }
             catch (ENException) {
                 return 0;

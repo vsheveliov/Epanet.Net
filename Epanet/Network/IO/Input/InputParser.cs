@@ -19,6 +19,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+
+using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network.Structures;
 using Epanet.Util;
@@ -37,17 +39,17 @@ namespace Epanet.Network.IO.Input {
 
         protected InputParser(TraceSource log) { this.Log = log; }
 
-        public static InputParser Create(Network.FileType type, TraceSource log) {
+        public static InputParser Create(FileType type, TraceSource log) {
             switch (type) {
-            case Network.FileType.INP_FILE:
+            case FileType.INP_FILE:
                 return new InpParser(log);
-            case Network.FileType.EXCEL_FILE:
+            case FileType.EXCEL_FILE:
                 return new ExcelParser(log);
-            case Network.FileType.XML_FILE:
+            case FileType.XML_FILE:
                 return new XmlParser(log, false);
-            case Network.FileType.XML_GZ_FILE:
+            case FileType.XML_GZ_FILE:
                 return new XmlParser(log, true);
-            case Network.FileType.NULL_FILE:
+            case FileType.NULL_FILE:
                 return new NullParser(log);
             }
             return null;
@@ -77,12 +79,12 @@ namespace Epanet.Network.IO.Input {
                     // at the start or send of a quoted section...
                     inQuote = !inQuote;
                 }
-                else if (!inQuote && char.IsWhiteSpace(c)) {
+                else if (!inQuote && Char.IsWhiteSpace(c)) {
                     // We've come to the end of a token, so we find the token,
                     // trim it and add it to the collection of results...
                     if (tok.Length > 0) {
                         string result = tok.ToString().Trim();
-                        if (!string.IsNullOrEmpty(result))
+                        if (!String.IsNullOrEmpty(result))
                             results.Add(result);
                     }
 
@@ -98,7 +100,7 @@ namespace Epanet.Network.IO.Input {
             // We've come to the end of the string, so we add the last token...
             if (tok.Length > 0) {
                 string lastResult = tok.ToString().Trim();
-                if (!string.IsNullOrEmpty(lastResult))
+                if (!String.IsNullOrEmpty(lastResult))
                     results.Add(lastResult);
             }
 
@@ -124,7 +126,7 @@ namespace Epanet.Network.IO.Input {
             if (m.HStep > m.PStep) m.HStep = m.PStep;
             if (m.HStep > m.RStep) m.HStep = m.RStep;
             if (m.RStart > m.Duration) m.RStart = 0;
-            if (m.Duration == 0) m.QualFlag = PropertiesMap.QualType.NONE;
+            if (m.Duration == 0) m.QualFlag = QualType.NONE;
             if (m.QStep == 0) m.QStep = m.HStep / 10;
             if (m.RuleStep == 0) m.RuleStep = m.HStep / 10;
 
@@ -132,30 +134,30 @@ namespace Epanet.Network.IO.Input {
             m.QStep = Math.Min(m.QStep, m.HStep);
 
             if (m.Ctol.IsMissing()) {
-                m.Ctol = m.QualFlag == PropertiesMap.QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
+                m.Ctol = m.QualFlag == QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
             }
 
             switch (m.FlowFlag) {
-            case PropertiesMap.FlowUnitsType.LPS:
-            case PropertiesMap.FlowUnitsType.LPM:
-            case PropertiesMap.FlowUnitsType.MLD:
-            case PropertiesMap.FlowUnitsType.CMH:
-            case PropertiesMap.FlowUnitsType.CMD:
-                m.UnitsFlag = PropertiesMap.UnitsType.SI;
+            case FlowUnitsType.LPS:
+            case FlowUnitsType.LPM:
+            case FlowUnitsType.MLD:
+            case FlowUnitsType.CMH:
+            case FlowUnitsType.CMD:
+                m.UnitsFlag = UnitsType.SI;
                 break;
             default:
-                m.UnitsFlag = PropertiesMap.UnitsType.US;
+                m.UnitsFlag = UnitsType.US;
                 break;
             }
 
 
-            if (m.UnitsFlag != PropertiesMap.UnitsType.SI)
-                m.PressFlag = PropertiesMap.PressUnitsType.PSI;
-            else if (m.PressFlag == PropertiesMap.PressUnitsType.PSI)
-                m.PressFlag = PropertiesMap.PressUnitsType.METERS;
+            if (m.UnitsFlag != UnitsType.SI)
+                m.PressFlag = PressUnitsType.PSI;
+            else if (m.PressFlag == PressUnitsType.PSI)
+                m.PressFlag = PressUnitsType.METERS;
 
             var ucf = 1.0;
-            if (m.UnitsFlag == PropertiesMap.UnitsType.SI)
+            if (m.UnitsFlag == UnitsType.SI)
                 ucf = Math.Pow(Constants.MperFT, 2);
 
             if (m.Viscos.IsMissing())
@@ -172,14 +174,14 @@ namespace Epanet.Network.IO.Input {
             else
                 m.Diffus = m.Diffus / ucf;
 
-            m.HExp = m.FormFlag == PropertiesMap.FormType.HW ? 1.852 : 2.0;
+            m.HExp = m.FormFlag == FormType.HW ? 1.852 : 2.0;
 
             double rfactor = m.RFactor;
-            PropertiesMap.FormType formFlag = m.FormFlag;
+            FormType formFlag = m.FormFlag;
             double kbulk = m.KBulk;
 
             foreach (Link link  in  net.Links) {
-                if (link.Type > Link.LinkType.PIPE)
+                if (link.Type > LinkType.PIPE)
                     continue;
 
                 if (link.Kb.IsMissing())
@@ -189,11 +191,11 @@ namespace Epanet.Network.IO.Input {
                     if (rfactor == 0.0)
                         link.Kw = m.KWall;
                     else if ((link.Roughness > 0.0) && (link.Diameter > 0.0)) {
-                        if (formFlag == PropertiesMap.FormType.HW)
+                        if (formFlag == FormType.HW)
                             link.Kw = rfactor / link.Roughness;
-                        if (formFlag == PropertiesMap.FormType.DW)
+                        if (formFlag == FormType.DW)
                             link.Kw = rfactor / Math.Abs(Math.Log(link.Roughness / link.Diameter));
-                        if (formFlag == PropertiesMap.FormType.CM)
+                        if (formFlag == FormType.CM)
                             link.Kw = rfactor * link.Roughness;
                     }
                     else
@@ -214,8 +216,8 @@ namespace Epanet.Network.IO.Input {
                 }
             }
 
-            if (m.QualFlag == PropertiesMap.QualType.NONE)
-                net.FieldsMap.GetField(FieldsMap.FieldType.QUALITY).Enabled = false;
+            if (m.QualFlag == QualType.NONE)
+                net.FieldsMap.GetField(FieldType.QUALITY).Enabled = false;
 
         }
 
@@ -269,40 +271,38 @@ namespace Epanet.Network.IO.Input {
             PropertiesMap pMap = net.PropertiesMap;
 
             foreach (Node node  in  net.Nodes) {
-                node.Elevation = node.Elevation / fMap.GetUnits(FieldsMap.FieldType.ELEV);
-                node.C0 = new[] {node.C0[0] / fMap.GetUnits(FieldsMap.FieldType.QUALITY)};
+                node.Elevation /= fMap.GetUnits(FieldType.ELEV);
+                node.C0 /= fMap.GetUnits(FieldType.QUALITY);
             }
 
 
             foreach (Node node  in  net.Nodes) {
-                if (node is Tank)
+                if(node.Type == NodeType.TANK)
                     continue;
 
                 foreach (Demand d  in  node.Demand) {
-                    d.Base = d.Base / fMap.GetUnits(FieldsMap.FieldType.DEMAND);
+                    d.Base = d.Base / fMap.GetUnits(FieldType.DEMAND);
                 }
             }
 
 
-            double ucf = Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pMap.QExp)
-                         / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+            double ucf = Math.Pow(fMap.GetUnits(FieldType.FLOW), pMap.QExp)
+                         / fMap.GetUnits(FieldType.PRESSURE);
 
             foreach (Node node  in  net.Nodes) {
-                if (node is Tank)
-                    continue;
-
-                if (node.Ke > 0.0)
-                    node.Ke = ucf / Math.Pow(node.Ke, pMap.QExp);
+                if (!(node is Tank))
+                    if (node.Ke > 0.0)
+                        node.Ke = ucf / Math.Pow(node.Ke, pMap.QExp);
             }
 
             foreach (Tank tk  in  net.Tanks) {
-                tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldsMap.FieldType.ELEV);
-                tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldsMap.FieldType.ELEV);
-                tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldsMap.FieldType.ELEV);
-                tk.Area = Math.PI * Math.Pow(tk.Area / fMap.GetUnits(FieldsMap.FieldType.ELEV), 2) / 4.0;
-                tk.V0 = tk.V0 / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
-                tk.Vmin = tk.Vmin / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
-                tk.Vmax = tk.Vmax / fMap.GetUnits(FieldsMap.FieldType.VOLUME);
+                tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldType.ELEV);
+                tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldType.ELEV);
+                tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldType.ELEV);
+                tk.Area = Math.PI * Math.Pow(tk.Area / fMap.GetUnits(FieldType.ELEV), 2) / 4.0;
+                tk.V0 = tk.V0 / fMap.GetUnits(FieldType.VOLUME);
+                tk.Vmin = tk.Vmin / fMap.GetUnits(FieldType.VOLUME);
+                tk.Vmax = tk.Vmax / fMap.GetUnits(FieldType.VOLUME);
                 tk.Kb = tk.Kb / Constants.SECperDAY;
                 //tk.setVolume(tk.getV0());
                 tk.Concentration = tk.C0;
@@ -310,8 +310,8 @@ namespace Epanet.Network.IO.Input {
             }
 
 
-            pMap.CLimit = pMap.CLimit / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
-            pMap.Ctol = pMap.Ctol / fMap.GetUnits(FieldsMap.FieldType.QUALITY);
+            pMap.CLimit = pMap.CLimit / fMap.GetUnits(FieldType.QUALITY);
+            pMap.Ctol = pMap.Ctol / fMap.GetUnits(FieldType.QUALITY);
 
             pMap.KBulk = pMap.KBulk / Constants.SECperDAY;
             pMap.KWall = pMap.KWall / Constants.SECperDAY;
@@ -319,11 +319,11 @@ namespace Epanet.Network.IO.Input {
 
             foreach (Link lk  in  net.Links) {
 
-                if (lk.Type <= Link.LinkType.PIPE) {
-                    if (pMap.FormFlag == PropertiesMap.FormType.DW)
-                        lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldsMap.FieldType.ELEV));
-                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldsMap.FieldType.DIAM);
-                    lk.Lenght = lk.Lenght / fMap.GetUnits(FieldsMap.FieldType.LENGTH);
+                if (lk.Type <= LinkType.PIPE) {
+                    if (pMap.FormFlag == FormType.DW)
+                        lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldType.ELEV));
+                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
+                    lk.Lenght = lk.Lenght / fMap.GetUnits(FieldType.LENGTH);
 
                     lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
 
@@ -333,35 +333,36 @@ namespace Epanet.Network.IO.Input {
                 else if (lk is Pump) {
                     Pump pump = (Pump)lk;
 
-                    if (pump.Ptype == Pump.PumpType.CONST_HP) {
-                        if (pMap.UnitsFlag == PropertiesMap.UnitsType.SI)
-                            pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldsMap.FieldType.POWER);
+                    if (pump.Ptype == PumpType.CONST_HP) {
+                        if (pMap.UnitsFlag == UnitsType.SI)
+                            pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldType.POWER);
                     }
                     else {
-                        if (pump.Ptype == Pump.PumpType.POWER_FUNC) {
-                            pump.H0 = pump.H0 / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                        if (pump.Ptype == PumpType.POWER_FUNC) {
+                            pump.H0 = pump.H0 / fMap.GetUnits(FieldType.HEAD);
                             pump.FlowCoefficient = pump.FlowCoefficient *
-                                                   (Math.Pow(fMap.GetUnits(FieldsMap.FieldType.FLOW), pump.N)) /
-                                                   fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                                                   (Math.Pow(fMap.GetUnits(FieldType.FLOW), pump.N)) /
+                                                   fMap.GetUnits(FieldType.HEAD);
                         }
 
-                        pump.Q0 = pump.Q0 / fMap.GetUnits(FieldsMap.FieldType.FLOW);
-                        pump.Qmax = pump.Qmax / fMap.GetUnits(FieldsMap.FieldType.FLOW);
-                        pump.Hmax = pump.Hmax / fMap.GetUnits(FieldsMap.FieldType.HEAD);
+                        pump.Q0 = pump.Q0 / fMap.GetUnits(FieldType.FLOW);
+                        pump.Qmax = pump.Qmax / fMap.GetUnits(FieldType.FLOW);
+                        pump.Hmax = pump.Hmax / fMap.GetUnits(FieldType.HEAD);
                     }
                 }
                 else {
-                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldsMap.FieldType.DIAM);
+                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
                     lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
-                    if (lk.Roughness != Constants.MISSING)
+                   
+                    if (!lk.Roughness.IsMissing())
                         switch (lk.Type) {
-                        case Link.LinkType.FCV:
-                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                        case LinkType.FCV:
+                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldType.FLOW);
                             break;
-                        case Link.LinkType.PRV:
-                        case Link.LinkType.PSV:
-                        case Link.LinkType.PBV:
-                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                        case LinkType.PRV:
+                        case LinkType.PSV:
+                        case LinkType.PBV:
+                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldType.PRESSURE);
                             break;
                         }
                 }
@@ -377,20 +378,20 @@ namespace Epanet.Network.IO.Input {
                     Node node = c.Node;
                     if (node is Tank)
                         c.Grade = node.Elevation +
-                                  c.Grade / fMap.GetUnits(FieldsMap.FieldType.ELEV);
+                                  c.Grade / fMap.GetUnits(FieldType.ELEV);
                     else
-                        c.Grade = node.Elevation + c.Grade / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                        c.Grade = node.Elevation + c.Grade / fMap.GetUnits(FieldType.PRESSURE);
                 }
 
-                if (c.Setting != Constants.MISSING)
+                if (!c.Setting.IsMissing())
                     switch (c.Link.Type) {
-                    case Link.LinkType.PRV:
-                    case Link.LinkType.PSV:
-                    case Link.LinkType.PBV:
-                        c.Setting = c.Setting / fMap.GetUnits(FieldsMap.FieldType.PRESSURE);
+                    case LinkType.PRV:
+                    case LinkType.PSV:
+                    case LinkType.PBV:
+                        c.Setting = c.Setting / fMap.GetUnits(FieldType.PRESSURE);
                         break;
-                    case Link.LinkType.FCV:
-                        c.Setting = c.Setting / fMap.GetUnits(FieldsMap.FieldType.FLOW);
+                    case LinkType.FCV:
+                        c.Setting = c.Setting / fMap.GetUnits(FieldType.FLOW);
                         break;
                     }
             }
@@ -403,7 +404,7 @@ namespace Epanet.Network.IO.Input {
 
             foreach (Pump pump  in  net.Pumps) {
                 // Constant Hp pump
-                if (pump.Ptype == Pump.PumpType.CONST_HP) {
+                if (pump.Ptype == PumpType.CONST_HP) {
                     pump.H0 = 0.0;
                     pump.FlowCoefficient = -8.814 * pump.Km;
                     pump.N = -1.0;
@@ -414,7 +415,7 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 // Set parameters for pump curves
-                else if (pump.Ptype == Pump.PumpType.NOCURVE) {
+                else if (pump.Ptype == PumpType.NOCURVE) {
                     Curve curve = pump.HCurve;
                     if (curve == null) {
                         throw new ENException(ErrorCode.Err226, pump.Id);
@@ -423,7 +424,7 @@ namespace Epanet.Network.IO.Input {
                     int n = curve.Points.Count;
 
                     if (n == 1) {
-                        pump.Ptype = Pump.PumpType.POWER_FUNC;
+                        pump.Ptype = PumpType.POWER_FUNC;
                         var pt = curve.Points[0];
                         q1 = pt.X;
                         h1 = pt.Y;
@@ -432,7 +433,7 @@ namespace Epanet.Network.IO.Input {
                         h2 = 0.0;
                     }
                     else if (n == 3 && curve.Points[0].X == 0.0) {
-                        pump.Ptype = Pump.PumpType.POWER_FUNC;
+                        pump.Ptype = PumpType.POWER_FUNC;
                         var poinst = curve.Points;
                         h0 = poinst[0].Y;
                         q1 = poinst[1].X;
@@ -441,12 +442,12 @@ namespace Epanet.Network.IO.Input {
                         h2 = poinst[2].Y;
                     }
                     else
-                        pump.Ptype = Pump.PumpType.CUSTOM;
+                        pump.Ptype = PumpType.CUSTOM;
 
                     // Compute shape factors & limits of power function pump curves
-                    if (pump.Ptype == Pump.PumpType.POWER_FUNC) {
+                    if (pump.Ptype == PumpType.POWER_FUNC) {
                         double a, b, c;
-                        if (!Utilities.GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
+                        if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
                             throw new ENException(ErrorCode.Err227, pump.Id);
 
 
@@ -460,7 +461,7 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 // Assign limits to custom pump curves
-                if (pump.Ptype == Pump.PumpType.CUSTOM) {
+                if (pump.Ptype == PumpType.CUSTOM) {
                     Curve curve = pump.HCurve;
                     var points = curve.Points;
 
@@ -491,13 +492,72 @@ namespace Epanet.Network.IO.Input {
 
         ///<summary>Check for unlinked nodes.</summary>
         /// <param name="net">Hydraulic network reference.</param>
-        private void CheckUnlinked(Network net) {
-            int[] marked = new int[net.Nodes.Count + 1];
+        private void CheckUnlinked1(Network net) {
+            //int[] marked = new int[net.Nodes.Count + 1];
             var nodes = net.Nodes;
+            Dictionary<Node, int> marked = new Dictionary<Node, int>(nodes.Count + 1);
 
             int err = 0;
 
             foreach (Link link in net.Links) {
+                marked[link.FirstNode] = 1;
+                marked[link.SecondNode] = 1;
+            }
+
+            foreach (Node node in nodes) {
+                if (marked[node] == 0) {
+                    err++;
+                    this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
+                }
+
+                if (err >= Constants.MAXERRS)
+                    break;
+            }
+
+            //        if (err > 0)
+            //            throw new ENException(200);
+        }
+
+        ///<summary>Check for unlinked nodes.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        private void CheckUnlinked2(Network net) {
+            //int[] marked = new int[net.Nodes.Count + 1];
+            var nodes = net.Nodes;
+            Dictionary<string, int> marked = new Dictionary<string, int>(
+                nodes.Count + 1,
+                StringComparer.OrdinalIgnoreCase);
+
+            int err = 0;
+
+            foreach (Link link in net.Links) {
+                marked[link.FirstNode.Id] = 1;
+                marked[link.SecondNode.Id] = 1;
+            }
+
+            foreach (Node node in nodes) {
+                if (marked[node.Id] == 0) {
+                    err++;
+                    this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
+                }
+
+                if (err >= Constants.MAXERRS)
+                    break;
+            }
+
+            //        if (err > 0)
+            //            throw new ENException(200);
+        }
+
+        ///<summary>Check for unlinked nodes.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        private void checkUnlinked(Network net) {
+            int[] marked = new int[net.Nodes.Count + 1];
+            List<Link> links = new List<Link>(net.Links);
+            List<Node> nodes = new List<Node>(net.Nodes);
+
+            int err = 0;
+
+            foreach (Link link in links) {
                 marked[nodes.IndexOf(link.FirstNode)]++;
                 marked[nodes.IndexOf(link.SecondNode)]++;
             }
@@ -506,7 +566,7 @@ namespace Epanet.Network.IO.Input {
             foreach (Node node in nodes) {
                 if (marked[i] == 0) {
                     err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
+                    this.Log.Error("checkUnlinked", new ENException(ErrorCode.Err233, node.Id));
                 }
 
                 if (err >= Constants.MAXERRS)
@@ -518,6 +578,75 @@ namespace Epanet.Network.IO.Input {
 //        if (err > 0)
 //            throw new ENException(200);
         }
+
+        ///<summary>Check for unlinked nodes.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        private void CheckUnlinked(Network net) {
+            int[] marked = new int[net.Nodes.Count + 1];
+            var nodes = net.Nodes;
+
+            int err = 0;
+
+            foreach (Link link in net.Links) {
+                marked[nodes.IndexOf(link.FirstNode)]++;
+                marked[nodes.IndexOf(link.SecondNode)]++;
+            }
+
+            for (int i = 0; i < nodes.Count; i++) {
+                if (marked[i] == 0) {
+                    err++;
+                    this.Log.Error(new ENException(ErrorCode.Err233, nodes[i].Id));
+                }
+
+                if (err >= Constants.MAXERRS)
+                    break;
+            }
+
+//        if (err > 0)
+//            throw new ENException(200);
+        }
+
+        /// <summary>Computes coeffs. for pump curve.</summary>
+        ///  <param name="h0">shutoff head</param>
+        /// <param name="h1">design head</param>
+        /// <param name="h2">head at max. flow</param>
+        /// <param name="q1">design flow</param>
+        /// <param name="q2">max. flow</param>
+        /// <param name="a">pump curve coeffs. (H = a-bQ^c)</param>
+        /// <param name="b">pump curve coeffs. (H = a-bQ^c)</param>
+        /// <param name="c">pump curve coeffs. (H = a-bQ^c)</param>
+        ///  <returns>Returns true if sucessful, false otherwise.</returns>
+        protected static bool GetPowerCurve(
+            double h0,
+            double h1,
+            double h2,
+            double q1,
+            double q2,
+            out double a,
+            out double b,
+            out double c) {
+            a = b = c = 0;
+
+            if (
+                h0 < Constants.TINY ||
+                h0 - h1 < Constants.TINY ||
+                h1 - h2 < Constants.TINY ||
+                q1 < Constants.TINY ||
+                q2 - q1 < Constants.TINY
+            ) return false;
+
+            a = h0;
+            double h4 = h0 - h1;
+            double h5 = h0 - h2;
+            c = Math.Log(h5 / h4) / Math.Log(q2 / q1);
+            if (c <= 0.0 || c > 20.0) return false;
+            b = -h4 / Math.Pow(q1, c);
+
+            return !(b >= 0.0);
+        }
     }
 
 }
+
+
+

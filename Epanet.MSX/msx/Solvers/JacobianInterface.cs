@@ -19,14 +19,9 @@ namespace Epanet.MSX.Solvers {
 
 
     public abstract class JacobianInterface {
-        public enum Operation {
-            PIPES_DC_DT_CONCENTRATIONS,
-            TANKS_DC_DT_CONCENTRATIONS,
-            PIPES_EQUIL,
-            TANKS_EQUIL,
-        }
-
         public abstract void solve(double t, double[] y, int n, double[] f, int off, Operation op);
     }
+
+
 
 }
