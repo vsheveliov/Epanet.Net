@@ -19,10 +19,11 @@ using System.IO;
 using Epanet.Enums;
 using Epanet.Hydraulic;
 using Epanet.Hydraulic.IO;
-using Epanet.Network;
 using Epanet.Network.IO.Input;
 using Epanet.Network.Structures;
 using Epanet.Util;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet {
 
@@ -31,11 +32,11 @@ namespace Epanet {
         public static void main(string[] args) {
             int i;
 
-            Network.Network network = new Network.Network();
+            var net = new EpanetNetwork();
 
             //Tank
             Tank tank = new Tank("0") {Elevation = 210};
-            network.Nodes.Add(tank);
+            net.Nodes.Add(tank);
 
             //Nodes
             Node[] node = new Node[7];
@@ -78,30 +79,30 @@ namespace Epanet {
             pipe[7].FirstNode = node[4];
             pipe[7].SecondNode = node[6];
 
-            for (i = 1; i < 7; i++) { network.Nodes.Add(node[i]); }
-            for (i = 0; i < 8; i++) { network.Links.Add(pipe[i]); }
+            for (i = 1; i < 7; i++) { net.Nodes.Add(node[i]); }
+            for (i = 0; i < 8; i++) { net.Links.Add(pipe[i]); }
 
             //Prepare Network
             TraceSource log = new TraceSource(typeof(SampleOOPNetwork2).FullName, SourceLevels.All);
             NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE, log);
             Debug.Assert(nP != null);
-            nP.Parse(network, null);
+            nP.Parse(net, null);
 
             //// Simulate hydraulics
             string hydFile = Path.GetTempFileName(); // ("hydSim", "bin");
-            HydraulicSim hydSim = new HydraulicSim(network, log);
+            HydraulicSim hydSim = new HydraulicSim(net, log);
             hydSim.Simulate(hydFile);
 
             // Read hydraulic results
-            PropertiesMap pMap = network.PropertiesMap;
+            
             HydraulicReader hydReader = new HydraulicReader(hydFile);
 
-            for (long time = pMap.RStart; time <= pMap.Duration; time += pMap.RStep) {
+            for (long time = net.RStart; time <= net.Duration; time += net.RStep) {
                 AwareStep step = hydReader.GetStep((int)time);
                 Console.WriteLine("Time : " + step.Time.GetClockTime() + ", nodes heads : ");
 
                 i = 0;
-                foreach (Node inode in network.Nodes)
+                foreach (Node inode in net.Nodes)
                     Console.Write("{0:F2}\t", step.GetNodeHead(i++, inode, null));
 
                 Console.WriteLine();

@@ -101,8 +101,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeJunctions(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             if (!net.Junctions.Any())
                 return;
 
@@ -120,7 +119,7 @@ namespace Epanet.Network.IO.Output {
                     this.buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, d.Base));
 
                     if (!string.IsNullOrEmpty(d.Pattern.Id)
-                        && !pMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
+                        && !net.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
                         this.buffer.Write("\t" + d.Pattern.Id);
                 }
 
@@ -212,8 +211,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePipes(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             if (net.Links.Count == 0)
                 return;
 
@@ -229,7 +227,7 @@ namespace Epanet.Network.IO.Output {
             foreach (Link link  in  pipes) {
                 double d = link.Diameter;
                 double kc = link.Roughness;
-                if (pMap.FormFlag == FormType.DW)
+                if (net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
@@ -242,7 +240,7 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.LENGTH, link.Lenght),
                         fMap.RevertUnit(FieldType.DIAM, d));
 
-                //if (pMap.getFormflag() == FormType.DW)
+                // if (net.FormFlag == FormType.DW)
                 this.buffer.Write(" {0}\t{1}", kc, km);
 
                 if (link.Type == LinkType.CV)
@@ -399,7 +397,7 @@ namespace Epanet.Network.IO.Output {
 
             double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
             double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
-            double qexp = net.PropertiesMap.QExp;
+            double qexp = net.QExp;
 
             foreach (Node node  in  net.Junctions) {
                 if (node.Ke == 0.0) continue;
@@ -634,37 +632,36 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeReaction(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.buffer.WriteLine(SectType.REACTIONS.ParseStr());
             this.buffer.WriteLine(REACTIONS_SUBTITLE);
 
-            this.buffer.WriteLine("ORDER BULK {0}", pMap.BulkOrder);
-            this.buffer.WriteLine("ORDER WALL {0}", pMap.WallOrder);
-            this.buffer.WriteLine("ORDER TANK {0}", pMap.TankOrder);
-            this.buffer.WriteLine("GLOBAL BULK {0}", pMap.KBulk * Constants.SECperDAY);
-            this.buffer.WriteLine("GLOBAL WALL {0}", pMap.KWall * Constants.SECperDAY);
+            this.buffer.WriteLine("ORDER BULK {0}", net.BulkOrder);
+            this.buffer.WriteLine("ORDER WALL {0}", net.WallOrder);
+            this.buffer.WriteLine("ORDER TANK {0}", net.TankOrder);
+            this.buffer.WriteLine("GLOBAL BULK {0}", net.KBulk * Constants.SECperDAY);
+            this.buffer.WriteLine("GLOBAL WALL {0}", net.KWall * Constants.SECperDAY);
 
-            //if (pMap.getClimit() > 0.0)
-            this.buffer.WriteLine("LIMITING POTENTIAL {0}", pMap.CLimit);
+            // if (net.CLimit > 0.0)
+            this.buffer.WriteLine("LIMITING POTENTIAL {0}", net.CLimit);
 
-            //if (pMap.getRfactor() != Constants.MISSING && pMap.getRfactor() != 0.0)
-            this.buffer.WriteLine("ROUGHNESS CORRELATION {0}", pMap.RFactor);
+            // if (!net.RFactor.IsMissing() && net.RFactor != 0.0)
+            this.buffer.WriteLine("ROUGHNESS CORRELATION {0}", net.RFactor);
 
 
             foreach (Link link  in  net.Links) {
                 if (link.Type > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != pMap.KBulk)
+                if (link.Kb != net.KBulk)
                     this.buffer.WriteLine("BULK {0} {1}", link.Id, link.Kb * Constants.SECperDAY);
-                if (link.Kw != pMap.KWall)
+                if (link.Kw != net.KWall)
                     this.buffer.WriteLine("WALL {0} {1}", link.Id, link.Kw * Constants.SECperDAY);
             }
 
             foreach (Tank tank  in  net.Tanks) {
                 if (tank.IsReservoir) continue;
-                if (tank.Kb != pMap.KBulk)
+                if (tank.Kb != net.KBulk)
                     this.buffer.WriteLine("TANK {0} {1}", tank.Id, tank.Kb * Constants.SECperDAY);
             }
 
@@ -672,18 +669,17 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeEnergy(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.buffer.WriteLine(SectType.ENERGY.ParseStr());
 
-            if (pMap.ECost != 0.0)
-                this.buffer.WriteLine("GLOBAL PRICE {0}", pMap.ECost);
+            if (net.ECost != 0.0)
+                this.buffer.WriteLine("GLOBAL PRICE {0}", net.ECost);
 
-            if (!pMap.EPatId.Equals(""))
-                this.buffer.WriteLine("GLOBAL PATTERN {0}", pMap.EPatId);
+            if (!net.EPatId.Equals(""))
+                this.buffer.WriteLine("GLOBAL PATTERN {0}", net.EPatId);
 
-            this.buffer.WriteLine("GLOBAL EFFIC {0}", pMap.EPump);
-            this.buffer.WriteLine("DEMAND CHARGE {0}", pMap.DCost);
+            this.buffer.WriteLine("GLOBAL EFFIC {0}", net.EPump);
+            this.buffer.WriteLine("DEMAND CHARGE {0}", net.DCost);
 
             foreach (Pump p  in  net.Pumps) {
                 if (p.ECost > 0.0)
@@ -701,51 +697,51 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeTimes(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
+            
             this.buffer.WriteLine(SectType.TIMES.ParseStr());
-            this.buffer.WriteLine("DURATION {0}", pMap.Duration.GetClockTime());
-            this.buffer.WriteLine("HYDRAULIC TIMESTEP {0}", pMap.HStep.GetClockTime());
-            this.buffer.WriteLine("QUALITY TIMESTEP {0}", pMap.QStep.GetClockTime());
-            this.buffer.WriteLine("REPORT TIMESTEP {0}", pMap.RStep.GetClockTime());
-            this.buffer.WriteLine("REPORT START {0}", pMap.RStart.GetClockTime());
-            this.buffer.WriteLine("PATTERN TIMESTEP {0}", pMap.PStep.GetClockTime());
-            this.buffer.WriteLine("PATTERN START {0}", pMap.PStart.GetClockTime());
-            this.buffer.WriteLine("RULE TIMESTEP {0}", pMap.RuleStep.GetClockTime());
-            this.buffer.WriteLine("START CLOCKTIME {0}", pMap.TStart.GetClockTime());
-            this.buffer.WriteLine("STATISTIC {0}", pMap.TStatFlag.ParseStr());
+            this.buffer.WriteLine("DURATION {0}", net.Duration.GetClockTime());
+            this.buffer.WriteLine("HYDRAULIC TIMESTEP {0}", net.HStep.GetClockTime());
+            this.buffer.WriteLine("QUALITY TIMESTEP {0}", net.QStep.GetClockTime());
+            this.buffer.WriteLine("REPORT TIMESTEP {0}", net.RStep.GetClockTime());
+            this.buffer.WriteLine("REPORT START {0}", net.RStart.GetClockTime());
+            this.buffer.WriteLine("PATTERN TIMESTEP {0}", net.PStep.GetClockTime());
+            this.buffer.WriteLine("PATTERN START {0}", net.PStart.GetClockTime());
+            this.buffer.WriteLine("RULE TIMESTEP {0}", net.RuleStep.GetClockTime());
+            this.buffer.WriteLine("START CLOCKTIME {0}", net.TStart.GetClockTime());
+            this.buffer.WriteLine("STATISTIC {0}", net.TStatFlag.ParseStr());
             this.buffer.WriteLine();
         }
 
         private void ComposeOptions(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
+            
             FieldsMap fMap = net.FieldsMap;
 
             this.buffer.WriteLine(SectType.OPTIONS.ParseStr());
-            this.buffer.WriteLine("UNITS               " + pMap.FlowFlag);
-            this.buffer.WriteLine("PRESSURE            " + pMap.PressFlag);
-            this.buffer.WriteLine("HEADLOSS            " + pMap.FormFlag);
+            this.buffer.WriteLine("UNITS               " + net.FlowFlag);
+            this.buffer.WriteLine("PRESSURE            " + net.PressFlag);
+            this.buffer.WriteLine("HEADLOSS            " + net.FormFlag);
 
-            if (!string.IsNullOrEmpty(pMap.DefPatId))
-                this.buffer.WriteLine("PATTERN             " + pMap.DefPatId);
+            if (!string.IsNullOrEmpty(net.DefPatId))
+                this.buffer.WriteLine("PATTERN             " + net.DefPatId);
 
-            if (pMap.HydFlag == HydType.USE)
-                this.buffer.WriteLine("HYDRAULICS USE      " + pMap.HydFname);
+            if (net.HydFlag == HydType.USE)
+                this.buffer.WriteLine("HYDRAULICS USE      " + net.HydFname);
 
-            if (pMap.HydFlag == HydType.SAVE)
-                this.buffer.WriteLine("HYDRAULICS SAVE     " + pMap.HydFname);
+            if (net.HydFlag == HydType.SAVE)
+                this.buffer.WriteLine("HYDRAULICS SAVE     " + net.HydFname);
 
-            if (pMap.ExtraIter == -1)
+            if (net.ExtraIter == -1)
                 this.buffer.WriteLine("UNBALANCED          STOP");
 
-            if (pMap.ExtraIter >= 0)
-                this.buffer.WriteLine("UNBALANCED          CONTINUE " + pMap.ExtraIter);
+            if (net.ExtraIter >= 0)
+                this.buffer.WriteLine("UNBALANCED          CONTINUE " + net.ExtraIter);
 
-            switch (pMap.QualFlag) {
+            switch (net.QualFlag) {
             case QualType.CHEM:
-                this.buffer.WriteLine("QUALITY             {0} {1}", pMap.ChemName, pMap.ChemUnits);
+                this.buffer.WriteLine("QUALITY             {0} {1}", net.ChemName, net.ChemUnits);
                 break;
             case QualType.TRACE:
-                this.buffer.WriteLine("QUALITY             TRACE " + pMap.TraceNode);
+                this.buffer.WriteLine("QUALITY             TRACE " + net.TraceNode);
                 break;
             case QualType.AGE:
                 this.buffer.WriteLine("QUALITY             AGE");
@@ -755,22 +751,22 @@ namespace Epanet.Network.IO.Output {
                 break;
             }
 
-            this.buffer.WriteLine("DEMAND MULTIPLIER {0}", pMap.DMult);
-            this.buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / pMap.QExp);
-            this.buffer.WriteLine("VISCOSITY         {0}", pMap.Viscos / Constants.VISCOS);
-            this.buffer.WriteLine("DIFFUSIVITY       {0}", pMap.Diffus / Constants.DIFFUS);
-            this.buffer.WriteLine("SPECIFIC GRAVITY  {0}", pMap.SpGrav);
-            this.buffer.WriteLine("TRIALS            {0}", pMap.MaxIter);
-            this.buffer.WriteLine("ACCURACY          {0}", pMap.HAcc);
-            this.buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, pMap.Ctol));
-            this.buffer.WriteLine("CHECKFREQ         {0}", pMap.CheckFreq);
-            this.buffer.WriteLine("MAXCHECK          {0}", pMap.MaxCheck);
-            this.buffer.WriteLine("DAMPLIMIT         {0}", pMap.DampLimit);
+            this.buffer.WriteLine("DEMAND MULTIPLIER {0}", net.DMult);
+            this.buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / net.QExp);
+            this.buffer.WriteLine("VISCOSITY         {0}", net.Viscos / Constants.VISCOS);
+            this.buffer.WriteLine("DIFFUSIVITY       {0}", net.Diffus / Constants.DIFFUS);
+            this.buffer.WriteLine("SPECIFIC GRAVITY  {0}", net.SpGrav);
+            this.buffer.WriteLine("TRIALS            {0}", net.MaxIter);
+            this.buffer.WriteLine("ACCURACY          {0}", net.HAcc);
+            this.buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, net.Ctol));
+            this.buffer.WriteLine("CHECKFREQ         {0}", net.CheckFreq);
+            this.buffer.WriteLine("MAXCHECK          {0}", net.MaxCheck);
+            this.buffer.WriteLine("DAMPLIMIT         {0}", net.DampLimit);
             this.buffer.WriteLine();
         }
 
         private void ComposeExtraOptions(Network net) {
-            var extraOptions = net.PropertiesMap.ExtraOptions;
+            var extraOptions = net.ExtraOptions;
 
             if(extraOptions.Count == 0)
                 return;
@@ -786,14 +782,13 @@ namespace Epanet.Network.IO.Output {
 
             this.buffer.WriteLine(SectType.REPORT.ParseStr());
 
-            PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
-            this.buffer.WriteLine("PAGESIZE       {0}", pMap.PageSize);
-            this.buffer.WriteLine("STATUS         " + pMap.Stat_Flag);
-            this.buffer.WriteLine("SUMMARY        " + (pMap.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            this.buffer.WriteLine("ENERGY         " + (pMap.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            this.buffer.WriteLine("PAGESIZE       {0}", net.PageSize);
+            this.buffer.WriteLine("STATUS         " + net.Stat_Flag);
+            this.buffer.WriteLine("SUMMARY        " + (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
+            this.buffer.WriteLine("ENERGY         " + (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
-            switch (pMap.NodeFlag) {
+            switch (net.NodeFlag) {
             case ReportFlag.FALSE:
                 this.buffer.WriteLine("NODES NONE");
                 break;
@@ -819,7 +814,7 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            switch (pMap.LinkFlag) {
+            switch (net.LinkFlag) {
             case ReportFlag.FALSE:
                 this.buffer.WriteLine("LINKS NONE");
                 break;

@@ -138,7 +138,7 @@ namespace Epanet.Network.Structures {
             double realkm = this.Km * Math.Pow(this.Diameter, 4.0) / 0.02517;
             this.Diameter = diameter;
             this.Km = 0.02517 * realkm / Math.Pow(diameter, 4);
-            this.initResistance(net.PropertiesMap.FormFlag, net.PropertiesMap.HExp);
+            this.initResistance(net.FormFlag, net.HExp);
         }
 
 #if NUCONVERT

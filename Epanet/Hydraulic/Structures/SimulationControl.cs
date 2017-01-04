@@ -22,10 +22,11 @@ using System.Diagnostics;
 using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network;
-using Epanet.Network.IO;
 using Epanet.Network.Structures;
 using Epanet.Properties;
 using Epanet.Util;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Hydraulic.Structures {
 
@@ -34,7 +35,7 @@ namespace Epanet.Hydraulic.Structures {
         private readonly SimulationLink link;
         private readonly SimulationNode node;
 
-        public SimulationControl(List<SimulationNode> nodes, List<SimulationLink> links, Control @ref) {
+        public SimulationControl(IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links, Control @ref) {
             if (@ref.Node != null) {
                 string nid = @ref.Node.Id;
                 foreach (SimulationNode simulationNode  in  nodes) {
@@ -73,7 +74,7 @@ namespace Epanet.Hydraulic.Structures {
         public ControlType Type { get { return this.control.Type; } }
 
         ///<summary>Get the shortest time step to activate the control.</summary>
-        private long GetRequiredTimeStep(FieldsMap fMap, PropertiesMap pMap, long htime, long tstep) {
+        private long GetRequiredTimeStep(EpanetNetwork net, long htime, long tstep) {
 
             long t = 0;
 
@@ -94,7 +95,7 @@ namespace Epanet.Hydraulic.Structures {
                     // Tank above low level & emptying
                 {
                     SimulationTank tank = ((SimulationTank)this.Node);
-                    double v = tank.FindVolume(fMap, this.Grade) - tank.SimVolume;
+                    double v = tank.FindVolume(net.FieldsMap, this.Grade) - tank.SimVolume;
                     t = (long)Math.Round(v / q); // Time to reach level
                 }
             }
@@ -107,7 +108,7 @@ namespace Epanet.Hydraulic.Structures {
 
             // Time-of-day control
             if (this.Type == ControlType.TIMEOFDAY) {
-                long t1 = (htime + pMap.TStart) % Constants.SECperDAY;
+                long t1 = (htime + net.TStart) % Constants.SECperDAY;
                 long t2 = this.Time;
                 if (t2 >= t1) t = t2 - t1;
                 else t = Constants.SECperDAY - t1 + t2;
@@ -129,14 +130,14 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Revises time step based on shortest time to fill or drain a tank.</summary>
         public static long MinimumTimeStep(
-            FieldsMap fMap,
-            PropertiesMap pMap,
-            List<SimulationControl> controls,
+            EpanetNetwork net,
+            IEnumerable<SimulationControl> controls,
             long htime,
             long tstep) {
             long newTStep = tstep;
             foreach (SimulationControl control  in  controls)
-                newTStep = control.GetRequiredTimeStep(fMap, pMap, htime, newTStep);
+                newTStep = control.GetRequiredTimeStep(net, htime, newTStep);
+
             return newTStep;
         }
 
@@ -144,9 +145,8 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Implements simple controls based on time or tank levels.</summary>
         public static int StepActions(
             TraceSource log,
-            FieldsMap fMap,
-            PropertiesMap pMap,
-            List<SimulationControl> controls,
+            EpanetNetwork net,
+            IEnumerable<SimulationControl> controls,
             long htime) {
             int setsum = 0;
 
@@ -166,8 +166,8 @@ namespace Epanet.Hydraulic.Structures {
 
                     SimulationTank tank = (SimulationTank)control.Node;
 
-                    double v1 = tank.FindVolume(fMap, h);
-                    double v2 = tank.FindVolume(fMap, control.Grade);
+                    double v1 = tank.FindVolume(net.FieldsMap, h);
+                    double v2 = tank.FindVolume(net.FieldsMap, control.Grade);
 
                     if (control.Type == ControlType.LOWLEVEL && v1 <= v2 + vplus)
                         reset = true;
@@ -183,7 +183,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 //  Link is time-of-day controlled
                 if (control.Type == ControlType.TIMEOFDAY) {
-                    if ((htime + pMap.TStart) % Constants.SECperDAY == control.Time)
+                    if ((htime + net.TStart) % Constants.SECperDAY == control.Time)
                         reset = true;
                 }
 
@@ -208,7 +208,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (s1 != s2 || k1 != k2) {
                         link.SimStatus = s2;
                         link.SimSetting = k2;
-                        if (pMap.Stat_Flag != StatFlag.NO)
+                        if (net.Stat_Flag != StatFlag.NO)
                             LogControlAction(log, control, htime);
                         setsum++;
                     }
@@ -222,9 +222,8 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Adjusts settings of links controlled by junction pressures after a hydraulic solution is found.</summary>
         public static bool PSwitch(
             TraceSource log,
-            PropertiesMap pMap,
-            FieldsMap fMap,
-            List<SimulationControl> controls) {
+            EpanetNetwork net,
+            IEnumerable<SimulationControl> controls) {
             bool anychange = false;
 
             foreach (SimulationControl control  in  controls) {
@@ -237,11 +236,11 @@ namespace Epanet.Hydraulic.Structures {
 
                     // Determine if control conditions are satisfied
                     if (control.Type == ControlType.LOWLEVEL
-                        && control.Node.SimHead <= control.Grade + pMap.HTol)
+                        && control.Node.SimHead <= control.Grade + net.HTol)
                         reset = true;
 
                     if (control.Type == ControlType.HILEVEL
-                        && control.Node.SimHead >= control.Grade - pMap.HTol)
+                        && control.Node.SimHead >= control.Grade - net.HTol)
                         reset = true;
                 }
 
@@ -273,8 +272,8 @@ namespace Epanet.Hydraulic.Structures {
                         link.SimStatus = control.Status;
                         if (link.Type > LinkType.PIPE)
                             link.SimSetting = control.Setting;
-                        if (pMap.Stat_Flag == StatFlag.FULL)
-                            LogStatChange(log, fMap, link, s);
+                        if (net.Stat_Flag == StatFlag.FULL)
+                            LogStatChange(log, net.FieldsMap, link, s);
 
                         anychange = true;
                     }

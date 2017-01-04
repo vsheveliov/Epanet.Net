@@ -28,6 +28,8 @@ using Epanet.Properties;
 using Epanet.Quality;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet.Report {
 
     ///<summary>
@@ -115,10 +117,10 @@ namespace Epanet.Report {
         ///  <param name="hydBinFile">Name of the hydraulic simulation output file.</param>
         /// <param name="net">Hydraulic network.</param>
         /// <param name="values">Variables report flag.</param>
-        public void CreateHydReport(string hydBinFile, Network.Network net, bool[] values) {
+        public void CreateHydReport(string hydBinFile, EpanetNetwork net, bool[] values) {
             this.Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydBinFile)));
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep) + 1;
+            int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
             var nodes = net.Nodes;
             var links = net.Links;
 
@@ -138,15 +140,13 @@ namespace Epanet.Report {
             for (int i = 0; i < resultSheets.Length; i++) {
                 if (values != null && !values[i]) continue;
                 resultSheets[i] = this.sheet.NewSpreadsheet(HydVariable.Values[i].Name);
-                resultSheets[i].AddData(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
+                resultSheets[i].AddHeader(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
             }
 
             var nodeRow = new object[dseek.Nodes + 1];
             var linkRow = new object[dseek.Links + 1];
 
-            for (long time = net.PropertiesMap.RStart;
-                 time <= net.PropertiesMap.Duration;
-                 time += net.PropertiesMap.RStep) {
+            for (long time = net.RStart; time <= net.Duration; time += net.RStep) {
 
                 var step = dseek.GetStep(time);
 
@@ -231,10 +231,10 @@ namespace Epanet.Report {
         /// <param name="net">Hydraulic network.</param>
         /// <param name="nodes">Show nodes quality flag.</param>
         /// <param name="links">Show links quality flag.</param>
-        public void CreateQualReport(string qualFile, Network.Network net, bool nodes, bool links) {
+        public void CreateQualReport(string qualFile, EpanetNetwork net, bool nodes, bool links) {
             this.Rtime = 0;
 
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep) + 1;
+            int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
 
             using (QualityReader dseek = new QualityReader(qualFile, net.FieldsMap)) {
                 var netNodes = net.Nodes;
@@ -258,16 +258,14 @@ namespace Epanet.Report {
                         continue;
 
                     resultSheets[i] = this.sheet.NewSpreadsheet(qvar.Name);
-                    resultSheets[i].AddData(qvar.IsNode ? nodesHead : linksHead);
+                    resultSheets[i].AddHeader(qvar.IsNode ? nodesHead : linksHead);
                 }
 
                 var nodeRow = new object[dseek.Nodes + 1];
                 var linkRow = new object[dseek.Links + 1];
 
                 using (var qIt = dseek.GetEnumerator())
-                for (long time = net.PropertiesMap.RStart;
-                     time <= net.PropertiesMap.Duration;
-                     time += net.PropertiesMap.RStep)
+                for (long time = net.RStart; time <= net.Duration; time += net.RStep)
                 {
                     if (!qIt.MoveNext()) return;
 
@@ -302,12 +300,12 @@ namespace Epanet.Report {
         /// <param name="netMSX">MSX network.</param>
         /// <param name="tk2">Hydraulic network - MSX bridge.</param>
         /// <param name="values">Species report flag.</param>
-        public void createMSXReport(string msxBin, Network.Network net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
+        public void createMSXReport(string msxBin, EpanetNetwork net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
             this.Rtime = 0;
             var nodes = netMSX.Network.Node;
             var links = netMSX.Network.Link;
             string[] nSpecies = netMSX.GetSpeciesNames();
-            int reportCount = (int)((net.PropertiesMap.Duration - net.PropertiesMap.RStart) / net.PropertiesMap.RStep) + 1;
+            int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
 
             var reader = new MsxReader(
                 nodes.Length - 1,
@@ -338,11 +336,11 @@ namespace Epanet.Report {
                 if (!nodes[i].Rpt) continue;
 
                 var spr = this.sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
-                spr.AddData(nodesHead);
+                spr.AddHeader(nodesHead);
 
-                for (long time = net.PropertiesMap.RStart, period = 0;
-                     time <= net.PropertiesMap.Duration;
-                     time += net.PropertiesMap.RStep, period++) {
+                for (long time = net.RStart, period = 0;
+                     time <= net.Duration;
+                     time += net.RStep, period++) {
 
                     nodeRow[0] = time.GetClockTime();
 
@@ -360,11 +358,11 @@ namespace Epanet.Report {
                 if (!links[i].Rpt) continue;
 
                 var spr = this.sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
-                spr.AddData(linksHead);
+                spr.AddHeader(linksHead);
 
-                for (long time = net.PropertiesMap.RStart, period = 0;
-                     time <= net.PropertiesMap.Duration;
-                     time += net.PropertiesMap.RStep, period++) 
+                for (long time = net.RStart, period = 0;
+                     time <= net.Duration;
+                     time += net.RStep, period++) 
                 {
                     linkRow[0] = time.GetClockTime();
 
@@ -390,11 +388,10 @@ namespace Epanet.Report {
         /// <param name="net">Hydraulic network.</param>
         /// <param name="msxFile">MSX file.</param>
         /// <param name="msx">MSX solver.</param>
-        public void WriteSummary(string inpFile, Network.Network net, string msxFile, EpanetMSX msx) {
+        public void WriteSummary(string inpFile, EpanetNetwork net, string msxFile, EpanetMSX msx) {
             var sh = this.sheet.NewSpreadsheet("Summary");
 
             try {
-                PropertiesMap pMap = net.PropertiesMap;
                 FieldsMap fMap = net.FieldsMap;
 
                 if (net.TitleText != null)
@@ -430,46 +427,46 @@ namespace Epanet.Report {
                 sh.AddData(Text.FMT22, nPipes);
                 sh.AddData(Text.FMT23, nPumps);
                 sh.AddData(Text.FMT24, nValves);
-                sh.AddData(Text.FMT25, pMap.FormFlag.ParseStr());
+                sh.AddData(Text.FMT25, net.FormFlag.ParseStr());
 
-                sh.AddData(Text.FMT26, pMap.HStep.GetClockTime());
-                sh.AddData(Text.FMT27, pMap.HAcc);
-                sh.AddData(Text.FMT27a, pMap.CheckFreq);
-                sh.AddData(Text.FMT27b, pMap.MaxCheck);
-                sh.AddData(Text.FMT27c, pMap.DampLimit);
-                sh.AddData(Text.FMT28, pMap.MaxIter);
+                sh.AddData(Text.FMT26, net.HStep.GetClockTime());
+                sh.AddData(Text.FMT27, net.HAcc);
+                sh.AddData(Text.FMT27a, net.CheckFreq);
+                sh.AddData(Text.FMT27b, net.MaxCheck);
+                sh.AddData(Text.FMT27c, net.DampLimit);
+                sh.AddData(Text.FMT28, net.MaxIter);
 
-                switch (pMap.Duration == 0 ? QualType.NONE : pMap.QualFlag) {
+                switch (net.Duration == 0 ? QualType.NONE : net.QualFlag) {
                 case QualType.NONE:
                     sh.AddData(Text.FMT29, "None");
                     break;
                 case QualType.CHEM:
-                    sh.AddData(Text.FMT30, pMap.ChemName);
+                    sh.AddData(Text.FMT30, net.ChemName);
                     break;
                 case QualType.TRACE:
-                    sh.AddData(Text.FMT31, "Trace From Node", net.GetNode(pMap.TraceNode).Id);
+                    sh.AddData(Text.FMT31, "Trace From Node", net.GetNode(net.TraceNode).Id);
                     break;
                 case QualType.AGE:
                     sh.AddData(Text.FMT32, "Age");
                     break;
                 }
 
-                if (pMap.QualFlag != QualType.NONE && pMap.Duration > 0) {
-                    sh.AddData(Text.FMT33, "Time Step", pMap.QStep.GetClockTime());
+                if (net.QualFlag != QualType.NONE && net.Duration > 0) {
+                    sh.AddData(Text.FMT33, "Time Step", net.QStep.GetClockTime());
                     sh.AddData(
                         Text.FMT34,
                         "Tolerance",
-                        fMap.RevertUnit(FieldType.QUALITY, pMap.Ctol),
+                        fMap.RevertUnit(FieldType.QUALITY, net.Ctol),
                         fMap.GetField(FieldType.QUALITY).Units);
                 }
 
-                sh.AddData(Text.FMT36, pMap.SpGrav);
-                sh.AddData(Text.FMT37a, pMap.Viscos / Constants.VISCOS);
-                sh.AddData(Text.FMT37b, pMap.Diffus / Constants.DIFFUS);
-                sh.AddData(Text.FMT38, pMap.DMult);
+                sh.AddData(Text.FMT36, net.SpGrav);
+                sh.AddData(Text.FMT37a, net.Viscos / Constants.VISCOS);
+                sh.AddData(Text.FMT37b, net.Diffus / Constants.DIFFUS);
+                sh.AddData(Text.FMT38, net.DMult);
                 sh.AddData(
                     Text.FMT39,
-                    fMap.RevertUnit(FieldType.TIME, pMap.Duration),
+                    fMap.RevertUnit(FieldType.TIME, net.Duration),
                     fMap.GetField(FieldType.TIME).Units);
 
                 if (msxFile != null && msx != null) {

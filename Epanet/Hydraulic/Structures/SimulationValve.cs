@@ -21,22 +21,22 @@ using System.Diagnostics;
 
 using Epanet.Enums;
 using Epanet.Log;
-using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationValve:SimulationLink {
 
-        public SimulationValve(List<SimulationNode> indexedNodes, Link @ref, int idx)
+        public SimulationValve(Dictionary<string, SimulationNode> indexedNodes, Link @ref, int idx)
             :base(indexedNodes, @ref, idx) {}
 
         /// <summary>
         /// Computes solution matrix coeffs. for a completely open, 
         /// closed, or throttled control valve.
         /// </summary>
-        private void ValveCoeff(PropertiesMap pMap) {
+        private void ValveCoeff(EpanetNetwork net) {
             // Valve is closed. Use a very small matrix coeff.
             if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
@@ -47,14 +47,14 @@ namespace Epanet.Hydraulic.Structures {
             // Account for any minor headloss through the valve
             if (this.Km > 0.0) {
                 double p = 2.0 * this.Km * Math.Abs(this.flow);
-                if (p < pMap.RQtol)
-                    p = pMap.RQtol;
+                if (p < net.RQtol)
+                    p = net.RQtol;
 
                 this.invHeadLoss = 1.0 / p;
                 this.flowCorrection = this.flow / 2.0;
             }
             else {
-                this.invHeadLoss = 1.0 / pMap.RQtol;
+                this.invHeadLoss = 1.0 / net.RQtol;
                 this.flowCorrection = this.flow;
             }
         }
@@ -63,7 +63,7 @@ namespace Epanet.Hydraulic.Structures {
         /// Computes solution matrix coeffs. for a completely open, 
         /// closed, or throttled control valve.
         /// </summary>
-        private void ValveCoeff(PropertiesMap pMap, double km) {
+        private void ValveCoeff(EpanetNetwork net, double km) {
             // Valve is closed. Use a very small matrix coeff.
             if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
@@ -74,24 +74,24 @@ namespace Epanet.Hydraulic.Structures {
             // Account for any minor headloss through the valve
             if (km > 0.0) {
                 double p = 2.0 * km * Math.Abs(this.flow);
-                if (p < pMap.RQtol)
-                    p = pMap.RQtol;
+                if (p < net.RQtol)
+                    p = net.RQtol;
 
                 this.invHeadLoss = 1.0 / p;
                 this.flowCorrection = this.flow / 2.0;
             }
             else {
-                this.invHeadLoss = 1.0 / pMap.RQtol;
+                this.invHeadLoss = 1.0 / net.RQtol;
                 this.flowCorrection = this.flow;
             }
         }
 
         /// <summary>Computes P & Y coeffs. for pressure breaker valve.</summary>
-        private void PbvCoeff(PropertiesMap pMap) {
+        private void PbvCoeff(EpanetNetwork net) {
             if (this.setting.IsMissing() || this.setting == 0.0)
-                this.ValveCoeff(pMap);
+                this.ValveCoeff(net);
             else if (this.Km * (this.flow * this.flow) > this.setting)
-                this.ValveCoeff(pMap);
+                this.ValveCoeff(net);
             else {
                 this.invHeadLoss = Constants.CBIG;
                 this.flowCorrection = this.setting * Constants.CBIG;
@@ -99,40 +99,40 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Computes P & Y coeffs. for throttle control valve.</summary>
-        private void TcvCoeff(PropertiesMap pMap) {
+        private void TcvCoeff(EpanetNetwork net) {
             double km = this.Km;
 
             if (!this.setting.IsMissing())
                 km = 0.02517 * this.setting / Math.Pow(this.Diameter, 4);
 
-            this.ValveCoeff(pMap, km);
+            this.ValveCoeff(net, km);
         }
 
         /// <summary>Computes P & Y coeffs. for general purpose valve.</summary>
-        private void GpvCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
+        private void GpvCoeff(EpanetNetwork net, IList<Curve> curves) {
             if (this.status == StatType.CLOSED)
-                this.ValveCoeff(pMap);
+                this.ValveCoeff(net);
             else {
                 double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
                 double h0, r;
-                curves[(int)Math.Round(this.setting)].GetCoeff(fMap, q, out h0, out r);
-                this.invHeadLoss = 1.0 / Math.Max(r, pMap.RQtol);
+                curves[(int)Math.Round(this.setting)].GetCoeff(net.FieldsMap, q, out h0, out r);
+                this.invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
                 this.flowCorrection = this.invHeadLoss * (h0 + r * q) * Utilities.GetSignal(this.flow);
             }
         }
 
         /// <summary>Updates status of a flow control valve.</summary>
-        public StatType FcvStatus(PropertiesMap pMap, StatType s) {
+        public StatType FcvStatus(EpanetNetwork net, StatType s) {
             StatType stat = s;
-            if (this.First.SimHead - this.Second.SimHead < -pMap.HTol) stat = StatType.XFCV;
-            else if (this.flow < -pMap.QTol) stat = StatType.XFCV;
+            if (this.First.SimHead - this.Second.SimHead < -net.HTol) stat = StatType.XFCV;
+            else if (this.flow < -net.QTol) stat = StatType.XFCV;
             else if (s == StatType.XFCV && this.flow >= this.setting) stat = StatType.ACTIVE;
             return stat;
         }
 
 
         /// <summary>Computes solution matrix coeffs. for pressure reducing valves.</summary>
-        private void PrvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
+        private void PrvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
             int k = this.Index;
             int n1 = smat.GetRow(this.first.Index);
             int n2 = smat.GetRow(this.second.Index);
@@ -151,7 +151,7 @@ namespace Epanet.Hydraulic.Structures {
                 return;
             }
 
-            this.ValveCoeff(pMap);
+            this.ValveCoeff(net);
 
             ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
             ls.AddAii(n1, +this.invHeadLoss);
@@ -162,7 +162,7 @@ namespace Epanet.Hydraulic.Structures {
 
 
         /// <summary>Computes solution matrix coeffs. for pressure sustaining valve.</summary>
-        private void PsvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
+        private void PsvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
             int k = this.Index;
             int n1 = smat.GetRow(this.first.Index);
             int n2 = smat.GetRow(this.second.Index);
@@ -177,7 +177,7 @@ namespace Epanet.Hydraulic.Structures {
                 return;
             }
 
-            this.ValveCoeff(pMap);
+            this.ValveCoeff(net);
             ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
             ls.AddAii(n1, +this.invHeadLoss);
             ls.AddAii(n2, +this.invHeadLoss);
@@ -186,7 +186,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Computes solution matrix coeffs. for flow control valve.</summary>
-        private void FcvCoeff(PropertiesMap pMap, LSVariables ls, SparseMatrix smat) {
+        private void FcvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
             int k = this.Index;
             double q = this.setting;
             int n1 = smat.GetRow(this.first.Index);
@@ -208,7 +208,7 @@ namespace Epanet.Hydraulic.Structures {
             }
             else {
                 //  Otherwise treat valve as an open pipe
-                this.ValveCoeff(pMap);
+                this.ValveCoeff(net);
                 ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
                 ls.AddAii(n1, +this.invHeadLoss);
                 ls.AddAii(n2, +this.invHeadLoss);
@@ -224,7 +224,7 @@ namespace Epanet.Hydraulic.Structures {
         /// is generated.
         /// </summary>
         public static bool CheckBadValve(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             TraceSource log,
             List<SimulationValve> valves,
             long htime,
@@ -236,7 +236,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (link.Type == LinkType.PRV || link.Type == LinkType.PSV
                         || link.Type == LinkType.FCV) {
                         if (link.status == StatType.ACTIVE) {
-                            if (pMap.Stat_Flag == StatFlag.FULL) {
+                            if (net.Stat_Flag == StatFlag.FULL) {
                                 LogBadValve(log, link, htime);
                             }
 
@@ -259,11 +259,11 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Updates status of a pressure reducing valve.</summary>
-        private StatType PrvStatus(PropertiesMap pMap, double hset) {
+        private StatType PrvStatus(EpanetNetwork net, double hset) {
             if (this.setting.IsMissing())
                 return this.status;
 
-            double htol = pMap.HTol;
+            double htol = net.HTol;
             double hml = this.Km * (this.flow * this.flow);
             double h1 = this.first.SimHead;
             double h2 = this.second.SimHead;
@@ -272,7 +272,7 @@ namespace Epanet.Hydraulic.Structures {
 
             switch (this.status) {
             case StatType.ACTIVE:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h1 - hml < hset - htol)
                     stat = StatType.OPEN;
@@ -281,7 +281,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.OPEN:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h2 >= hset + htol)
                     stat = StatType.ACTIVE;
@@ -299,7 +299,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.XPRESSURE:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 break;
             }
@@ -308,19 +308,19 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Updates status of a pressure sustaining valve.</summary>
-        private StatType PsvStatus(PropertiesMap pMap, double hset) {
+        private StatType PsvStatus(EpanetNetwork net, double hset) {
             if (this.setting.IsMissing())
                 return this.status;
 
             double h1 = this.first.SimHead;
             double h2 = this.second.SimHead;
-            double htol = pMap.HTol;
+            double htol = net.HTol;
             double hml = this.Km * (this.flow * this.flow);
             StatType stat = this.status;
 
             switch (this.status) {
             case StatType.ACTIVE:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h2 + hml > hset + htol)
                     stat = StatType.OPEN;
@@ -329,7 +329,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.OPEN:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h1 < hset - htol)
                     stat = StatType.ACTIVE;
@@ -347,7 +347,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.XPRESSURE:
-                if (this.flow < -pMap.QTol)
+                if (this.flow < -net.QTol)
                     stat = StatType.CLOSED;
                 break;
             }
@@ -356,18 +356,18 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Compute P & Y coefficients for PBV,TCV,GPV valves.</summary>
-        public bool ComputeValveCoeff(FieldsMap fMap, PropertiesMap pMap, IList<Curve> curves) {
+        public bool ComputeValveCoeff(EpanetNetwork net, IList<Curve> curves) {
             switch (this.Type) {
             case LinkType.PBV:
-                this.PbvCoeff(pMap);
+                this.PbvCoeff(net);
                 break;
 
             case LinkType.TCV:
-                this.TcvCoeff(pMap);
+                this.TcvCoeff(net);
                 break;
 
             case LinkType.GPV:
-                this.GpvCoeff(fMap, pMap, curves);
+                this.GpvCoeff(net, curves);
                 break;
 
             case LinkType.FCV:
@@ -375,7 +375,7 @@ namespace Epanet.Hydraulic.Structures {
             case LinkType.PSV:
 
                 if (this.SimSetting.IsMissing())
-                    this.ValveCoeff(pMap);
+                    this.ValveCoeff(net);
                 else
                     return false;
 
@@ -387,10 +387,9 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status for PRVs & PSVs whose status is not fixed to OPEN/CLOSED.</summary>
         public static bool ValveStatus(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             TraceSource log,
-            List<SimulationValve> valves) {
+            IEnumerable<SimulationValve> valves) {
             bool change = false;
 
             foreach (SimulationValve v  in  valves) {
@@ -402,13 +401,13 @@ namespace Epanet.Hydraulic.Structures {
                 switch (v.Type) {
                 case LinkType.PRV: {
                     double hset = v.second.Elevation + v.setting;
-                    v.status = v.PrvStatus(pMap, hset);
+                    v.status = v.PrvStatus(net, hset);
                     break;
                 }
 
                 case LinkType.PSV: {
                     double hset = v.first.Elevation + v.setting;
-                    v.status = v.PsvStatus(pMap, hset);
+                    v.status = v.PsvStatus(net, hset);
                     break;
                 }
 
@@ -417,8 +416,8 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (s != v.status) {
-                    if (pMap.Stat_Flag == StatFlag.FULL)
-                        LogStatChange(fMap, log, v, s, v.status);
+                    if (net.Stat_Flag == StatFlag.FULL)
+                        LogStatChange(net.FieldsMap, log, v, s, v.status);
                     change = true;
                 }
             }
@@ -432,7 +431,7 @@ namespace Epanet.Hydraulic.Structures {
         /// whose status is not fixed to OPEN/CLOSED.
         /// </summary>
         public static void ComputeMatrixCoeffs(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             LSVariables ls,
             SparseMatrix smat,
             List<SimulationValve> valves) {
@@ -442,13 +441,13 @@ namespace Epanet.Hydraulic.Structures {
 
                 switch (valve.Type) {
                 case LinkType.PRV:
-                    valve.PrvCoeff(pMap, ls, smat);
+                    valve.PrvCoeff(net, ls, smat);
                     break;
                 case LinkType.PSV:
-                    valve.PsvCoeff(pMap, ls, smat);
+                    valve.PsvCoeff(net, ls, smat);
                     break;
                 case LinkType.FCV:
-                    valve.FcvCoeff(pMap, ls, smat);
+                    valve.FcvCoeff(net, ls, smat);
                     break;
                 }
             }

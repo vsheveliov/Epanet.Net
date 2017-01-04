@@ -42,7 +42,7 @@ namespace Epanet.Log {
 
             FileMode mode = append ? FileMode.Append : FileMode.Create;
 
-            RollingFileStream fs = new RollingFileStream(path, 0x1000, 10, mode, FileShare.Read);
+            RollingFileStream fs = new RollingFileStream(path, 0x100000, 10, mode, FileShare.Read);
 
             InvariantStreamWriter writer = new InvariantStreamWriter(fs, Encoding.Default);
 

@@ -18,12 +18,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Hydraulic.Structures {
 
@@ -42,7 +45,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Rule premise.</summary>
         private class Premise {
-            public Premise(string[] tok, Rulewords lOp, List<SimulationNode> nodes, List<SimulationLink> links) {
+            public Premise(string[] tok, Rulewords lOp, IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links) {
                 Objects loType;
                 Varwords lVar;
                 object lObj;
@@ -89,13 +92,11 @@ namespace Epanet.Hydraulic.Structures {
 
                     if (loType == Objects.NODE) {
                         //Node nodeRef = net.getNode(Tok[2]);
-                        SimulationNode nodeRef = null;
-                        foreach (SimulationNode simNode  in  nodes)
-                            if (simNode.Node.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
-                                nodeRef = simNode;
+                        SimulationNode nodeRef = nodes.FirstOrDefault(simNode => simNode.Node.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (nodeRef == null)
                             throw new ENException(ErrorCode.Err203);
+
                         switch (lVar) {
                         case Varwords.DEMAND:
                         case Varwords.HEAD:
@@ -116,13 +117,11 @@ namespace Epanet.Hydraulic.Structures {
                     }
                     else {
                         //Link linkRef = net.getLink(Tok[2]);
-                        SimulationLink linkRef = null;
-                        foreach (SimulationLink simLink  in  links)
-                            if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
-                                linkRef = simLink;
+                        SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (linkRef == null)
                             throw new ENException(ErrorCode.Err204);
+
                         switch (lVar) {
                         case Varwords.FLOW:
                         case Varwords.STATUS:
@@ -212,21 +211,21 @@ namespace Epanet.Hydraulic.Structures {
 
             /// <summary>Checks if a particular premise is true.</summary>
             public bool CheckPremise(
-                FieldsMap fMap,
-                PropertiesMap pMap,
+                EpanetNetwork net,
                 long time1,
                 long htime,
-                double dsystem) {
+                double dsystem) 
+            {
                 if (this.variable == Varwords.TIME || this.variable == Varwords.CLOCKTIME)
-                    return this.CheckTime(pMap, time1, htime);
+                    return this.CheckTime(net, time1, htime);
                 else if (this.status > Values.IS_NUMBER)
                     return this.CheckStatus();
                 else
-                    return this.CheckValue(fMap, dsystem);
+                    return this.CheckValue(net.FieldsMap, dsystem);
             }
 
             /// <summary>Checks if condition on system time holds.</summary>
-            private bool CheckTime(PropertiesMap pMap, long time1, long htime) {
+            private bool CheckTime(EpanetNetwork net, long time1, long htime) {
                 long t1, t2;
 
                 if (this.variable == Varwords.TIME) {
@@ -234,8 +233,8 @@ namespace Epanet.Hydraulic.Structures {
                     t2 = htime;
                 }
                 else if (this.variable == Varwords.CLOCKTIME) {
-                    t1 = (time1 + pMap.TStart) % Constants.SECperDAY;
-                    t2 = (htime + pMap.TStart) % Constants.SECperDAY;
+                    t1 = (time1 + net.TStart) % Constants.SECperDAY;
+                    t2 = (htime + net.TStart) % Constants.SECperDAY;
                 }
                 else
                     return false;
@@ -418,7 +417,7 @@ namespace Epanet.Hydraulic.Structures {
         private class Action {
             private readonly string label;
 
-            public Action(string[] tok, List<SimulationLink> links, string label) {
+            public Action(string[] tok, IEnumerable<SimulationLink> links, string label) {
                 this.label = label;
 
                 int ntokens = tok.Length;
@@ -429,10 +428,7 @@ namespace Epanet.Hydraulic.Structures {
                     throw new ENException(ErrorCode.Err201);
 
                 //Link linkRef = net.getLink(tok[2]);
-                SimulationLink linkRef = null;
-                foreach (SimulationLink simLink  in  links)
-                    if (simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase))
-                        linkRef = simLink;
+                SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                 if (linkRef == null)
                     throw new ENException(ErrorCode.Err204);
@@ -469,7 +465,7 @@ namespace Epanet.Hydraulic.Structures {
             private readonly double setting;
 
             /// <summary>Execute action, returns true if the link was alterated.</summary>
-            public bool Execute(FieldsMap fMap, PropertiesMap pMap, TraceSource log, double tol, long htime) {
+            public bool Execute(EpanetNetwork net, TraceSource log, double tol, long htime) {
                 bool flag = false;
 
                 StatType s = this.link.SimStatus;
@@ -492,10 +488,10 @@ namespace Epanet.Hydraulic.Structures {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
-                        x = x / fMap.GetUnits(FieldType.PRESSURE);
+                        x = x / net.FieldsMap.GetUnits(FieldType.PRESSURE);
                         break;
                     case LinkType.FCV:
-                        x = x / fMap.GetUnits(FieldType.FLOW);
+                        x = x / net.FieldsMap.GetUnits(FieldType.FLOW);
                         break;
                     }
                     if (Math.Abs(x - v) > tol) {
@@ -505,7 +501,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (flag) {
-                    if (pMap.Stat_Flag > 0) // Report rule action
+                    if (net.Stat_Flag > 0) // Report rule action
                         this.LogRuleExecution(log, htime);
                     return true;
                 }
@@ -536,8 +532,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Evaluate rule premises.</summary>
         private bool EvalPremises(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             long time1,
             long htime,
             double dsystem) {
@@ -546,12 +541,12 @@ namespace Epanet.Hydraulic.Structures {
             foreach (var p  in  this.pchain) {
                 if (p.logop == Rulewords.OR) {
                     if (!result)
-                        result = p.CheckPremise(fMap, pMap, time1, htime, dsystem);
+                        result = p.CheckPremise(net, time1, htime, dsystem);
                 }
                 else {
                     if (!result)
                         return false;
-                    result = p.CheckPremise(fMap, pMap, time1, htime, dsystem);
+                    result = p.CheckPremise(net, time1, htime, dsystem);
                 }
 
             }
@@ -596,8 +591,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Implements actions on action list, returns the number of actions executed.</summary>
         private static int TakeActions(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             TraceSource log,
             List<ActItem> actionList,
             long htime) {
@@ -605,7 +599,7 @@ namespace Epanet.Hydraulic.Structures {
             int n = 0;
 
             foreach (ActItem item  in  actionList) {
-                if (item.Action.Execute(fMap, pMap, log, tol, htime))
+                if (item.Action.Execute(net, log, tol, htime))
                     n++;
             }
 
@@ -615,9 +609,8 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Checks which rules should fire at current time.</summary>
         private static int Check(
-            FieldsMap fMap,
-            PropertiesMap pMap,
-            List<SimulationRule> rules,
+            EpanetNetwork net,
+            IEnumerable<SimulationRule> rules,
             TraceSource log,
             long htime,
             long dt,
@@ -628,9 +621,9 @@ namespace Epanet.Hydraulic.Structures {
             List<ActItem> actionList = new List<ActItem>();
 
             foreach (SimulationRule rule  in  rules)
-                UpdateActionList(rule, actionList, rule.EvalPremises(fMap, pMap, time1, htime, dsystem));
+                UpdateActionList(rule, actionList, rule.EvalPremises(net, time1, htime, dsystem));
 
-            return TakeActions(fMap, pMap, log, actionList, htime);
+            return TakeActions(net, log, actionList, htime);
         }
 
         /// <summary>
@@ -638,10 +631,9 @@ namespace Epanet.Hydraulic.Structures {
         /// also updates tank levels.
         /// </summary>
         public static void MinimumTimeStep(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             TraceSource log,
-            List<SimulationRule> rules,
+            SimulationRule[] rules,
             List<SimulationTank> tanks,
             long htime,
             long tstep,
@@ -657,7 +649,7 @@ namespace Epanet.Hydraulic.Structures {
             long tmax = tnow + tstep; // End of time interval for rule evaluation
 
             //If no rules, then time increment equals current time step
-            if (rules.Count == 0) {
+            if (rules.Length == 0) {
                 dt = tstep;
                 dt1 = dt;
             }
@@ -665,8 +657,8 @@ namespace Epanet.Hydraulic.Structures {
                 // Otherwise, time increment equals rule evaluation time step and
                 // first actual increment equals time until next even multiple of
                 // Rulestep occurs.
-                dt = pMap.RuleStep;
-                dt1 = pMap.RuleStep - tnow % pMap.RuleStep;
+                dt = net.RuleStep;
+                dt1 = net.RuleStep - tnow % net.RuleStep;
             }
 
             // Make sure time increment is no larger than current time step
@@ -689,8 +681,8 @@ namespace Epanet.Hydraulic.Structures {
 
             do {
                 htime += dt1; // Update simulation clock
-                SimulationTank.StepWaterLevels(tanks, fMap, dt1); // Find new tank levels
-                if (Check(fMap, pMap, rules, log, htime, dt1, dsystem) != 0) break; // Stop if rules fire
+                SimulationTank.StepWaterLevels(tanks, net.FieldsMap, dt1); // Find new tank levels
+                if (Check(net, rules, log, htime, dt1, dsystem) != 0) break; // Stop if rules fire
                 dt = Math.Min(dt, tmax - htime); // Update time increment
                 dt1 = dt; // Update actual increment
             }
@@ -703,7 +695,7 @@ namespace Epanet.Hydraulic.Structures {
 
         }
 
-        public SimulationRule(Rule rule, List<SimulationLink> links, List<SimulationNode> nodes) {
+        public SimulationRule(Rule rule, IList<SimulationLink> links, IList<SimulationNode> nodes) {
             this.label = rule.Label;
 
             double tempPriority = 0.0;
@@ -783,14 +775,14 @@ namespace Epanet.Hydraulic.Structures {
         private void ParsePremise(
             string[] tok,
             Rulewords logop,
-            List<SimulationNode> nodes,
-            List<SimulationLink> links) {
-            Premise p = new Premise(tok, logop, nodes, links);
-            this.pchain.Add(p);
+            IEnumerable<SimulationNode> nodes,
+            IEnumerable<SimulationLink> links) {
+            
+            this.pchain.Add(new Premise(tok, logop, nodes, links));
 
         }
 
-        private void ParseAction(Rulewords state, string[] tok, List<SimulationLink> links) {
+        private void ParseAction(Rulewords state, string[] tok, IEnumerable<SimulationLink> links) {
             Action a = new Action(tok, links, this.label);
 
             if (state == Rulewords.THEN)

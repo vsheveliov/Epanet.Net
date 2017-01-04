@@ -58,7 +58,7 @@ namespace Epanet.Hydraulic {
         public int CoeffsCount { get { return this.coeffsCount; } }
 
         ///<summary>Creates sparse representation of coeff. matrix.</summary>
-        public SparseMatrix(List<SimulationNode> nodes, List<SimulationLink> links, int juncs) {
+        public SparseMatrix(ICollection<SimulationNode> nodes, ICollection<SimulationLink> links, int juncs) {
 
             this.order = new int[nodes.Count + 1];
             this.row = new int[nodes.Count + 1];
@@ -96,8 +96,8 @@ namespace Epanet.Hydraulic {
         /// <param name="paraflag">Remove parallel links.</param>
         private void BuildLists(
             List<AdjItem>[] adjlist,
-            List<SimulationNode> nodes,
-            List<SimulationLink> links,
+            IEnumerable<SimulationNode> nodes,
+            IEnumerable<SimulationLink> links,
             bool paraflag) {
 
             bool pmark = false;

@@ -26,12 +26,12 @@ using Epanet.Enums;
 using Epanet.Hydraulic;
 using Epanet.Log;
 using Epanet.MSX;
-using Epanet.Network;
 using Epanet.Network.IO.Input;
 using Epanet.Quality;
 using Epanet.Report;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
 using UnitsType = Epanet.Enums.UnitsType;
 using Utilities = Epanet.Util.Utilities;
 
@@ -52,7 +52,7 @@ namespace Epanet.UI {
         private readonly TraceSource log;
 
         /// <summary>Loaded INP network.</summary>
-        private readonly Network.Network netInp;
+        private readonly EpanetNetwork netInp;
 
         /// <summary>Hydraulic simulator.</summary>
         private HydraulicSim hydSim;
@@ -90,7 +90,7 @@ namespace Epanet.UI {
             if (inpFile == null) return;
 
             this.fileInp = inpFile;
-            this.netInp = new Network.Network();
+            this.netInp = new EpanetNetwork();
 
             try {
                 InputParser inpParser;
@@ -162,8 +162,8 @@ namespace Epanet.UI {
                 try {
                     this.hydSim.StopRunning();
                 }
-                catch (ThreadInterruptedException e1) {
-                    Debug.Print(e1.ToString());
+                catch (ThreadInterruptedException ex) {
+                    Debug.Print(ex.ToString());
                 }
             }
 
@@ -183,14 +183,13 @@ namespace Epanet.UI {
 
             if (this.netInp != null) {
                 try {
-                    PropertiesMap pMap = this.netInp.PropertiesMap;
-                    this.unitsBox.SelectedIndex = pMap.UnitsFlag == UnitsType.SI ? 0 : 1;
-                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(pMap.RStep);
-                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.HStep);
-                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(pMap.QStep);
-                    this.textSimulationDuration.Text = pMap.Duration.GetClockTime();
-                    this.textReportStart.Text = pMap.RStart.GetClockTime();
-                    this.qualityCheckBox.Enabled = pMap.QualFlag != QualType.NONE;
+                    this.unitsBox.SelectedIndex = this.netInp.UnitsFlag == UnitsType.SI ? 0 : 1;
+                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.RStep);
+                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.HStep);
+                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.QStep);
+                    this.textSimulationDuration.Text = this.netInp.Duration.GetClockTime();
+                    this.textReportStart.Text = this.netInp.RStart.GetClockTime();
+                    this.qualityCheckBox.Enabled = this.netInp.QualFlag != QualType.NONE;
                 }
                 catch (ENException ex) {
                     Debug.Print(ex.ToString());
@@ -278,7 +277,7 @@ namespace Epanet.UI {
 
             this.hydVariables.Enabled = true;
             try {
-                if (this.netInp.PropertiesMap.QualFlag != QualType.NONE) {
+                if (this.netInp.QualFlag != QualType.NONE) {
                     if (this.qualityCheckBox.Checked) {
                         this.qualityVariables.Enabled = true;
                         this.qualityCheckBox.Enabled = true;
@@ -378,8 +377,6 @@ namespace Epanet.UI {
 
             try {
 
-                PropertiesMap pMap = this.netInp.PropertiesMap;
-
                 if (this.showHydraulicSolverEventsCheckBox.Checked) {
 
                     string logFile = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, "hydEvents.log");
@@ -400,11 +397,11 @@ namespace Epanet.UI {
                 int qualTStep = ((TimeStep)this.qualComboBox.SelectedItem).Time;
                 int durationTime = (int)(Utilities.GetHour(this.textSimulationDuration.Text) * 3600);
 
-                pMap.RStart = reportStartTime;
-                pMap.RStep = reportPeriod;
-                pMap.HStep = hydTStep;
-                pMap.Duration = durationTime;
-                pMap.QStep = qualTStep;
+                this.netInp.RStart = reportStartTime;
+                this.netInp.RStep = reportPeriod;
+                this.netInp.HStep = hydTStep;
+                this.netInp.Duration = durationTime;
+                this.netInp.QStep = qualTStep;
 
                 this.statusLabel.Text = "Simulating hydraulics";
 
@@ -417,7 +414,7 @@ namespace Epanet.UI {
                         10,
                         30,
                         () => this.hydSim.Htime,
-                        () => this.hydSim.Htime / (double)pMap.Duration);
+                        () => this.hydSim.Htime / (double)this.netInp.Duration);
                 }
                 catch (ENException ex) {
                     if (ex.getCodeID() == ErrorCode.Err1000)
@@ -456,7 +453,7 @@ namespace Epanet.UI {
                             30,
                             50,
                             () => this.netMsx.QTime,
-                            () => this.netMsx.QTime / (double)pMap.Duration);
+                            () => this.netMsx.QTime / (double)this.netInp.Duration);
                     }
                     catch (IOException) {}
                     catch (ENException) {
@@ -481,7 +478,7 @@ namespace Epanet.UI {
                             30,
                             50,
                             () => qSim.Qtime,
-                            () => qSim.Qtime / (double)pMap.Duration);
+                            () => qSim.Qtime / (double)this.netInp.Duration);
 
                     }
                     catch (ENException ex) {
@@ -528,7 +525,7 @@ namespace Epanet.UI {
                             50,
                             60,
                             () => this.gen.Rtime,
-                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
+                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
                     }
 
                     if (this.canselSimulation) return;
@@ -544,7 +541,7 @@ namespace Epanet.UI {
                             60,
                             70,
                             () => this.gen.Rtime,
-                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
+                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
                     }
 
                     if (this.canselSimulation) return;
@@ -574,7 +571,7 @@ namespace Epanet.UI {
                             70,
                             80,
                             () => this.netMsx.QTime,
-                            () => (this.gen.Rtime - pMap.RStart) / (double)pMap.Duration);
+                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
 
                     }
 

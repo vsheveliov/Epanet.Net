@@ -27,6 +27,8 @@ using Epanet.Network.IO.Input;
 using Epanet.Network.IO.Output;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet.UI {
 
     public sealed partial class EpanetUI : Form {
@@ -41,7 +43,7 @@ namespace Epanet.UI {
         /// <summary>Abstract representation of the network file(INP/XLSX/XML).</summary>
         private string inpFile;
 
-        private Network.Network net;
+        private EpanetNetwork net;
 
         private TraceSource log;
 
@@ -121,18 +123,18 @@ namespace Epanet.UI {
 
             this.textReservoirs.Text = resrvCount.ToString(CultureInfo.CurrentCulture);
             this.textTanks.Text = tanksCount.ToString(CultureInfo.CurrentCulture);
-            this.textPipes.Text = this.Net.Links.Count.ToString(CultureInfo.CurrentCulture);
-            this.textNodes.Text = this.Net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
+            this.textPipes.Text = this.net.Links.Count.ToString(CultureInfo.CurrentCulture);
+            this.textNodes.Text = this.net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
 
             try {
-                var pMap = this.Net.PropertiesMap;
-                this.textDuration.Text = pMap.Duration.GetClockTime();
-                this.textUnits.Text = pMap.UnitsFlag.ToString();
-                this.textHeadloss.Text = pMap.FormFlag.ToString();
-                this.textQuality.Text = pMap.QualFlag.ToString();
-                this.textDemand.Text = pMap.DMult.ToString(CultureInfo.CurrentCulture);
-                this.textHydraulic.Text = pMap.HStep.GetClockTime();
-                this.textPattern.Text = pMap.PStep.GetClockTime();
+                
+                this.textDuration.Text = this.net.Duration.GetClockTime();
+                this.textUnits.Text = this.net.UnitsFlag.ToString();
+                this.textHeadloss.Text = this.net.FormFlag.ToString();
+                this.textQuality.Text = this.net.QualFlag.ToString();
+                this.textDemand.Text = this.net.DMult.ToString(CultureInfo.CurrentCulture);
+                this.textHydraulic.Text = this.net.HStep.GetClockTime();
+                this.textPattern.Text = this.net.PStep.GetClockTime();
             }
             catch (ENException) { }
 
@@ -155,7 +157,7 @@ namespace Epanet.UI {
             
         }
 
-        private Network.Network Net {
+        private EpanetNetwork Net {
             get { return this.net; }
             set {
                 if (this.net == value) return;
@@ -208,7 +210,7 @@ namespace Epanet.UI {
             OutputComposer compose;
 
             string fileName = Path.GetFullPath(dlg.FileName);
-            string extension = Path.GetExtension(dlg.FileName) ?? string.Empty;
+            string extension = Path.GetExtension(dlg.FileName);
 
             switch (extension) {
                 case ".inp":
@@ -316,7 +318,7 @@ namespace Epanet.UI {
                     return;
             }
 
-            var epanetNetwork = new Network.Network();
+            var epanetNetwork = new EpanetNetwork();
 
             try {
                 inpParser.Parse(epanetNetwork, this.inpFile);

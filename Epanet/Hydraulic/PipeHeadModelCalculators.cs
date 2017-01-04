@@ -19,21 +19,22 @@ using System;
 
 using Epanet.Enums;
 using Epanet.Hydraulic.Structures;
-using Epanet.Network;
 using Epanet.Network.Structures;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Hydraulic.Models {
 
     ///<summary>Pipe head loss model calculators.</summary>
     public static class PipeHeadModelCalculators {
         /// <summary>Compute link coefficients through the implemented pipe headloss model.</summary>
-        ///  <param name="pMap">Network properties map.</param>
+        ///  <param name="net">Epanet Network.</param>
         ///  <param name="sL">Simulation link.</param>
         /// <param name="invHeadLoss">Computed link coefficients.</param>
         /// <param name="flowCorrection">Computed link coefficients.</param>
         /// <returns>Computed link coefficients.</returns>
         public delegate void Compute(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             SimulationLink sL,
             out double invHeadLoss,
             out double flowCorrection);
@@ -53,7 +54,7 @@ namespace Epanet.Hydraulic.Models {
 
         ///<summary>Darcy-Weishbach model calculator.</summary>
         public static void DwModelCalculator(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             SimulationLink sL,
             out double invHeadLoss,
             out double flowCorrection) {
@@ -71,7 +72,7 @@ namespace Epanet.Hydraulic.Models {
             if (isOne)
                 resistance = 1d;
             else {
-                double s = pMap.Viscos * diameter;
+                double s = net.Viscos * diameter;
                 double w = q / s;
 
                 if (w >= A1) {
@@ -102,9 +103,9 @@ namespace Epanet.Hydraulic.Models {
 
             double r1 = resistance * flowResistance + km;
             // Use large P coefficient for small flow resistance product
-            if (r1 * q < pMap.RQtol) {
-                invHeadLoss = 1d / pMap.RQtol;
-                flowCorrection = simFlow / pMap.HExp;
+            if (r1 * q < net.RQtol) {
+                invHeadLoss = 1d / net.RQtol;
+                flowCorrection = simFlow / net.HExp;
             }
             else {
                 // Compute P and Y coefficients
@@ -121,11 +122,11 @@ namespace Epanet.Hydraulic.Models {
 
         ///<summary>Chezy-Manning model calculator, which is implemented through the Hazen-Williams model.</summary>
         public static void CMModelCalculator(
-            PropertiesMap pmap,
+            EpanetNetwork net,
             SimulationLink sl,
             out double invheadloss,
             out double flowcorrection) {
-            HWModelCalculator(pmap, sl, out invheadloss, out flowcorrection);
+            HWModelCalculator(net, sl, out invheadloss, out flowcorrection);
         }
 
         #endregion
@@ -134,7 +135,7 @@ namespace Epanet.Hydraulic.Models {
 
         ///<summary>Hazen-Williams model calculator.</summary>
         public static void HWModelCalculator(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             SimulationLink sL,
             out double invHeadLoss,
             out double flowCorrection) {
@@ -146,14 +147,14 @@ namespace Epanet.Hydraulic.Models {
             double r1 = 1.0 * r + ml;
 
             // Use large P coefficient for small flow resistance product
-            if (r1 * q < pMap.RQtol) {
-                invHeadLoss = 1d / pMap.RQtol;
-                flowCorrection = sL.SimFlow / pMap.HExp;
+            if (r1 * q < net.RQtol) {
+                invHeadLoss = 1d / net.RQtol;
+                flowCorrection = sL.SimFlow / net.HExp;
                 return;
             }
 
-            double hpipe = r * Math.Pow(q, pMap.HExp); // Friction head loss
-            double p = pMap.HExp * hpipe; // Q*dh(friction)/dQ
+            double hpipe = r * Math.Pow(q, net.HExp); // Friction head loss
+            double p = net.HExp * hpipe; // Q*dh(friction)/dQ
             double hml;
 
             if (ml > 0d) {

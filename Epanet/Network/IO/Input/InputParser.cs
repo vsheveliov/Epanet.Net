@@ -79,12 +79,12 @@ namespace Epanet.Network.IO.Input {
                     // at the start or send of a quoted section...
                     inQuote = !inQuote;
                 }
-                else if (!inQuote && Char.IsWhiteSpace(c)) {
+                else if (!inQuote && char.IsWhiteSpace(c)) {
                     // We've come to the end of a token, so we find the token,
                     // trim it and add it to the collection of results...
                     if (tok.Length > 0) {
                         string result = tok.ToString().Trim();
-                        if (!String.IsNullOrEmpty(result))
+                        if (!string.IsNullOrEmpty(result))
                             results.Add(result);
                     }
 
@@ -100,7 +100,7 @@ namespace Epanet.Network.IO.Input {
             // We've come to the end of the string, so we add the last token...
             if (tok.Length > 0) {
                 string lastResult = tok.ToString().Trim();
-                if (!String.IsNullOrEmpty(lastResult))
+                if (!string.IsNullOrEmpty(lastResult))
                     results.Add(lastResult);
             }
 
@@ -118,67 +118,66 @@ namespace Epanet.Network.IO.Input {
 
         ///<summary>Adjust simulation configurations.</summary>
         protected static void AdjustData(Network net) {
-            PropertiesMap m = net.PropertiesMap;
+            
+            if (net.PStep <= 0) net.PStep = 3600;
+            if (net.RStep == 0) net.RStep = net.PStep;
+            if (net.HStep <= 0) net.HStep = 3600;
+            if (net.HStep > net.PStep) net.HStep = net.PStep;
+            if (net.HStep > net.RStep) net.HStep = net.RStep;
+            if (net.RStart > net.Duration) net.RStart = 0;
+            if (net.Duration == 0) net.QualFlag = QualType.NONE;
+            if (net.QStep == 0) net.QStep = net.HStep / 10;
+            if (net.RuleStep == 0) net.RuleStep = net.HStep / 10;
 
-            if (m.PStep <= 0) m.PStep = 3600;
-            if (m.RStep == 0) m.RStep = m.PStep;
-            if (m.HStep <= 0) m.HStep = 3600;
-            if (m.HStep > m.PStep) m.HStep = m.PStep;
-            if (m.HStep > m.RStep) m.HStep = m.RStep;
-            if (m.RStart > m.Duration) m.RStart = 0;
-            if (m.Duration == 0) m.QualFlag = QualType.NONE;
-            if (m.QStep == 0) m.QStep = m.HStep / 10;
-            if (m.RuleStep == 0) m.RuleStep = m.HStep / 10;
+            net.RuleStep = Math.Min(net.RuleStep, net.HStep);
+            net.QStep = Math.Min(net.QStep, net.HStep);
 
-            m.RuleStep = Math.Min(m.RuleStep, m.HStep);
-            m.QStep = Math.Min(m.QStep, m.HStep);
-
-            if (m.Ctol.IsMissing()) {
-                m.Ctol = m.QualFlag == QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
+            if (net.Ctol.IsMissing()) {
+                net.Ctol = net.QualFlag == QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
             }
 
-            switch (m.FlowFlag) {
+            switch (net.FlowFlag) {
             case FlowUnitsType.LPS:
             case FlowUnitsType.LPM:
             case FlowUnitsType.MLD:
             case FlowUnitsType.CMH:
             case FlowUnitsType.CMD:
-                m.UnitsFlag = UnitsType.SI;
+                net.UnitsFlag = UnitsType.SI;
                 break;
             default:
-                m.UnitsFlag = UnitsType.US;
+                net.UnitsFlag = UnitsType.US;
                 break;
             }
 
 
-            if (m.UnitsFlag != UnitsType.SI)
-                m.PressFlag = PressUnitsType.PSI;
-            else if (m.PressFlag == PressUnitsType.PSI)
-                m.PressFlag = PressUnitsType.METERS;
+            if (net.UnitsFlag != UnitsType.SI)
+                net.PressFlag = PressUnitsType.PSI;
+            else if (net.PressFlag == PressUnitsType.PSI)
+                net.PressFlag = PressUnitsType.METERS;
 
             var ucf = 1.0;
-            if (m.UnitsFlag == UnitsType.SI)
+            if (net.UnitsFlag == UnitsType.SI)
                 ucf = Math.Pow(Constants.MperFT, 2);
 
-            if (m.Viscos.IsMissing())
-                m.Viscos = Constants.VISCOS;
-            else if (m.Viscos > 1e-3)
-                m.Viscos = m.Viscos * Constants.VISCOS;
+            if (net.Viscos.IsMissing())
+                net.Viscos = Constants.VISCOS;
+            else if (net.Viscos > 1e-3)
+                net.Viscos = net.Viscos * Constants.VISCOS;
             else
-                m.Viscos = m.Viscos / ucf;
+                net.Viscos = net.Viscos / ucf;
 
-            if (m.Diffus.IsMissing())
-                m.Diffus = Constants.DIFFUS;
-            else if (m.Diffus > 1e-4)
-                m.Diffus = m.Diffus * Constants.DIFFUS;
+            if (net.Diffus.IsMissing())
+                net.Diffus = Constants.DIFFUS;
+            else if (net.Diffus > 1e-4)
+                net.Diffus = net.Diffus * Constants.DIFFUS;
             else
-                m.Diffus = m.Diffus / ucf;
+                net.Diffus = net.Diffus / ucf;
 
-            m.HExp = m.FormFlag == FormType.HW ? 1.852 : 2.0;
+            net.HExp = net.FormFlag == FormType.HW ? 1.852 : 2.0;
 
-            double rfactor = m.RFactor;
-            FormType formFlag = m.FormFlag;
-            double kbulk = m.KBulk;
+            double rfactor = net.RFactor;
+            FormType formFlag = net.FormFlag;
+            double kbulk = net.KBulk;
 
             foreach (Link link  in  net.Links) {
                 if (link.Type > LinkType.PIPE)
@@ -189,7 +188,7 @@ namespace Epanet.Network.IO.Input {
 
                 if (link.Kw.IsMissing()) {
                     if (rfactor == 0.0)
-                        link.Kw = m.KWall;
+                        link.Kw = net.KWall;
                     else if ((link.Roughness > 0.0) && (link.Diameter > 0.0)) {
                         if (formFlag == FormType.HW)
                             link.Kw = rfactor / link.Roughness;
@@ -207,7 +206,7 @@ namespace Epanet.Network.IO.Input {
                 if (tank.Kb.IsMissing())
                     tank.Kb = kbulk;
 
-            Pattern defpat = net.GetPattern(m.DefPatId) ?? net.GetPattern("");
+            Pattern defpat = net.GetPattern(net.DefPatId) ?? net.GetPattern("");
 
             foreach (Node node  in  net.Nodes) {
                 foreach (Demand d  in  node.Demand) {
@@ -216,7 +215,7 @@ namespace Epanet.Network.IO.Input {
                 }
             }
 
-            if (m.QualFlag == QualType.NONE)
+            if (net.QualFlag == QualType.NONE)
                 net.FieldsMap.GetField(FieldType.QUALITY).Enabled = false;
 
         }
@@ -268,8 +267,7 @@ namespace Epanet.Network.IO.Input {
         /// <param name="net">Hydraulic network reference.</param>
         private static void ConvertUnits(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             foreach (Node node  in  net.Nodes) {
                 node.Elevation /= fMap.GetUnits(FieldType.ELEV);
                 node.C0 /= fMap.GetUnits(FieldType.QUALITY);
@@ -286,13 +284,13 @@ namespace Epanet.Network.IO.Input {
             }
 
 
-            double ucf = Math.Pow(fMap.GetUnits(FieldType.FLOW), pMap.QExp)
+            double ucf = Math.Pow(fMap.GetUnits(FieldType.FLOW), net.QExp)
                          / fMap.GetUnits(FieldType.PRESSURE);
 
             foreach (Node node  in  net.Nodes) {
                 if (!(node is Tank))
                     if (node.Ke > 0.0)
-                        node.Ke = ucf / Math.Pow(node.Ke, pMap.QExp);
+                        node.Ke = ucf / Math.Pow(node.Ke, net.QExp);
             }
 
             foreach (Tank tk  in  net.Tanks) {
@@ -310,17 +308,17 @@ namespace Epanet.Network.IO.Input {
             }
 
 
-            pMap.CLimit = pMap.CLimit / fMap.GetUnits(FieldType.QUALITY);
-            pMap.Ctol = pMap.Ctol / fMap.GetUnits(FieldType.QUALITY);
+            net.CLimit = net.CLimit / fMap.GetUnits(FieldType.QUALITY);
+            net.Ctol = net.Ctol / fMap.GetUnits(FieldType.QUALITY);
 
-            pMap.KBulk = pMap.KBulk / Constants.SECperDAY;
-            pMap.KWall = pMap.KWall / Constants.SECperDAY;
+            net.KBulk = net.KBulk / Constants.SECperDAY;
+            net.KWall = net.KWall / Constants.SECperDAY;
 
 
             foreach (Link lk  in  net.Links) {
 
                 if (lk.Type <= LinkType.PIPE) {
-                    if (pMap.FormFlag == FormType.DW)
+                    if (net.FormFlag == FormType.DW)
                         lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldType.ELEV));
                     lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
                     lk.Lenght = lk.Lenght / fMap.GetUnits(FieldType.LENGTH);
@@ -334,7 +332,7 @@ namespace Epanet.Network.IO.Input {
                     Pump pump = (Pump)lk;
 
                     if (pump.Ptype == PumpType.CONST_HP) {
-                        if (pMap.UnitsFlag == UnitsType.SI)
+                        if (net.UnitsFlag == UnitsType.SI)
                             pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldType.POWER);
                     }
                     else {
@@ -367,7 +365,7 @@ namespace Epanet.Network.IO.Input {
                         }
                 }
 
-                lk.initResistance(net.PropertiesMap.FormFlag, net.PropertiesMap.HExp);
+                lk.initResistance(net.FormFlag, net.HExp);
             }
 
             foreach (Control c  in  net.Controls) {
@@ -489,6 +487,8 @@ namespace Epanet.Network.IO.Input {
                 }
             }
         }
+
+        // TODO: performance testing
 
         ///<summary>Check for unlinked nodes.</summary>
         /// <param name="net">Hydraulic network reference.</param>

@@ -27,6 +27,8 @@ using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet.MSX {
 
     ///<summary>Bridge between the hydraulic network properties and the multi-species simulation MSX class.</summary>
@@ -66,7 +68,7 @@ namespace Epanet.MSX {
 
         private readonly IList<Link> links;
         private readonly IList<Node> nodes;
-        private readonly Epanet.Network.Network net;
+        private readonly EpanetNetwork net;
 
         private HydraulicReader dseek;
 
@@ -80,7 +82,7 @@ namespace Epanet.MSX {
             return null;
         }
 
-        public ENToolkit2(Epanet.Network.Network net) {
+        public ENToolkit2(EpanetNetwork net) {
             this.net = net;
             this.links = net.Links;
             this.nodes = net.Nodes;
@@ -109,7 +111,7 @@ namespace Epanet.MSX {
 
         public FlowUnitsType ENgetflowunits() {
             try {
-                return (FlowUnitsType)this.net.PropertiesMap.FlowFlag;
+                return (FlowUnitsType)this.net.FlowFlag;
             }
             catch (ENException e) {
                 Debug.Print(e.ToString());
@@ -150,7 +152,7 @@ namespace Epanet.MSX {
 
             case EN_ROUGHNESS:
                 if (link.Type <= LinkType.PIPE) {
-                    v = this.net.PropertiesMap.FormFlag == FormType.DW
+                    v = this.net.FormFlag == FormType.DW
                         ? fMap.RevertUnit(FieldType.ELEV, link.Roughness * 1000.00)
                         : link.Roughness;
                 }
@@ -189,28 +191,28 @@ namespace Epanet.MSX {
             try {
                 switch (code) {
                 case EN_DURATION:
-                    value = this.net.PropertiesMap.Duration;
+                    value = this.net.Duration;
                     break;
                 case EN_HYDSTEP:
-                    value = this.net.PropertiesMap.HStep;
+                    value = this.net.HStep;
                     break;
                 case EN_QUALSTEP:
-                    value = this.net.PropertiesMap.QStep;
+                    value = this.net.QStep;
                     break;
                 case EN_PATTERNSTEP:
-                    value = this.net.PropertiesMap.PStep;
+                    value = this.net.PStep;
                     break;
                 case EN_PATTERNSTART:
-                    value = this.net.PropertiesMap.PStart;
+                    value = this.net.PStart;
                     break;
                 case EN_REPORTSTEP:
-                    value = this.net.PropertiesMap.RStep;
+                    value = this.net.RStep;
                     break;
                 case EN_REPORTSTART:
-                    value = this.net.PropertiesMap.RStart;
+                    value = this.net.RStart;
                     break;
                 case EN_STATISTIC:
-                    value = (long)this.net.PropertiesMap.TStatFlag;
+                    value = (long)this.net.TStatFlag;
                     break;
                 case EN_PERIODS:
                     throw new NotSupportedException();

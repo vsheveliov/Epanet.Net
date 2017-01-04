@@ -16,7 +16,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 using Epanet.Enums;
@@ -85,30 +84,23 @@ namespace Epanet.Hydraulic.IO {
         }
 
 
-        public static void Write(BinaryWriter outStream, HydraulicSim hydraulicSim, long hydStep) {
-
-            List<SimulationNode> nodes = hydraulicSim.Nodes;
-            List<SimulationLink> links = hydraulicSim.Links;
+        public static void Write(BinaryWriter bw, HydraulicSim hydraulicSim, long hydStep) {
             long hydTime = hydraulicSim.Htime;
 
-            // int nNodes = nodes.Count;
-            // int nLinks = links.Count;
-            // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double)  + sizeof(long) * 2;
-
-            foreach (SimulationNode node  in  nodes) {
-                outStream.Write((double)node.SimDemand);
-                outStream.Write((double)node.SimHead);
-                outStream.Write((double)0);
+            foreach(SimulationNode node in hydraulicSim.Nodes) {
+                bw.Write((double)node.SimDemand);
+                bw.Write((double)node.SimHead);
+                bw.Write((double)0);
             }
 
-            foreach (SimulationLink link  in  links) {
-                outStream.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
-                outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
-                outStream.Write((double)0.0);
+            foreach(SimulationLink link in hydraulicSim.Links) {
+                bw.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
+                bw.Write((double)(link.First.SimHead - link.Second.SimHead));
+                bw.Write((double)0.0);
             }
 
-            outStream.Write((long)hydStep);
-            outStream.Write((long)hydTime);
+            bw.Write((long)hydStep);
+            bw.Write((long)hydTime);
         }
 
         public static void WriteHydAndQual(
@@ -117,10 +109,10 @@ namespace Epanet.Hydraulic.IO {
             QualitySim qualitySim,
             long step,
             long time) {
-            List<QualityNode> qNodes = qualitySim != null ? qualitySim.NNodes : null;
-            List<QualityLink> qLinks = qualitySim != null ? qualitySim.NLinks : null;
-            List<SimulationNode> nodes = hydraulicSim.Nodes;
-            List<SimulationLink> links = hydraulicSim.Links;
+            QualityNode[] qNodes = qualitySim != null ? qualitySim.NNodes : null;
+            QualityLink[] qLinks = qualitySim != null ? qualitySim.NLinks : null;
+            var nodes = hydraulicSim.Nodes;
+            var links = hydraulicSim.Links;
 
             // int nNodes = nodes.Count;
             // int nLinks = links.Count;
@@ -154,8 +146,8 @@ namespace Epanet.Hydraulic.IO {
             long step,
             long time) {
 
-            List<SimulationNode> nodes = hydraulicSim.Nodes;
-            List<SimulationLink> links = hydraulicSim.Links;
+            var nodes = hydraulicSim.Nodes;
+            var links = hydraulicSim.Links;
 
             // int nNodes = nodes.Count;
             // int nLinks = links.Count;

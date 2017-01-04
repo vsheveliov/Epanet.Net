@@ -23,6 +23,8 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using Epanet.Network.Structures;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet.UI {
 
     internal sealed class NetworkPanel : Panel {
@@ -55,7 +57,7 @@ namespace Epanet.UI {
         private float dyo;
 
         /// <summary>Loaded hydraulic network.</summary>
-        private Network.Network net;
+        private EpanetNetwork net;
 
         private PointF panPoint;
         private float zoom = 0.9f;
@@ -107,7 +109,7 @@ namespace Epanet.UI {
         public PointF MousePoint { get; private set; }
 
         [DefaultValue(null)]
-        public Network.Network Net {
+        public EpanetNetwork Net {
             get { return this.net; }
             set {
                 if (value == this.net) return;

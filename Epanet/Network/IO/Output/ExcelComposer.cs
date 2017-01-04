@@ -314,7 +314,7 @@ namespace Epanet.Network.IO.Output {
 
             double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
             double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
-            double qexp = net.PropertiesMap.QExp;
+            double qexp = net.QExp;
 
             foreach (Node node  in  net.Junctions) {
                 if (node.Ke == 0.0) continue;
@@ -327,18 +327,17 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeEnergy(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.writer.Write(SectType.ENERGY.ParseStr(), NEWLINE);
 
-            if (pMap.ECost != 0.0)
-                this.writer.Write("GLOBAL", "PRICE", pMap.ECost, NEWLINE);
+            if (net.ECost != 0.0)
+                this.writer.Write("GLOBAL", "PRICE", net.ECost, NEWLINE);
 
-            if (!string.IsNullOrEmpty(pMap.EPatId))
-                this.writer.Write("GLOBAL", "PATTERN", pMap.EPatId, NEWLINE);
+            if (!string.IsNullOrEmpty(net.EPatId))
+                this.writer.Write("GLOBAL", "PATTERN", net.EPatId, NEWLINE);
 
-            this.writer.Write("GLOBAL", "EFFIC", pMap.EPump, NEWLINE);
-            this.writer.Write("DEMAND", "CHARGE", pMap.DCost, NEWLINE);
+            this.writer.Write("GLOBAL", "EFFIC", net.EPump, NEWLINE);
+            this.writer.Write("DEMAND", "CHARGE", net.DCost, NEWLINE);
 
             foreach (Pump p  in  net.Pumps) {
                 if (p.ECost > 0.0)
@@ -369,8 +368,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeJunctions(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
+           
             this.writer.Write(SectType.JUNCTIONS.ParseStr(), NEWLINE);
             this.writer.WriteHeader(JUNCS_SUBTITLE);
 
@@ -382,7 +380,7 @@ namespace Epanet.Network.IO.Output {
                     this.writer.Write(fMap.RevertUnit(FieldType.DEMAND, d.Base));
 
                     if (!string.IsNullOrEmpty(d.Pattern.Id)
-                        && !pMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
+                        && !net.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
                         this.writer.Write(d.Pattern.Id);
                 }
 
@@ -421,61 +419,60 @@ namespace Epanet.Network.IO.Output {
         private void ComposeOptions(Network net) {
             this.writer.Write(SectType.OPTIONS.ParseStr(), NEWLINE);
 
-            PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
 
-            this.writer.Write("UNITS", pMap.FlowFlag.ParseStr(), NEWLINE);
-            this.writer.Write("PRESSURE", pMap.PressFlag.ParseStr(), NEWLINE);
-            this.writer.Write("HEADLOSS", pMap.FormFlag.ParseStr(), NEWLINE);
+            this.writer.Write("UNITS", net.FlowFlag.ParseStr(), NEWLINE);
+            this.writer.Write("PRESSURE", net.PressFlag.ParseStr(), NEWLINE);
+            this.writer.Write("HEADLOSS", net.FormFlag.ParseStr(), NEWLINE);
 
-            if (!string.IsNullOrEmpty(pMap.DefPatId))
-                this.writer.Write("PATTERN", pMap.DefPatId, NEWLINE);
+            if (!string.IsNullOrEmpty(net.DefPatId))
+                this.writer.Write("PATTERN", net.DefPatId, NEWLINE);
 
-            if (pMap.HydFlag == HydType.USE)
-                this.writer.Write("HYDRAULICS USE", pMap.HydFname, NEWLINE);
+            if (net.HydFlag == HydType.USE)
+                this.writer.Write("HYDRAULICS USE", net.HydFname, NEWLINE);
 
-            if (pMap.HydFlag == HydType.SAVE)
-                this.writer.Write("HYDRAULICS SAVE", pMap.HydFname, NEWLINE);
+            if (net.HydFlag == HydType.SAVE)
+                this.writer.Write("HYDRAULICS SAVE", net.HydFname, NEWLINE);
 
-            if (pMap.ExtraIter == -1)
+            if (net.ExtraIter == -1)
                 this.writer.Write("UNBALANCED", "STOP", NEWLINE);
 
-            if (pMap.ExtraIter >= 0)
-                this.writer.Write("UNBALANCED", "CONTINUE", pMap.ExtraIter, NEWLINE);
+            if (net.ExtraIter >= 0)
+                this.writer.Write("UNBALANCED", "CONTINUE", net.ExtraIter, NEWLINE);
 
-            if (pMap.QualFlag == QualType.CHEM)
-                this.writer.Write("QUALITY", pMap.ChemName, pMap.ChemUnits, NEWLINE);
+            if (net.QualFlag == QualType.CHEM)
+                this.writer.Write("QUALITY", net.ChemName, net.ChemUnits, NEWLINE);
 
-            if (pMap.QualFlag == QualType.TRACE)
-                this.writer.Write("QUALITY", "TRACE", pMap.TraceNode, NEWLINE);
+            if (net.QualFlag == QualType.TRACE)
+                this.writer.Write("QUALITY", "TRACE", net.TraceNode, NEWLINE);
 
-            if (pMap.QualFlag == QualType.AGE)
+            if (net.QualFlag == QualType.AGE)
                 this.writer.Write("QUALITY", "AGE", NEWLINE);
 
-            if (pMap.QualFlag == QualType.NONE)
+            if (net.QualFlag == QualType.NONE)
                 this.writer.Write("QUALITY", "NONE", NEWLINE);
 
-            this.writer.Write("DEMAND", "MULTIPLIER", pMap.DMult, NEWLINE);
+            this.writer.Write("DEMAND", "MULTIPLIER", net.DMult, NEWLINE);
 
-            this.writer.Write("EMITTER", "EXPONENT", 1.0 / pMap.QExp, NEWLINE);
+            this.writer.Write("EMITTER", "EXPONENT", 1.0 / net.QExp, NEWLINE);
 
-            this.writer.Write("VISCOSITY", pMap.Viscos / Constants.VISCOS, NEWLINE);
+            this.writer.Write("VISCOSITY", net.Viscos / Constants.VISCOS, NEWLINE);
 
-            this.writer.Write("DIFFUSIVITY", pMap.Diffus / Constants.DIFFUS, NEWLINE);
+            this.writer.Write("DIFFUSIVITY", net.Diffus / Constants.DIFFUS, NEWLINE);
 
-            this.writer.Write("SPECIFIC", "GRAVITY", pMap.SpGrav, NEWLINE);
+            this.writer.Write("SPECIFIC", "GRAVITY", net.SpGrav, NEWLINE);
 
-            this.writer.Write("TRIALS", pMap.MaxIter, NEWLINE);
+            this.writer.Write("TRIALS", net.MaxIter, NEWLINE);
 
-            this.writer.Write("ACCURACY", pMap.HAcc, NEWLINE);
+            this.writer.Write("ACCURACY", net.HAcc, NEWLINE);
 
-            this.writer.Write("TOLERANCE", fMap.RevertUnit(FieldType.QUALITY, pMap.Ctol), NEWLINE);
+            this.writer.Write("TOLERANCE", fMap.RevertUnit(FieldType.QUALITY, net.Ctol), NEWLINE);
 
-            this.writer.Write("CHECKFREQ", pMap.CheckFreq, NEWLINE);
+            this.writer.Write("CHECKFREQ", net.CheckFreq, NEWLINE);
 
-            this.writer.Write("MAXCHECK", pMap.MaxCheck, NEWLINE);
+            this.writer.Write("MAXCHECK", net.MaxCheck, NEWLINE);
 
-            this.writer.Write("DAMPLIMIT", pMap.DampLimit, NEWLINE);
+            this.writer.Write("DAMPLIMIT", net.DampLimit, NEWLINE);
 
             this.writer.NewLine();
         }
@@ -506,9 +503,8 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePipes(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
             List<Link> pipes = new List<Link>();
+
             foreach (Link link  in  net.Links)
                 if (link.Type <= LinkType.PIPE)
                     pipes.Add(link);
@@ -519,7 +515,7 @@ namespace Epanet.Network.IO.Output {
             foreach (Link link  in  pipes) {
                 double d = link.Diameter;
                 double kc = link.Roughness;
-                if (pMap.FormFlag == FormType.DW)
+                if (net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
@@ -531,7 +527,7 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.LENGTH, link.Lenght),
                         fMap.RevertUnit(FieldType.DIAM, d));
 
-                //if (pMap.getFormflag() == FormType.DW)
+                // if (net.FormFlag == FormType.DW)
                 this.writer.Write(kc, km);
 
                 if (link.Type == LinkType.CV)
@@ -682,36 +678,35 @@ namespace Epanet.Network.IO.Output {
 
 
         private void ComposeReaction(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.writer.Write(SectType.REACTIONS.ParseStr(), NEWLINE);
             this.writer.WriteHeader(REACTIONS_SUBTITLE);
 
-            this.writer.Write("ORDER", "BULK", pMap.BulkOrder, NEWLINE);
-            this.writer.Write("ORDER", "WALL", pMap.WallOrder, NEWLINE);
-            this.writer.Write("ORDER", "TANK", pMap.TankOrder, NEWLINE);
-            this.writer.Write("GLOBAL", "BULK", pMap.KBulk * Constants.SECperDAY, NEWLINE);
-            this.writer.Write("GLOBAL", "WALL", pMap.KWall * Constants.SECperDAY, NEWLINE);
-            //if (pMap.getClimit() > 0.0)
-            this.writer.Write("LIMITING", "POTENTIAL", pMap.CLimit, NEWLINE);
+            this.writer.Write("ORDER", "BULK", net.BulkOrder, NEWLINE);
+            this.writer.Write("ORDER", "WALL", net.WallOrder, NEWLINE);
+            this.writer.Write("ORDER", "TANK", net.TankOrder, NEWLINE);
+            this.writer.Write("GLOBAL", "BULK", net.KBulk * Constants.SECperDAY, NEWLINE);
+            this.writer.Write("GLOBAL", "WALL", net.KWall * Constants.SECperDAY, NEWLINE);
+            // if (net.CLimit > 0.0)
+            this.writer.Write("LIMITING", "POTENTIAL", net.CLimit, NEWLINE);
 
-            //if (pMap.getRfactor() != Constants.MISSING && pMap.getRfactor() != 0.0)
-            this.writer.Write("ROUGHNESS", "CORRELATION", pMap.RFactor, NEWLINE);
+            // if (!net.RFactor.IsMissing() && net.RFactor != 0.0)
+            this.writer.Write("ROUGHNESS", "CORRELATION", net.RFactor, NEWLINE);
 
 
             foreach (Link link  in  net.Links) {
                 if (link.Type > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != pMap.KBulk)
+                if (link.Kb != net.KBulk)
                     this.writer.Write("BULK", link.Id, link.Kb * Constants.SECperDAY, NEWLINE);
-                if (link.Kw != pMap.KWall)
+                if (link.Kw != net.KWall)
                     this.writer.Write("WALL", link.Id, link.Kw * Constants.SECperDAY, NEWLINE);
             }
 
             foreach (Tank tank  in  net.Tanks) {
                 if (tank.IsReservoir) continue;
-                if (tank.Kb != pMap.KBulk)
+                if (tank.Kb != net.KBulk)
                     this.writer.Write("TANK", tank.Id, tank.Kb * Constants.SECperDAY, NEWLINE);
             }
             this.writer.NewLine();
@@ -720,14 +715,13 @@ namespace Epanet.Network.IO.Output {
         private void ComposeReport(Network net) {
             this.writer.Write(SectType.REPORT.ParseStr(), NEWLINE);
 
-            PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
-            this.writer.Write("PAGESIZE", pMap.PageSize, NEWLINE);
-            this.writer.Write("STATUS", pMap.Stat_Flag.ToString(), NEWLINE);
-            this.writer.Write("SUMMARY", pMap.SummaryFlag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
-            this.writer.Write("ENERGY", pMap.EnergyFlag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
+            this.writer.Write("PAGESIZE", net.PageSize, NEWLINE);
+            this.writer.Write("STATUS", net.Stat_Flag.ToString(), NEWLINE);
+            this.writer.Write("SUMMARY", net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
+            this.writer.Write("ENERGY", net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO, NEWLINE);
 
-            switch (pMap.NodeFlag) {
+            switch (net.NodeFlag) {
             case ReportFlag.FALSE:
                 this.writer.Write("NODES", "NONE", NEWLINE);
                 break;
@@ -747,7 +741,7 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            switch (pMap.LinkFlag) {
+            switch (net.LinkFlag) {
             case ReportFlag.FALSE:
                 this.writer.Write("LINKS", "NONE", NEWLINE);
                 break;
@@ -914,18 +908,17 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeTimes(Network net) {
             this.writer.Write(SectType.TIMES.ParseStr(), NEWLINE);
-            PropertiesMap pMap = net.PropertiesMap;
-
-            this.writer.Write("DURATION", TimeSpan.FromSeconds(pMap.Duration), NEWLINE);
-            this.writer.Write("HYDRAULIC", "TIMESTEP", TimeSpan.FromSeconds(pMap.HStep), NEWLINE);
-            this.writer.Write("QUALITY", "TIMESTEP", TimeSpan.FromSeconds(pMap.QStep), NEWLINE);
-            this.writer.Write("REPORT", "TIMESTEP", TimeSpan.FromSeconds(pMap.RStep), NEWLINE);
-            this.writer.Write("REPORT", "START", TimeSpan.FromSeconds(pMap.RStart), NEWLINE);
-            this.writer.Write("PATTERN", "TIMESTEP", TimeSpan.FromSeconds(pMap.PStep), NEWLINE);
-            this.writer.Write("PATTERN", "START", TimeSpan.FromSeconds(pMap.PStart), NEWLINE);
-            this.writer.Write("RULE", "TIMESTEP", TimeSpan.FromSeconds(pMap.RuleStep), NEWLINE);
-            this.writer.Write("START", "CLOCKTIME", TimeSpan.FromSeconds(pMap.TStart), NEWLINE);
-            this.writer.Write("STATISTIC", pMap.TStatFlag.ParseStr(), NEWLINE);
+            
+            this.writer.Write("DURATION", TimeSpan.FromSeconds(net.Duration), NEWLINE);
+            this.writer.Write("HYDRAULIC", "TIMESTEP", TimeSpan.FromSeconds(net.HStep), NEWLINE);
+            this.writer.Write("QUALITY", "TIMESTEP", TimeSpan.FromSeconds(net.QStep), NEWLINE);
+            this.writer.Write("REPORT", "TIMESTEP", TimeSpan.FromSeconds(net.RStep), NEWLINE);
+            this.writer.Write("REPORT", "START", TimeSpan.FromSeconds(net.RStart), NEWLINE);
+            this.writer.Write("PATTERN", "TIMESTEP", TimeSpan.FromSeconds(net.PStep), NEWLINE);
+            this.writer.Write("PATTERN", "START", TimeSpan.FromSeconds(net.PStart), NEWLINE);
+            this.writer.Write("RULE", "TIMESTEP", TimeSpan.FromSeconds(net.RuleStep), NEWLINE);
+            this.writer.Write("START", "CLOCKTIME", TimeSpan.FromSeconds(net.TStart), NEWLINE);
+            this.writer.Write("STATISTIC", net.TStatFlag.ParseStr(), NEWLINE);
             this.writer.NewLine();
         }
 

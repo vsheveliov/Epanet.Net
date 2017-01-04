@@ -18,9 +18,10 @@
 using System.Collections.Generic;
 
 using Epanet.Enums;
-using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Quality.Structures {
 
@@ -40,7 +41,7 @@ namespace Epanet.Quality.Structures {
         private readonly LinkedList<QualitySegment> segments;
 
         /// <summary>Initialize a new water quality Link wrapper from the original Link.</summary>
-        public QualityLink(IList<Node> oNodes, List<QualityNode> qNodes, Link link) {
+        public QualityLink(IList<Node> oNodes, IList<QualityNode> qNodes, Link link) {
             int n1 = oNodes.IndexOf(link.FirstNode);
             int n2 = oNodes.IndexOf(link.SecondNode);
             this.first = qNodes[n1];
@@ -87,12 +88,12 @@ namespace Epanet.Quality.Structures {
         }
 
         ///<summary>Get link average quality.</summary>
-        public double GetAverageQuality(PropertiesMap pMap) {
+        public double GetAverageQuality(EpanetNetwork net) {
             double vsum = 0.0,
                    msum = 0.0;
 
             try {
-                if (pMap != null && pMap.QualFlag == QualType.NONE)
+                if (net != null && net.QualFlag == QualType.NONE)
                     return 0.0;
             }
             catch (ENException) {

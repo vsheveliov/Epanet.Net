@@ -27,6 +27,8 @@ using Epanet.Network.Structures;
 using Epanet.Properties;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet.Hydraulic.Structures {
 
 
@@ -54,29 +56,6 @@ namespace Epanet.Hydraulic.Structures {
         protected StatType oldStatus;
 
 
-        public static SimulationLink CreateIndexedLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
-            SimulationLink ret;
-            if (@ref is Valve)
-                ret = new SimulationValve(new List<SimulationNode>(byId.Values), @ref, idx);
-            else if (@ref is Pump)
-                ret = new SimulationPump(new List<SimulationNode>(byId.Values), @ref, idx);
-            else
-                ret = new SimulationLink(byId, @ref, idx);
-
-            return ret;
-        }
-
-        public static SimulationLink CreateIndexedLink(List<SimulationNode> indexedNodes, Link @ref, int idx) {
-            SimulationLink ret = null;
-            if (@ref is Valve)
-                ret = new SimulationValve(indexedNodes, @ref, idx);
-            else if (@ref is Pump)
-                ret = new SimulationPump(indexedNodes, @ref, idx);
-            else
-                ret = new SimulationLink(indexedNodes, @ref, idx);
-
-            return ret;
-        }
 
         public SimulationLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
 
@@ -228,8 +207,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Compute P, Y and matrix coeffs.</summary>
         private void ComputeMatrixCoeff(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             PipeHeadModelCalculators.Compute hlModel,
             IList<Curve> curves,
             SparseMatrix smat,
@@ -239,11 +217,11 @@ namespace Epanet.Hydraulic.Structures {
             // Pipes
             case LinkType.CV:
             case LinkType.PIPE:
-                this.ComputePipeCoeff(pMap, hlModel);
+                this.ComputePipeCoeff(net, hlModel);
                 break;
             // Pumps
             case LinkType.PUMP:
-                ((SimulationPump)this).ComputePumpCoeff(fMap, pMap);
+                ((SimulationPump)this).ComputePumpCoeff(net);
                 break;
             // Valves
             case LinkType.PBV:
@@ -254,7 +232,7 @@ namespace Epanet.Hydraulic.Structures {
             case LinkType.PSV:
                 // If valve status fixed then treat as pipe
                 // otherwise ignore the valve for now.
-                if (!((SimulationValve)this).ComputeValveCoeff(fMap, pMap, curves))
+                if (!((SimulationValve)this).ComputeValveCoeff(net, curves))
                     return;
                 break;
             default:
@@ -286,7 +264,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Computes P & Y coefficients for pipe k.</summary>
-        private void ComputePipeCoeff(PropertiesMap pMap, PipeHeadModelCalculators.Compute hlModel) {
+        private void ComputePipeCoeff(EpanetNetwork net, PipeHeadModelCalculators.Compute hlModel) {
             // For closed pipe use headloss formula: h = CBIG*q
             if (this.status <= StatType.CLOSED) {
                 this.invHeadLoss = 1.0 / Constants.CBIG;
@@ -294,12 +272,12 @@ namespace Epanet.Hydraulic.Structures {
                 return;
             }
 
-            hlModel(pMap, this, out this.invHeadLoss, out this.flowCorrection);
+            hlModel(net, this, out this.invHeadLoss, out this.flowCorrection);
         }
 
 
         /// <summary>Closes link flowing into full or out of empty tank.</summary>
-        private void TankStatus(PropertiesMap pMap) {
+        private void TankStatus(EpanetNetwork net) {
             double q = this.flow;
             SimulationNode n1 = this.First;
             SimulationNode n2 = this.Second;
@@ -324,42 +302,42 @@ namespace Epanet.Hydraulic.Structures {
                 return;
 
             // If tank full, then prevent flow into it
-            if (tank.SimHead >= tank.Hmax - pMap.HTol) {
+            if (tank.SimHead >= tank.Hmax - net.HTol) {
                 //Case 1: Link is a pump discharging into tank
                 if (this.Type == LinkType.PUMP) {
                     if (this.Second == n1)
                         this.status = StatType.TEMPCLOSED;
                 }
-                else if (CvStatus(pMap, StatType.OPEN, h, q) == StatType.CLOSED)
+                else if (CvStatus(net, StatType.OPEN, h, q) == StatType.CLOSED)
                     //  Case 2: Downstream head > tank head
                     this.status = StatType.TEMPCLOSED;
             }
 
             // If tank empty, then prevent flow out of it
-            if (tank.SimHead <= tank.Hmin + pMap.HTol) {
+            if (tank.SimHead <= tank.Hmin + net.HTol) {
                 // Case 1: Link is a pump discharging from tank
                 if (this.Type == LinkType.PUMP) {
                     if (this.First == n1)
                         this.status = StatType.TEMPCLOSED;
                 }
                 // Case 2: Tank head > downstream head
-                else if (CvStatus(pMap, StatType.CLOSED, h, q) == StatType.OPEN)
+                else if (CvStatus(net, StatType.CLOSED, h, q) == StatType.OPEN)
                     this.status = StatType.TEMPCLOSED;
             }
         }
 
         /// <summary>Updates status of a check valve.</summary>
-        private static StatType CvStatus(PropertiesMap pMap, StatType s, double dh, double q) {
-            if (Math.Abs(dh) > pMap.HTol) {
-                if (dh < -pMap.HTol)
+        private static StatType CvStatus(EpanetNetwork net, StatType s, double dh, double q) {
+            if (Math.Abs(dh) > net.HTol) {
+                if (dh < -net.HTol)
                     return (StatType.CLOSED);
-                else if (q < -pMap.QTol)
+                else if (q < -net.QTol)
                     return (StatType.CLOSED);
                 else
                     return (StatType.OPEN);
             }
             else {
-                if (q < -pMap.QTol)
+                if (q < -net.QTol)
                     return (StatType.CLOSED);
                 else
                     return (s);
@@ -367,7 +345,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
-        private bool LinkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log) {
+        private bool LinkStatus(EpanetNetwork net, TraceSource log) {
             bool change = false;
 
             double dh = this.first.SimHead - this.second.SimHead;
@@ -378,21 +356,21 @@ namespace Epanet.Hydraulic.Structures {
                 this.status = StatType.OPEN;
 
             if (this.Type == LinkType.CV)
-                this.status = CvStatus(pMap, this.status, dh, this.flow);
+                this.status = CvStatus(net, this.status, dh, this.flow);
 
             if (this is SimulationPump && this.status >= StatType.OPEN && this.setting > 0.0)
-                this.status = ((SimulationPump)this).PumpStatus(pMap, -dh);
+                this.status = ((SimulationPump)this).PumpStatus(net, -dh);
 
             if (this.Type == LinkType.FCV && !this.setting.IsMissing())
-                this.status = ((SimulationValve)this).FcvStatus(pMap, tStatus);
+                this.status = ((SimulationValve)this).FcvStatus(net, tStatus);
 
             if (this.first is SimulationTank || this.second is SimulationTank)
-                this.TankStatus(pMap);
+                this.TankStatus(net);
 
             if (tStatus != this.status) {
                 change = true;
-                if (pMap.Stat_Flag == StatFlag.FULL)
-                    LogStatChange(fMap, log, this, tStatus, this.status);
+                if (net.Stat_Flag == StatFlag.FULL)
+                    LogStatChange(net.FieldsMap, log, this, tStatus, this.status);
             }
 
             return (change);
@@ -451,10 +429,10 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Determines new status for pumps, CVs, FCVs & pipes to tanks.</summary>
-        public static bool LinkStatus(PropertiesMap pMap, FieldsMap fMap, TraceSource log, List<SimulationLink> links) {
+        public static bool LinkStatus(EpanetNetwork net, TraceSource log, IEnumerable<SimulationLink> links) {
             bool change = false;
             foreach (SimulationLink link  in  links) {
-                if (link.LinkStatus(pMap, fMap, log))
+                if (link.LinkStatus(net, log))
                     change = true;
             }
             return change;
@@ -462,16 +440,15 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes solution matrix coefficients for links.</summary>
         public static void ComputeMatrixCoeffs(
-            FieldsMap fMap,
-            PropertiesMap pMap,
+            EpanetNetwork net,
             PipeHeadModelCalculators.Compute hlModel,
-            List<SimulationLink> links,
+            IEnumerable<SimulationLink> links,
             IList<Curve> curves,
             SparseMatrix smat,
             LSVariables ls) {
 
             foreach (SimulationLink link  in  links) {
-                link.ComputeMatrixCoeff(fMap, pMap, hlModel, curves, smat, ls);
+                link.ComputeMatrixCoeff(net, hlModel, curves, smat, ls);
             }
         }
 

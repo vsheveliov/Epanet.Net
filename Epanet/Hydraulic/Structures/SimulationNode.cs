@@ -19,15 +19,16 @@ using System;
 using System.Collections.Generic;
 
 using Epanet.Enums;
-using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Util;
+
+using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.Hydraulic.Structures {
 
 
     public class SimulationNode {
-        protected readonly int index;
+        private readonly int index;
         protected readonly Node node;
 
         ///<summary>Epanet 'H[n]' variable, node head.</summary>
@@ -37,14 +38,7 @@ namespace Epanet.Hydraulic.Structures {
         protected double demand; 
 
         ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
-        protected double emitter; 
-
-
-        public static SimulationNode CreateIndexedNode(Node networkNode, int idx) {
-            return networkNode is Tank
-                ? new SimulationTank(networkNode, idx)
-                : new SimulationNode(networkNode, idx);
-        }
+        private double emitter; 
 
         public SimulationNode(Node @ref, int idx) {
             this.node = @ref;
@@ -94,7 +88,7 @@ namespace Epanet.Hydraulic.Structures {
         /// Ke*(Flow)^Qexp, where Ke = emitter headloss coeff.
         /// </remarks>
         public static void ComputeEmitterCoeffs(
-            PropertiesMap pMap,
+            EpanetNetwork net,
             List<SimulationNode> junctions,
             SparseMatrix smat,
             LSVariables ls) {
@@ -105,10 +99,10 @@ namespace Epanet.Hydraulic.Structures {
 
                 double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
                 double q = node.emitter;
-                double z = ke * Math.Pow(Math.Abs(q), pMap.QExp);
-                double p = pMap.QExp * z / Math.Abs(q);
+                double z = ke * Math.Pow(Math.Abs(q), net.QExp);
+                double p = net.QExp * z / Math.Abs(q);
 
-                p = p < pMap.RQtol ? 1.0 / pMap.RQtol : 1.0 / p;
+                p = p < net.RQtol ? 1.0 / net.RQtol : 1.0 / p;
 
                 double y = Utilities.GetSignal(q) * z * p;
                 ls.AddAii(smat.GetRow(node.Index), +p);
@@ -118,11 +112,11 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Computes flow change at an emitter node.</summary>
-        public double EmitFlowChange(PropertiesMap pMap) {
+        public double EmitFlowChange(EpanetNetwork net) {
             double ke = Math.Max(Constants.CSMALL, this.Ke);
-            double p = pMap.QExp * ke * Math.Pow(Math.Abs(this.emitter), (pMap.QExp - 1.0));
-            p = p < pMap.RQtol ? 1.0d / pMap.RQtol : 1.0d / p;
-            return (this.emitter / pMap.QExp - p * (this.head - this.Elevation));
+            double p = net.QExp * ke * Math.Pow(Math.Abs(this.emitter), (net.QExp - 1.0));
+            p = p < net.RQtol ? 1.0d / net.RQtol : 1.0d / p;
+            return (this.emitter / net.QExp - p * (this.head - this.Elevation));
         }
 
     }

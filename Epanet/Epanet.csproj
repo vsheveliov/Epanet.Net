@@ -83,7 +83,6 @@
     <Compile Include="Network\IO\Output\XMLComposer.cs" />
     <Compile Include="Network\IStringKeyed.cs" />
     <Compile Include="Network\Network.cs" />
-    <Compile Include="Network\PropertiesMap.cs" />
     <Compile Include="Network\StringKeyedCollection.cs" />
     <Compile Include="Network\Structures\Control.cs" />
     <Compile Include="Network\Structures\Curve.cs" />

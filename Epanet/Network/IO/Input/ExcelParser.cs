@@ -137,13 +137,13 @@ namespace Epanet.Network.IO.Input {
 
             AdjustData(net);
             net.FieldsMap.Prepare(
-                   net.PropertiesMap.UnitsFlag,
-                   net.PropertiesMap.FlowFlag,
-                   net.PropertiesMap.PressFlag,
-                   net.PropertiesMap.QualFlag,
-                   net.PropertiesMap.ChemUnits,
-                   net.PropertiesMap.SpGrav,
-                   net.PropertiesMap.HStep);
+                   net.UnitsFlag,
+                   net.FlowFlag,
+                   net.PressFlag,
+                   net.QualFlag,
+                   net.ChemUnits,
+                   net.SpGrav,
+                   net.HStep);
 
             this.Convert(net);
             return net;

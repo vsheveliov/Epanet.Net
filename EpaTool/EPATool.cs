@@ -32,6 +32,8 @@ using Epanet.Network.Structures;
 using Epanet.Quality;
 using Epanet.Util;
 
+using EpanetNetwork = Epanet.Network.Network;
+
 namespace Epanet {
 
     public class EPATool {
@@ -147,7 +149,7 @@ namespace Epanet {
 
             string hydFile = null;
             string qualFile = null;
-            Network.Network net = new Network.Network();
+            var net = new EpanetNetwork();
 
             List<NodeVariableType> nodesVariables = new List<NodeVariableType>();
             List<LinkVariableType> linksVariables = new List<LinkVariableType>();
@@ -201,18 +203,18 @@ namespace Epanet {
             try {
                 InputParser parserINP = InputParser.Create(FileType.INP_FILE, log);
                 parserINP.Parse(net, inFile);
-                PropertiesMap pMap = net.PropertiesMap;
+                
 
                 if (targetTimes.Count > 0) {
                     foreach (long time  in  targetTimes) {
                         string epanetTime = time.GetClockTime();
-                        if (time < pMap.RStart)
+                        if (time < net.RStart)
                             throw new Exception("Target time \"" + epanetTime + "\" smaller than simulation start time");
 
-                        if (time > pMap.Duration)
+                        if (time > net.Duration)
                             throw new Exception("Target time \"" + epanetTime + "\" bigger than simulation duration");
 
-                        if ((time - pMap.RStart) % pMap.RStep != 0)
+                        if ((time - net.RStart) % net.RStep != 0)
                             throw new Exception("Target time \"" + epanetTime + "\" not found");
                     }
                 }
@@ -230,14 +232,14 @@ namespace Epanet {
                 nodesVariables.Add(NodeVariableType.ELEVATION);
                 nodesVariables.Add(NodeVariableType.BASEDEMAND);
 
-                if (pMap.QualFlag != QualType.NONE)
+                if (net.QualFlag != QualType.NONE)
                     nodesVariables.Add(NodeVariableType.INITQUALITY);
 
                 nodesVariables.Add(NodeVariableType.PRESSURE);
                 nodesVariables.Add(NodeVariableType.HEAD);
                 nodesVariables.Add(NodeVariableType.DEMAND);
 
-                if (pMap.QualFlag != (QualType.NONE))
+                if (net.QualFlag != (QualType.NONE))
                     nodesVariables.Add(NodeVariableType.QUALITY);
 
                 linksVariables.Add(LinkVariableType.LENGHT);
@@ -248,7 +250,7 @@ namespace Epanet {
                 linksVariables.Add(LinkVariableType.UNITHEADLOSS);
                 linksVariables.Add(LinkVariableType.FRICTIONFACTOR);
 
-                if (pMap.QualFlag != QualType.NONE)
+                if (net.QualFlag != QualType.NONE)
                     linksVariables.Add(LinkVariableType.QUALITY);
 
                 hydFile = Path.GetTempFileName(); // "hydSim.bin"
@@ -259,7 +261,7 @@ namespace Epanet {
                 hydSim.Simulate(hydFile);
 
 
-                if (net.PropertiesMap.QualFlag != (QualType.NONE)) {
+                if (net.QualFlag != QualType.NONE) {
                     qualFile = Path.GetTempFileName(); // "qualSim.bin"
 
                     QualitySim q = new QualitySim(net, log);
@@ -314,7 +316,7 @@ namespace Epanet {
                 }
 
 
-                for (long time = pMap.RStart; time <= pMap.Duration; time += pMap.RStep) {
+                for (long time = net.RStart; time <= net.Duration; time += net.RStep) {
                     AwareStep step = hydReader.GetStep((int)time);
 
                     int i = 0;
@@ -360,7 +362,7 @@ namespace Epanet {
                                 linksTextWriter.Write('\t');
                                 double val = GetLinkValue(
                                     linkVar,
-                                    net.PropertiesMap.FormFlag,
+                                    net.FormFlag,
                                     net.FieldsMap,
                                     step,
                                     link,

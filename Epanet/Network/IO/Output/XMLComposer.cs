@@ -113,7 +113,7 @@ namespace Epanet.Network.IO.Output {
                     this.writer.WriteAttributeString("demand", baseDemand.ToString(NumberFormatInfo.InvariantInfo));
 
                     if(!string.IsNullOrEmpty(d.Pattern.Id)
-                        && !net.PropertiesMap.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
+                        && !net.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
                         this.writer.WriteAttributeString("pattern", d.Pattern.Id);
                     
                     if (!string.IsNullOrEmpty(node.Comment)) {
@@ -219,8 +219,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePipes(Network net) {
             FieldsMap fMap = net.FieldsMap;
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             if(net.Links.Count == 0)
                 return;
 
@@ -235,7 +234,7 @@ namespace Epanet.Network.IO.Output {
             foreach(Link link in pipes) {
                 double d = link.Diameter;
                 double kc = link.Roughness;
-                if(pMap.FormFlag == FormType.DW)
+                if(net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
@@ -400,7 +399,7 @@ namespace Epanet.Network.IO.Output {
             
             double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
             double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
-            double qexp = net.PropertiesMap.QExp;
+            double qexp = net.QExp;
 
             foreach(Node node in net.Junctions) {
                 if(node.Ke == 0.0)
@@ -667,17 +666,16 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeReaction(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.writer.WriteStartElement(SectType.REACTIONS.ToString());
 
-            WriteTag("order bulk", pMap.BulkOrder.ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("order wall", pMap.WallOrder.ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("order tank", pMap.TankOrder.ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("global bulk", (pMap.KBulk * Constants.SECperDAY).ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("global wall", (pMap.KWall * Constants.SECperDAY).ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("limiting potential", pMap.CLimit.ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("roughness correlation", pMap.RFactor.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("order bulk", net.BulkOrder.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("order wall", net.WallOrder.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("order tank", net.TankOrder.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("global bulk", (net.KBulk * Constants.SECperDAY).ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("global wall", (net.KWall * Constants.SECperDAY).ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("limiting potential", net.CLimit.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("roughness correlation", net.RFactor.ToString(NumberFormatInfo.InvariantInfo));
 
 
 
@@ -685,7 +683,7 @@ namespace Epanet.Network.IO.Output {
                 if(link.Type > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != pMap.KBulk) {
+                if (link.Kb != net.KBulk) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "bulk");
                     this.writer.WriteAttributeString("link", link.Id);
@@ -693,7 +691,7 @@ namespace Epanet.Network.IO.Output {
                     this.writer.WriteEndElement();                    
                 }
 
-                if (link.Kw != pMap.KWall) {
+                if (link.Kw != net.KWall) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "wall");
                     this.writer.WriteAttributeString("link", link.Id);
@@ -705,7 +703,7 @@ namespace Epanet.Network.IO.Output {
             foreach(Tank tank in net.Tanks) {
                 if(tank.IsReservoir)
                     continue;
-                if (tank.Kb != pMap.KBulk) {
+                if (tank.Kb != net.KBulk) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "tank");
                     this.writer.WriteAttributeString("id", tank.Id);
@@ -718,18 +716,17 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeEnergy(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
-
+            
             this.writer.WriteStartElement(SectType.ENERGY.ToString());
 
-            if (pMap.ECost != 0.0)
-                WriteTag("global price", pMap.ECost.ToString(NumberFormatInfo.InvariantInfo));
+            if (net.ECost != 0.0)
+                WriteTag("global price", net.ECost.ToString(NumberFormatInfo.InvariantInfo));
 
-            if (!string.IsNullOrEmpty(pMap.EPatId))
-                WriteTag("global pattern", pMap.EPatId);
+            if (!string.IsNullOrEmpty(net.EPatId))
+                WriteTag("global pattern", net.EPatId);
 
-            WriteTag("global effic", pMap.EPump.ToString(NumberFormatInfo.InvariantInfo));
-            WriteTag("demand charge", pMap.DCost.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("global effic", net.EPump.ToString(NumberFormatInfo.InvariantInfo));
+            WriteTag("demand charge", net.DCost.ToString(NumberFormatInfo.InvariantInfo));
 
             foreach(Pump pump in net.Pumps) {
                 if (pump.ECost > 0.0) {
@@ -766,19 +763,19 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeTimes(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
+            
             this.writer.WriteStartElement(SectType.TIMES.ToString());
 
-            WriteTag("DURATION", pMap.Duration.GetClockTime());
-            WriteTag("HYDRAULIC_TIMESTEP", pMap.HStep.GetClockTime());
-            WriteTag("QUALITY_TIMESTEP", pMap.QStep.GetClockTime());
-            WriteTag("REPORT_TIMESTEP", pMap.RStep.GetClockTime());
-            WriteTag("REPORT_START", pMap.RStart.GetClockTime());
-            WriteTag("PATTERN_TIMESTEP", pMap.PStep.GetClockTime());
-            WriteTag("PATTERN_START", pMap.PStart.GetClockTime());
-            WriteTag("RULE_TIMESTEP", pMap.RuleStep.GetClockTime());
-            WriteTag("START_CLOCKTIME", pMap.TStart.GetClockTime());
-            WriteTag("STATISTIC", pMap.TStatFlag.ParseStr());
+            WriteTag("DURATION", net.Duration.GetClockTime());
+            WriteTag("HYDRAULIC_TIMESTEP", net.HStep.GetClockTime());
+            WriteTag("QUALITY_TIMESTEP", net.QStep.GetClockTime());
+            WriteTag("REPORT_TIMESTEP", net.RStep.GetClockTime());
+            WriteTag("REPORT_START", net.RStart.GetClockTime());
+            WriteTag("PATTERN_TIMESTEP", net.PStep.GetClockTime());
+            WriteTag("PATTERN_START", net.PStart.GetClockTime());
+            WriteTag("RULE_TIMESTEP", net.RuleStep.GetClockTime());
+            WriteTag("START_CLOCKTIME", net.TStart.GetClockTime());
+            WriteTag("STATISTIC", net.TStatFlag.ParseStr());
 
             this.writer.WriteEndElement();
         }
@@ -786,48 +783,47 @@ namespace Epanet.Network.IO.Output {
 
 
         private void ComposeOptions(Network net) {
-            PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.OPTIONS.ToString());
 
-            this.WriteTag("units", pMap.FlowFlag.ParseStr());
-            this.WriteTag("pressure", pMap.PressFlag.ParseStr());
-            this.WriteTag("headloss", pMap.FormFlag.ParseStr());
+            this.WriteTag("units", net.FlowFlag.ParseStr());
+            this.WriteTag("pressure", net.PressFlag.ParseStr());
+            this.WriteTag("headloss", net.FormFlag.ParseStr());
 
-            if(!string.IsNullOrEmpty(pMap.DefPatId))
-                this.WriteTag("pattern", pMap.DefPatId);
+            if(!string.IsNullOrEmpty(net.DefPatId))
+                this.WriteTag("pattern", net.DefPatId);
 
-            switch (pMap.HydFlag) {
+            switch (net.HydFlag) {
             case HydType.USE:
-                WriteTag("hydraulics use", pMap.HydFname);
+                WriteTag("hydraulics use", net.HydFname);
                 break;
             case HydType.SAVE:
-                WriteTag("hydraulics save", pMap.HydFname);
+                WriteTag("hydraulics save", net.HydFname);
                 break;
             }
 
-            if (pMap.ExtraIter == -1) {
+            if (net.ExtraIter == -1) {
                 WriteTag("unbalanced stop", "");
             }
-            else if (pMap.ExtraIter >= 0) {
-                WriteTag("unbalanced continue", pMap.ExtraIter.ToString());
+            else if (net.ExtraIter >= 0) {
+                WriteTag("unbalanced continue", net.ExtraIter.ToString());
             }
 
-            switch (pMap.QualFlag) {
+            switch (net.QualFlag) {
             case QualType.CHEM:
             this.writer.WriteStartElement("option");
                 this.writer.WriteAttributeString("name", "quality");
                 this.writer.WriteAttributeString("value", "chem");
-                this.writer.WriteAttributeString("chemname", pMap.ChemName);
-                this.writer.WriteAttributeString("chemunits", pMap.ChemUnits);
+                this.writer.WriteAttributeString("chemname", net.ChemName);
+                this.writer.WriteAttributeString("chemunits", net.ChemUnits);
                 this.writer.WriteEndElement();
                 break;
             case QualType.TRACE:
             this.writer.WriteStartElement("option");
                 this.writer.WriteAttributeString("name", "quality");
                 this.writer.WriteAttributeString("value", "trace");
-                this.writer.WriteAttributeString("node", pMap.TraceNode);
+                this.writer.WriteAttributeString("node", net.TraceNode);
                 this.writer.WriteEndElement();
                 break;
             case QualType.AGE:
@@ -838,17 +834,17 @@ namespace Epanet.Network.IO.Output {
                 break;
             }
 
-            this.WriteTag("demand_multiplier", pMap.DMult.ToString(NumberFormatInfo.InvariantInfo));
-            this.WriteTag("emitter_exponent", (1.0 / pMap.QExp).ToString(NumberFormatInfo.InvariantInfo));
-            this.WriteTag("viscosity", (pMap.Viscos / Constants.VISCOS).ToString(NumberFormatInfo.InvariantInfo));
-            this.WriteTag("diffusivity", (pMap.Diffus / Constants.DIFFUS).ToString(NumberFormatInfo.InvariantInfo));
-            this.WriteTag("specific_gravity", pMap.SpGrav.ToString(NumberFormatInfo.InvariantInfo));
-            this.WriteTag("trials", pMap.MaxIter.ToString());
-            this.WriteTag("accuracy", pMap.HAcc.ToString(CultureInfo.InvariantCulture));
-            this.WriteTag("tolerance", fMap.RevertUnit(FieldType.QUALITY, pMap.Ctol).ToString(CultureInfo.InvariantCulture));
-            this.WriteTag("checkfreq", pMap.CheckFreq.ToString());
-            this.WriteTag("maxcheck", pMap.MaxCheck.ToString());
-            this.WriteTag("damplimit", pMap.DampLimit.ToString(CultureInfo.InvariantCulture));
+            this.WriteTag("demand_multiplier", net.DMult.ToString(NumberFormatInfo.InvariantInfo));
+            this.WriteTag("emitter_exponent", (1.0 / net.QExp).ToString(NumberFormatInfo.InvariantInfo));
+            this.WriteTag("viscosity", (net.Viscos / Constants.VISCOS).ToString(NumberFormatInfo.InvariantInfo));
+            this.WriteTag("diffusivity", (net.Diffus / Constants.DIFFUS).ToString(NumberFormatInfo.InvariantInfo));
+            this.WriteTag("specific_gravity", net.SpGrav.ToString(NumberFormatInfo.InvariantInfo));
+            this.WriteTag("trials", net.MaxIter.ToString());
+            this.WriteTag("accuracy", net.HAcc.ToString(CultureInfo.InvariantCulture));
+            this.WriteTag("tolerance", fMap.RevertUnit(FieldType.QUALITY, net.Ctol).ToString(CultureInfo.InvariantCulture));
+            this.WriteTag("checkfreq", net.CheckFreq.ToString());
+            this.WriteTag("maxcheck", net.MaxCheck.ToString());
+            this.WriteTag("damplimit", net.DampLimit.ToString(CultureInfo.InvariantCulture));
 
             ComposeExtraOptions(net);
 
@@ -856,7 +852,7 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeExtraOptions(Network net) {
-            var extraOptions = net.PropertiesMap.ExtraOptions;
+            var extraOptions = net.ExtraOptions;
 
             if(extraOptions.Count == 0)
                 return;
@@ -872,14 +868,13 @@ namespace Epanet.Network.IO.Output {
 
             this.writer.WriteStartElement(SectType.REPORT.ToString());
 
-            PropertiesMap pMap = net.PropertiesMap;
             FieldsMap fMap = net.FieldsMap;
-            WriteTag("pagesize", pMap.PageSize.ToString());
-            WriteTag("status", pMap.Stat_Flag.ParseStr());
-            WriteTag("summary", (pMap.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            WriteTag("energy", (pMap.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            WriteTag("pagesize", net.PageSize.ToString());
+            WriteTag("status", net.Stat_Flag.ParseStr());
+            WriteTag("summary", (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
+            WriteTag("energy", (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
-            switch (pMap.NodeFlag) {
+            switch (net.NodeFlag) {
             case ReportFlag.FALSE:
                 WriteTag("nodes", "none");
                 break;
@@ -904,7 +899,7 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            switch (pMap.LinkFlag) {
+            switch (net.LinkFlag) {
             case ReportFlag.FALSE:
                 WriteTag("links", "none");
                 break;

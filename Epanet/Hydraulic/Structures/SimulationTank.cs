@@ -127,7 +127,7 @@ namespace Epanet.Hydraulic.Structures {
 
             double h = this.head; // Current tank grade
             double q = this.demand; // Flow into tank
-            double v = 0.0;
+            double v;
 
             if (Math.Abs(q) <= Constants.QZERO)
                 return tstep;

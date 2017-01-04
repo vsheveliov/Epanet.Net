@@ -301,13 +301,13 @@ namespace Epanet.Network.IO.Input {
             AdjustData(net);
 
             net.FieldsMap.Prepare(
-                   net.PropertiesMap.UnitsFlag,
-                   net.PropertiesMap.FlowFlag,
-                   net.PropertiesMap.PressFlag,
-                   net.PropertiesMap.QualFlag,
-                   net.PropertiesMap.ChemUnits,
-                   net.PropertiesMap.SpGrav,
-                   net.PropertiesMap.HStep);
+                   net.UnitsFlag,
+                   net.FlowFlag,
+                   net.PressFlag,
+                   net.QualFlag,
+                   net.ChemUnits,
+                   net.SpGrav,
+                   net.HStep);
 
             this.Convert(net);
             return net;
@@ -1049,11 +1049,11 @@ namespace Epanet.Network.IO.Input {
                     throw new ENException(ErrorCode.Err213);
                 }
 
-                if (tok[1].Match(Keywords.w_BULK)) net.PropertiesMap.BulkOrder = y;
-                else if (tok[1].Match(Keywords.w_TANK)) net.PropertiesMap.TankOrder = y;
+                if (tok[1].Match(Keywords.w_BULK)) net.BulkOrder = y;
+                else if (tok[1].Match(Keywords.w_TANK)) net.TankOrder = y;
                 else if (tok[1].Match(Keywords.w_WALL)) {
-                    if (y == 0.0) net.PropertiesMap.WallOrder = 0.0;
-                    else if (y == 1.0) net.PropertiesMap.WallOrder = 1.0;
+                    if (y == 0.0) net.WallOrder = 0.0;
+                    else if (y == 1.0) net.WallOrder = 1.0;
                     else throw new ENException(ErrorCode.Err213);
                 }
                 else throw new ENException(ErrorCode.Err213);
@@ -1064,7 +1064,7 @@ namespace Epanet.Network.IO.Input {
                 if (!tok[n - 1].ToDouble(out y)) {
                     throw new ENException(ErrorCode.Err213);
                 }
-                net.PropertiesMap.RFactor = y;
+                net.RFactor = y;
                 return;
             }
 
@@ -1072,7 +1072,7 @@ namespace Epanet.Network.IO.Input {
                 if (!tok[n - 1].ToDouble(out y)) {
                     throw new ENException(ErrorCode.Err213);
                 }
-                net.PropertiesMap.CLimit = y;
+                net.CLimit = y;
                 return;
             }
 
@@ -1080,8 +1080,8 @@ namespace Epanet.Network.IO.Input {
                 if (!tok[n - 1].ToDouble(out y)) {
                     throw new ENException(ErrorCode.Err213);
                 }
-                if (tok[1].Match(Keywords.w_BULK)) net.PropertiesMap.KBulk = y;
-                else if (tok[1].Match(Keywords.w_WALL)) net.PropertiesMap.KWall = y;
+                if (tok[1].Match(Keywords.w_BULK)) net.KBulk = y;
+                else if (tok[1].Match(Keywords.w_WALL)) net.KWall = y;
                 else throw new ENException(ErrorCode.Err201);
                 return;
             }
@@ -1298,7 +1298,7 @@ namespace Epanet.Network.IO.Input {
             if (tok[0].Match(Keywords.w_DMNDCHARGE)) {
                 if (!tok[2].ToDouble(out y))
                     throw new ENException(ErrorCode.Err213);
-                net.PropertiesMap.DCost = y;
+                net.DCost = y;
                 return;
             }
 
@@ -1325,7 +1325,7 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (pumpRef == null)
-                    net.PropertiesMap.ECost = y;
+                    net.ECost = y;
                 else
                     pumpRef.ECost = y;
 
@@ -1338,7 +1338,7 @@ namespace Epanet.Network.IO.Input {
                     else throw new ENException(ErrorCode.Err217);
                 }
                 if (pumpRef == null)
-                    net.PropertiesMap.EPatId = t.Id;
+                    net.EPatId = t.Id;
                 else
                     pumpRef.EPat = t;
                 return;
@@ -1349,7 +1349,7 @@ namespace Epanet.Network.IO.Input {
                         throw new ENException(ErrorCode.Err213);
                     if (y <= 0.0)
                         throw new ENException(ErrorCode.Err213);
-                    net.PropertiesMap.EPump = y;
+                    net.EPump = y;
                 }
                 else {
                     Curve t = net.GetCurve(tok[n - 1]);
@@ -1372,7 +1372,7 @@ namespace Epanet.Network.IO.Input {
             if (tok[0].Match(Keywords.w_PAGE)) {
                 if (!tok[n].ToDouble(out y)) throw new ENException(ErrorCode.Err213);
                 if (y < 0.0 || y > 255.0) throw new ENException(ErrorCode.Err213);
-                net.PropertiesMap.PageSize = (int)y;
+                net.PageSize = (int)y;
                 return;
             }
 
@@ -1380,7 +1380,7 @@ namespace Epanet.Network.IO.Input {
             if (tok[0].Match(Keywords.w_STATUS)) {
                 StatFlag flag;
                 if (EnumsTxt.TryParse(tok[n], out flag)) {
-                    net.PropertiesMap.Stat_Flag = flag;
+                    net.Stat_Flag = flag;
                 }
                 else {
                     // TODO: complete this    
@@ -1393,28 +1393,28 @@ namespace Epanet.Network.IO.Input {
             }
 
             if (tok[0].Match(Keywords.w_SUMMARY)) {
-                if (tok[n].Match(Keywords.w_NO)) net.PropertiesMap.SummaryFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.PropertiesMap.SummaryFlag = true;
+                if (tok[n].Match(Keywords.w_NO)) net.SummaryFlag = false;
+                if (tok[n].Match(Keywords.w_YES)) net.SummaryFlag = true;
                 return;
             }
 
             if (tok[0].Match(Keywords.w_MESSAGES)) {
-                if (tok[n].Match(Keywords.w_NO)) net.PropertiesMap.MessageFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.PropertiesMap.MessageFlag = true;
+                if (tok[n].Match(Keywords.w_NO)) net.MessageFlag = false;
+                if (tok[n].Match(Keywords.w_YES)) net.MessageFlag = true;
                 return;
             }
 
             if (tok[0].Match(Keywords.w_ENERGY)) {
-                if (tok[n].Match(Keywords.w_NO)) net.PropertiesMap.EnergyFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.PropertiesMap.EnergyFlag = true;
+                if (tok[n].Match(Keywords.w_NO)) net.EnergyFlag = false;
+                if (tok[n].Match(Keywords.w_YES)) net.EnergyFlag = true;
                 return;
             }
 
             if (tok[0].Match(Keywords.w_NODE)) {
                 if (tok[n].Match(Keywords.w_NONE))
-                    net.PropertiesMap.NodeFlag = ReportFlag.FALSE;
+                    net.NodeFlag = ReportFlag.FALSE;
                 else if (tok[n].Match(Keywords.w_ALL))
-                    net.PropertiesMap.NodeFlag = ReportFlag.TRUE;
+                    net.NodeFlag = ReportFlag.TRUE;
                 else {
                     if (net.Nodes.Count == 0) throw new ENException(ErrorCode.Err208);
                     for (int ii = 1; ii <= n; ii++) {
@@ -1422,16 +1422,16 @@ namespace Epanet.Network.IO.Input {
                         if ((nodeRef = net.GetNode(tok[n])) == null) throw new ENException(ErrorCode.Err208);
                         nodeRef.RptFlag = true;
                     }
-                    net.PropertiesMap.NodeFlag = ReportFlag.SOME;
+                    net.NodeFlag = ReportFlag.SOME;
                 }
                 return;
             }
 
             if (tok[0].Match(Keywords.w_LINK)) {
                 if (tok[n].Match(Keywords.w_NONE))
-                    net.PropertiesMap.LinkFlag = ReportFlag.FALSE;
+                    net.LinkFlag = ReportFlag.FALSE;
                 else if (tok[n].Match(Keywords.w_ALL))
-                    net.PropertiesMap.LinkFlag = ReportFlag.TRUE;
+                    net.LinkFlag = ReportFlag.TRUE;
                 else {
                     if (net.Links.Count == 0) throw new ENException(ErrorCode.Err210);
                     for (int ii = 1; ii <= n; ii++) {
@@ -1439,7 +1439,7 @@ namespace Epanet.Network.IO.Input {
                         if (linkRef == null) throw new ENException(ErrorCode.Err210);
                         linkRef.RptFlag = true;
                     }
-                    net.PropertiesMap.LinkFlag = ReportFlag.SOME;
+                    net.LinkFlag = ReportFlag.SOME;
                 }
                 return;
             }
@@ -1483,7 +1483,7 @@ namespace Epanet.Network.IO.Input {
             }
 
             if (tok[0].Match(Keywords.w_FILE)) {
-                net.PropertiesMap.AltReport = tok[1];
+                net.AltReport = tok[1];
                 return;
             }
 
@@ -1497,7 +1497,7 @@ namespace Epanet.Network.IO.Input {
             if (notHandled)
                 notHandled = this.OptionValue(net, tok, n);
             if (notHandled) {
-                net.PropertiesMap.ExtraOptions[tok[0]] = tok[1];
+                net.ExtraOptions[tok[0]] = tok[1];
             }
         }
 
@@ -1507,8 +1507,7 @@ namespace Epanet.Network.IO.Input {
         /// <param name="n">number of tokens</param>
         /// <returns><c>true</c> is it didn't handle the option.</returns>
         protected bool OptionChoice(Network net, string[] tok, int n) {
-            PropertiesMap map = net.PropertiesMap;
-
+            
             if (n < 0)
                 throw new ENException(ErrorCode.Err201);
 
@@ -1518,7 +1517,7 @@ namespace Epanet.Network.IO.Input {
                 if (n < 1)
                     return false;
                 else if (EnumsTxt.TryParse(tok[1], out type))
-                    map.FlowFlag = type;
+                    net.FlowFlag = type;
                 else
                     throw new ENException(ErrorCode.Err201);
 
@@ -1531,7 +1530,7 @@ namespace Epanet.Network.IO.Input {
                     throw new ENException(ErrorCode.Err201);
                 }
 
-                map.PressFlag = value;
+                net.PressFlag = value;
             }
             else if (tok[0].Match(Keywords.w_HEADLOSS)) {
                 if (n < 1) return false;
@@ -1541,7 +1540,7 @@ namespace Epanet.Network.IO.Input {
                     throw new ENException(ErrorCode.Err201);
                 }
                 
-                map.FormFlag = value;
+                net.FormFlag = value;
             }
             else if (tok[0].Match(Keywords.w_HYDRAULIC)) {
                 if (n < 2) return false;
@@ -1551,8 +1550,8 @@ namespace Epanet.Network.IO.Input {
                     throw new ENException(ErrorCode.Err201);
                 }
 
-                map.HydFlag = value;
-                map.HydFname = tok[2];
+                net.HydFlag = value;
+                net.HydFname = tok[2];
             }
             else if (tok[0].Match(Keywords.w_QUALITY)) {
                 QualType type;
@@ -1560,14 +1559,14 @@ namespace Epanet.Network.IO.Input {
                 if (n < 1)
                     return false;
                 else if (EnumsTxt.TryParse(tok[1], out type))
-                    map.QualFlag = type;
+                    net.QualFlag = type;
                 else {
-                    map.QualFlag = QualType.CHEM;
-                    map.ChemName = tok[1];
+                    net.QualFlag = QualType.CHEM;
+                    net.ChemName = tok[1];
                     if (n >= 2)
-                        map.ChemUnits = tok[2];
+                        net.ChemUnits = tok[2];
                 }
-                if (map.QualFlag == QualType.TRACE) {
+                if (net.QualFlag == QualType.TRACE) {
 
                     tok[0] = "";
                     if (n < 2)
@@ -1576,44 +1575,44 @@ namespace Epanet.Network.IO.Input {
                     Node nodeRef = net.GetNode(tok[2]);
                     if (nodeRef == null)
                         throw new ENException(ErrorCode.Err212);
-                    map.TraceNode = nodeRef.Id;
-                    map.ChemName = Keywords.u_PERCENT;
-                    map.ChemUnits = tok[2];
+                    net.TraceNode = nodeRef.Id;
+                    net.ChemName = Keywords.u_PERCENT;
+                    net.ChemUnits = tok[2];
                 }
-                if (map.QualFlag == QualType.AGE) {
-                    map.ChemName = Keywords.w_AGE;
-                    map.ChemUnits = Keywords.u_HOURS;
+                if (net.QualFlag == QualType.AGE) {
+                    net.ChemName = Keywords.w_AGE;
+                    net.ChemUnits = Keywords.u_HOURS;
                 }
             }
             else if (tok[0].Match(Keywords.w_MAP)) {
                 if (n < 1)
                     return false;
-                map.MapFname = tok[1];
+                net.MapFname = tok[1];
             }
             else if (tok[0].Match(Keywords.w_UNBALANCED)) {
                 if (n < 1)
                     return false;
                 if (tok[1].Match(Keywords.w_STOP))
-                    map.ExtraIter = -1;
+                    net.ExtraIter = -1;
                 else if (tok[1].Match(Keywords.w_CONTINUE)) {
                     if (n >= 2) {
                         double d;
                         if (tok[2].ToDouble(out d)) {
-                            map.ExtraIter = (int)d;
+                            net.ExtraIter = (int)d;
                         }
                         else {
                             throw new ENException(ErrorCode.Err201);
                         }
                     }
                     else
-                        map.ExtraIter = 0;
+                        net.ExtraIter = 0;
                 }
                 else throw new ENException(ErrorCode.Err201);
             }
             else if (tok[0].Match(Keywords.w_PATTERN)) {
                 if (n < 1)
                     return false;
-                map.DefPatId = tok[1];
+                net.DefPatId = tok[1];
             }
             else
                 return true;
@@ -1622,10 +1621,8 @@ namespace Epanet.Network.IO.Input {
 
         protected bool OptionValue(Network net, string[] tok, int n) {
             int nvalue = 1;
-            PropertiesMap map = net.PropertiesMap;
-
+            
             string name = tok[0];
-
 
             if (name.Match(Keywords.w_SPECGRAV) || name.Match(Keywords.w_EMITTER)
                 || name.Match(Keywords.w_DEMAND)) nvalue = 2;
@@ -1648,42 +1645,42 @@ namespace Epanet.Network.IO.Input {
             if (name.Match(Keywords.w_TOLERANCE)) {
                 if (y < 0.0)
                     throw new ENException(ErrorCode.Err213);
-                map.Ctol = y;
+                net.Ctol = y;
                 return false;
             }
 
             if (name.Match(Keywords.w_DIFFUSIVITY)) {
                 if (y < 0.0)
                     throw new ENException(ErrorCode.Err213);
-                map.Diffus = y;
+                net.Diffus = y;
                 return false;
             }
 
             if (name.Match(Keywords.w_DAMPLIMIT)) {
-                map.DampLimit = y;
+                net.DampLimit = y;
                 return false;
             }
 
             if (y <= 0.0) throw new ENException(ErrorCode.Err213);
 
-            if (name.Match(Keywords.w_VISCOSITY)) map.Viscos = y;
-            else if (name.Match(Keywords.w_SPECGRAV)) map.SpGrav = y;
-            else if (name.Match(Keywords.w_TRIALS)) map.MaxIter = (int)y;
+            if (name.Match(Keywords.w_VISCOSITY)) net.Viscos = y;
+            else if (name.Match(Keywords.w_SPECGRAV)) net.SpGrav = y;
+            else if (name.Match(Keywords.w_TRIALS)) net.MaxIter = (int)y;
             else if (name.Match(Keywords.w_ACCURACY)) {
                 y = Math.Max(y, 1e-5);
                 y = Math.Min(y, 1e-1);
-                map.HAcc = y;
+                net.HAcc = y;
             }
-            else if (name.Match(Keywords.w_HTOL)) map.HTol = y;
-            else if (name.Match(Keywords.w_QTOL)) map.QTol = y;
+            else if (name.Match(Keywords.w_HTOL)) net.HTol = y;
+            else if (name.Match(Keywords.w_QTOL)) net.QTol = y;
             else if (name.Match(Keywords.w_RQTOL)) {
                 if (y >= 1.0) throw new ENException(ErrorCode.Err213);
-                map.RQtol = y;
+                net.RQtol = y;
             }
-            else if (name.Match(Keywords.w_CHECKFREQ)) map.CheckFreq = (int)y;
-            else if (name.Match(Keywords.w_MAXCHECK)) map.MaxCheck = (int)y;
-            else if (name.Match(Keywords.w_EMITTER)) map.QExp = 1.0d / y;
-            else if (name.Match(Keywords.w_DEMAND)) map.DMult = y;
+            else if (name.Match(Keywords.w_CHECKFREQ)) net.CheckFreq = (int)y;
+            else if (name.Match(Keywords.w_MAXCHECK)) net.MaxCheck = (int)y;
+            else if (name.Match(Keywords.w_EMITTER)) net.QExp = 1.0d / y;
+            else if (name.Match(Keywords.w_DEMAND)) net.DMult = y;
 
             return false;
         }
@@ -1691,8 +1688,7 @@ namespace Epanet.Network.IO.Input {
         protected void ParseTime(Network net, string[] tok) {
             int n = tok.Length - 1;
             double y;
-            PropertiesMap map = net.PropertiesMap;
-
+            
             if (n < 1)
                 throw new ENException(ErrorCode.Err201);
 
@@ -1702,7 +1698,7 @@ namespace Epanet.Network.IO.Input {
                 if (!EnumsTxt.TryParse(tok[n], out type))
                     throw new ENException(ErrorCode.Err201);
 
-                map.TStatFlag = type;
+                net.TStatFlag = type;
     
                 return;
             }
@@ -1717,33 +1713,33 @@ namespace Epanet.Network.IO.Input {
             var t = (long)(3600.0 * y);
 
             if (tok[0].Match(Keywords.w_DURATION))
-                map.Duration = t;
+                net.Duration = t;
             else if (tok[0].Match(Keywords.w_HYDRAULIC))
-                map.HStep = t;
+                net.HStep = t;
             else if (tok[0].Match(Keywords.w_QUALITY))
-                map.QStep = t;
+                net.QStep = t;
             else if (tok[0].Match(Keywords.w_RULE))
-                map.RuleStep = t;
+                net.RuleStep = t;
             else if (tok[0].Match(Keywords.w_MINIMUM))
                 return;
             else if (tok[0].Match(Keywords.w_PATTERN)) {
                 if (tok[1].Match(Keywords.w_TIME))
-                    map.PStep = t;
+                    net.PStep = t;
                 else if (tok[1].Match(Keywords.w_START))
-                    map.PStart = t;
+                    net.PStart = t;
                 else
                     throw new ENException(ErrorCode.Err201);
             }
             else if (tok[0].Match(Keywords.w_REPORT)) {
                 if (tok[1].Match(Keywords.w_TIME))
-                    map.RStep = t;
+                    net.RStep = t;
                 else if (tok[1].Match(Keywords.w_START))
-                    map.RStart = t;
+                    net.RStart = t;
                 else
                     throw new ENException(ErrorCode.Err201);
             }
             else if (tok[0].Match(Keywords.w_START))
-                map.TStart = t % Constants.SECperDAY;
+                net.TStart = t % Constants.SECperDAY;
             else throw new ENException(ErrorCode.Err201);
 
         }
@@ -1783,7 +1779,7 @@ namespace Epanet.Network.IO.Input {
                 if (y <= 0.0)
                     throw new ENException(ErrorCode.Err202);
                 else
-                    net.PropertiesMap.DMult = y;
+                    net.DMult = y;
                 return;
             }
 
