@@ -18,7 +18,7 @@
 namespace Epanet.MSX {
 
 
-public class Constants {
+public static class Constants {
     public const int MAXUNITS = 16;
     public const int MAXFNAME = 259; // Max. # characters in file name
     public const int CODEVERSION =20012;

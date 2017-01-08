@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Windows.Forms;
 using Epanet.Log;
 using Epanet.Network.IO.Input;
@@ -40,20 +39,38 @@ namespace Epanet.UI {
 
         private const string LOG_FILENAME = "epanet.log";
 
+        private const string SaveFileDialogFilter =
+            "Epanet INP network file (*.inp)|*.inp|" +
+            "Epanet XML network file (*.xml)|*.xml|" +
+            "Epanet XLSX network file (*.xlsx)|*.xlsx|" +
+            "Epanet GZIP'ped XML network file (*.xml.gz)|*.xml.gz";
+
+        private const string OpenFileDialogFilter =
+            "Epanet INP network file (*.inp)|*.inp|" +
+            "Epanet XML network file (*.xml)|*.xml|" +
+            "Epanet XLSX network file (*.xlsx)|*.xlsx|" +
+            "All supported files (*.inp, *.xlsx, *.xml)|*.inp *.xlsx *.xml";
+
         /// <summary>Abstract representation of the network file(INP/XLSX/XML).</summary>
         private string inpFile;
 
         private EpanetNetwork net;
 
-        private TraceSource log;
+        private static readonly TraceSource Log;
 
         /// <summary>Reference to the report options window.</summary>
         private ReportOptions reportOptions;
 
+        static EpanetUI() {
+           // InitLogger
+            Log = new TraceSource("epanet", SourceLevels.All);
+            Log.Listeners.Remove("Default");
+            Log.Listeners.Add(new EpanetTraceListener(LOG_FILENAME, true));
+        }
+
         public EpanetUI() {
             this.InitializeComponent();
-            this.InitLogger();
-            this.log.Information(0, this.GetType().FullName + " started.");
+            Log.Information(0, this.GetType().FullName + " started.");
             this.Text = APP_TITTLE;
             this.MinimumSize = new Size(848, 500);
             this.ClearInterface();
@@ -74,7 +91,8 @@ namespace Epanet.UI {
         }
 
         private void EpanetUI_FormClosing(object sender, FormClosingEventArgs e) {
-            this.log.Flush();
+            // Log.Flush();
+            Log.Close();
             // Environment.Exit(0);
         }
 
@@ -86,16 +104,16 @@ namespace Epanet.UI {
             this.inpFile = null;
             this.Text = APP_TITTLE;
             this.textReservoirs.Text = "0";
-            this.textTanks.Text = ("0");
-            this.textPipes.Text = ("0");
-            this.textNodes.Text = ("0");
-            this.textDuration.Text = ("00:00:00");
-            this.textHydraulic.Text = ("00:00:00");
-            this.textPattern.Text = ("00:00:00");
-            this.textUnits.Text = ("NONE");
-            this.textHeadloss.Text = ("NONE");
-            this.textQuality.Text = ("NONE");
-            this.textDemand.Text = ("0.0");
+            this.textTanks.Text = "0";
+            this.textPipes.Text = "0";
+            this.textNodes.Text = "0";
+            this.textDuration.Text = "00:00:00";
+            this.textHydraulic.Text = "00:00:00";
+            this.textPattern.Text = "00:00:00";
+            this.textUnits.Text = "NONE";
+            this.textHeadloss.Text = "NONE";
+            this.textQuality.Text = "NONE";
+            this.textDemand.Text = "0.0";
 
             if (this.reportOptions != null) {
                 this.reportOptions.Close();
@@ -173,19 +191,12 @@ namespace Epanet.UI {
             }
         }
 
-        private void InitLogger() {
-            this.log = new TraceSource(typeof(EpanetUI).FullName, SourceLevels.All);
-            this.log.Listeners.Remove("Default");
-            RollingFileStream stream = new RollingFileStream(LOG_FILENAME, 0x1000, 10, FileMode.Append, FileShare.Read);
-            TextWriter writer = new StreamWriter(stream, Encoding.Default);
-            TextWriterTraceListener listener = new EpanetTraceListener(writer, LOG_FILENAME);
-            this.log.Listeners.Add(listener);
-        }
+
 
         /// <summary>Show report options window to configure and run the simulation.</summary>
         private void RunSimulation(object sender, EventArgs e) {
             if (this.reportOptions == null)
-                this.reportOptions = new ReportOptions(this.inpFile, null, this.log);
+                this.reportOptions = new ReportOptions(this.inpFile, null, this.Log);
 
             this.reportOptions.ShowDialog(this);
         }
@@ -200,9 +211,7 @@ namespace Epanet.UI {
                 // InitialDirectory = initialDirectory,
                 OverwritePrompt = true,
                 FileName = Path.GetFileNameWithoutExtension(this.inpFile),
-                Filter =
-                    "Epanet XLSX network file (*.xlsx)|*.xlsx|" + "Epanet XML network file (*.xml)|*.xml|"
-                    + "Epanet GZIP'ped XML network file (*.xml.gz)|*.xml.gz|" + "Epanet INP network file (*.inp)|*.inp"
+                Filter = SaveFileDialogFilter
             };
 
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
@@ -246,7 +255,8 @@ namespace Epanet.UI {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this.log.Error("Unable to save network configuration file: {0}", ex);
+                
+                Log.Error("Unable to save network configuration file: {0}", ex);
             }
             catch (Exception ex) {
                 MessageBox.Show(
@@ -255,7 +265,7 @@ namespace Epanet.UI {
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
 
-                this.log.Error(0, "Unable to save network configuration file: {0}", ex);
+                Log.Error(0, "Unable to save network configuration file: {0}", ex);
             }
         }
 
@@ -265,11 +275,7 @@ namespace Epanet.UI {
 
             var fileChooser = new OpenFileDialog {
                 Multiselect = false,
-                Filter =
-                    "Epanet XLSX network file (*.xlsx)|*.xlsx|" 
-                    + "Epanet XML network file (*.xml)|*.xml|"
-                    + "Epanet INP network file (*.inp)|*.inp|"
-                    + "All supported files (*.inp, *.xlsx, *.xml)|*.inp *.xlsx *.xml",
+                Filter = OpenFileDialogFilter,
                 FilterIndex = 3
             };
 
@@ -296,18 +302,18 @@ namespace Epanet.UI {
 
             switch (fileExtension.ToLowerInvariant()) {                    
                 case ".xlsx":
-                    inpParser = new ExcelParser(this.log);
+                    inpParser = new ExcelParser();
                     break;
                 
                 case ".xml":
-                    inpParser = new XmlParser(this.log, false);
+                    inpParser = new XmlParser(false);
                     break;
 
                 case ".gz":
-                    inpParser = new XmlParser(this.log, true);
+                    inpParser = new XmlParser(true);
                     break;
                 case ".inp":
-                    inpParser = new InpParser(this.log);
+                    inpParser = new InpParser();
                     break;
                 default:
                     MessageBox.Show(
@@ -341,7 +347,9 @@ namespace Epanet.UI {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this.log.Error("Unable to parse network configuration file: {0}", ex);
+                
+                Log.Error("Unable to parse network configuration file: {0}", ex);
+
                 this.ClearInterface();
                 this.inpFile = null;
 

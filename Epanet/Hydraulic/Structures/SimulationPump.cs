@@ -87,7 +87,7 @@ namespace Epanet.Hydraulic.Structures {
 
             if (this.Ecurve != null) {
                 Curve curve = this.Ecurve;
-                e = curve[q * net.FieldsMap.GetUnits(FieldType.FLOW)];
+                e = curve.Interpolate(q * net.FieldsMap.GetUnits(FieldType.FLOW));
             }
 
             e = Math.Min(e, 100.0);
@@ -114,8 +114,8 @@ namespace Epanet.Hydraulic.Structures {
             double c = this.Ecost > 0.0 ? this.Ecost : c0;
 
             if (this.Epat != null) {
-                int m = (int)(n % this.Epat.FactorsList.Count);
-                c *= this.Epat.FactorsList[m];
+                int m = (int)(n % this.Epat.Count);
+                c *= this.Epat[m];
             }
             else
                 c *= f0;
@@ -209,8 +209,8 @@ namespace Epanet.Hydraulic.Structures {
             double f0 = 1.0;
 
             if (epat != null) {
-                long m = n % (long)epat.FactorsList.Count;
-                f0 = epat.FactorsList[(int)m];
+                long m = n % epat.Count;
+                f0 = epat[(int)m];
             }
 
             foreach (SimulationPump pump  in  pumps) {

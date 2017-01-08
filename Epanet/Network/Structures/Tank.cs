@@ -23,7 +23,7 @@ namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic tank structure.</summary>
     public class Tank:Node {
-        public Tank(string id):base(id) { }
+        public Tank(string name):base(name) { }
 
         public override NodeType Type { get { return NodeType.TANK; } }
 

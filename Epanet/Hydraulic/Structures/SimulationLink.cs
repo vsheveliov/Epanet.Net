@@ -60,8 +60,8 @@ namespace Epanet.Hydraulic.Structures {
         public SimulationLink(Dictionary<string, SimulationNode> byId, Link @ref, int idx) {
 
             this.link = @ref;
-            this.first = byId[this.link.FirstNode.Id];
-            this.second = byId[this.link.SecondNode.Id];
+            this.first = byId[this.link.FirstNode.Name];
+            this.second = byId[this.link.SecondNode.Name];
             this.index = idx;
 
             // Init
@@ -74,9 +74,9 @@ namespace Epanet.Hydraulic.Structures {
             this.link = @ref;
 
             foreach (SimulationNode indexedNode  in  indexedNodes) {
-                if (indexedNode.Id == this.link.FirstNode.Id)
+                if (indexedNode.Id == this.link.FirstNode.Name)
                     this.first = indexedNode;
-                else if (indexedNode.Id == this.link.SecondNode.Id)
+                else if (indexedNode.Id == this.link.SecondNode.Name)
                     this.second = indexedNode;
                 if (this.first != null && this.second != null) break;
             }
@@ -101,7 +101,7 @@ namespace Epanet.Hydraulic.Structures {
 
 #region Network link Getters
 
-        public double[] C0 { get { return this.link.C0; } }
+        public double C0 { get { return this.link.C0; } }
 
         public double Diameter { get { return this.link.Diameter; } }
 
@@ -398,7 +398,7 @@ namespace Epanet.Hydraulic.Structures {
                 logger.Verbose(
                     Text.FMT56,
                     link.Type.ParseStr(),
-                    link.Link.Id,
+                    link.Link.Name,
                     link.setting);
                 return;
             }
@@ -421,7 +421,7 @@ namespace Epanet.Hydraulic.Structures {
                 logger.Verbose(
                     Text.FMT57,
                     link.Type.ParseStr(),
-                    link.Link.Id,
+                    link.Link.Name,
                     j1.ReportStr(),
                     j2.ReportStr());
             }

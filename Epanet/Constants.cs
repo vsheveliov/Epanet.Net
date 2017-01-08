@@ -30,7 +30,7 @@ namespace Epanet {
         ///<summary>Max. input errors reported</summary>
         public const int MAXERRS = 10;
         //public const int     MAXMSG = 79;
-        //public const int     MAXID  = 31;
+        public const int     MAXID  = 31;
         //public const int     MAXFNAME = 259;
 
         ///<summary>Epanet binary files code version</summary>

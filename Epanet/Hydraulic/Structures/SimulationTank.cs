@@ -85,8 +85,8 @@ namespace Epanet.Hydraulic.Structures {
                 return this.Vmin + (h - this.Hmin) * this.Area;
             else {
                 return
-                    curve[(h - this.Elevation) * fMap.GetUnits(FieldType.HEAD)
-                          / fMap.GetUnits(FieldType.VOLUME)];
+                    curve.Interpolate((h - this.Elevation) * fMap.GetUnits(FieldType.HEAD)
+                                      / fMap.GetUnits(FieldType.VOLUME));
             }
 
         }
@@ -117,7 +117,7 @@ namespace Epanet.Hydraulic.Structures {
                 return this.Hmin + (this.volume - this.Vmin) / this.Area;
             else
                 return this.Elevation
-                       + curve[this.volume * fMap.GetUnits(FieldType.VOLUME)]
+                       + curve.Interpolate(this.volume * fMap.GetUnits(FieldType.VOLUME))
                        / fMap.GetUnits(FieldType.HEAD);
         }
 

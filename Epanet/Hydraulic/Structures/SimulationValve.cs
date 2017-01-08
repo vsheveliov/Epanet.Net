@@ -255,7 +255,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         private static void LogBadValve(TraceSource log, SimulationLink link, long htime) {
-            log.Warning(Properties.Text.FMT61, htime.GetClockTime(), link.Link.Id);
+            log.Warning(Properties.Text.FMT61, htime.GetClockTime(), link.Link.Name);
         }
 
         /// <summary>Updates status of a pressure reducing valve.</summary>

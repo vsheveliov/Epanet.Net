@@ -24,7 +24,7 @@ namespace Epanet.Network.Structures {
         ///<summary>Energy usage statistics.</summary>
         private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
-        public Pump(string id):base(id) { }
+        public Pump(string name):base(name) { }
 
         ///<summary>Unit energy cost.</summary>
         public double ECost { get; set; }

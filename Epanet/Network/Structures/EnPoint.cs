@@ -15,11 +15,13 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Simple 2d point.</summary>
 
-    public struct EnPoint {
+    public struct EnPoint : IComparable<EnPoint>, IEquatable<EnPoint> {
         public static readonly EnPoint Invalid = new EnPoint(double.NaN, double.NaN);
         private readonly double x;
         private readonly double y;
@@ -38,7 +40,31 @@ namespace Epanet.Network.Structures {
         ///<summary>Ordinate coordinate.</summary>
         public double Y { get { return this.y; } }
 
-        public override string ToString() { return "Point{" + "x=" + this.x + ", y=" + this.y + '}'; }
+        public int CompareTo(EnPoint other) {
+            var cmp = this.x.CompareTo(other.x);
+            if (cmp != 0) return cmp;
+
+            return this.y.CompareTo(other.y);
+        }
+
+        public bool Equals(EnPoint other) {
+            bool ex = (this.x == other.x) || (double.IsNaN(this.x) && double.IsNaN(other.x));
+            bool ey = (this.y == other.y) || (double.IsNaN(this.y) && double.IsNaN(other.y)); 
+            
+            return ex && ey;
+        }
+        
+        public override bool Equals(object obj) {
+            if (!(obj is EnPoint)) return false;
+
+            return this.Equals((EnPoint)obj);
+        }
+        
+        public override int GetHashCode() {
+            return this.x.GetHashCode() ^ this.y.GetHashCode();
+        }
+        
+        public override string ToString() { return "EnPoint{" + "x=" + this.x + ", y=" + this.y + '}'; }
     }
 
 }

@@ -120,7 +120,7 @@ namespace Epanet.Quality {
             if (this.qualflag != QualType.NONE) {
                 if (this.qualflag == QualType.TRACE) {
                     foreach (QualityNode qN  in  this.nodes)
-                        if (qN.Node.Id.Equals(this.net.TraceNode, StringComparison.OrdinalIgnoreCase)) {
+                        if (qN.Node.Name.Equals(this.net.TraceNode, StringComparison.OrdinalIgnoreCase)) {
                             this.traceNode = qN;
                             this.traceNode.Quality = 100.0;
                             break;
@@ -639,7 +639,7 @@ namespace Epanet.Quality {
                 return;
 
             foreach (QualityNode qN  in  this.nodes) {
-                Source source = qN.Node.Source;
+                QualSource source = qN.Node.QualSource;
 
                 // Skip node if no WQ source
                 if (source == null)
@@ -719,7 +719,7 @@ namespace Epanet.Quality {
         }
 
         ///<summary>Determines source concentration in current time period.</summary>
-        private double Sourcequal(Source source) {
+        private double Sourcequal(QualSource source) {
             double c = source.C0;
 
             if (source.Type == SourceType.MASS)
@@ -731,8 +731,8 @@ namespace Epanet.Quality {
             Pattern pat = source.Pattern;
             if (pat == null)
                 return (c);
-            long k = ((this.qtime + this.net.PStart) / this.net.PStep) % pat.FactorsList.Count;
-            return (c * pat.FactorsList[(int)k]);
+            long k = ((this.qtime + this.net.PStart) / this.net.PStep) % pat.Count;
+            return c * pat[(int)k];
         }
 
         /// <summary>Complete mix tank model.</summary>
@@ -1084,13 +1084,13 @@ namespace Epanet.Quality {
         ///<summary>Updates quality at source nodes.</summary>
         ///<param name="dt">step duration in seconds.</param>
         private void Updatesourcenodes(long dt) {
-            Source source;
+            QualSource source;
 
             if (this.qualflag != QualType.CHEM) return;
 
 
             foreach (QualityNode qN  in  this.nodes) {
-                source = qN.Node.Source;
+                source = qN.Node.QualSource;
                 if (source == null)
                     continue;
 

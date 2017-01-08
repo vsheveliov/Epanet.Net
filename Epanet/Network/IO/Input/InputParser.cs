@@ -34,21 +34,19 @@ namespace Epanet.Network.IO.Input {
         protected string FileName;
 
         ///<summary>Reference to the error logger.</summary>
-        protected readonly TraceSource Log;
+        protected readonly TraceSource Log = new TraceSource("epanet", SourceLevels.All);
         protected readonly List<ENException> Errors = new List<ENException>();
-
-        protected InputParser(TraceSource log) { this.Log = log; }
 
         public static InputParser Create(FileType type, TraceSource log) {
             switch (type) {
             case FileType.INP_FILE:
-                return new InpParser(log);
+                return new InpParser();
             case FileType.EXCEL_FILE:
-                return new ExcelParser(log);
+                return new ExcelParser();
             case FileType.XML_FILE:
-                return new XmlParser(log, false);
+                return new XmlParser(false);
             case FileType.XML_GZ_FILE:
-                return new XmlParser(log, true);
+                return new XmlParser(true);
             case FileType.NULL_FILE:
                 return new NullParser(log);
             }
@@ -56,6 +54,8 @@ namespace Epanet.Network.IO.Input {
         }
 
         public abstract Network Parse(Network net, string fileName);
+
+
 
 
         /// <summary>
@@ -238,25 +238,24 @@ namespace Epanet.Network.IO.Input {
                 Curve curv = tank.Vcurve;
 
                 if (curv != null) {
-                    n = curv.Points.Count - 1;
-                    if (tank.Hmin < curv.Points[0].X ||
-                        tank.Hmax > curv.Points[n].X)
+                    n = curv.Count - 1;
+                    if (tank.Hmin < curv[0].X ||
+                        tank.Hmax > curv[n].X)
 
                         levelerr = 1;
                 }
 
                 if (levelerr != 0) {
-                    throw new ENException(ErrorCode.Err225, tank.Id);
+                    throw new ENException(ErrorCode.Err225, tank.Name);
                 }
 
                 if (curv != null) {
 
-                    tank.Vmin = curv[tank.Hmin];
-                    tank.Vmax = curv[tank.Hmax];
-                    tank.V0 = curv[tank.H0];
-
-                    var p = curv.Points;
-                    double a = (p[n].Y - p[0].Y) / (p[n].X - p[0].X);
+                    tank.Vmin = curv.Interpolate(tank.Hmin);
+                    tank.Vmax = curv.Interpolate(tank.Hmax);
+                    tank.V0 = curv.Interpolate(tank.H0);
+                   
+                    double a = (curv[n].Y - curv[0].Y) / (curv[n].X - curv[0].X);
 
                     tank.Area = Math.Sqrt(4.0 * a / Math.PI);
                 }
@@ -339,7 +338,7 @@ namespace Epanet.Network.IO.Input {
                         if (pump.Ptype == PumpType.POWER_FUNC) {
                             pump.H0 = pump.H0 / fMap.GetUnits(FieldType.HEAD);
                             pump.FlowCoefficient = pump.FlowCoefficient *
-                                                   (Math.Pow(fMap.GetUnits(FieldType.FLOW), pump.N)) /
+                                                   Math.Pow(fMap.GetUnits(FieldType.FLOW), pump.N) /
                                                    fMap.GetUnits(FieldType.HEAD);
                         }
 
@@ -416,28 +415,27 @@ namespace Epanet.Network.IO.Input {
                 else if (pump.Ptype == PumpType.NOCURVE) {
                     Curve curve = pump.HCurve;
                     if (curve == null) {
-                        throw new ENException(ErrorCode.Err226, pump.Id);
+                        throw new ENException(ErrorCode.Err226, pump.Name);
                     }
 
-                    int n = curve.Points.Count;
+                    int n = curve.Count;
 
                     if (n == 1) {
                         pump.Ptype = PumpType.POWER_FUNC;
-                        var pt = curve.Points[0];
+                        var pt = curve[0];
                         q1 = pt.X;
                         h1 = pt.Y;
                         h0 = 1.33334 * h1;
                         q2 = 2.0 * q1;
                         h2 = 0.0;
                     }
-                    else if (n == 3 && curve.Points[0].X == 0.0) {
+                    else if (n == 3 && curve[0].X == 0.0) {
                         pump.Ptype = PumpType.POWER_FUNC;
-                        var poinst = curve.Points;
-                        h0 = poinst[0].Y;
-                        q1 = poinst[1].X;
-                        h1 = poinst[1].Y;
-                        q2 = poinst[2].X;
-                        h2 = poinst[2].Y;
+                        h0 = curve[0].Y;
+                        q1 = curve[1].X;
+                        h1 = curve[1].Y;
+                        q2 = curve[2].X;
+                        h2 = curve[2].Y;
                     }
                     else
                         pump.Ptype = PumpType.CUSTOM;
@@ -446,14 +444,14 @@ namespace Epanet.Network.IO.Input {
                     if (pump.Ptype == PumpType.POWER_FUNC) {
                         double a, b, c;
                         if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                            throw new ENException(ErrorCode.Err227, pump.Id);
+                            throw new ENException(ErrorCode.Err227, pump.Name);
 
 
                         pump.H0 = -a;
                         pump.FlowCoefficient = -b;
                         pump.N = c;
                         pump.Q0 = q1;
-                        pump.Qmax = Math.Pow(-a / b, (1.0 / c));
+                        pump.Qmax = Math.Pow(-a / b, 1.0 / c);
                         pump.Hmax = h0;
                     }
                 }
@@ -461,18 +459,17 @@ namespace Epanet.Network.IO.Input {
                 // Assign limits to custom pump curves
                 if (pump.Ptype == PumpType.CUSTOM) {
                     Curve curve = pump.HCurve;
-                    var points = curve.Points;
 
-                    for (int i = 1; i < points.Count; i++) {
+                    for(int i = 1; i < curve.Count; i++) {
                         // Check for invalid curve
-                        if (points[i].Y >= points[i - 1].Y) {
-                            throw new ENException(ErrorCode.Err227, pump.Id);
+                        if(curve[i].Y >= curve[i - 1].Y) {
+                            throw new ENException(ErrorCode.Err227, pump.Name);
                         }
                     }
 
-                    pump.Qmax = points[curve.Points.Count - 1].X;
-                    pump.Q0 = (points[0].X + pump.Qmax) / 2.0;
-                    pump.Hmax = points[0].Y;
+                    pump.Qmax = curve[curve.Count - 1].X;
+                    pump.Q0 = (curve[0].X + pump.Qmax) / 2.0;
+                    pump.Hmax = curve[0].Y;
                 }
             }
 
@@ -481,11 +478,9 @@ namespace Epanet.Network.IO.Input {
         ///<summary>Initialize patterns.</summary>
         /// <param name="net">Hydraulic network reference.</param>
         private static void InitPatterns(Network net) {
-            foreach (Pattern par  in  net.Patterns) {
-                if (par.FactorsList.Count == 0) {
-                    par.FactorsList.Add(1.0);
-                }
-            }
+            foreach (Pattern par  in  net.Patterns)
+                if (par.Count == 0)
+                    par.Add(1.0);
         }
 
         // TODO: performance testing
@@ -507,7 +502,7 @@ namespace Epanet.Network.IO.Input {
             foreach (Node node in nodes) {
                 if (marked[node] == 0) {
                     err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
+                    this.Log.Error(new ENException(ErrorCode.Err233, node.Name));
                 }
 
                 if (err >= Constants.MAXERRS)
@@ -530,14 +525,14 @@ namespace Epanet.Network.IO.Input {
             int err = 0;
 
             foreach (Link link in net.Links) {
-                marked[link.FirstNode.Id] = 1;
-                marked[link.SecondNode.Id] = 1;
+                marked[link.FirstNode.Name] = 1;
+                marked[link.SecondNode.Name] = 1;
             }
 
             foreach (Node node in nodes) {
-                if (marked[node.Id] == 0) {
+                if (marked[node.Name] == 0) {
                     err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, node.Id));
+                    this.Log.Error(new ENException(ErrorCode.Err233, node.Name));
                 }
 
                 if (err >= Constants.MAXERRS)
@@ -552,8 +547,8 @@ namespace Epanet.Network.IO.Input {
         /// <param name="net">Hydraulic network reference.</param>
         private void checkUnlinked(Network net) {
             int[] marked = new int[net.Nodes.Count + 1];
-            List<Link> links = new List<Link>(net.Links);
-            List<Node> nodes = new List<Node>(net.Nodes);
+            IList<Link> links = net.Links;
+            IList<Node> nodes = net.Nodes;
 
             int err = 0;
 
@@ -566,7 +561,7 @@ namespace Epanet.Network.IO.Input {
             foreach (Node node in nodes) {
                 if (marked[i] == 0) {
                     err++;
-                    this.Log.Error("checkUnlinked", new ENException(ErrorCode.Err233, node.Id));
+                    this.Log.Error("checkUnlinked", new ENException(ErrorCode.Err233, node.Name));
                 }
 
                 if (err >= Constants.MAXERRS)
@@ -595,7 +590,7 @@ namespace Epanet.Network.IO.Input {
             for (int i = 0; i < nodes.Count; i++) {
                 if (marked[i] == 0) {
                     err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, nodes[i].Id));
+                    this.Log.Error(new ENException(ErrorCode.Err233, nodes[i].Name));
                 }
 
                 if (err >= Constants.MAXERRS)

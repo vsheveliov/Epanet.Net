@@ -20,24 +20,16 @@ using System.Collections.Generic;
 namespace Epanet.Network.Structures {
 
     ///<summary>Rule source code class.</summary>
-    public class Rule:IStringKeyed {
-
-        #region enums
-
-        #endregion
-
-        private readonly string label;
+    public class Rule:Element {
         private readonly List<string> code = new List<string>();
 
-        public Rule(string label) { this.label = label; }
+        public Rule(string name) : base(name) { }
 
         public List<string> Code { get { return this.code; } }
+  
+        public override ElementType ElementType { get { return ElementType.Rule;} }
 
-        public string Label { get { return this.label; } }
-
-        string IStringKeyed.Id { get { return this.label; } }
-
-        
+  
     }
 
 }

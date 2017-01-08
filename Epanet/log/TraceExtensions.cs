@@ -23,6 +23,16 @@ namespace Epanet.Log {
     /// </summary>
     public static class TraceExtensions {
 
+        private static object[] GetCaller() {
+            var frame = new StackFrame(2,true);
+
+            return new object[] {
+                frame.GetMethod().Name,
+                frame.GetFileName(),
+                frame.GetFileLineNumber()
+            };
+        }
+
         #region Critical
 
         [Conditional("TRACE")]
@@ -57,6 +67,11 @@ namespace Epanet.Log {
         [Conditional("TRACE")]
         public static void Error(this TraceSource src, string format, params object[] args) {
             src.TraceEvent(TraceEventType.Error, 0, format, args);
+        }
+
+        [Conditional("TRACE")]
+        public static void Error(this TraceSource src, string format, object arg) {
+            src.TraceEvent(TraceEventType.Error, 0, format, arg);
         }
 
         [Conditional("TRACE")]

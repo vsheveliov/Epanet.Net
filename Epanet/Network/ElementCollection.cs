@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 
+using Epanet.Network.Structures;
+
 namespace Epanet.Network {
 
-    internal class StringKeyedCollection<TItem>:KeyedCollection<string, TItem>
-        where TItem:IStringKeyed {
-        public StringKeyedCollection():base(StringComparer.OrdinalIgnoreCase, 20) { }
+    internal class ElementCollection<TItem>:KeyedCollection<string, TItem> where TItem:Element {
+        public ElementCollection():base(StringComparer.OrdinalIgnoreCase, 10) { }
 
-        public new void Add(TItem item) {
-            base.Add(item);
-        }
+        // public new void Add(TItem item) { base.Add(item); }
 
         public void AddOrReplace(TItem item) {
             string key = this.GetKeyForItem(item);
@@ -88,7 +87,7 @@ namespace Epanet.Network {
         }
 
 
-        protected override string GetKeyForItem(TItem item) { return item.Id; }
+        protected override string GetKeyForItem(TItem item) { return item.Name; }
     }
 
 }

@@ -92,7 +92,7 @@ namespace Epanet.Hydraulic.Structures {
 
                     if (loType == Objects.NODE) {
                         //Node nodeRef = net.getNode(Tok[2]);
-                        SimulationNode nodeRef = nodes.FirstOrDefault(simNode => simNode.Node.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationNode nodeRef = nodes.FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (nodeRef == null)
                             throw new ENException(ErrorCode.Err203);
@@ -117,7 +117,7 @@ namespace Epanet.Hydraulic.Structures {
                     }
                     else {
                         //Link linkRef = net.getLink(Tok[2]);
-                        SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (linkRef == null)
                             throw new ENException(ErrorCode.Err204);
@@ -428,7 +428,7 @@ namespace Epanet.Hydraulic.Structures {
                     throw new ENException(ErrorCode.Err201);
 
                 //Link linkRef = net.getLink(tok[2]);
-                SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Id.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                 if (linkRef == null)
                     throw new ENException(ErrorCode.Err204);
@@ -514,7 +514,7 @@ namespace Epanet.Hydraulic.Structures {
                     Properties.Text.FMT63,
                     htime.GetClockTime(),
                     this.link.Type.ParseStr(),
-                    this.link.Link.Id,
+                    this.link.Link.Name,
                     this.label);
             }
         }
@@ -696,7 +696,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         public SimulationRule(Rule rule, IList<SimulationLink> links, IList<SimulationNode> nodes) {
-            this.label = rule.Label;
+            this.label = rule.Name;
 
             double tempPriority = 0.0;
 

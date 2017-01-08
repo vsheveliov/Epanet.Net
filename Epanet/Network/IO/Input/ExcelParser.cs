@@ -17,7 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -31,9 +30,6 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>Excel XLSX file parser.</summary>
     public class ExcelParser:InpParser {
-
-        public ExcelParser(TraceSource logger):base(logger) { }
-
         private string ConvertCell(ICell cell, SectType section) {
             switch (cell.CellType) {
             case CellType.Numeric:
@@ -202,7 +198,7 @@ namespace Epanet.Network.IO.Input {
                                         foreach (string tk  in  tokArray)
                                             line += tk + " ";
 
-                                        this.LogException(lastType, e.getCodeID(), line, tokArray);
+                                        this.LogException(lastType, e.Code, line, tokArray);
                                         errSum++;
                                     }
                                 }

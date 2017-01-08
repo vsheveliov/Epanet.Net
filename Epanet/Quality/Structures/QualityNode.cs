@@ -41,7 +41,7 @@ namespace Epanet.Quality.Structures {
         protected QualityNode(Node node) {
             this.node = node;
             this.Quality = node.C0;
-            if (this.node.Source != null)
+            if (this.node.QualSource != null)
                 this.MassRate = 0.0;
         }
 

@@ -24,6 +24,168 @@ using System.Text;
 namespace Epanet.Log {
 
     public sealed class EpanetTraceListener : TextWriterTraceListener {
+        
+        private sealed class RollingFileStream : FileStream {
+
+            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode)
+                : base(path, BaseFileMode(mode), FileAccess.Write) {
+                this.Init(path, maxFileLength, maxFileCount, mode);
+            }
+
+            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode, FileShare share)
+                : base(path, BaseFileMode(mode), FileAccess.Write, share) {
+                this.Init(path, maxFileLength, maxFileCount, mode);
+            }
+
+            public RollingFileStream(
+                string path,
+                long maxFileLength,
+                int maxFileCount,
+                FileMode mode,
+                FileShare share,
+                int bufferSize)
+                : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize) {
+                this.Init(path, maxFileLength, maxFileCount, mode);
+            }
+
+            public RollingFileStream(
+                string path,
+                long maxFileLength,
+                int maxFileCount,
+                FileMode mode,
+                FileShare share,
+                int bufferSize,
+                bool isAsync)
+                : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize, isAsync) {
+                this.Init(path, maxFileLength, maxFileCount, mode);
+            }
+
+            public override bool CanRead { get { return false; } }
+
+            public override void Write(byte[] array, int offset, int count) {
+                while(true) {
+                    int actualCount = Math.Min(count, array.GetLength(0));
+
+                    if(this.Position + actualCount <= this.MaxFileLength) {
+                        base.Write(array, offset, count);
+                        break;
+                    }
+
+                    if(this.CanSplitData) {
+                        int partialCount = (int)(Math.Max(this.MaxFileLength, this.Position) - this.Position);
+                        base.Write(array, offset, partialCount);
+                        offset += partialCount;
+                        count = actualCount - partialCount;
+                    }
+                    else {
+                        if(count > this.MaxFileLength) {
+                            throw new ArgumentOutOfRangeException("count", "Buffer size exceeds maximum file length");
+                        }
+                    }
+                    this.BackupAndResetStream();
+                }
+            }
+
+            public long MaxFileLength { get; private set; }
+            public int MaxFileCount { get; private set; }
+            public bool CanSplitData { get; set; }
+
+            private void Init(string path, long maxFileLength, int maxFileCount, FileMode mode) {
+                if(maxFileLength <= 0)
+                    throw new ArgumentOutOfRangeException("maxFileLength", "Invalid maximum file length");
+                if(maxFileCount <= 0)
+                    throw new ArgumentOutOfRangeException("maxFileCount", "Invalid maximum file count");
+
+                this.MaxFileLength = maxFileLength;
+                this.MaxFileCount = maxFileCount;
+                // this.CanSplitData = true;
+
+                string fullPath = Path.GetFullPath(path);
+                this.fileDir = Path.GetDirectoryName(fullPath);
+                this.fileBase = Path.GetFileNameWithoutExtension(fullPath);
+                this.fileExt = Path.GetExtension(fullPath);
+
+                this.fileDecimals = 1;
+                int decimalBase = 10;
+
+                while(decimalBase < this.MaxFileCount) {
+                    this.fileDecimals++;
+                    decimalBase *= 10;
+                }
+
+                switch(mode) {
+                case FileMode.Create:
+                case FileMode.CreateNew:
+                case FileMode.Truncate:
+                // Delete old files
+                for(int iFile = 0; iFile < this.MaxFileCount; ++iFile) {
+                    string file = this.GetBackupFileName(iFile);
+                    if(File.Exists(file))
+                        File.Delete(file);
+                }
+
+                break;
+
+                default:
+                // Position file pointer to the last backup file
+                for(int iFile = 0; iFile < this.MaxFileCount; ++iFile) {
+                    if(File.Exists(this.GetBackupFileName(iFile)))
+                        this.nextFileIndex = iFile + 1;
+                }
+
+                if(this.nextFileIndex == this.MaxFileCount)
+                    this.nextFileIndex = 0;
+                this.Seek(0, SeekOrigin.End);
+                break;
+                }
+            }
+
+            private void BackupAndResetStream() {
+                this.Flush();
+                File.Copy(this.Name, this.GetBackupFileName(this.nextFileIndex), true);
+                this.SetLength(0);
+
+                this.nextFileIndex++;
+
+                if(this.nextFileIndex >= this.MaxFileCount)
+                    this.nextFileIndex = 0;
+            }
+
+            private string GetBackupFileName(int index) {
+                string sIndex = index.ToString("D{0}" + this.fileDecimals);
+
+                string path2 = string.IsNullOrEmpty(this.fileExt)
+                    ? string.Format("{0}{1}", this.fileBase, sIndex)
+                    : string.Format("{0}{1}{2}", this.fileBase, sIndex, this.fileExt);
+
+                return Path.Combine(this.fileDir, path2);
+            }
+
+            private static FileMode BaseFileMode(FileMode mode) {
+                return mode == FileMode.Append ? FileMode.OpenOrCreate : mode;
+            }
+
+            private string fileDir;
+            private string fileBase;
+            private string fileExt;
+            private int fileDecimals;
+            private int nextFileIndex;
+
+        }
+        
+        private sealed class InvariantStreamWriter : StreamWriter {
+            public InvariantStreamWriter(Stream s, Encoding enc) : base(s, enc) { }
+
+            public InvariantStreamWriter(string path, bool append, Encoding encoding) : base(path, append, encoding) { }
+
+            /// <summary>
+            /// Returns new StreamWriter with FormatProvider = CultureInfo.Invariantculture and output encoding UTF8 (no BOM).
+            /// </summary>
+            /// <param name="stream"></param>
+            public InvariantStreamWriter(Stream stream) : base(stream) { }
+
+            public override IFormatProvider FormatProvider { get { return CultureInfo.InvariantCulture; } }
+        }
 
         private bool printDate = true;
         public EpanetTraceListener() { }
@@ -31,6 +193,7 @@ namespace Epanet.Log {
         public EpanetTraceListener(Stream stream) : base(stream) { }
 
         public EpanetTraceListener(string path, bool append, string name) : base(CreateWriter(path, append), name) { }
+        public EpanetTraceListener(string path, bool append) : base(CreateWriter(path, append), path) { }
 
         public EpanetTraceListener(TextWriter writer) : base(writer) { }
 
@@ -80,7 +243,7 @@ namespace Epanet.Log {
                 return;
 
             this.WriteHeader(source, eventType, id);
-            if(args != null)
+            if(args != null && args.Length > 0)
                 this.WriteLine(string.Format(CultureInfo.InvariantCulture, format, args));
             else
                 this.WriteLine(format);

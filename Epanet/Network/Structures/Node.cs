@@ -15,7 +15,6 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System;
 using System.Collections.Generic;
 
 using Epanet.Enums;
@@ -24,33 +23,23 @@ namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic node structure  (junction)</summary>
 
-    public class Node:IComparable<Node>, IStringKeyed {
-        private readonly string id;
+    public class Node: Element {
         private readonly List<Demand> demand = new List<Demand>();
 
-        [NonSerialized]
-        private double initDemand;
-        
-        public Node(string id) {
-            this.id = id;
+        public Node(string name):base(name) {
             this.C0 = 0.0;
-            this.Comment = "";
-            this.initDemand = 0;
+            this.InitDemand = 0;
             this.Position = EnPoint.Invalid;
         }
 
-        ///<summary>Node comment.</summary>
-        public string Comment { get; set; }
+        public override ElementType ElementType { get { return ElementType.Node; } }
 
-        public double InitDemand { get { return this.initDemand; } set { this.initDemand = value; } }
+        public double InitDemand { get; set; }
 
         public virtual NodeType Type { get { return NodeType.JUNC; } }
 
         ///<summary>Node position.</summary>
         public EnPoint Position { get; set; }
-
-        ///<summary>Node id string.</summary>
-        public string Id { get { return this.id; } }
 
         ///<summary>Node elevation(foot).</summary>
         public double Elevation { get; set; }
@@ -59,7 +48,7 @@ namespace Epanet.Network.Structures {
         public List<Demand> Demand { get { return this.demand; } }
 
         ///<summary>Water quality source.</summary>
-        public Source Source { get; set; }
+        public QualSource QualSource { get; set; }
 
         ///<summary>Initial species concentrations.</summary>
         public double C0 { get; set; }
@@ -70,21 +59,8 @@ namespace Epanet.Network.Structures {
         ///<summary>Node reporting flag.</summary>
         public bool RptFlag { get; set; }
 
-        public override int GetHashCode() { return string.IsNullOrEmpty(this.id) ? 0 : this.id.GetHashCode(); }
 
-        public int CompareTo(Node o) {
-            if (o == null) return 1;
-            return string.Compare(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
-        }
-
-        /*
-        public override bool Equals(object obj) {
-            Node o = obj as Node;
-            if (o == null) return false;
-
-            return string.Equals(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
-        }
-        */
+        
 
 #if NUCONVERT
 

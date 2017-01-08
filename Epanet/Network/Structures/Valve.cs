@@ -20,10 +20,11 @@ namespace Epanet.Network.Structures {
     ///<summary>Hydraulic valve structure.</summary>
     public class Valve:Link {
 
-        public Valve(string id):base(id) { }
+        public Valve(string name):base(name) { }
 
         ///<summary>Settings curve.</summary>
         public Curve Curve { get; set; }
+
     }
 
 }

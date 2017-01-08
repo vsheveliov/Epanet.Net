@@ -92,9 +92,9 @@ namespace Epanet.MSX {
 
         public void Close() { this.dseek.Close(); }
 
-        public string ENgetlinkid(int j) { return this.links[j - 1].Id; }
+        public string ENgetlinkid(int j) { return this.links[j - 1].Name; }
 
-        public string ENgetnodeid(int j) { return this.nodes[j - 1].Id; }
+        public string ENgetnodeid(int j) { return this.nodes[j - 1].Name; }
 
         public int ENgetnodeindex(string s, out int tmp) {
             Node n = this.net.GetNode(s);

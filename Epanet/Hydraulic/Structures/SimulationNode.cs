@@ -49,7 +49,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public Node Node { get { return this.node; } }
 
-        public string Id { get { return this.node.Id; } }
+        public string Id { get { return this.node.Name; } }
 
         public NodeType Type { get { return this.node.Type; } }
 
@@ -57,7 +57,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public List<Demand> Demand { get { return this.node.Demand; } }
 
-        public Source Source { get { return this.node.Source; } }
+        public QualSource QualSource { get { return this.node.QualSource; } }
 
         public double C0 { get { return this.node.C0; } }
 

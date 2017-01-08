@@ -23,47 +23,49 @@ namespace Epanet.Util {
     public class ENException:Exception {
 
         ///<summary>Array of arguments to be used in the error string creation.</summary>
-        private readonly object[] arguments;
+        private readonly object[] _arguments;
 
         ///<summary>Epanet error code.</summary>
-        private readonly ErrorCode codeID;
+        private readonly ErrorCode _code;
 
-        ///<summary>Get error code.</summary>
-        /// <returns>Code id.</returns>
-        public ErrorCode getCodeID() { return this.codeID; }
+        /// <summary>Get error code.</summary>
+        /// <value>Code id.</value>
+        public ErrorCode Code {
+            get { return this._code; }
+        }
 
         ///<summary>Contructor from error code id.</summary>
-        ///<param name="id">Error code id.</param>
+        ///<param name="code">Error code id.</param>
 
-        public ENException(ErrorCode id) {
-            this.arguments = null;
-            this.codeID = id;
+        public ENException(ErrorCode code) {
+            this._arguments = null;
+            this._code = code;
         }
 
         /// <summary>Contructor from error code id and multiple arguments.</summary>
-        ///  <param name="id">Error code id.</param>
+        ///  <param name="code">Error code id.</param>
         /// <param name="arg">Extra arguments.</param>
         ///  
-        public ENException(ErrorCode id, params object[] arg) {
-            this.codeID = id;
-            this.arguments = arg;
+        public ENException(ErrorCode code, params object[] arg) {
+            this._code = code;
+            this._arguments = arg;
         }
 
         ///<summary>Contructor from other exception and multiple arguments.</summary>
         public ENException(ENException e, params object[] arg) {
-            this.arguments = arg;
-            this.codeID = e.getCodeID();
+            this._arguments = arg;
+            this._code = e.Code;
         }
 
         ///<summary>Get arguments array.</summary>
-        public object[] Arguments { get { return this.arguments; } }
+        public object[] Arguments { get { return this._arguments; } }
 
         ///<summary>Handles the exception string conversion.</summary>
         /// <returns>Final error string.</returns>
         public override string Message {
             get {
                 string str;
-                string name = "ERR" + (int)this.codeID;
+                string name = "ERR" + (int)this._code;
 
                 try {
                     str = Properties.Error.ResourceManager.GetString(name);
@@ -74,10 +76,10 @@ namespace Epanet.Util {
 
 
                 if (str == null)
-                    return string.Format("Unknown error message ({0})", this.codeID);
+                    return string.Format("Unknown error message ({0})", this._code);
 
-                if (this.arguments != null)
-                    return string.Format(str, this.arguments);
+                if (this._arguments != null)
+                    return string.Format(str, this._arguments);
 
                 return str;
             }

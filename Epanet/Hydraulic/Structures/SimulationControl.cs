@@ -37,7 +37,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public SimulationControl(IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links, Control @ref) {
             if (@ref.Node != null) {
-                string nid = @ref.Node.Id;
+                string nid = @ref.Node.Name;
                 foreach (SimulationNode simulationNode  in  nodes) {
                     if (simulationNode.Id.Equals(nid, StringComparison.OrdinalIgnoreCase)) {
                         this.node = simulationNode;
@@ -47,9 +47,9 @@ namespace Epanet.Hydraulic.Structures {
             }
 
             if (@ref.Link != null) {
-                string linkId = @ref.Link.Id;
+                string linkId = @ref.Link.Name;
                 foreach (SimulationLink simulationLink  in  links) {
-                    if (simulationLink.Link.Id.Equals(linkId, StringComparison.OrdinalIgnoreCase)) {
+                    if (simulationLink.Link.Name.Equals(linkId, StringComparison.OrdinalIgnoreCase)) {
                         this.link = simulationLink;
                         break;
                     }
@@ -298,7 +298,7 @@ namespace Epanet.Hydraulic.Structures {
                     Text.FMT54,
                     htime.GetClockTime(),
                     l.Type.ParseStr(),
-                    l.Link.Id,
+                    l.Link.Name,
                     type,
                     n.Id);
                 break;
@@ -309,7 +309,7 @@ namespace Epanet.Hydraulic.Structures {
                     Text.FMT55,
                     htime.GetClockTime(),
                     l.Type.ParseStr(),
-                    l.Link.Id);
+                    l.Link.Name);
                 break;
             default:
                 return;
@@ -338,7 +338,7 @@ namespace Epanet.Hydraulic.Structures {
                         string.Format(
                             Text.FMT56,
                             link.Type.ParseStr(),
-                            link.Link.Id,
+                            link.Link.Name,
                             setting));
                     return;
                 }
@@ -361,7 +361,7 @@ namespace Epanet.Hydraulic.Structures {
                     log.Warning(
                         Text.FMT57,
                         link.Type.ParseStr(),
-                        link.Link.Id,
+                        link.Link.Name,
                         j1.ReportStr(),
                         j2.ReportStr());
                 }

@@ -28,20 +28,20 @@ namespace Epanet.Network {
     ///<summary>Hydraulic network structure.</summary>
     public class Network {
         private readonly List<Control> controls = new List<Control>();
-        private readonly StringKeyedCollection<Curve> curves = new StringKeyedCollection<Curve>();
+        private readonly ElementCollection<Curve> curves = new ElementCollection<Curve>();
         
         [NonSerialized]
         private readonly FieldsMap fields = new FieldsMap();
         
         private readonly List<Label> labels = new List<Label>();
-        private readonly StringKeyedCollection<Link> links = new StringKeyedCollection<Link>();
-        private readonly StringKeyedCollection<Node> nodes = new StringKeyedCollection<Node>();
+        private readonly ElementCollection<Link> links = new ElementCollection<Link>();
+        private readonly ElementCollection<Node> nodes = new ElementCollection<Node>();
         
-        private readonly StringKeyedCollection<Pattern> patterns = new StringKeyedCollection<Pattern>() {
+        private readonly ElementCollection<Pattern> patterns = new ElementCollection<Pattern>() {
             new Pattern(string.Empty)
         };
 
-        private readonly StringKeyedCollection<Rule> rules = new StringKeyedCollection<Rule>();
+        private readonly ElementCollection<Rule> rules = new ElementCollection<Rule>();
         private readonly List<string> titleText = new List<string>();
 
         public Network() {
@@ -79,7 +79,7 @@ namespace Epanet.Network {
         ///<summary>Transient colleciton of pumps.</summary>
         public IEnumerable<Pump> Pumps {
             get {
-                return this.links.Where(x => x.Type == LinkType.PUMP).Select(x => (Pump)x);
+                return this.links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>();
             } 
         }
 

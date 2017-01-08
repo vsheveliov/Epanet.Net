@@ -109,7 +109,7 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine(JUNCS_SUBTITLE);
 
             foreach (Node node in net.Junctions) {
-                this.buffer.Write(" {0}\t{1}", node.Id, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
+                this.buffer.Write(" {0}\t{1}", node.Name, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
 
                 //if(node.getDemand()!=null && node.getDemand().size()>0 && !node.getDemand()[0].getPattern().getId().equals(""))
                 //    buffer.write("\t"+node.getDemand()[0].getPattern().getId());
@@ -118,9 +118,9 @@ namespace Epanet.Network.IO.Output {
                     Demand d = node.Demand[0];
                     this.buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, d.Base));
 
-                    if (!string.IsNullOrEmpty(d.Pattern.Id)
-                        && !net.DefPatId.Equals(d.Pattern.Id, StringComparison.OrdinalIgnoreCase))
-                        this.buffer.Write("\t" + d.Pattern.Id);
+                    if (!string.IsNullOrEmpty(d.Pattern.Name)
+                        && !net.DefPatId.Equals(d.Pattern.Name, StringComparison.OrdinalIgnoreCase))
+                        this.buffer.Write("\t" + d.Pattern.Name);
                 }
 
                 if (!string.IsNullOrEmpty(node.Comment))
@@ -151,11 +151,11 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine(RESERVOIRS_SUBTITLE);
 
             foreach (Tank r  in  reservoirs) {
-                this.buffer.Write(" {0}\t{1}", r.Id, fMap.RevertUnit(FieldType.ELEV, r.Elevation));
+                this.buffer.Write(" {0}\t{1}", r.Name, fMap.RevertUnit(FieldType.ELEV, r.Elevation));
 
 
                 if (r.Pattern != null)
-                    this.buffer.Write("\t{0}", r.Pattern.Id);
+                    this.buffer.Write("\t{0}", r.Pattern.Name);
 
 
                 if (!string.IsNullOrEmpty(r.Comment))
@@ -190,7 +190,7 @@ namespace Epanet.Network.IO.Output {
 
                 this.buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
-                        tank.Id,
+                        tank.Name,
                         fMap.RevertUnit(FieldType.ELEV, tank.Elevation),
                         fMap.RevertUnit(FieldType.ELEV, tank.H0 - tank.Elevation),
                         fMap.RevertUnit(FieldType.ELEV, tank.Hmin - tank.Elevation),
@@ -199,7 +199,7 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.VOLUME, vmin));
 
                 if (tank.Vcurve != null)
-                    this.buffer.Write(" " + tank.Vcurve.Id);
+                    this.buffer.Write(" " + tank.Vcurve.Name);
 
                 if (!string.IsNullOrEmpty(tank.Comment))
                     this.buffer.Write("\t;" + tank.Comment);
@@ -234,9 +234,9 @@ namespace Epanet.Network.IO.Output {
 
                 this.buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
-                        link.Id,
-                        link.FirstNode.Id,
-                        link.SecondNode.Id,
+                        link.Name,
+                        link.FirstNode.Name,
+                        link.SecondNode.Name,
                         fMap.RevertUnit(FieldType.LENGTH, link.Lenght),
                         fMap.RevertUnit(FieldType.DIAM, d));
 
@@ -271,9 +271,9 @@ namespace Epanet.Network.IO.Output {
             foreach (Pump pump in net.Pumps) {
                 this.buffer.Write(
                         " {0}\t{1}\t{2}",
-                        pump.Id,
-                        pump.FirstNode.Id,
-                        pump.SecondNode.Id);
+                        pump.Name,
+                        pump.FirstNode.Name,
+                        pump.SecondNode.Name);
 
 
                 // Pump has constant power
@@ -281,7 +281,7 @@ namespace Epanet.Network.IO.Output {
                     this.buffer.Write(" POWER " + pump.Km);
                 // Pump has a head curve
                 else if (pump.HCurve != null)
-                    this.buffer.Write(" HEAD " + pump.HCurve.Id);
+                    this.buffer.Write(" HEAD " + pump.HCurve.Name);
                 // Old format used for pump curve
                 else {
                     this.buffer.Write(
@@ -297,7 +297,7 @@ namespace Epanet.Network.IO.Output {
                 }
 
                 if (pump.UPat != null)
-                    this.buffer.Write(" PATTERN " + pump.UPat.Id);
+                    this.buffer.Write(" PATTERN " + pump.UPat.Name);
 
 
                 if (pump.Roughness != 1.0)
@@ -342,14 +342,14 @@ namespace Epanet.Network.IO.Output {
 
                 this.buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
-                        valve.Id,
-                        valve.FirstNode.Id,
-                        valve.SecondNode.Id,
+                        valve.Name,
+                        valve.FirstNode.Name,
+                        valve.SecondNode.Name,
                         fMap.RevertUnit(FieldType.DIAM, d),
                         valve.Type.ParseStr());
 
                 if (valve.Type == LinkType.GPV && valve.Curve != null)
-                    this.buffer.Write(" {0}\t{1}", valve.Curve.Id, km);
+                    this.buffer.Write(" {0}\t{1}", valve.Curve.Name, km);
                 else
                     this.buffer.Write(" {0}\t{1}", kc, km);
 
@@ -375,10 +375,10 @@ namespace Epanet.Network.IO.Output {
             foreach (Node node in net.Junctions) {
                 if (node.Demand.Count > 1)
                     foreach (Demand demand in node.Demand) {
-                        this.buffer.Write("{0}\t{1}", node.Id, ucf * demand.Base);
+                        this.buffer.Write("{0}\t{1}", node.Name, ucf * demand.Base);
 
                         if (demand.Pattern != null)
-                            this.buffer.Write("\t" + demand.Pattern.Id);
+                            this.buffer.Write("\t" + demand.Pattern.Name);
 
                         this.buffer.WriteLine();
                     }
@@ -402,7 +402,7 @@ namespace Epanet.Network.IO.Output {
             foreach (Node node  in  net.Junctions) {
                 if (node.Ke == 0.0) continue;
                 double ke = uflow / Math.Pow(upressure * node.Ke, (1.0 / qexp));
-                this.buffer.WriteLine(" {0}\t{1}", node.Id, ke);
+                this.buffer.WriteLine(" {0}\t{1}", node.Name, ke);
             }
 
             this.buffer.WriteLine();
@@ -419,7 +419,7 @@ namespace Epanet.Network.IO.Output {
             foreach (Link link  in  net.Links) {
                 if (link.Type <= LinkType.PUMP) {
                     if (link.Status == StatType.CLOSED)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.CLOSED.ParseStr());
+                        this.buffer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED.ParseStr());
 
                     // Write pump speed here for pumps with old-style pump curve input
                     else if (link.Type == LinkType.PUMP) {
@@ -427,16 +427,16 @@ namespace Epanet.Network.IO.Output {
                         if (pump.HCurve == null &&
                             pump.Ptype != PumpType.CONST_HP &&
                             pump.Roughness != 1.0)
-                            this.buffer.WriteLine(" {0}\t{1}", link.Id, link.Roughness);
+                            this.buffer.WriteLine(" {0}\t{1}", link.Name, link.Roughness);
                     }
                 }
                 // Write fixed-status PRVs & PSVs (setting = MISSING)
                 else if(link.Roughness.IsMissing()) {
                     if (link.Status == StatType.OPEN)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.OPEN.ParseStr());
+                        this.buffer.WriteLine(" {0}\t{1}", link.Name, StatType.OPEN.ParseStr());
 
                     if (link.Status == StatType.CLOSED)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Id, StatType.CLOSED.ParseStr());
+                        this.buffer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED.ParseStr());
 
                 }
 
@@ -457,12 +457,11 @@ namespace Epanet.Network.IO.Output {
 
             for (int i = 1; i < pats.Count; i++) {
                 Pattern pat = pats[i];
-                List<double> f = pat.FactorsList;
-                for (int j = 0; j < pats[i].Length; j++) {
+                for (int j = 0; j < pats[i].Count; j++) {
                     if (j % 6 == 0)
-                        this.buffer.Write(" {0}", pat.Id);
+                        this.buffer.Write(" {0}", pat.Name);
 
-                    this.buffer.Write(" {0}", f[j]);
+                    this.buffer.Write(" {0}", pat[j]);
 
                     if (j % 6 == 5)
                         this.buffer.WriteLine();
@@ -483,9 +482,9 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine(SectType.CURVES.ParseStr());
             this.buffer.WriteLine(CURVE_SUBTITLE);
 
-            foreach (Curve c  in  curves) {
-                foreach (var pt in c.Points) {
-                    this.buffer.WriteLine(" {0}\t{1}\t{2}", c.Id, pt.X, pt.Y);
+            foreach (Curve curve  in  curves) {
+                foreach (var pt in curve) {
+                    this.buffer.WriteLine(" {0}\t{1}\t{2}", curve.Name, pt.X, pt.Y);
                 }
             }
 
@@ -507,7 +506,7 @@ namespace Epanet.Network.IO.Output {
 
                 // Get text of control's link status/setting
                 if(control.Setting.IsMissing())
-                    this.buffer.Write(" LINK {0} {1} ", control.Link.Id, control.Status.ParseStr());
+                    this.buffer.Write(" LINK {0} {1} ", control.Link.Name, control.Status.ParseStr());
                 else {
                     double kc = control.Setting;
                     switch (control.Link.Type) {
@@ -520,7 +519,7 @@ namespace Epanet.Network.IO.Output {
                         kc = fmap.RevertUnit(FieldType.FLOW, kc);
                         break;
                     }
-                    this.buffer.Write(" LINK {0} {1} ", control.Link.Id, kc);
+                    this.buffer.Write(" LINK {0} {1} ", control.Link.Name, kc);
                 }
 
 
@@ -536,7 +535,7 @@ namespace Epanet.Network.IO.Output {
 
                     this.buffer.Write(
                             " IF NODE {0} {1} {2}",
-                            control.Node.Id,
+                            control.Node.Name,
                             control.Type.ParseStr(),
                             kc);
 
@@ -576,7 +575,7 @@ namespace Epanet.Network.IO.Output {
 
             foreach (Node node  in  net.Nodes) {
                 if (node.C0 == 0.0) continue;
-                this.buffer.WriteLine(" {0}\t{1}", node.Id, fmap.RevertUnit(FieldType.QUALITY, node.C0));
+                this.buffer.WriteLine(" {0}\t{1}", node.Name, fmap.RevertUnit(FieldType.QUALITY, node.C0));
             }
 
             this.buffer.WriteLine();
@@ -592,18 +591,18 @@ namespace Epanet.Network.IO.Output {
 
 
             foreach (Node node in net.Nodes) {
-                Source source = node.Source;
+                QualSource source = node.QualSource;
                 if (source == null)
                     continue;
 
                 this.buffer.Write(
                         " {0}\t{1}\t{2}",
-                        node.Id,
+                        node.Name,
                         source.Type.ParseStr(),
                         source.C0);
 
                 if (source.Pattern != null)
-                    this.buffer.Write(" " + source.Pattern.Id);
+                    this.buffer.Write(" " + source.Pattern.Name);
 
                 this.buffer.WriteLine();
             }
@@ -623,7 +622,7 @@ namespace Epanet.Network.IO.Output {
                 if (tank.IsReservoir) continue;
                 this.buffer.WriteLine(
                         " {0}\t{1}\t{2}",
-                        tank.Id,
+                        tank.Name,
                         tank.MixModel.ParseStr(),
                         tank.V1Max / tank.Vmax);
             }
@@ -654,15 +653,15 @@ namespace Epanet.Network.IO.Output {
                     continue;
 
                 if (link.Kb != net.KBulk)
-                    this.buffer.WriteLine("BULK {0} {1}", link.Id, link.Kb * Constants.SECperDAY);
+                    this.buffer.WriteLine("BULK {0} {1}", link.Name, link.Kb * Constants.SECperDAY);
                 if (link.Kw != net.KWall)
-                    this.buffer.WriteLine("WALL {0} {1}", link.Id, link.Kw * Constants.SECperDAY);
+                    this.buffer.WriteLine("WALL {0} {1}", link.Name, link.Kw * Constants.SECperDAY);
             }
 
             foreach (Tank tank  in  net.Tanks) {
                 if (tank.IsReservoir) continue;
                 if (tank.Kb != net.KBulk)
-                    this.buffer.WriteLine("TANK {0} {1}", tank.Id, tank.Kb * Constants.SECperDAY);
+                    this.buffer.WriteLine("TANK {0} {1}", tank.Name, tank.Kb * Constants.SECperDAY);
             }
 
             this.buffer.WriteLine();
@@ -683,13 +682,13 @@ namespace Epanet.Network.IO.Output {
 
             foreach (Pump p  in  net.Pumps) {
                 if (p.ECost > 0.0)
-                    this.buffer.WriteLine("PUMP {0} PRICE {1}", p.Id, p.ECost);
+                    this.buffer.WriteLine("PUMP {0} PRICE {1}", p.Name, p.ECost);
 
                 if (p.EPat != null)
-                    this.buffer.WriteLine("PUMP {0} PATTERN {1}", p.Id, p.EPat.Id);
+                    this.buffer.WriteLine("PUMP {0} PATTERN {1}", p.Name, p.EPat.Name);
 
                 if (p.ECurve != null)
-                    this.buffer.WriteLine("PUMP {0} EFFIC {1}", p.Id, p.ECurve.Id);
+                    this.buffer.WriteLine("PUMP {0} EFFIC {1}", p.Name, p.ECurve.Name);
             }
 
             this.buffer.WriteLine();
@@ -806,7 +805,7 @@ namespace Epanet.Network.IO.Output {
                             this.buffer.Write("NODES ");
                         }
 
-                        this.buffer.Write("{0} ", node.Id);
+                        this.buffer.Write("{0} ", node.Name);
                         j++;
                     }
                 }
@@ -831,7 +830,7 @@ namespace Epanet.Network.IO.Output {
                             this.buffer.Write("LINKS ");
                         }
 
-                        this.buffer.Write("{0} ", link.Id);
+                        this.buffer.Write("{0} ", link.Name);
                         j++;
                     }
                 }
@@ -867,7 +866,7 @@ namespace Epanet.Network.IO.Output {
                 if (!node.Position.IsInvalid) {
                     this.buffer.WriteLine(
                             " {0,-16}\t{1,-12}\t{2,-12}",
-                            node.Id,
+                            node.Name,
                             node.Position.X,
                             node.Position.Y);
                 }
@@ -903,7 +902,7 @@ namespace Epanet.Network.IO.Output {
                     continue;
 
                 foreach (EnPoint p  in  link.Vertices) {
-                    this.buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Id, p.X, p.Y);
+                    this.buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Name, p.X, p.Y);
                 }
             }
 
@@ -915,7 +914,7 @@ namespace Epanet.Network.IO.Output {
             this.buffer.WriteLine();
 
             foreach (Rule r  in  net.Rules) {
-                this.buffer.WriteLine("RULE " + r.Label);
+                this.buffer.WriteLine("RULE " + r.Name);
                 foreach (string s  in  r.Code)
                     this.buffer.WriteLine(s);
                 this.buffer.WriteLine();

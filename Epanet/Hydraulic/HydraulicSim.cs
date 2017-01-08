@@ -563,10 +563,11 @@ namespace Epanet.Hydraulic {
                 double sum = 0.0;
                 foreach (Demand demand  in  node.Demand) {
                     // pattern period (k) = (elapsed periods) modulus (periods per pattern)
-                    List<double> factors = demand.Pattern.FactorsList;
+                    var pat = demand.Pattern;
 
-                    long k = p % factors.Count;
-                    double djunc = (demand.Base) * factors[(int)k] * this.Net.DMult;
+                    long k = p % pat.Count;
+                    double djunc = demand.Base * pat[(int)k] * this.Net.DMult;
+
                     if (djunc > 0.0)
                         this.dsystem += djunc;
 
@@ -580,10 +581,8 @@ namespace Epanet.Hydraulic {
                 if (tank.IsReservoir) {
                     Pattern pat = tank.Pattern;
                     if (pat != null) {
-                        List<double> factors = pat.FactorsList;
-                        long k = p % factors.Count;
-
-                        tank.SimHead = tank.Elevation * factors[(int)k];
+                        long k = p % pat.Count;
+                        tank.SimHead = tank.Elevation * pat[(int)k];
                     }
                 }
             }
@@ -591,9 +590,9 @@ namespace Epanet.Hydraulic {
             // Update status of pumps with utilization patterns
             foreach (SimulationPump pump  in  this.pumps) {
                 if (pump.Upat != null) {
-                    List<double> factors = pump.Upat.FactorsList;
-                    int k = (int)(p % factors.Count);
-                    pump.SetLinkSetting(factors[k]);
+                    var pat = pump.Upat;
+                    int k = (int)(p % pat.Count);
+                    pump.SetLinkSetting(pat[k]);
                 }
             }
         }
@@ -742,7 +741,7 @@ namespace Epanet.Hydraulic {
                             this.logger.Warning(
                                     Error.WARN05,
                                     valve.Type.ParseStr(),
-                                    valve.Link.Id,
+                                    valve.Link.Name,
                                     valve.SimStatus.ReportStr(),
                                     atime);
                         flag = 5;
@@ -763,7 +762,7 @@ namespace Epanet.Hydraulic {
                         if (this.Net.MessageFlag)
                             this.logger.Warning(
                                     Error.WARN04,
-                                    pump.Link.Id,
+                                    pump.Link.Name,
                                     pump.SimStatus.ReportStr(),
                                     atime);
                         flag = 4;
@@ -837,14 +836,14 @@ namespace Epanet.Hydraulic {
                                     Text.FMT52,
                                     atime,
                                     link.Type.ParseStr(),
-                                    link.Link.Id,
+                                    link.Link.Name,
                                     link.SimStatus.ReportStr());
                         else
                             this.logger.Warning(
                                     Text.FMT53,
                                     atime,
                                     link.Type.ParseStr(),
-                                    link.Link.Id,
+                                    link.Link.Name,
                                     link.SimOldStatus.ReportStr(),
                                     link.SimStatus.ReportStr());
                         link.SimOldStatus = link.SimStatus;

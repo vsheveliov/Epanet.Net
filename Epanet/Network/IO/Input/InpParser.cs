@@ -17,7 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -42,12 +41,12 @@ namespace Epanet.Network.IO.Input {
             Keywords.w_EMITTER,   Keywords.w_DEMAND
         };
 
-        public InpParser(TraceSource log):base(log) {
+        public InpParser() {
             this.currentRule = null;
         }
 
         protected void LogException(SectType section, ErrorCode err, string line, IList<string> tokens) {
-            if (err == ErrorCode.Ok)
+            if(err == ErrorCode.Ok)
                 return;
 
             string arg = section == SectType.OPTIONS ? line : tokens[0];
@@ -124,7 +123,7 @@ namespace Epanet.Network.IO.Input {
                             }
                         }
                         catch (ENException e) {
-                            this.LogException(sectionType, e.getCodeID(), line, tokens);
+                            this.LogException(sectionType, e.Code, line, tokens);
                         }
                     }
 
@@ -277,7 +276,7 @@ namespace Epanet.Network.IO.Input {
                         }
                     }
                     catch (ENException e) {
-                        this.LogException(sectionType, e.getCodeID(), line, tokens);
+                        this.LogException(sectionType, e.Code, line, tokens);
                         errSum++;
                     }
                     if (errSum == Constants.MAXERRS) break;
@@ -342,7 +341,7 @@ namespace Epanet.Network.IO.Input {
 
             nodeRef.Elevation = el;
             nodeRef.C0 = 0.0;
-            nodeRef.Source = null;
+            nodeRef.QualSource = null;
             nodeRef.Ke = 0.0;
             nodeRef.RptFlag = false;
 
@@ -426,7 +425,7 @@ namespace Epanet.Network.IO.Input {
             tank.RptFlag = false;
             tank.Elevation = el;
             tank.C0 = 0.0;
-            tank.Source = null;
+            tank.QualSource = null;
             tank.Ke = 0.0;
 
             tank.H0 = initlevel;
@@ -683,15 +682,15 @@ namespace Epanet.Network.IO.Input {
                 LinkType vtype = vk.Type;
 
                 if (vtype == LinkType.PRV && type == LinkType.PRV) {
-                    if (vj2 == j2 ||
-                        vj2 == j1 ||
-                        vj1 == j2) return (false);
+                    if (Equals(vj2, j2) ||
+                        Equals(vj2, j1) ||
+                        Equals(vj1, j2)) return (false);
                 }
 
                 if (vtype == LinkType.PSV && type == LinkType.PSV) {
-                    if (vj1 == j1 ||
-                        vj1 == j2 ||
-                        vj2 == j1) return (false);
+                    if (Equals(vj1, j1) ||
+                        Equals(vj1, j2) ||
+                        Equals(vj2, j1)) return (false);
                 }
 
                 if (vtype == LinkType.PSV && type == LinkType.PRV && vj1 == j2) return (false);
@@ -959,13 +958,13 @@ namespace Epanet.Network.IO.Input {
                 if (pat == null) throw new ENException(ErrorCode.Err205);
             }
 
-            Source src = new Source();
+            QualSource src = new QualSource();
 
             src.C0 = c0;
             src.Pattern = pat;
             src.Type = type;
 
-            nodeRef.Source = src;
+            nodeRef.QualSource = src;
         }
 
 
@@ -1018,7 +1017,7 @@ namespace Epanet.Network.IO.Input {
                     if (i0 > 0 && i1 > 0) {
                         foreach (Node j  in  net.Nodes) {
                             double d;
-                            if (double.TryParse(j.Id, out d)) {
+                            if (double.TryParse(j.Name, out d)) {
                                 long i = (long)d;
                                 if (i >= i0 && i <= i1)
                                     j.C0 = c0;
@@ -1027,8 +1026,8 @@ namespace Epanet.Network.IO.Input {
                     }
                     else {
                         foreach (Node j  in  net.Nodes) {
-                            if ((string.Compare(tok[0], j.Id, StringComparison.OrdinalIgnoreCase) <= 0) &&
-                                (string.Compare(tok[1], j.Id, StringComparison.OrdinalIgnoreCase) >= 0))
+                            if ((string.Compare(tok[0], j.Name, StringComparison.OrdinalIgnoreCase) <= 0) &&
+                                (string.Compare(tok[1], j.Name, StringComparison.OrdinalIgnoreCase) >= 0))
                                 j.C0 = c0;
                         }
                     }
@@ -1114,15 +1113,15 @@ namespace Epanet.Network.IO.Input {
                     finally {
                         if (i1 > 0 && i2 > 0) {
                             foreach (Tank j  in  net.Tanks) {
-                                long i = long.Parse(j.Id);
+                                long i = long.Parse(j.Name);
                                 if (i >= i1 && i <= i2)
                                     j.Kb = y;
                             }
                         }
                         else {
                             foreach (Tank j  in  net.Tanks) {
-                                if (string.Compare(tok[1], j.Id, StringComparison.Ordinal) <= 0 &&
-                                    string.Compare(tok[2], j.Id, StringComparison.Ordinal) >= 0)
+                                if (string.Compare(tok[1], j.Name, StringComparison.Ordinal) <= 0 &&
+                                    string.Compare(tok[2], j.Name, StringComparison.Ordinal) >= 0)
                                     j.Kb = y;
                             }
                         }
@@ -1153,7 +1152,7 @@ namespace Epanet.Network.IO.Input {
                         if (i1 > 0 && i2 > 0) {
                             foreach (Link j  in  net.Links) {
                                 try {
-                                    long i = long.Parse(j.Id);
+                                    long i = long.Parse(j.Name);
                                     if (i >= i1 && i <= i2) {
                                         if (item == 1)
                                             j.Kb = y;
@@ -1166,8 +1165,8 @@ namespace Epanet.Network.IO.Input {
                         }
                         else
                             foreach (Link j  in  net.Links) {
-                                if (string.Compare(tok[1], j.Id, StringComparison.Ordinal) <= 0 &&
-                                    string.Compare(tok[2], j.Id, StringComparison.Ordinal) >= 0) {
+                                if (string.Compare(tok[1], j.Name, StringComparison.Ordinal) <= 0 &&
+                                    string.Compare(tok[2], j.Name, StringComparison.Ordinal) >= 0) {
                                     if (item == 1)
                                         j.Kb = y;
                                     else
@@ -1252,7 +1251,7 @@ namespace Epanet.Network.IO.Input {
                     if (i0 > 0 && i1 > 0) {
                         foreach (Link j  in  net.Links) {
                             try {
-                                long i = long.Parse(j.Id);
+                                long i = long.Parse(j.Name);
                                 if (i >= i0 && i <= i1)
                                     this.ChangeStatus(j, status, y);
                             }
@@ -1261,8 +1260,8 @@ namespace Epanet.Network.IO.Input {
                     }
                     else
                         foreach (Link j  in  net.Links)
-                            if (string.Compare(tok[0], j.Id, StringComparison.Ordinal) <= 0 &&
-                                string.Compare(tok[1], j.Id, StringComparison.Ordinal) >= 0)
+                            if (string.Compare(tok[0], j.Name, StringComparison.Ordinal) <= 0 &&
+                                string.Compare(tok[1], j.Name, StringComparison.Ordinal) >= 0)
                                 this.ChangeStatus(j, status, y);
                 }
             }
@@ -1338,7 +1337,7 @@ namespace Epanet.Network.IO.Input {
                     else throw new ENException(ErrorCode.Err217);
                 }
                 if (pumpRef == null)
-                    net.EPatId = t.Id;
+                    net.EPatId = t.Name;
                 else
                     pumpRef.EPat = t;
                 return;
@@ -1575,7 +1574,7 @@ namespace Epanet.Network.IO.Input {
                     Node nodeRef = net.GetNode(tok[2]);
                     if (nodeRef == null)
                         throw new ENException(ErrorCode.Err212);
-                    net.TraceNode = nodeRef.Id;
+                    net.TraceNode = nodeRef.Name;
                     net.ChemName = Keywords.u_PERCENT;
                     net.ChemUnits = tok[2];
                 }

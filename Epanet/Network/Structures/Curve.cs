@@ -16,6 +16,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 using Epanet.Enums;
@@ -23,11 +24,10 @@ using Epanet.Enums;
 namespace Epanet.Network.Structures {
 
     ///<summary>2D graph used to map volume, pump, efficiency and head loss curves.</summary>
-    public class Curve:IStringKeyed {
-        private readonly string id;
+    public class Curve : Element, IEnumerable<EnPoint> {
         private readonly List<EnPoint> points = new List<EnPoint>();
 
-        public Curve(string id) { this.id = id; }
+        public Curve(string name):base(name) { }
 
         /// <summary>Computes intercept and slope of head v. flow curve at current flow.</summary>
         /// <param name="fMap"></param>
@@ -55,9 +55,6 @@ namespace Epanet.Network.Structures {
 
         }
 
-        ///<summary>Curve name.</summary>
-        public string Id { get { return this.id; } }
-
         ///<summary>Curve type.</summary>
         public CurveType Type { get; set; }
 
@@ -66,27 +63,42 @@ namespace Epanet.Network.Structures {
         /// <summary>Compute the linear interpolation of a 2d cartesian graph.</summary>
         /// <param name="x">The abscissa value.</param>
         /// <returns>The interpolated value.</returns>
-        public double this[double x] {
-            get {
-                var p = this.points;
-                int m = this.points.Count - 1;
+        public double Interpolate(double x) {
+            var p = this.points;
+            int m = this.points.Count - 1;
 
-                if (x <= p[0].X) return p[0].Y;
+            if (x <= p[0].X) return p[0].Y;
 
-                for (int i = 1; i <= m; i++) {
-                    if (p[i].X >= x) {
-                        double dx = p[i].X - p[i - 1].X;
-                        double dy = p[i].Y - p[i - 1].Y;
-                        if (Math.Abs(dx) < Constants.TINY) return p[i].Y;
-                        else return p[i].Y - (p[i].X - x) * dy / dx;
-                    }
+            for (int i = 1; i <= m; i++) {
+                if (p[i].X >= x) {
+                    double dx = p[i].X - p[i - 1].X;
+                    double dy = p[i].Y - p[i - 1].Y;
+                    if (Math.Abs(dx) < Constants.TINY) return p[i].Y;
+                    else return p[i].Y - (p[i].X - x) * dy / dx;
                 }
-
-                return p[m].Y;
             }
+
+            return p[m].Y;
         }
 
+        public override ElementType ElementType {
+            get { return ElementType.Curve; }
+        }
+
+        #region partial implementation of IList<EnPoint>
+
         public void Add(double x, double y) { this.points.Add(new EnPoint(x, y)); }
+
+        IEnumerator IEnumerable.GetEnumerator() { return this.points.GetEnumerator(); }
+        public IEnumerator<EnPoint> GetEnumerator() { return this.points.GetEnumerator(); }
+        
+        public int Count { get { return this.points.Count; } }
+        public EnPoint this[int index] {
+            get { return this.points[index]; }
+        }
+
+        #endregion
+
     }
 
 }

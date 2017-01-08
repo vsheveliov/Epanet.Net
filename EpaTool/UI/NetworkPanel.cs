@@ -20,6 +20,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using Epanet.Network.Structures;
 
@@ -415,7 +416,7 @@ namespace Epanet.UI {
 
                 string s = string.Format(
                     "{0}: x={1:f};y={2:f}",
-                    this.selNode.Id,
+                    this.selNode.Name,
                     this.selNode.Position.X,
                     this.selNode.Position.Y);
 

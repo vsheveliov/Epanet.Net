@@ -23,7 +23,7 @@ using Epanet.Enums;
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic link structure (pipe)</summary>
-    public class Link:IComparable<Link>, IStringKeyed {
+    public class Link:Element {
 
         ///<summary>Init links flow resistance values.</summary>
         public void initResistance(FormType formflag, double hexp) {
@@ -56,22 +56,20 @@ namespace Epanet.Network.Structures {
             }
         }
 
-        private readonly string id;
         private readonly List<EnPoint> vertices;
 
-        public Link(string id) {
-            this.id = id;
-            this.Comment = "";
+        public Link(string name):base(name) {
             this.vertices = new List<EnPoint>();
             this.Type = LinkType.CV;
             this.Status = StatType.XHEAD;
         }
 
         ///<summary>Initial species concentrations.</summary>
-        public double[] C0 { get; set; }
+        public double C0 { get; set; }
 
-        ///<summary>Link comment (parsed from INP or excel file)</summary>
-        public string Comment { get; set; }
+        public override ElementType ElementType {
+            get { return ElementType.Link; }
+        }
 
         ///<summary>Link diameter (feet).</summary>
         public double Diameter { get; set; }
@@ -81,9 +79,6 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Flow resistance.</summary>
         public double FlowResistance { get; set; }
-
-        ///<summary>Link name.</summary>
-        public string Id { get { return this.id; } }
 
         ///<summary>Bulk react. coeff.</summary>
         public double Kb { get; set; }
@@ -117,22 +112,6 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Link report flag.</summary>
         public bool RptFlag { get; set; }
-
-        public override int GetHashCode() { return string.IsNullOrEmpty(this.id) ? 0 : this.id.GetHashCode(); }
-
-        public int CompareTo(Link o) {
-            if(o == null) return 1;
-            return string.Compare(this.id, o.id, StringComparison.OrdinalIgnoreCase);
-        }
-
-        /*
-        public override bool Equals(object obj) {
-            Link o = obj as Link;
-            if(o == null) return false;
-
-            return string.Equals(this.Id, o.Id, StringComparison.OrdinalIgnoreCase);
-        }
-        */
 
         public void SetDiameterAndUpdate(double diameter, Network net) {
             double realkm = this.Km * Math.Pow(this.Diameter, 4.0) / 0.02517;

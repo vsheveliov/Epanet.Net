@@ -21,7 +21,7 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>Network conversion units only class.</summary>
     public class NullParser:InputParser {
-        public NullParser(TraceSource log):base(log) { }
+        public NullParser(TraceSource log):base() { }
 
         public override Network Parse(Network net, string f) {
             AdjustData(net);

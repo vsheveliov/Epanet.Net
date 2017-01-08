@@ -99,7 +99,7 @@ namespace Epanet.UI {
 
                 switch (extension.ToLowerInvariant()) {
                     case  ".xlsx":
-                        inpParser = new ExcelParser(log);
+                        inpParser = new ExcelParser();
                         break;
 #if false
                     // TODO: implement this
@@ -111,10 +111,10 @@ namespace Epanet.UI {
                         break;
 #endif
                     case ".inp":
-                        inpParser = new InpParser(log);
+                        inpParser = new InpParser();
                         break;
                     default:
-                        inpParser = new InpParser(log);
+                        inpParser = new InpParser();
                         break;
                 }
 
@@ -382,7 +382,7 @@ namespace Epanet.UI {
                     string logFile = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, "hydEvents.log");
 
                     try {
-                        simHandler = new EpanetTraceListener(logFile, false, logFile);
+                        simHandler = new EpanetTraceListener(logFile, false);
                         simHandler.TraceOutputOptions &= ~TraceOptions.DateTime;
                         this.log.Listeners.Add(simHandler);
                     }
@@ -417,7 +417,7 @@ namespace Epanet.UI {
                         () => this.hydSim.Htime / (double)this.netInp.Duration);
                 }
                 catch (ENException ex) {
-                    if (ex.getCodeID() == ErrorCode.Err1000)
+                    if (ex.Code == ErrorCode.Err1000)
                         throw new ThreadInterruptedException();
 
                     MessageBox.Show(

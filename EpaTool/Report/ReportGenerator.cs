@@ -127,12 +127,12 @@ namespace Epanet.Report {
             object[] nodesHead = new object[dseek.Nodes + 1];
             nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
             for (int i = 0; i < nodes.Count; i++)
-                nodesHead[i + 1] = nodes[i].Id;
+                nodesHead[i + 1] = nodes[i].Name;
 
             var linksHead = new object[dseek.Links + 1];
             linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
             for (int i = 0; i < links.Count; i++)
-                linksHead[i + 1] = links[i].Id;
+                linksHead[i + 1] = links[i].Name;
 
             XLSXWriter.Spreadsheet[] resultSheets = new XLSXWriter.Spreadsheet[HydVariable.Values.Length];
             // Array.Clear(resultSheets, 0, resultSheets.Length);
@@ -243,12 +243,12 @@ namespace Epanet.Report {
                 var nodesHead = new object[dseek.Nodes + 1];
                 nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
                 for(int i = 0; i < netNodes.Count; i++)
-                    nodesHead[i + 1] = netNodes[i].Id;
+                    nodesHead[i + 1] = netNodes[i].Name;
 
                 var linksHead = new object[dseek.Links + 1];
                 linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
                 for(int i = 0; i < netLinks.Count; i++)
-                    linksHead[i + 1] = netLinks[i].Id;
+                    linksHead[i + 1] = netLinks[i].Name;
 
                 var resultSheets = new XLSXWriter.Spreadsheet[HydVariable.Values.Length];
                
@@ -444,7 +444,7 @@ namespace Epanet.Report {
                     sh.AddData(Text.FMT30, net.ChemName);
                     break;
                 case QualType.TRACE:
-                    sh.AddData(Text.FMT31, "Trace From Node", net.GetNode(net.TraceNode).Id);
+                    sh.AddData(Text.FMT31, "Trace From Node", net.GetNode(net.TraceNode).Name);
                     break;
                 case QualType.AGE:
                     sh.AddData(Text.FMT32, "Age");
@@ -461,8 +461,8 @@ namespace Epanet.Report {
                 }
 
                 sh.AddData(Text.FMT36, net.SpGrav);
-                sh.AddData(Text.FMT37a, net.Viscos / Constants.VISCOS);
-                sh.AddData(Text.FMT37b, net.Diffus / Constants.DIFFUS);
+                sh.AddData(Text.FMT37a, net.Viscos / Epanet.Constants.VISCOS);
+                sh.AddData(Text.FMT37b, net.Diffus / Epanet.Constants.DIFFUS);
                 sh.AddData(Text.FMT38, net.DMult);
                 sh.AddData(
                     Text.FMT39,

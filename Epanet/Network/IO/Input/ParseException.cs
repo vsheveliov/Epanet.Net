@@ -3,7 +3,7 @@
 namespace Epanet.Network.IO.Input {
     public sealed class EpanetParseException : ENException {
 
-        public EpanetParseException(ErrorCode id, int line, string file, params object[] args) : base(id, args) {
+        public EpanetParseException(ErrorCode code, int line, string file, params object[] args) : base(code, args) {
             this.File = file;
             this.Line = line;
         }

@@ -20,7 +20,7 @@ using Epanet.Enums;
 namespace Epanet.Network.Structures {
 
     ///<summary>Water quality object, source quality.</summary>
-    public class Source {
+    public class QualSource {
         ///<summary>Base concentration.</summary>
         public double C0 { get; set; }
 

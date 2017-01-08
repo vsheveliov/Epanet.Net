@@ -326,10 +326,10 @@ namespace Epanet {
 
                     if (nodesTextWriter != null) {
                         foreach (Node node  in  net.Nodes) {
-                            if (targetNodes.Count > 0 && !targetNodes.Contains(node.Id))
+                            if (targetNodes.Count > 0 && !targetNodes.Contains(node.Name))
                                 continue;
 
-                            nodesTextWriter.Write(node.Id);
+                            nodesTextWriter.Write(node.Name);
 
                             nodesTextWriter.Write('\t');
                             nodesTextWriter.Write(time.GetClockTime());
@@ -350,10 +350,10 @@ namespace Epanet {
 
                     if (linksTextWriter != null) {
                         foreach (Link link  in  net.Links) {
-                            if (targetLinks.Count > 0 && !targetLinks.Contains(link.Id))
+                            if (targetLinks.Count > 0 && !targetLinks.Contains(link.Name))
                                 continue;
 
-                            linksTextWriter.Write(link.Id);
+                            linksTextWriter.Write(link.Name);
 
                             linksTextWriter.Write('\t');
                             linksTextWriter.Write(time.GetClockTime());
