@@ -30,8 +30,11 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>INP parser class.</summary>
     public class InpParser:InputParser {
+        private SectType sectionType = (SectType)(-1);
+        private readonly List<string> Tok = new List<string>(Constants.MAXTOKS);
+        private string comment;
+        string line;
 
-        private int lineNumber;
         private Rule currentRule; // Current rule
 
         private static readonly string[] OptionValueKeywords = {
@@ -44,381 +47,337 @@ namespace Epanet.Network.IO.Input {
         public InpParser() {
             this.currentRule = null;
         }
+        
+        public override Network Parse(Network net_, string fileName)
+        {
+            if(net_ == null)
+                throw new ArgumentNullException("net_");
 
-        protected void LogException(SectType section, ErrorCode err, string line, IList<string> tokens) {
-            if(err == ErrorCode.Ok)
-                return;
+            if(string.IsNullOrEmpty(fileName))
+                throw new ArgumentNullException("fileName");
 
-            string arg = section == SectType.OPTIONS ? line : tokens[0];
+            this.net = net_;
+            this.FileName = Path.GetFullPath(fileName);
 
-            EpanetParseException parseException = new EpanetParseException(
-                err,
-                this.lineNumber,
-                this.FileName,
-                section.ReportStr(),
-                arg);
+            try {
+                using(FileStream fs = File.OpenRead(fileName)) {
+                    this.ParsePc(fs);
+                    this.Parse(fs);
 
-            base.Errors.Add(parseException);
+                    if (this.Errors.Count > 0)
+                        throw new ENException(ErrorCode.Err200);
 
-            this.Log.Error(parseException.ToString());
-
+                    return net_;
+                }
+            }
+            catch(IOException ex) {
+                throw new ENException(ErrorCode.Err302, ex);
+            }
         }
 
         /// <summary>Parse demands and time patterns first.</summary>
-        /// <param name="net"></param>
-        /// <param name="f"></param>
+        /// <param name="stream"></param>
+        private void ParsePc(Stream stream) {
+            var buffReader = new StreamReader(stream, Encoding.Default);
 
-        private void ParsePc(Network net, string f) {
-            this.lineNumber = 0;
-            SectType sectionType = (SectType)(-1);
-            StreamReader buffReader;
+            while ((this.line = buffReader.ReadLine()) != null) {
 
-            try {
-                buffReader = new StreamReader(f, Encoding.Default); // "ISO-8859-1"
-            }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
+                this.line = this.line.Trim();
 
-            try {
-                string line;
-                while ((line = buffReader.ReadLine()) != null) {
-                    this.lineNumber++;
+                if (string.IsNullOrEmpty(this.line))
+                    continue;
 
-                    line = line.Trim();
+                if (this.line[0] == '[') {
+                    if (this.line.StartsWith("[PATTERNS]", StringComparison.OrdinalIgnoreCase)) {
+                        this.sectionType = SectType.PATTERNS;
+                    }
+                    else if (this.line.StartsWith("[CURVES]", StringComparison.OrdinalIgnoreCase))
+                        this.sectionType = SectType.CURVES;
+                    else
+                        this.sectionType = (SectType)(-1);
+                    continue;
+                }
 
-                    if (string.IsNullOrEmpty(line))
+                if (this.sectionType != (SectType)(-1)) {
+                    if (this.line.IndexOf(';') >= 0)
+                        this.line = this.line.Substring(0, this.line.IndexOf(';'));
+
+                    if (string.IsNullOrEmpty(this.line))
                         continue;
 
-                    if (line[0] == '[') {
-                        if (line.StartsWith("[PATTERNS]")) {
-                            sectionType = SectType.PATTERNS;
-                        }
-                        else if (line.StartsWith("[CURVES]"))
-                            sectionType = SectType.CURVES;
-                        else
-                            sectionType = (SectType)(-1);
+                    if (Tokenize(this.line, this.Tok) == 0)
                         continue;
-                    }
 
-                    if (sectionType != (SectType)(-1)) {
-                        if (line.IndexOf(';') >= 0)
-                            line = line.Substring(0, line.IndexOf(';'));
-
-                        if (line.Length == 0)
-                            continue;
-
-                        string[] tokens = Tokenize(line);
-
-                        if (tokens.Length == 0) continue;
-
-                        try {
-                            switch (sectionType) {
-                            case SectType.PATTERNS:
-                                this.ParsePattern(net, tokens);
-                                break;
-                            case SectType.CURVES:
-                                this.ParseCurve(net, tokens);
-                                break;
-                            }
-                        }
-                        catch (ENException e) {
-                            this.LogException(sectionType, e.Code, line, tokens);
+                    try {
+                        switch (this.sectionType) {
+                        case SectType.PATTERNS:
+                            this.ParsePattern();
+                            break;
+                        case SectType.CURVES:
+                            this.ParseCurve();
+                            break;
                         }
                     }
-
-                    if (this.Errors.Count == Constants.MAXERRS) break;
+                    catch (InputException ex) {
+                        this.LogException(ex);
+                    }
                 }
             }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
 
-            if (this.Errors.Count > 0)
-                throw new ENException(ErrorCode.Err200);
-
-            try {
-                buffReader.Close();
-            }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
         }
 
         // Parse INP file
-        public override Network Parse(Network net, string f) {
-            this.FileName = Path.GetFullPath(f);
+        private void Parse(Stream stream) {
+            
+            this.sectionType = (SectType)(-1);
+            TextReader buffReader = new StreamReader(stream, Encoding.Default); // "ISO-8859-1";
 
-            this.ParsePc(net, f);
+            while ((this.line = buffReader.ReadLine()) != null) {
+                this.comment = null;
 
-            int errSum = 0;
-            //int lineCount = 0;
-            SectType sectionType = (SectType)(-1);
-            TextReader buffReader;
+                int index = this.line.IndexOf(';');
 
-            try {
-                buffReader = new StreamReader(f, Encoding.Default); // "ISO-8859-1"
-            }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
+                if (index >= 0) {
+                    if (index > 0)
+                        this.comment = this.line.Substring(index + 1).Trim();
 
-            try {
-                string line;
-                while ((line = buffReader.ReadLine()) != null) {
-                    string comment = "";
+                    this.line = this.line.Substring(0, index);
+                }
 
-                    int index = line.IndexOf(';');
+                //lineCount++;
+                this.line = this.line.Trim();
+                if (string.IsNullOrEmpty(this.line))
+                    continue;
 
-                    if (index >= 0) {
-                        if (index > 0)
-                            comment = line.Substring(index + 1).Trim();
+                if (Tokenize(this.line, this.Tok) == 0)
+                    continue;
 
-                        line = line.Substring(0, index);
+                if (this.Tok[0][0] == '[') {
+                    this.sectionType = FindSectionType(this.Tok[0]);
+
+                    if (this.sectionType < 0) {
+                        this.Log.Warning("Unknown section type : %s", this.Tok[0]);
                     }
 
+                    continue;
+                }
 
-                    //lineCount++;
-                    line = line.Trim();
-                    if (string.IsNullOrEmpty(line))
-                        continue;
+                if (this.sectionType < 0) continue;
 
-                    string[] tokens = Tokenize(line);
-                    if (tokens.Length == 0) continue;
+                try {
+                    switch (this.sectionType) {
+                    case SectType.TITLE:
+                        this.net.Title.Add(this.line);
+                        break;
+                    case SectType.JUNCTIONS:
+                        this.ParseJunction();
+                        break;
 
-                    try {
+                    case SectType.RESERVOIRS:
+                    case SectType.TANKS:
+                        this.ParseTank();
+                        break;
 
-                        if (tokens[0].IndexOf('[') >= 0) {
-                            SectType type = FindSectionType(tokens[0]);
-                            if (type >= 0)
-                                sectionType = type;
-                            else {
-                                sectionType = (SectType)(-1);
-                                this.Log.Error(null, null, string.Format("Unknown section type : {0}", tokens[0]));
-                                //throw new ENException(201, lineCount);
-                            }
-                        }
-                        else if (sectionType >= 0) {
+                    case SectType.PIPES:
+                        this.ParsePipe();
+                        break;
+                    case SectType.PUMPS:
+                        this.ParsePump();
+                        break;
+                    case SectType.VALVES:
+                        this.ParseValve();
+                        break;
+                    case SectType.CONTROLS:
+                        this.ParseControl();
+                        break;
 
-                            switch (sectionType) {
-                            case SectType.TITLE:
-                                net.TitleText.Add(line);
-                                break;
-                            case SectType.JUNCTIONS:
-                                ParseJunction(net, tokens, comment);
-                                break;
+                    case SectType.RULES:
+                        this.ParseRule();
+                        break;
 
-                            case SectType.RESERVOIRS:
-                            case SectType.TANKS:
-                                ParseTank(net, tokens, comment);
-                                break;
-
-                            case SectType.PIPES:
-                                this.ParsePipe(net, tokens, comment);
-                                break;
-                            case SectType.PUMPS:
-                                this.ParsePump(net, tokens, comment);
-                                break;
-                            case SectType.VALVES:
-                                this.ParseValve(net, tokens, comment);
-                                break;
-                            case SectType.CONTROLS:
-                                this.ParseControl(net, tokens);
-                                break;
-
-                            case SectType.RULES:
-                                this.ParseRule(net, tokens, line);
-                                break;
-
-                            case SectType.DEMANDS:
-                                this.ParseDemand(net, tokens);
-                                break;
-                            case SectType.SOURCES:
-                                this.ParseSource(net, tokens);
-                                break;
-                            case SectType.EMITTERS:
-                                this.ParseEmitter(net, tokens);
-                                break;
-                            case SectType.QUALITY:
-                                ParseQuality(net, tokens);
-                                break;
-                            case SectType.STATUS:
-                                this.ParseStatus(net, tokens);
-                                break;
-                            case SectType.ENERGY:
-                                this.ParseEnergy(net, tokens);
-                                break;
-                            case SectType.REACTIONS:
-                                this.ParseReact(net, tokens);
-                                break;
-                            case SectType.MIXING:
-                                this.ParseMixing(net, tokens);
-                                break;
-                            case SectType.REPORT:
-                                this.ParseReport(net, tokens);
-                                break;
-                            case SectType.TIMES:
-                                this.ParseTime(net, tokens);
-                                break;
-                            case SectType.OPTIONS:
-                                this.ParseOption(net, tokens);
-                                break;
-                            case SectType.COORDINATES:
-                                this.ParseCoordinate(net, tokens);
-                                break;
-                            case SectType.VERTICES:
-                                this.ParseVertice(net, tokens);
-                                break;
-                            case SectType.LABELS:
-                                this.ParseLabel(net, tokens);
-                                break;
-                            }
-                        }
+                    case SectType.DEMANDS:
+                        this.ParseDemand();
+                        break;
+                    case SectType.SOURCES:
+                        this.ParseSource();
+                        break;
+                    case SectType.EMITTERS:
+                        this.ParseEmitter();
+                        break;
+                    case SectType.QUALITY:
+                        this.ParseQuality();
+                        break;
+                    case SectType.STATUS:
+                        this.ParseStatus();
+                        break;
+                    case SectType.ENERGY:
+                        this.ParseEnergy();
+                        break;
+                    case SectType.REACTIONS:
+                        this.ParseReact();
+                        break;
+                    case SectType.MIXING:
+                        this.ParseMixing();
+                        break;
+                    case SectType.REPORT:
+                        this.ParseReport();
+                        break;
+                    case SectType.TIMES:
+                        this.ParseTime();
+                        break;
+                    case SectType.OPTIONS:
+                        this.ParseOption();
+                        break;
+                    case SectType.COORDINATES:
+                        this.ParseCoordinate();
+                        break;
+                    case SectType.VERTICES:
+                        this.ParseVertice();
+                        break;
+                    case SectType.LABELS:
+                        this.ParseLabel();
+                        break;
                     }
-                    catch (ENException e) {
-                        this.LogException(sectionType, e.Code, line, tokens);
-                        errSum++;
-                    }
-                    if (errSum == Constants.MAXERRS) break;
+                }
+                catch (InputException ex) {
+                    this.LogException(ex);
                 }
             }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
 
-            if (errSum > 0) {
-                throw new ENException(ErrorCode.Err200);
-            }
+            AdjustData(this.net);
 
-            try {
-                buffReader.Close();
-            }
-            catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
-            }
+            this.net.FieldsMap.Prepare(this.net.UnitsFlag, this.net.FlowFlag, this.net.PressFlag, this.net.QualFlag, this.net.ChemUnits, this.net.SpGrav, this.net.HStep);
 
-            AdjustData(net);
+            this.Convert();
 
-            net.FieldsMap.Prepare(
-                   net.UnitsFlag,
-                   net.FlowFlag,
-                   net.PressFlag,
-                   net.QualFlag,
-                   net.ChemUnits,
-                   net.SpGrav,
-                   net.HStep);
-
-            this.Convert(net);
-            return net;
+            return;
         }
 
-        protected static void ParseJunction(Network net, string[] tok, string comment) {
-            int n = tok.Length;
+        private static long atol(string value) {
+            value = (value ?? "").Trim();
+            if (string.IsNullOrEmpty(value)) return 0;
+
+            int i = 0;
+
+            if(value[0] == '-' || value[0] == '+')
+                i++;
+
+            while (i < value.Length) {
+
+                if(!char.IsNumber(value[i]))   
+                    break;
+
+                i++;
+            }
+
+            long result;
+
+            return long.TryParse(value.Substring(0, i), out result) ? result : 0;
+        }
+
+
+        private void ParseJunction() {
+            int n = this.Tok.Count;
             double el, y = 0.0d;
             Pattern p = null;
 
-            if (net.GetNode(tok[0]) != null)
-                throw new ENException(ErrorCode.Err215, SectType.JUNCTIONS, tok[0]);
+            if (this.net.GetNode(this.Tok[0]) != null)
+                throw new InputException(ErrorCode.Err215, SectType.JUNCTIONS, this.Tok[0]);
 
-            Node nodeRef = new Node(tok[0]);
+            Node node = new Node(this.Tok[0]);
 
-            net.Nodes.Add(nodeRef);
+            this.net.Nodes.Add(node);
 
             if (n < 2)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.JUNCTIONS, this.line);
 
-            if (!tok[1].ToDouble(out el))
-                throw new ENException(ErrorCode.Err202, SectType.JUNCTIONS, tok[0]);
+            if (!this.Tok[1].ToDouble(out el))
+                throw new InputException(ErrorCode.Err202, SectType.JUNCTIONS, this.Tok[0]);
 
-            if (n >= 3 && !tok[2].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202, SectType.JUNCTIONS, tok[0]);
+            if (n >= 3 && !this.Tok[2].ToDouble(out y)) {
+                throw new InputException(ErrorCode.Err202, SectType.JUNCTIONS, this.Tok[0]);
+            }
 
             if (n >= 4) {
-                p = net.GetPattern(tok[3]);
-                if (p == null)
-                    throw new ENException(ErrorCode.Err205);
+                p = this.net.GetPattern(this.Tok[3]);
+                if (p == null) {
+                    throw new InputException(ErrorCode.Err205, SectType.JUNCTIONS, this.Tok[0]);
+                }
             }
 
-            nodeRef.Elevation = el;
-            nodeRef.C0 = 0.0;
-            nodeRef.QualSource = null;
-            nodeRef.Ke = 0.0;
-            nodeRef.RptFlag = false;
+            node.Elevation = el;
+            node.C0 = 0.0;
+            node.QualSource = null;
+            node.Ke = 0.0;
+            node.RptFlag = false;
 
-            if (!string.IsNullOrEmpty(comment))
-                nodeRef.Comment = comment;
+            if (!string.IsNullOrEmpty(this.comment))
+                node.Comment = this.comment;
 
             if (n >= 3) {
-                Demand demand = new Demand(y, p);
-                nodeRef.Demand.Add(demand);
-
-                nodeRef.InitDemand = y;
+                node.PrimaryDemand.Base = y;
+                node.PrimaryDemand.Pattern = p;
             }
-            else
-                nodeRef.InitDemand = Constants.MISSING;
+            
         }
 
-
-        protected static void ParseTank(Network net, string[] tok, string comment) {
-            int n = tok.Length;
+        private void ParseTank() {
+            int n = this.Tok.Count;
             Pattern p = null;
-            Curve c = null;
+            Curve vcurve = null;
             double el,
                    initlevel = 0.0d,
                    minlevel = 0.0d,
                    maxlevel = 0.0d,
                    minvol = 0.0d,
-                   diam = 0.0d,
-                   area;
+                   diam = 0.0d;
 
-            if (net.GetNode(tok[0]) != null)
-                throw new ENException(ErrorCode.Err215);
+            if (this.net.GetNode(this.Tok[0]) != null)
+                throw new InputException(ErrorCode.Err215, SectType.TANKS, this.Tok[0]);
 
-            Tank tank = new Tank(tok[0]);
+            Tank tank = new Tank(this.Tok[0]);
             
-            if(comment.Length > 0)
-                tank.Comment = comment;
+            if(!string.IsNullOrEmpty(this.comment))
+                tank.Comment = this.comment;
 
-            net.Nodes.Add(tank);
+            this.net.Nodes.Add(tank);
 
             if (n < 2)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.TANKS, this.line);
 
-            if (!tok[1].ToDouble(out el))
-                throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[1].ToDouble(out el))
+                throw new InputException(ErrorCode.Err202, SectType.TANKS, this.Tok[0]);
 
-            if (n <= 3) {
+            if(n <= 3) {
+                /* Tank is reservoir.*/
                 if (n == 3) {
-                    p = net.GetPattern(tok[2]);
-                    if (p == null)
-                        throw new ENException(ErrorCode.Err205);
+                    p = this.net.GetPattern(this.Tok[2]);
+                    if (p == null) {
+                        throw new InputException(ErrorCode.Err205, SectType.TANKS, this.Tok[0]);
+                    }
                 }
             }
-            else if (n < 6)
-                throw new ENException(ErrorCode.Err201);
+            else if (n < 6) {
+                throw new InputException(ErrorCode.Err201, SectType.TANKS, this.line);
+            }
             else {
-                if (!tok[2].ToDouble(out initlevel))
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
 
-                if (!tok[3].ToDouble(out minlevel))
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
+                /* Check for valid input data */
+                if (!this.Tok[2].ToDouble(out initlevel) ||
+                    !this.Tok[3].ToDouble(out minlevel) ||
+                    !this.Tok[4].ToDouble(out maxlevel) ||
+                    !this.Tok[5].ToDouble(out diam) ||
+                    (diam < 0.0))
+                    throw new InputException(ErrorCode.Err202, SectType.TANKS, this.Tok[0]);
 
-                if (!tok[4].ToDouble(out maxlevel))
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
-                if (!tok[5].ToDouble(out diam))
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
-
-                if (diam < 0.0)
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
-
-                if (n >= 7
-                    && !tok[6].ToDouble(out minvol))
-                    throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
+                if (n >= 7 && !this.Tok[6].ToDouble(out minvol))
+                    throw new InputException(ErrorCode.Err202, SectType.TANKS, this.Tok[0]);
 
                 if (n == 8) {
-                    c = net.GetCurve(tok[7]);
-                    if (c == null)
-                        throw new ENException(ErrorCode.Err202, SectType.TANKS, tok[0]);
+                    vcurve = this.net.GetCurve(this.Tok[7]);
+
+                    if (vcurve == null)
+                        throw new InputException(ErrorCode.Err206, SectType.TANKS, this.Tok[0]);
                 }
             }
 
@@ -435,75 +394,82 @@ namespace Epanet.Network.IO.Input {
             tank.Pattern = p;
             tank.Kb = Constants.MISSING;
 
-            area = Math.PI * diam * diam / 4.0d;
+            /*
+            *******************************************************************
+             NOTE: The min, max, & initial volumes set here are based on a     
+                nominal tank diameter. They will be modified in INPUT1.C if    
+                a volume curve is supplied for this tank.                      
+            *******************************************************************
+            */
 
+            double area = Math.PI * diam * diam / 4.0d;
             tank.Vmin = area * minlevel;
-            if (minvol > 0.0)
-                tank.Vmin = minvol;
-
+            if (minvol > 0.0) tank.Vmin = minvol;
             tank.V0 = tank.Vmin + area * (initlevel - minlevel);
             tank.Vmax = tank.Vmin + area * (maxlevel - minlevel);
 
-            tank.Vcurve = c;
+            tank.Vcurve = vcurve;
             tank.MixModel = MixType.MIX1;
             tank.V1Max = 1.0;
+
         }
 
-
-        protected void ParsePipe(Network net, string[] tok, string comment) {
-            Node j1, j2;
-            int n = tok.Length;
+        private void ParsePipe() {
+            int n = this.Tok.Count;
             LinkType type = LinkType.PIPE;
             StatType status = StatType.OPEN;
             double length, diam, rcoeff, lcoeff = 0.0d;
 
-            if (net.GetLink(tok[0]) != null)
-                throw new ENException(ErrorCode.Err215);
+            if (this.net.GetLink(this.Tok[0]) != null)
+                throw new InputException(ErrorCode.Err215, SectType.PIPES, this.Tok[0]);
 
-            Link link = new Link(tok[0]);
-            net.Links.Add(link);
+            Link link = new Link(this.Tok[0]);
+            this.net.Links.Add(link);
             
             if (n < 6)
-                throw new ENException(ErrorCode.Err201);
-
-            if ((j1 = net.GetNode(tok[1])) == null ||
-                (j2 = net.GetNode(tok[2])) == null
-            ) throw new ENException(ErrorCode.Err203);
+                throw new InputException(ErrorCode.Err201, SectType.PIPES, this.line);
 
 
-            if (j1.Equals(j2)) throw new ENException(ErrorCode.Err222);
+            Node j1 = this.net.GetNode(this.Tok[1]),
+                 j2 = this.net.GetNode(this.Tok[2]);
+            
+            if (j1 == null || j2 == null)
+                throw new InputException(ErrorCode.Err203, SectType.PIPES, this.Tok[0]);
 
-            if (!tok[3].ToDouble(out length) ||
-                !tok[4].ToDouble(out diam) ||
-                !tok[5].ToDouble(out rcoeff)
-            ) throw new ENException(ErrorCode.Err202);
 
+            if (j1.Equals(j2))
+                throw new InputException(ErrorCode.Err222, SectType.PIPES, this.Tok[0]);
 
-            if (length <= 0.0 || diam <= 0.0 || rcoeff <= 0.0) throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[3].ToDouble(out length) || length <= 0.0 ||
+                !this.Tok[4].ToDouble(out diam) || diam <= 0.0 ||
+                !this.Tok[5].ToDouble(out rcoeff) || rcoeff <= 0.0)
+                throw new InputException(ErrorCode.Err202, SectType.PIPES, this.Tok[0]);
+
 
             if (n == 7) {
-                if (tok[6].Match(LinkType.CV.ParseStr())) type = LinkType.CV;
-                else if (tok[6].Match(StatType.CLOSED.ParseStr())) status = StatType.CLOSED;
-                else if (tok[6].Match(StatType.OPEN.ParseStr())) status = StatType.OPEN;
-                else if (!tok[6].ToDouble(out lcoeff)) throw new ENException(ErrorCode.Err202);
+                if(this.Tok[6].Match(Keywords.w_CV)) type = LinkType.CV;
+                else if(this.Tok[6].Match(Keywords.w_CLOSED)) status = StatType.CLOSED;
+                else if(this.Tok[6].Match(Keywords.w_OPEN)) status = StatType.OPEN;
+                else if (!this.Tok[6].ToDouble(out lcoeff) || lcoeff < 0)
+                    throw new InputException(ErrorCode.Err202, SectType.PIPES, this.Tok[0]);
             }
 
             if (n == 8) {
-                if (!tok[6].ToDouble(out lcoeff)) throw new ENException(ErrorCode.Err202);
-                if (tok[7].Match(LinkType.CV.ParseStr())) type = LinkType.CV;
-                else if (tok[7].Match(StatType.CLOSED.ParseStr())) status = StatType.CLOSED;
-                else if (tok[7].Match(StatType.OPEN.ParseStr())) status = StatType.OPEN;
-                else
-                    throw new ENException(ErrorCode.Err202);
-            }
+                if (!this.Tok[6].ToDouble(out lcoeff) || lcoeff < 0)
+                    throw new InputException(ErrorCode.Err202, SectType.PIPES, this.Tok[0]);
 
-            if (lcoeff < 0.0) throw new ENException(ErrorCode.Err202);
+                if(this.Tok[7].Match(Keywords.w_CV)) type = LinkType.CV;
+                else if(this.Tok[7].Match(Keywords.w_CLOSED)) status = StatType.CLOSED;
+                else if(this.Tok[7].Match(Keywords.w_OPEN)) status = StatType.OPEN;
+                else
+                    throw new InputException(ErrorCode.Err202, SectType.PIPES, this.Tok[0]); 
+            }
 
             link.FirstNode = j1;
             link.SecondNode = j2;
             link.Lenght = length;
             link.Diameter = diam;
-            link.Roughness = rcoeff;
+            link.Kc = rcoeff;
             link.Km = lcoeff;
             link.Kb = Constants.MISSING;
             link.Kw = Constants.MISSING;
@@ -511,965 +477,889 @@ namespace Epanet.Network.IO.Input {
             link.Status = status;
             link.RptFlag = false;
 
-            if (!string.IsNullOrEmpty(comment))
-                link.Comment = comment;
+            if (!string.IsNullOrEmpty(this.comment))
+                link.Comment = this.comment;
         }
 
-
-        protected void ParsePump(Network net, string[] tok, string comment) {
-            int m, n = tok.Length;
-            Node j1, j2;
+        private void ParsePump() {
+            int m, n = this.Tok.Count;
             double[] x = new double[6];
 
-            if (net.GetLink(tok[0]) != null)
-                throw new ENException(ErrorCode.Err215);
+            if (this.net.GetLink(this.Tok[0]) != null)
+                throw new InputException(ErrorCode.Err215, SectType.PUMPS, this.Tok[0]);
+            
+            if (n < 4)
+                throw new InputException(ErrorCode.Err201, SectType.PUMPS, this.line);
 
-            Pump pump = new Pump(tok[0]);
+            Node j1 = this.net.GetNode(this.Tok[1]),
+                 j2 = this.net.GetNode(this.Tok[2]);
 
-            net.Links.Add(pump);
+            if (j1 == null || j2 == null)
+                throw new InputException(ErrorCode.Err203, SectType.PUMPS, this.Tok[0]);
 
-            if (n < 4) throw new ENException(ErrorCode.Err201);
+            if (j1.Equals(j2))
+                throw new InputException(ErrorCode.Err222, SectType.PUMPS, this.Tok[0]);
 
-            if ((j1 = net.GetNode(tok[1])) == null || (j2 = net.GetNode(tok[2])) == null)
-                throw new ENException(ErrorCode.Err203);
+            Pump pump = new Pump(this.Tok[0]) {
+                FirstNode = j1,
+                SecondNode = j2,
+            };
+            
+            this.net.Links.Add(pump);
 
-            if (j1.Equals(j2)) throw new ENException(ErrorCode.Err222);
+            if (!string.IsNullOrEmpty(this.comment)) pump.Comment = this.comment;
 
-            // Link attributes
-            pump.FirstNode = j1;
-            pump.SecondNode = j2;
-            pump.Diameter = 0;
-            pump.Lenght = 0.0d;
-            pump.Roughness = 1.0d;
-            pump.Km = 0.0d;
-            pump.Kb = 0.0d;
-            pump.Kw = 0.0d;
-            pump.Type = LinkType.PUMP;
-            pump.Status = StatType.OPEN;
-            pump.RptFlag = false;
-
-            // Pump attributes
-            pump.Ptype = PumpType.NOCURVE;
-            pump.HCurve = null;
-            pump.ECurve = null;
-            pump.UPat = null;
-            pump.ECost = 0.0d;
-            pump.EPat = null;
-
-            if (comment.Length > 0) pump.Comment = comment;
-
-            if (tok[3].ToDouble(out x[0])) {
+            // If 4-th token is a number then input follows Version 1.x format 
+            // so retrieve pump curve parameters
+            if (this.Tok[3].ToDouble(out x[0])) {
 
                 m = 1;
                 for (int j = 4; j < n; j++) {
-                    if (!tok[j].ToDouble(out x[m])) throw new ENException(ErrorCode.Err202);
+                    if (!this.Tok[j].ToDouble(out x[m]))
+                        throw new InputException(ErrorCode.Err202, SectType.PUMPS, this.Tok[0]);
                     m++;
                 }
-                GetPumpCurve(tok, pump, m, x);
-                return;
-                    /* If 4-th token is a number then input follows Version 1.x format  so retrieve pump curve parameters */
 
+                GetPumpCurve(pump, m, x); /* Get pump curve params */
+
+                return;
             }
 
+            /* Otherwise input follows Version 2 format */
+            /* so retrieve keyword/value pairs.         */
             m = 4;
             while (m < n) {
-                if (tok[m - 1].Match(Keywords.w_POWER)) {
+                if (this.Tok[m - 1].Match(Keywords.w_POWER)) { /* Const. HP curve       */
                     double y;
-                    if (!tok[m].ToDouble(out y) || y <= 0.0) throw new ENException(ErrorCode.Err202);
+                    if (!this.Tok[m].ToDouble(out y) || y <= 0.0)
+                        throw new InputException(ErrorCode.Err202, SectType.PUMPS, this.Tok[0]);
+
                     pump.Ptype = PumpType.CONST_HP;
                     pump.Km = y;
                 }
-                else if (tok[m - 1].Match(Keywords.w_HEAD)) {
-                    Curve t = net.GetCurve(tok[m]);
-                    if (t == null) throw new ENException(ErrorCode.Err206);
+                else if (this.Tok[m - 1].Match(Keywords.w_HEAD)) { /* Custom pump curve      */
+                    Curve t = this.net.GetCurve(this.Tok[m]);
+                    if (t == null) 
+                        throw new InputException(ErrorCode.Err206, SectType.PUMPS, this.Tok[0]);
+
                     pump.HCurve = t;
                 }
-                else if (tok[m - 1].Match(Keywords.w_PATTERN)) {
-                    Pattern p = net.GetPattern(tok[m]);
-                    if (p == null) throw new ENException(ErrorCode.Err205);
+                else if (this.Tok[m - 1].Match(Keywords.w_PATTERN)) { /* Speed/status pattern */
+                    Pattern p = this.net.GetPattern(this.Tok[m]);
+                    if (p == null) 
+                        throw new InputException(ErrorCode.Err205, SectType.PUMPS, this.Tok[0]);
+
                     pump.UPat = p;
                 }
-                else if (tok[m - 1].Match(Keywords.w_SPEED)) {
+                else if (this.Tok[m - 1].Match(Keywords.w_SPEED)) { /* Speed setting */
                     double y;
-                    if (!tok[m].ToDouble(out y)) throw new ENException(ErrorCode.Err202);
-                    if (y < 0.0) throw new ENException(ErrorCode.Err202);
-                    pump.Roughness = y;
-                }
-                else
-                    throw new ENException(ErrorCode.Err201);
+                    if (!this.Tok[m].ToDouble(out y) || y < 0.0)
+                        throw new InputException(ErrorCode.Err202, SectType.PUMPS, this.Tok[0]);
 
-                m = m + 2;
+                    pump.Kc = y;
+                }
+                else {
+                    throw new InputException(ErrorCode.Err201, SectType.PUMPS, this.line);
+                }
+
+                m += 2;
             }
         }
 
-
-        protected void ParseValve(Network net, string[] tok, string comment) {
-            Node j1, j2;
-            int n = tok.Length;
+        private void ParseValve() {
+            int n = this.Tok.Count;
             StatType status = StatType.ACTIVE;
             LinkType type;
 
             double diam, setting, lcoeff = 0.0;
 
-            if (net.GetLink(tok[0]) != null)
-                throw new ENException(ErrorCode.Err215);
+            if (this.net.GetLink(this.Tok[0]) != null)
+                throw new InputException(ErrorCode.Err215, SectType.VALVES, this.Tok[0]);
 
-            Valve valve = new Valve(tok[0]);
-            net.Links.Add(valve);
+            Valve valve = new Valve(this.Tok[0]);
+            this.net.Links.Add(valve);
 
-            if (n < 6) throw new ENException(ErrorCode.Err201);
-            if ((j1 = net.GetNode(tok[1])) == null ||
-                (j2 = net.GetNode(tok[2])) == null
-            ) throw new ENException(ErrorCode.Err203);
+            if (n < 6)
+                throw new InputException(ErrorCode.Err201, SectType.VALVES, this.line);
+
+            Node j1 = this.net.GetNode(this.Tok[1]),
+                 j2 = this.net.GetNode(this.Tok[2]);
+
+            if (j1 == null || j2 == null)
+                throw new InputException(ErrorCode.Err203, SectType.VALVES, this.Tok[0]);
 
             if (j1.Equals(j2))
-                throw new ENException(ErrorCode.Err222);
+                throw new InputException(ErrorCode.Err222, SectType.VALVES, this.Tok[0]);
 
-            if (!EnumsTxt.TryParse(tok[4], out type))
-                throw new ENException(ErrorCode.Err201);
+            if (!EnumsTxt.TryParse(this.Tok[4], out type))
+                throw new InputException(ErrorCode.Err201, SectType.VALVES, this.line);
 
-            if(!tok[3].ToDouble(out diam) || diam <= 0.0) {
-                throw new ENException(ErrorCode.Err202);
-            }
+            if (!this.Tok[3].ToDouble(out diam) || diam <= 0.0)
+                throw new InputException(ErrorCode.Err202, SectType.VALVES, this.Tok[0]);
 
             if (type == LinkType.GPV) {
-                Curve t = net.GetCurve(tok[5]);
-                if (t == null) throw new ENException(ErrorCode.Err206);
+                Curve t = this.net.GetCurve(this.Tok[5]);
+                
+                if (t == null)
+                    throw new InputException(ErrorCode.Err206, SectType.VALVES, this.Tok[0]);
 
-                setting = net.Curves.IndexOf(t);
+                setting = this.net.Curves.IndexOf(t);
                 this.Log.Warning("GPV Valve, index as roughness !");
                 valve.Curve = t;
                 status = StatType.OPEN;
             }
-            else if (!tok[5].ToDouble(out setting)) {
-                throw new ENException(ErrorCode.Err202);
+            else if (!this.Tok[5].ToDouble(out setting)) {
+                throw new InputException(ErrorCode.Err202, SectType.VALVES, this.Tok[0]);
             }
 
             if (n >= 7) {
-                if (!tok[6].ToDouble(out lcoeff)) {
-                    throw new ENException(ErrorCode.Err202);
+                if (!this.Tok[6].ToDouble(out lcoeff)) {
+                    throw new InputException(ErrorCode.Err202, SectType.VALVES, this.Tok[0]);
                 }
             }
 
-            if ((j1 is Tank || j2 is Tank) &&
+            if ((j1.Type > NodeType.JUNC || j2.Type > NodeType.JUNC) &&
                 (type == LinkType.PRV || type == LinkType.PSV || type == LinkType.FCV))
-                throw new ENException(ErrorCode.Err219);
+                throw new InputException(ErrorCode.Err219, SectType.VALVES, this.Tok[0]);
 
-            if (!Valvecheck(net, type, j1, j2))
-                throw new ENException(ErrorCode.Err220);
+            if (!Valvecheck(this.net, type, j1, j2))
+                throw new InputException(ErrorCode.Err220, SectType.VALVES, this.Tok[0]);
 
 
             valve.FirstNode = j1;
             valve.SecondNode = j2;
             valve.Diameter = diam;
             valve.Lenght = 0.0d;
-            valve.Roughness = setting;
+            valve.Kc = setting;
             valve.Km = lcoeff;
             valve.Kb = 0.0d;
             valve.Kw = 0.0d;
             valve.Type = type;
             valve.Status = status;
             valve.RptFlag = false;
-            if (comment.Length > 0)
-                valve.Comment = comment;
+
+            if (!string.IsNullOrEmpty(this.comment))
+                valve.Comment = this.comment;
         }
-
-        private static bool Valvecheck(Network net, LinkType type, Node j1, Node j2) {
-            // Examine each existing valve
-            foreach (Valve vk  in  net.Valves) {
-                Node vj1 = vk.FirstNode;
-                Node vj2 = vk.SecondNode;
-                LinkType vtype = vk.Type;
-
-                if (vtype == LinkType.PRV && type == LinkType.PRV) {
-                    if (Equals(vj2, j2) ||
-                        Equals(vj2, j1) ||
-                        Equals(vj1, j2)) return (false);
-                }
-
-                if (vtype == LinkType.PSV && type == LinkType.PSV) {
-                    if (Equals(vj1, j1) ||
-                        Equals(vj1, j2) ||
-                        Equals(vj2, j1)) return (false);
-                }
-
-                if (vtype == LinkType.PSV && type == LinkType.PRV && vj1 == j2) return (false);
-                if (vtype == LinkType.PRV && type == LinkType.PSV && vj2 == j1) return (false);
-
-                if (vtype == LinkType.FCV && type == LinkType.PSV && vj2 == j1) return (false);
-                if (vtype == LinkType.FCV && type == LinkType.PRV && vj1 == j2) return (false);
-
-                if (vtype == LinkType.PSV && type == LinkType.FCV && vj1 == j2) return (false);
-                if (vtype == LinkType.PRV && type == LinkType.FCV && vj2 == j1) return (false);
-            }
-            return (true);
-        }
-
-        private static void GetPumpCurve(string[] tok, Pump pump, int n, double[] x) {
-            
-
-            if (n == 1) {
-                if (x[0] <= 0.0) throw new ENException(ErrorCode.Err202);
-                pump.Ptype = PumpType.CONST_HP;
-                pump.Km = x[0];
-            }
-            else {
-                double h0, h1, h2, q1, q2;
-
-                if (n == 2) {
-                    q1 = x[1];
-                    h1 = x[0];
-                    h0 = 1.33334 * h1;
-                    q2 = 2.0 * q1;
-                    h2 = 0.0;
-                }
-                else if (n >= 5) {
-                    h0 = x[0];
-                    h1 = x[1];
-                    q1 = x[2];
-                    h2 = x[3];
-                    q2 = x[4];
-                }
-                else 
-                    throw new ENException(ErrorCode.Err202);
-
-                pump.Ptype = PumpType.POWER_FUNC;
-                double a, b, c;
-              
-                if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                    throw new ENException(ErrorCode.Err206);
-
-                pump.H0 = -a;
-                pump.FlowCoefficient = -b;
-                pump.N = c;
-                pump.Q0 = q1;
-                pump.Qmax = Math.Pow(-a / b, 1.0 / c);
-                pump.Hmax = h0;
-            }
-        }
-
-        protected void ParsePattern(Network net, string[] tok) {
-            Pattern pat = net.GetPattern(tok[0]);
+      
+        private void ParsePattern() {
+            Pattern pat = this.net.GetPattern(this.Tok[0]);
 
             if (pat == null) {
-                pat = new Pattern(tok[0]);
-                net.Patterns.Add(pat);
+                pat = new Pattern(this.Tok[0]);
+                this.net.Patterns.Add(pat);
             }
 
-            for (int i = 1; i < tok.Length; i++) {
+            for (int i = 1; i < this.Tok.Count; i++) {
                 double x;
 
-                if (!tok[i].ToDouble(out x))
-                    throw new ENException(ErrorCode.Err202);
+                if (!this.Tok[i].ToDouble(out x))
+                    throw new InputException(ErrorCode.Err202, SectType.PATTERNS, this.Tok[0]);
 
                 pat.Add(x);
             }
         }
 
-        protected void ParseCurve(Network net, string[] tok) {
-            Curve cur = net.GetCurve(tok[0]);
+        private void ParseCurve() {
+            Curve cur = this.net.GetCurve(this.Tok[0]);
 
             if (cur == null) {
-                cur = new Curve(tok[0]);
-                net.Curves.Add(cur);
+                cur = new Curve(this.Tok[0]);
+                this.net.Curves.Add(cur);
             }
 
             double x, y;
 
-            if (!tok[1].ToDouble(out x) || !tok[2].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[1].ToDouble(out x) || !this.Tok[2].ToDouble(out y))
+                throw new InputException(ErrorCode.Err202, SectType.CURVES, this.Tok[0]);
 
             cur.Add(x, y);
         }
 
-        protected void ParseCoordinate(Network net, string[] tok) {
-            if (tok.Length < 3)
-                throw new ENException(ErrorCode.Err201);
+        private void ParseCoordinate() {
+            if (this.Tok.Count < 3)
+                throw new InputException(ErrorCode.Err201, SectType.COORDINATES, this.line);
 
-            Node nodeRef = net.GetNode(tok[0]);
+            Node node = this.net.GetNode(this.Tok[0]);
 
-            if (nodeRef == null)
-                throw new ENException(ErrorCode.Err203);
+            if (node == null)
+                throw new InputException(ErrorCode.Err203, SectType.COORDINATES, this.Tok[0]);
 
             double x, y;
 
-            if (!tok[1].ToDouble(out x) || !tok[2].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[1].ToDouble(out x) || !this.Tok[2].ToDouble(out y))
+                throw new InputException(ErrorCode.Err202, SectType.COORDINATES, this.Tok[0]);
 
-            nodeRef.Position = new EnPoint(x, y);
+            node.Position = new EnPoint(x, y);
         }
 
-        protected void ParseLabel(Network net, string[] tok) {
-            if (tok.Length < 3)
-                throw new ENException(ErrorCode.Err201);
+        private void ParseLabel() {
+            if (this.Tok.Count < 3)
+                throw new InputException(ErrorCode.Err201, SectType.LABELS, this.line);
+            
+            double x, y;
 
-            Label l = new Label();
-            double x;
-            double y;
+            if (!this.Tok[0].ToDouble(out x) || !this.Tok[1].ToDouble(out y))
+                throw new InputException(ErrorCode.Err201, SectType.LABELS, this.line);
 
-            if (!tok[0].ToDouble(out x) || !tok[1].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202);
+            string text = this.Tok[2].Replace("\"", "");
+            
+            Label label = new Label(text) {
+                Position = new EnPoint(x, y)
+            };
 
-            l.Position = new EnPoint(x, y);
-            //if (tok[2].length() > 1)
-            //    l.setText(tok[2].substring(1, tok[2].length() - 1));
-            for (int i = 2; i < tok.Length; i++)
-                if (l.Text.Length == 0)
-                    l.Text = tok[i].Replace("\"", "");
-                else
-                    l.Text = l.Text + " " + tok[i].Replace("\"", "");
-
-            net.Labels.Add(l);
+            this.net.Labels.Add(label);
         }
 
-        protected void ParseVertice(Network net, string[] tok) {
-            if (tok.Length < 3)
-                throw new ENException(ErrorCode.Err201);
+        private void ParseVertice() {
+            if (this.Tok.Count < 3)
+                throw new InputException(ErrorCode.Err201, SectType.VERTICES, this.line);
 
-            Link linkRef = net.GetLink(tok[0]);
+            Link link = this.net.GetLink(this.Tok[0]);
 
-            if (linkRef == null)
-                throw new ENException(ErrorCode.Err204);
+            if (link == null)
+                throw new InputException(ErrorCode.Err204, SectType.VERTICES, this.Tok[0]);
 
-            double x;
-            double y;
+            double x, y;
 
-            if (!tok[1].ToDouble(out x) || !tok[2].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[1].ToDouble(out x) || !this.Tok[2].ToDouble(out y))
+                throw new InputException(ErrorCode.Err202, SectType.VERTICES, this.Tok[0]);
 
-            linkRef.Vertices.Add(new EnPoint(x, y));
+            link.Vertices.Add(new EnPoint(x, y));
         }
 
-        protected void ParseControl(Network net, string[] tok) {
-            int n = tok.Length;
+        private void ParseControl() {
+            int n = this.Tok.Count;
             StatType status = StatType.ACTIVE;
 
             double setting = Constants.MISSING, time = 0.0, level = 0.0;
 
             if (n < 6)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.CONTROLS, this.line);
 
-            Node nodeRef = null;
-            Link linkRef = net.GetLink(tok[1]);
+            Node node = null;
+            Link link = this.net.GetLink(this.Tok[1]);
 
-            if (linkRef == null) throw new ENException(ErrorCode.Err204);
+            if (link == null)
+                throw new InputException(ErrorCode.Err204, SectType.CONTROLS, this.line);
 
-            LinkType ltype = linkRef.Type;
+            LinkType ltype = link.Type;
 
-            if (ltype == LinkType.CV) throw new ENException(ErrorCode.Err207);
+            if (ltype == LinkType.CV)
+                throw new InputException(ErrorCode.Err207, SectType.CONTROLS, this.line);
 
-            if (tok[2].Match(StatType.OPEN.ParseStr())) {
+            if (this.Tok[2].Match(StatType.OPEN.ToString())) {
                 status = StatType.OPEN;
                 if (ltype == LinkType.PUMP) setting = 1.0;
-                if (ltype == LinkType.GPV) setting = linkRef.Roughness;
+                if (ltype == LinkType.GPV) setting = link.Kc;
             }
-            else if (tok[2].Match(StatType.CLOSED.ParseStr())) {
+            else if (this.Tok[2].Match(StatType.CLOSED.ToString())) {
                 status = StatType.CLOSED;
                 if (ltype == LinkType.PUMP) setting = 0.0;
-                if (ltype == LinkType.GPV) setting = linkRef.Roughness;
+                if (ltype == LinkType.GPV) setting = link.Kc;
             }
-            else if (ltype == LinkType.GPV)
-                throw new ENException(ErrorCode.Err206);
-            else if (!tok[2].ToDouble(out setting))
-                throw new ENException(ErrorCode.Err202);
+            else if (ltype == LinkType.GPV) {
+                throw new InputException(ErrorCode.Err206, SectType.CONTROLS, this.line);
+            }
+            else if (!this.Tok[2].ToDouble(out setting)) {
+                throw new InputException(ErrorCode.Err202, SectType.CONTROLS, this.line);
+            }
 
             if (ltype == LinkType.PUMP || ltype == LinkType.PIPE) {
                 if (!setting.IsMissing()) {
-                    if (setting < 0.0) throw new ENException(ErrorCode.Err202);
-                    else if (setting == 0.0) status = StatType.CLOSED;
-                    else status = StatType.OPEN;
+                    if (setting < 0.0)
+                        throw new InputException(ErrorCode.Err202, SectType.CONTROLS, this.line);
+
+                    status = setting == 0.0 ? StatType.CLOSED : StatType.OPEN;
                 }
             }
 
             ControlType ctype;
 
-            if (tok[4].Match(Keywords.w_TIME))
+            if (this.Tok[4].Match(Keywords.w_TIME))
                 ctype = ControlType.TIMER;
-            else if (tok[4].Match(Keywords.w_CLOCKTIME))
+            else if (this.Tok[4].Match(Keywords.w_CLOCKTIME))
                 ctype = ControlType.TIMEOFDAY;
             else {
                 if (n < 8)
-                    throw new ENException(ErrorCode.Err201);
-                if ((nodeRef = net.GetNode(tok[5])) == null)
-                    throw new ENException(ErrorCode.Err203);
-                if (tok[6].Match(Keywords.w_BELOW)) ctype = ControlType.LOWLEVEL;
-                else if (tok[6].Match(Keywords.w_ABOVE)) ctype = ControlType.HILEVEL;
+                    throw new InputException(ErrorCode.Err201, SectType.CONTROLS, this.line);
+
+                if ((node = this.net.GetNode(this.Tok[5])) == null)
+                    throw new InputException(ErrorCode.Err203, SectType.CONTROLS, this.line);
+
+                if (this.Tok[6].Match(Keywords.w_BELOW)) ctype = ControlType.LOWLEVEL;
+                else if (this.Tok[6].Match(Keywords.w_ABOVE)) ctype = ControlType.HILEVEL;
                 else
-                    throw new ENException(ErrorCode.Err201);
+                    throw new InputException(ErrorCode.Err201, SectType.CONTROLS, this.line);
             }
 
             switch (ctype) {
             case ControlType.TIMER:
             case ControlType.TIMEOFDAY:
-                if (n == 6) time = Utilities.GetHour(tok[5]);
-                if (n == 7) time = Utilities.GetHour(tok[5], tok[6]);
-                if (time < 0.0) throw new ENException(ErrorCode.Err201);
+                if (n == 6) time = Utilities.GetHour(this.Tok[5]);
+                if (n == 7) time = Utilities.GetHour(this.Tok[5], this.Tok[6]);
+                if(time < 0.0) throw new InputException(ErrorCode.Err201, SectType.CONTROLS, this.line);
                 break;
+
             case ControlType.LOWLEVEL:
             case ControlType.HILEVEL:
-                if (!tok[7].ToDouble(out level)) {
-                    throw new ENException(ErrorCode.Err202);
-                }
+                if (!this.Tok[7].ToDouble(out level))
+                    throw new InputException(ErrorCode.Err202, SectType.CONTROLS, this.line);
+
                 break;
             }
 
-            Control cntr = new Control();
-            cntr.Link = linkRef;
-            cntr.Node = nodeRef;
-            cntr.Type = ctype;
-            cntr.Status = status;
-            cntr.Setting = setting;
-            cntr.Time = (long)(3600.0 * time);
-            if (ctype == ControlType.TIMEOFDAY)
-                cntr.Time = cntr.Time % Constants.SECperDAY;
-            cntr.Grade = level;
+            Control cntr = new Control {
+                Link = link,
+                Node = node,
+                Type = ctype,
+                Status = status,
+                Setting = setting,
 
-            net.Controls.Add(cntr);
+                Time = ctype == ControlType.TIMEOFDAY
+                    ? (long)(3600.0 * time) % Constants.SECperDAY
+                    : (long)(3600.0 * time),
+
+                Grade = level
+            };
+
+            this.net.Controls.Add(cntr);
         }
 
+        private void ParseSource() {
+            int n = this.Tok.Count;
 
-        protected void ParseSource(Network net, string[] tok) {
-            int n = tok.Length;
-            SourceType type;
-            double c0;
+            SourceType type; /* Source type   */
+            double c0; /* Init. quality */
             Pattern pat = null;
-            Node nodeRef;
+            
 
-            if (n < 2) throw new ENException(ErrorCode.Err201);
-            if ((nodeRef = net.GetNode(tok[0])) == null) throw new ENException(ErrorCode.Err203);
+            if (n < 2) 
+                throw new InputException(ErrorCode.Err201, SectType.SOURCES, this.line);
 
-            int i = 2;
+            Node node = this.net.GetNode(this.Tok[0]);
 
-            if (!EnumsTxt.TryParse(tok[1], out type))
+            if (node == null)
+                throw new InputException(ErrorCode.Err203, SectType.SOURCES, this.Tok[0]);
+
+            /* NOTE: Under old format, SourceType not supplied so let  */
+            /*       i = index of token that contains quality value.   */
+            int i = 2; /* Token with quality value */
+
+            if (!EnumsTxt.TryParse(this.Tok[1], out type)) {
                 i = 1;
-
-            //if (Utilities.match(Tok[1], Keywords.w_CONCEN)) type = Source.Type.CONCEN;
-            //else if (Utilities.match(Tok[1], Keywords.w_MASS)) type = Source.Type.MASS;
-            //else if (Utilities.match(Tok[1], Keywords.w_SETPOINT)) type = Source.Type.SETPOINT;
-            //else if (Utilities.match(Tok[1], Keywords.w_FLOWPACED)) type = Source.Type.FLOWPACED;
-            //else i = 1;
-
-            if (!tok[i].ToDouble(out c0)) {
-                throw new ENException(ErrorCode.Err202);
+                type = SourceType.CONCEN;
             }
 
-            if (n > i + 1 && tok[i + 1].Length > 0 && !tok[i + 1].Equals("*", StringComparison.Ordinal)) {
-                pat = net.GetPattern(tok[i + 1]);
-                if (pat == null) throw new ENException(ErrorCode.Err205);
+            if (!this.Tok[i].ToDouble(out c0)) {
+                /* Illegal WQ value */
+                throw new InputException(ErrorCode.Err202, SectType.SOURCES, this.Tok[0]);
             }
 
-            QualSource src = new QualSource();
+            if (n > i + 1 && !string.IsNullOrEmpty(this.Tok[i + 1]) && this.Tok[i + 1] != "*") {
+                if((pat = this.net.GetPattern(this.Tok[i + 1])) == null)
+                    throw new InputException(ErrorCode.Err205, SectType.SOURCES, this.Tok[0]);
+            }
 
-            src.C0 = c0;
-            src.Pattern = pat;
-            src.Type = type;
-
-            nodeRef.QualSource = src;
+            node.QualSource = new QualSource(type, c0, pat);
         }
 
-
-        protected void ParseEmitter(Network net, string[] tok) {
-            int n = tok.Length;
-            Node nodeRef;
+        private void ParseEmitter() {
+            int n = this.Tok.Count;
+            Node node;
             double k;
 
-            if (n < 2) throw new ENException(ErrorCode.Err201);
-            if ((nodeRef = net.GetNode(tok[0])) == null) throw new ENException(ErrorCode.Err203);
-            if (nodeRef is Tank)
-                throw new ENException(ErrorCode.Err209);
+            if (n < 2) throw
+                new InputException(ErrorCode.Err201, SectType.EMITTERS, this.line);
+            
+            if ((node = this.net.GetNode(this.Tok[0])) == null)
+                throw new InputException(ErrorCode.Err203, SectType.EMITTERS, this.Tok[0]);
 
-            if (!tok[1].ToDouble(out k)) {
-                throw new ENException(ErrorCode.Err202);
-            }
+            if (node.Type != NodeType.JUNC)
+                throw new InputException(ErrorCode.Err209, SectType.EMITTERS, this.Tok[0]);
 
-            if (k < 0.0)
-                throw new ENException(ErrorCode.Err202);
+            if (!this.Tok[1].ToDouble(out k) || k < 0.0)
+                throw new InputException(ErrorCode.Err202, SectType.EMITTERS, this.Tok[0]);
 
-            nodeRef.Ke = k;
+            node.Ke = k;
 
         }
 
-
-        protected static void ParseQuality(Network net, string[] tok) {
-            int n = tok.Length;
-            long i0 = 0, i1 = 0;
+        private void ParseQuality() {
+            int n = this.Tok.Count;
             double c0;
 
             if (n < 2) return;
 
+            /* Single node entered  */
             if (n == 2) {
-                Node nodeRef;
-                if ((nodeRef = net.GetNode(tok[0])) == null) return;
-                if (!tok[1].ToDouble(out c0))
-                    throw new ENException(ErrorCode.Err209);
-                nodeRef.C0 = c0;
+                Node node = this.net.GetNode(this.Tok[0]);
+
+                if (node == null) return;
+
+                if (!this.Tok[1].ToDouble(out c0))
+                    throw new InputException(ErrorCode.Err209, SectType.QUALITY, this.Tok[0]);
+
+                node.C0 = c0;
             }
             else {
-                if (!tok[2].ToDouble(out c0)) {
-                    throw new ENException(ErrorCode.Err209);
-                }
 
-                try {
-                    i0 = long.Parse(tok[0]);
-                    i1 = long.Parse(tok[1]);
-                }
-                finally {
-                    if (i0 > 0 && i1 > 0) {
-                        foreach (Node j  in  net.Nodes) {
-                            double d;
-                            if (double.TryParse(j.Name, out d)) {
-                                long i = (long)d;
-                                if (i >= i0 && i <= i1)
-                                    j.C0 = c0;
-                            }
-                        }
+                /* Node range entered    */
+                if (!this.Tok[2].ToDouble(out c0))
+                    throw new InputException(ErrorCode.Err209, SectType.QUALITY, this.Tok[0]);
+
+                /* If numerical range supplied, then use numerical comparison */
+                long i0, i1;
+
+                if ((i0 = atol(this.Tok[0])) > 0 && (i1 = atol(this.Tok[1])) > 0) {
+                    foreach (Node node  in  this.net.Nodes) {
+                        long i = atol(node.Name);
+                        if (i >= i0 && i <= i1)
+                            node.C0 = c0;
                     }
-                    else {
-                        foreach (Node j  in  net.Nodes) {
-                            if ((string.Compare(tok[0], j.Name, StringComparison.OrdinalIgnoreCase) <= 0) &&
-                                (string.Compare(tok[1], j.Name, StringComparison.OrdinalIgnoreCase) >= 0))
-                                j.C0 = c0;
-                        }
+                }
+                else {
+                    foreach (Node node  in  this.net.Nodes) {
+                        if ((string.Compare(this.Tok[0], node.Name, StringComparison.Ordinal) <= 0) &&
+                            (string.Compare(this.Tok[1], node.Name, StringComparison.Ordinal) >= 0))
+                            node.C0 = c0;
                     }
                 }
             }
         }
 
-        protected void ParseReact(Network net, string[] tok) {
-            int item, n = tok.Length;
+        private void ParseReact() {
+            int item, n = this.Tok.Count;
             double y;
 
             if (n < 3) return;
 
 
-            if (tok[0].Match(Keywords.w_ORDER)) {
+            if(this.Tok[0].Match(Keywords.w_ORDER)) { /* Reaction order */
 
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err213);
-                }
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
 
-                if (tok[1].Match(Keywords.w_BULK)) net.BulkOrder = y;
-                else if (tok[1].Match(Keywords.w_TANK)) net.TankOrder = y;
-                else if (tok[1].Match(Keywords.w_WALL)) {
-                    if (y == 0.0) net.WallOrder = 0.0;
-                    else if (y == 1.0) net.WallOrder = 1.0;
-                    else throw new ENException(ErrorCode.Err213);
+                if (this.Tok[1].Match(Keywords.w_BULK)) this.net.BulkOrder = y;
+                else if (this.Tok[1].Match(Keywords.w_TANK)) this.net.TankOrder = y;
+                else if (this.Tok[1].Match(Keywords.w_WALL)) {
+                    if (y == 0.0) this.net.WallOrder = 0.0;
+                    else if (y == 1.0) this.net.WallOrder = 1.0;
+                    else throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
                 }
-                else throw new ENException(ErrorCode.Err213);
+                else throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
+
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_ROUGHNESS)) {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err213);
-                }
-                net.RFactor = y;
+            if(this.Tok[0].Match(Keywords.w_ROUGHNESS)) { /* Roughness factor */
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
+
+                this.net.RFactor = y;
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_LIMITING)) {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err213);
-                }
-                net.CLimit = y;
+            if(this.Tok[0].Match(Keywords.w_LIMITING)) { /* Limiting potential */
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
+
+                this.net.CLimit = y;
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_GLOBAL)) {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err213);
-                }
-                if (tok[1].Match(Keywords.w_BULK)) net.KBulk = y;
-                else if (tok[1].Match(Keywords.w_WALL)) net.KWall = y;
-                else throw new ENException(ErrorCode.Err201);
+            if(this.Tok[0].Match(Keywords.w_GLOBAL)) { /* Global rates */
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.REACTIONS, this.line);
+
+                if (this.Tok[1].Match(Keywords.w_BULK)) this.net.KBulk = y;
+                else if (this.Tok[1].Match(Keywords.w_WALL)) this.net.KWall = y;
+                else throw new InputException(ErrorCode.Err201, SectType.REACTIONS, this.line);
+
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_BULK)) item = 1;
-            else if (tok[0].Match(Keywords.w_WALL)) item = 2;
-            else if (tok[0].Match(Keywords.w_TANK)) item = 3;
-            else throw new ENException(ErrorCode.Err201);
+            /* Individual rates */
+            if (this.Tok[0].Match(Keywords.w_BULK)) item = 1;
+            else if (this.Tok[0].Match(Keywords.w_WALL)) item = 2;
+            else if (this.Tok[0].Match(Keywords.w_TANK)) item = 3;
+            else throw new InputException(ErrorCode.Err201, SectType.REACTIONS, this.line);
 
-            tok[0] = tok[1];
+            this.Tok[0] = this.Tok[1];
 
-            if (item == 3) {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err209);
-                }
+            if(item == 3) { /* Tank rates */
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err209, SectType.REACTIONS, this.Tok[1]);
 
                 if (n == 3) {
-                    Node nodeRef;
-                    if ((nodeRef = net.GetNode(tok[1])) == null)
-                        throw new ENException(ErrorCode.Err208); //if ((j = net.getNode(Tok[1])) <= juncsCount) return;
-                    if (!(nodeRef is Tank)) return;
-                    ((Tank)nodeRef).Kb = y; //net.getTanks()[j - juncsCount].setKb(y);
+                    Node node;
+                    if ((node = this.net.GetNode(this.Tok[1])) == null)
+                        throw new InputException(ErrorCode.Err208, SectType.REACTIONS, this.Tok[1]); 
+
+                    Tank tank = node as Tank;
+                    
+                    if (tank == null) return;
+                    tank.Kb = y; 
                 }
                 else {
-                    long i1 = 0, i2 = 0;
-                    try {
-                        i1 = long.Parse(tok[1]);
-                        i2 = long.Parse(tok[2]);
-                    }
-                    finally {
-                        if (i1 > 0 && i2 > 0) {
-                            foreach (Tank j  in  net.Tanks) {
-                                long i = long.Parse(j.Name);
-                                if (i >= i1 && i <= i2)
-                                    j.Kb = y;
-                            }
+                    long i1, i2;
+
+                    /* If numerical range supplied, then use numerical comparison */
+                    if ((i1 = atol(this.Tok[1])) > 0 && (i2 = atol(this.Tok[2])) > 0) {
+                        foreach (Tank tank  in  this.net.Tanks) {
+                            long i = atol(tank.Name);
+                            if (i >= i1 && i <= i2)
+                                tank.Kb = y;
                         }
-                        else {
-                            foreach (Tank j  in  net.Tanks) {
-                                if (string.Compare(tok[1], j.Name, StringComparison.Ordinal) <= 0 &&
-                                    string.Compare(tok[2], j.Name, StringComparison.Ordinal) >= 0)
-                                    j.Kb = y;
-                            }
+                    }
+                    else {
+                        foreach (Tank tank  in  this.net.Tanks) {
+                            if (string.Compare(this.Tok[1], tank.Name, StringComparison.Ordinal) <= 0 &&
+                                string.Compare(this.Tok[2], tank.Name, StringComparison.Ordinal) >= 0)
+                                tank.Kb = y;
                         }
                     }
                 }
             }
-            else {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    throw new ENException(ErrorCode.Err211);
-                }
+            else { /* Link rates */
+                if (!this.Tok[n - 1].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err211, SectType.REACTIONS, this.Tok[1]);
 
-                if (net.Links.Count == 0) return;
-                if (n == 3) {
-                    Link linkRef;
-                    if ((linkRef = net.GetLink(tok[1])) == null) return;
-                    if (item == 1)
-                        linkRef.Kb = y;
+                if (this.net.Links.Count == 0) return;
+
+                if(n == 3) { /* Single link */
+                    Link link;
+                    if ((link = this.net.GetLink(this.Tok[1])) == null) return;
+                    if (item == 1) link.Kb = y;
+                    else           link.Kw = y;
+                }
+                else { /* Range of links */
+                    long i1, i2;
+
+                    /* If numerical range supplied, then use numerical comparison */
+                    if ((i1 = atol(this.Tok[1])) > 0 && (i2 = atol(this.Tok[2])) > 0) {
+                        foreach (Link link  in  this.net.Links) {
+                            long i = atol(link.Name);
+                            if (i >= i1 && i <= i2) {
+                                if (item == 1) link.Kb = y;
+                                else link.Kw = y;
+                            }
+                        }
+                    }
                     else
-                        linkRef.Kw = y;
-                }
-                else {
-                    long i1 = 0, i2 = 0;
-                    try {
-                        i1 = long.Parse(tok[1]);
-                        i2 = long.Parse(tok[2]);
-                    }
-                    finally {
-                        if (i1 > 0 && i2 > 0) {
-                            foreach (Link j  in  net.Links) {
-                                try {
-                                    long i = long.Parse(j.Name);
-                                    if (i >= i1 && i <= i2) {
-                                        if (item == 1)
-                                            j.Kb = y;
-                                        else
-                                            j.Kw = y;
-                                    }
-                                }
-                                catch (Exception) {}
+                        foreach (Link link  in  this.net.Links) {
+                            if (string.Compare(this.Tok[1], link.Name, StringComparison.Ordinal) <= 0 &&
+                                string.Compare(this.Tok[2], link.Name, StringComparison.Ordinal) >= 0) {
+                                if (item == 1) link.Kb = y;
+                                else           link.Kw = y;
                             }
                         }
-                        else
-                            foreach (Link j  in  net.Links) {
-                                if (string.Compare(tok[1], j.Name, StringComparison.Ordinal) <= 0 &&
-                                    string.Compare(tok[2], j.Name, StringComparison.Ordinal) >= 0) {
-                                    if (item == 1)
-                                        j.Kb = y;
-                                    else
-                                        j.Kw = y;
-                                }
-                            }
-                    }
                 }
             }
         }
 
+        private void ParseMixing() {
+            int n = this.Tok.Count;
+            MixType type;
 
-        protected void ParseMixing(Network net, string[] tok) {
-            int n = tok.Length;
-            MixType i;
-
-            if (net.Nodes.Count == 0)
-                throw new ENException(ErrorCode.Err208);
+            if (this.net.Nodes.Count == 0)
+                throw new InputException(ErrorCode.Err208, SectType.MIXING, this.Tok[0]);
 
             if (n < 2) return;
 
-            Node nodeRef = net.GetNode(tok[0]);
-            if (nodeRef == null) throw new ENException(ErrorCode.Err208);
-            if (!(nodeRef is Tank)) return;
-            Tank tankRef = (Tank)nodeRef;
+            Node node = this.net.GetNode(this.Tok[0]);
 
-            if (!EnumsTxt.TryParse(tok[1], out i))
-                throw new ENException(ErrorCode.Err201);
+            if(node == null)
+                throw new InputException(ErrorCode.Err208, SectType.MIXING, this.Tok[0]);
+
+            if (node.Type != NodeType.JUNC) return;
+            
+            Tank tank = (Tank)node;
+
+            if (!EnumsTxt.TryParse(this.Tok[1], out type))
+                throw new InputException(ErrorCode.Err201, SectType.MIXING, this.line);
 
             var v = 1.0;
-            if (i == MixType.MIX2 && n == 3) {
-                if (!tok[2].ToDouble(out v)) {
-                    throw new ENException(ErrorCode.Err209);
+            if (type == MixType.MIX2 && n == 3) {
+                if (!this.Tok[2].ToDouble(out v)) {
+                    throw new InputException(ErrorCode.Err209, SectType.MIXING, this.Tok[0]);
                 }
             }
 
             if (v == 0.0)
                 v = 1.0;
 
-            if (tankRef.IsReservoir) return;
-            tankRef.MixModel = i;
-            tankRef.V1Max = v;
+            if (tank.Type == NodeType.RESERV) return;
+
+            tank.MixModel = type;
+            tank.V1Max = v;
         }
 
-
-        protected void ParseStatus(Network net, string[] tok) {
-            int n = tok.Length - 1;
+        private void ParseStatus() {
+            int n = this.Tok.Count - 1;
             double y = 0.0;
             StatType status = StatType.ACTIVE;
 
-            if (net.Links.Count == 0) throw new ENException(ErrorCode.Err210);
+            if (this.net.Links.Count == 0)
+                throw new InputException(ErrorCode.Err210, SectType.STATUS, this.Tok[0]);
 
-            if (n < 1) throw new ENException(ErrorCode.Err201);
+            if(n < 1)
+                throw new InputException(ErrorCode.Err201, SectType.STATUS, this.line);
 
-            if (tok[n].Match(Keywords.w_OPEN)) status = StatType.OPEN;
-            else if (tok[n].Match(Keywords.w_CLOSED)) status = StatType.CLOSED;
-            else if (!tok[n].ToDouble(out y)) {
-                throw new ENException(ErrorCode.Err211);
-            }
+            if (this.Tok[n].Match(Keywords.w_OPEN)) status = StatType.OPEN;
+            else if (this.Tok[n].Match(Keywords.w_CLOSED)) status = StatType.CLOSED;
+            else if (!this.Tok[n].ToDouble(out y)) 
+                throw new InputException(ErrorCode.Err211, SectType.STATUS, this.Tok[0]);
 
             if (y < 0.0)
-                throw new ENException(ErrorCode.Err211);
+                throw new InputException(ErrorCode.Err211, SectType.STATUS, this.Tok[0]);
 
             if (n == 1) {
-                Link linkRef;
-                if ((linkRef = net.GetLink(tok[0])) == null) return;
+                Link link;
+                if ((link = this.net.GetLink(this.Tok[0])) == null) return;
 
-                if (linkRef.Type == LinkType.CV) throw new ENException(ErrorCode.Err211);
+                if (link.Type == LinkType.CV)
+                    throw new InputException(ErrorCode.Err211, SectType.STATUS, this.Tok[0]);
 
-                if (linkRef.Type == LinkType.GPV
-                    && status == StatType.ACTIVE) throw new ENException(ErrorCode.Err211);
+                if (link.Type == LinkType.GPV && status == StatType.ACTIVE)
+                    throw new InputException(ErrorCode.Err211, SectType.STATUS, this.Tok[0]);
 
-                this.ChangeStatus(linkRef, status, y);
+                ChangeStatus(link, status, y);
             }
             else {
-                long i0 = 0, i1 = 0;
-                try {
-                    i0 = long.Parse(tok[0]);
-                    i1 = long.Parse(tok[1]);
-                }
-                finally {
-                    if (i0 > 0 && i1 > 0) {
-                        foreach (Link j  in  net.Links) {
-                            try {
-                                long i = long.Parse(j.Name);
-                                if (i >= i0 && i <= i1)
-                                    this.ChangeStatus(j, status, y);
-                            }
-                            catch (Exception) {}
-                        }
+                long i0, i1;
+
+                /* If numerical range supplied, then use numerical comparison */
+                if ((i0 = atol(this.Tok[0])) > 0 && (i1 = atol(this.Tok[1])) > 0) {
+                    foreach (Link link  in  this.net.Links) {
+                        long i = atol(link.Name);
+                        if (i >= i0 && i <= i1) 
+                            ChangeStatus(link, status, y);
+                        
+                        
                     }
-                    else
-                        foreach (Link j  in  net.Links)
-                            if (string.Compare(tok[0], j.Name, StringComparison.Ordinal) <= 0 &&
-                                string.Compare(tok[1], j.Name, StringComparison.Ordinal) >= 0)
-                                this.ChangeStatus(j, status, y);
                 }
+                else
+                    foreach (Link j  in  this.net.Links)
+                        if (string.Compare(this.Tok[0], j.Name, StringComparison.Ordinal) <= 0 &&
+                            string.Compare(this.Tok[1], j.Name, StringComparison.Ordinal) >= 0)
+                            ChangeStatus(j, status, y);
             }
         }
 
-        protected void ChangeStatus(Link lLink, StatType status, double y) {
-            if (lLink.Type == LinkType.PIPE || lLink.Type == LinkType.GPV) {
-                if (status != StatType.ACTIVE) lLink.Status = status;
-            }
-            else if (lLink.Type == LinkType.PUMP) {
-                if (status == StatType.ACTIVE) {
-                    lLink.Roughness = y; //lLink.setKc(y);
-                    status = StatType.OPEN;
-                    if (y == 0.0) status = StatType.CLOSED;
-                }
-                else if (status == StatType.OPEN) lLink.Roughness = 1.0; //lLink.setKc(1.0);
-                lLink.Status = status;
-            }
-            else if (lLink.Type >= LinkType.PRV) {
-                lLink.Roughness = y; //lLink.setKc(y);
-                lLink.Status = status;
-                if (status != StatType.ACTIVE)
-                    lLink.Roughness = Constants.MISSING; //lLink.setKc(Constants.MISSING);
-            }
-        }
 
-        protected void ParseEnergy(Network net, string[] tok) {
-            int n = tok.Length;
+        private void ParseEnergy() {
+            int n = this.Tok.Count;
             double y;
 
-            if (n < 3) throw new ENException(ErrorCode.Err201);
+            if(n < 3)
+                throw new InputException(ErrorCode.Err201, SectType.ENERGY, this.line);
 
-            if (tok[0].Match(Keywords.w_DMNDCHARGE)) {
-                if (!tok[2].ToDouble(out y))
-                    throw new ENException(ErrorCode.Err213);
-                net.DCost = y;
+            if (this.Tok[0].Match(Keywords.w_DMNDCHARGE)) {
+                if (!this.Tok[2].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.ENERGY, this.line);
+
+                this.net.DCost = y;
                 return;
             }
 
-            Pump pumpRef;
-            if (tok[0].Match(Keywords.w_GLOBAL)) {
-                pumpRef = null;
+            Pump pump;
+
+            if (this.Tok[0].Match(Keywords.w_GLOBAL)) {
+                pump = null;
             }
-            else if (tok[0].Match(Keywords.w_PUMP)) {
-                if (n < 4) throw new ENException(ErrorCode.Err201);
-                Link linkRef = net.GetLink(tok[1]);
-                if (linkRef == null) throw new ENException(ErrorCode.Err216);
-                if (linkRef.Type != LinkType.PUMP) throw new ENException(ErrorCode.Err216);
-                pumpRef = (Pump)linkRef;
+            else if (this.Tok[0].Match(Keywords.w_PUMP)) {
+                if (n < 4)
+                    throw new InputException(ErrorCode.Err201, SectType.ENERGY, this.line);
+
+                Link linkRef = this.net.GetLink(this.Tok[1]);
+                
+                if(linkRef == null || linkRef.Type != LinkType.PUMP)
+                    throw new InputException(ErrorCode.Err216, SectType.ENERGY, this.Tok[0]);
+
+                pump = (Pump)linkRef;
             }
-            else throw new ENException(ErrorCode.Err201);
+            else
+                throw new InputException(ErrorCode.Err201, SectType.ENERGY, this.line);
 
 
-            if (tok[n - 2].Match(Keywords.w_PRICE)) {
-                if (!tok[n - 1].ToDouble(out y)) {
-                    if (pumpRef == null)
-                        throw new ENException(ErrorCode.Err213);
+            if (this.Tok[n - 2].Match(Keywords.w_PRICE)) {
+                if (!this.Tok[n - 1].ToDouble(out y)) {
+                    if (pump == null)
+                        throw new InputException(ErrorCode.Err213, SectType.ENERGY, this.line);
                     else
-                        throw new ENException(ErrorCode.Err217);
+                        throw new InputException(ErrorCode.Err217, SectType.ENERGY, this.Tok[0]);
                 }
 
-                if (pumpRef == null)
-                    net.ECost = y;
+                if (pump == null)
+                    this.net.ECost = y;
                 else
-                    pumpRef.ECost = y;
+                    pump.ECost = y;
 
                 return;
             }
-            else if (tok[n - 2].Match(Keywords.w_PATTERN)) {
-                Pattern t = net.GetPattern(tok[n - 1]);
+
+            if (this.Tok[n - 2].Match(Keywords.w_PATTERN)) {
+                Pattern t = this.net.GetPattern(this.Tok[n - 1]);
                 if (t == null) {
-                    if (pumpRef == null) throw new ENException(ErrorCode.Err213);
-                    else throw new ENException(ErrorCode.Err217);
+                    throw pump == null
+                        ? new InputException(ErrorCode.Err213, SectType.ENERGY, this.line)
+                        : new InputException(ErrorCode.Err217, SectType.ENERGY, this.Tok[0]);
                 }
-                if (pumpRef == null)
-                    net.EPatId = t.Name;
+
+                if (pump == null)
+                    this.net.EPatId = t.Name;
                 else
-                    pumpRef.EPat = t;
+                    pump.EPat = t;
+
                 return;
             }
-            else if (tok[n - 2].Match(Keywords.w_EFFIC)) {
-                if (pumpRef == null) {
-                    if (!tok[n - 1].ToDouble(out y))
-                        throw new ENException(ErrorCode.Err213);
-                    if (y <= 0.0)
-                        throw new ENException(ErrorCode.Err213);
-                    net.EPump = y;
+
+            if (this.Tok[n - 2].Match(Keywords.w_EFFIC)) {
+                if (pump == null) {
+                    if(!this.Tok[n - 1].ToDouble(out y) || y <= 0.0)
+                        throw new InputException(ErrorCode.Err213, SectType.ENERGY, this.line);
+
+                    this.net.EPump = y;
                 }
                 else {
-                    Curve t = net.GetCurve(tok[n - 1]);
-                    if (t == null) throw new ENException(ErrorCode.Err217);
-                    pumpRef.ECurve = t;
+                    Curve t = this.net.GetCurve(this.Tok[n - 1]);
+                    if(t == null)
+                        throw new InputException(ErrorCode.Err217, SectType.ENERGY, this.Tok[0]);
+
+                    pump.ECurve = t;
                 }
                 return;
             }
-            throw new ENException(ErrorCode.Err201);
+
+            throw new InputException(ErrorCode.Err201, SectType.ENERGY, this.line);
         }
 
-
-        protected void ParseReport(Network net, string[] tok) {
-            int n = tok.Length - 1;
+        private void ParseReport() {
+            int n = this.Tok.Count - 1;
             //FieldType i;
             double y;
 
-            if (n < 1) throw new ENException(ErrorCode.Err201);
+            if (n < 1) 
+                throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
-            if (tok[0].Match(Keywords.w_PAGE)) {
-                if (!tok[n].ToDouble(out y)) throw new ENException(ErrorCode.Err213);
-                if (y < 0.0 || y > 255.0) throw new ENException(ErrorCode.Err213);
-                net.PageSize = (int)y;
+            if (this.Tok[0].Match(Keywords.w_PAGE)) {
+                if(!this.Tok[n].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err213, SectType.REPORT, this.line);
+
+                if(y < 0.0 || y > 255.0)
+                    throw new InputException(ErrorCode.Err213, SectType.REPORT, this.line);
+
+                this.net.PageSize = (int)y;
                 return;
             }
 
 
-            if (tok[0].Match(Keywords.w_STATUS)) {
+            if (this.Tok[0].Match(Keywords.w_STATUS)) {
                 StatFlag flag;
-                if (EnumsTxt.TryParse(tok[n], out flag)) {
-                    net.Stat_Flag = flag;
-                }
-                else {
-                    // TODO: complete this    
+                if (EnumsTxt.TryParse(this.Tok[n], out flag)) {
+                    this.net.StatFlag = flag;
                 }
 
-                //if (Utilities.match(Tok[n], Keywords.w_NO)) net.getPropertiesMap().setStatflag(PropertiesMap.StatFlag.FALSE);
-                //if (Utilities.match(Tok[n], Keywords.w_YES)) net.getPropertiesMap().setStatflag(PropertiesMap.StatFlag.TRUE);
-                //if (Utilities.match(Tok[n], Keywords.w_FULL)) net.getPropertiesMap().setStatflag(PropertiesMap.StatFlag.FULL);
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_SUMMARY)) {
-                if (tok[n].Match(Keywords.w_NO)) net.SummaryFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.SummaryFlag = true;
+            if (this.Tok[0].Match(Keywords.w_SUMMARY)) {
+                if (this.Tok[n].Match(Keywords.w_NO)) this.net.SummaryFlag = false;
+                if (this.Tok[n].Match(Keywords.w_YES)) this.net.SummaryFlag = true;
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_MESSAGES)) {
-                if (tok[n].Match(Keywords.w_NO)) net.MessageFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.MessageFlag = true;
+            if (this.Tok[0].Match(Keywords.w_MESSAGES)) {
+                if (this.Tok[n].Match(Keywords.w_NO)) this.net.MessageFlag = false;
+                if (this.Tok[n].Match(Keywords.w_YES)) this.net.MessageFlag = true;
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_ENERGY)) {
-                if (tok[n].Match(Keywords.w_NO)) net.EnergyFlag = false;
-                if (tok[n].Match(Keywords.w_YES)) net.EnergyFlag = true;
+            if (this.Tok[0].Match(Keywords.w_ENERGY)) {
+                if (this.Tok[n].Match(Keywords.w_NO)) this.net.EnergyFlag = false;
+                if (this.Tok[n].Match(Keywords.w_YES)) this.net.EnergyFlag = true;
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_NODE)) {
-                if (tok[n].Match(Keywords.w_NONE))
-                    net.NodeFlag = ReportFlag.FALSE;
-                else if (tok[n].Match(Keywords.w_ALL))
-                    net.NodeFlag = ReportFlag.TRUE;
+            if (this.Tok[0].Match(Keywords.w_NODE)) {
+
+                if (this.Tok[n].Match(Keywords.w_NONE)) {
+                    this.net.NodeFlag = ReportFlag.FALSE;
+                }
+                else if (this.Tok[n].Match(Keywords.w_ALL)) {
+                    this.net.NodeFlag = ReportFlag.TRUE;
+                }
                 else {
-                    if (net.Nodes.Count == 0) throw new ENException(ErrorCode.Err208);
-                    for (int ii = 1; ii <= n; ii++) {
-                        Node nodeRef;
-                        if ((nodeRef = net.GetNode(tok[n])) == null) throw new ENException(ErrorCode.Err208);
-                        nodeRef.RptFlag = true;
+
+                    if (this.net.Nodes.Count == 0)
+                        throw new InputException(ErrorCode.Err208, SectType.REPORT, this.Tok[1]);
+
+                    for (int i = 1; i <= n; i++) {
+                        Node node = this.net.GetNode(this.Tok[i]);
+                       
+                        if (node == null)
+                            throw new InputException(ErrorCode.Err208, SectType.REPORT, this.Tok[i]);
+
+                        node.RptFlag = true;
                     }
-                    net.NodeFlag = ReportFlag.SOME;
+
+                    this.net.NodeFlag = ReportFlag.SOME;
                 }
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_LINK)) {
-                if (tok[n].Match(Keywords.w_NONE))
-                    net.LinkFlag = ReportFlag.FALSE;
-                else if (tok[n].Match(Keywords.w_ALL))
-                    net.LinkFlag = ReportFlag.TRUE;
+            if (this.Tok[0].Match(Keywords.w_LINK)) {
+                if (this.Tok[n].Match(Keywords.w_NONE))
+                    this.net.LinkFlag = ReportFlag.FALSE;
+                else if (this.Tok[n].Match(Keywords.w_ALL))
+                    this.net.LinkFlag = ReportFlag.TRUE;
                 else {
-                    if (net.Links.Count == 0) throw new ENException(ErrorCode.Err210);
-                    for (int ii = 1; ii <= n; ii++) {
-                        Link linkRef = net.GetLink(tok[ii]);
-                        if (linkRef == null) throw new ENException(ErrorCode.Err210);
-                        linkRef.RptFlag = true;
+                   
+                    if (this.net.Links.Count == 0)
+                        throw new InputException(ErrorCode.Err210, SectType.REPORT, this.Tok[1]);
+                    
+                    for (int i = 1; i <= n; i++) {
+                        Link link = this.net.GetLink(this.Tok[i]);
+                        
+                        if (link == null)
+                            throw new InputException(ErrorCode.Err210, SectType.REPORT, this.Tok[i]);
+                        
+                        link.RptFlag = true;
                     }
-                    net.LinkFlag = ReportFlag.SOME;
+
+                    this.net.LinkFlag = ReportFlag.SOME;
                 }
                 return;
             }
 
             FieldType iFieldID;
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
-            if (EnumsTxt.TryParse(tok[0], out iFieldID)) {
+            if (EnumsTxt.TryParse(this.Tok[0], out iFieldID)) {
                 if (iFieldID > FieldType.FRICTION)
-                    throw new ENException(ErrorCode.Err201);
+                    throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
-                if (tok.Length == 1 || tok[1].Match(Keywords.w_YES)) {
+                if (this.Tok.Count == 1 || this.Tok[1].Match(Keywords.w_YES)) {
                     fMap.GetField(iFieldID).Enabled = true;
                     return;
                 }
 
-                if (tok[1].Match(Keywords.w_NO)) {
+                if (this.Tok[1].Match(Keywords.w_NO)) {
                     fMap.GetField(iFieldID).Enabled = false;
                     return;
                 }
 
                 RangeType rj;
 
-                if (tok.Length < 3)
-                    throw new ENException(ErrorCode.Err201);
+                if (this.Tok.Count < 3)
+                    throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
-                if (!EnumsTxt.TryParse(tok[1], out rj))
-                    throw new ENException(ErrorCode.Err201);
+                if (!EnumsTxt.TryParse(this.Tok[1], out rj))
+                    throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
-                if (!tok[2].ToDouble(out y))
-                    throw new ENException(ErrorCode.Err201);
+                if (!this.Tok[2].ToDouble(out y))
+                    throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
                 if (rj == RangeType.PREC) {
                     fMap.GetField(iFieldID).Enabled = true;
@@ -1481,150 +1371,167 @@ namespace Epanet.Network.IO.Input {
                 return;
             }
 
-            if (tok[0].Match(Keywords.w_FILE)) {
-                net.AltReport = tok[1];
+            if (this.Tok[0].Match(Keywords.w_FILE)) {
+                this.net.AltReport = this.Tok[1];
                 return;
             }
+          
+            throw new InputException(ErrorCode.Err201, SectType.REPORT, this.line);
 
-            this.Log.Information("Unknow section keyword " + tok[0] + " value " + tok[1]);
-//        throw new ENException(ErrorCode.Err201);
         }
 
-        protected void ParseOption(Network net, string[] tok) {
-            int n = tok.Length - 1;
-            bool notHandled = this.OptionChoice(net, tok, n);
+        private void ParseOption() {
+            int n = this.Tok.Count - 1;
+            bool notHandled = this.OptionChoice(n);
             if (notHandled)
-                notHandled = this.OptionValue(net, tok, n);
+                notHandled = this.OptionValue(n);
             if (notHandled) {
-                net.ExtraOptions[tok[0]] = tok[1];
+                this.net.ExtraOptions[this.Tok[0]] = this.Tok[1];
             }
         }
 
         ///<summary>Handles options that are choice values, such as quality type, for example.</summary>
-        /// <param name="net">newtwork</param>
-        /// <param name="tok">token arry</param>
         /// <param name="n">number of tokens</param>
         /// <returns><c>true</c> is it didn't handle the option.</returns>
-        protected bool OptionChoice(Network net, string[] tok, int n) {
+        private bool OptionChoice(int n) {
             
             if (n < 0)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
 
-            if (tok[0].Match(Keywords.w_UNITS)) {
+            if (this.Tok[0].Match(Keywords.w_UNITS)) {
                 FlowUnitsType type;
 
                 if (n < 1)
                     return false;
-                else if (EnumsTxt.TryParse(tok[1], out type))
-                    net.FlowFlag = type;
-                else
-                    throw new ENException(ErrorCode.Err201);
 
+                if (!EnumsTxt.TryParse(this.Tok[1], out type))
+                    throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
+
+                this.net.FlowFlag = type;
             }
-            else if (tok[0].Match(Keywords.w_PRESSURE)) {
+            else if (this.Tok[0].Match(Keywords.w_PRESSURE)) {
                 if (n < 1) return false;
                 PressUnitsType value;
 
-                if (!EnumsTxt.TryParse(tok[1], out value)) {
-                    throw new ENException(ErrorCode.Err201);
+                if (!EnumsTxt.TryParse(this.Tok[1], out value)) {
+                    throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
                 }
 
-                net.PressFlag = value;
+                this.net.PressFlag = value;
             }
-            else if (tok[0].Match(Keywords.w_HEADLOSS)) {
+            else if (this.Tok[0].Match(Keywords.w_HEADLOSS)) {
                 if (n < 1) return false;
                 FormType value;
 
-                if (!EnumsTxt.TryParse(tok[1], out value)) {
-                    throw new ENException(ErrorCode.Err201);
-                }
-                
-                net.FormFlag = value;
+                if (!EnumsTxt.TryParse(this.Tok[1], out value))
+                    throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
+
+                this.net.FormFlag = value;
             }
-            else if (tok[0].Match(Keywords.w_HYDRAULIC)) {
+            else if (this.Tok[0].Match(Keywords.w_HYDRAULIC)) {
                 if (n < 2) return false;
                 HydType value;
 
-                if (!EnumsTxt.TryParse(tok[1], out value)) {
-                    throw new ENException(ErrorCode.Err201);
-                }
+                if (!EnumsTxt.TryParse(this.Tok[1], out value))
+                    throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
 
-                net.HydFlag = value;
-                net.HydFname = tok[2];
+                this.net.HydFlag = value;
+                this.net.HydFname = this.Tok[2];
             }
-            else if (tok[0].Match(Keywords.w_QUALITY)) {
+            else if (this.Tok[0].Match(Keywords.w_QUALITY)) {
                 QualType type;
 
                 if (n < 1)
                     return false;
-                else if (EnumsTxt.TryParse(tok[1], out type))
-                    net.QualFlag = type;
-                else {
-                    net.QualFlag = QualType.CHEM;
-                    net.ChemName = tok[1];
-                    if (n >= 2)
-                        net.ChemUnits = tok[2];
-                }
-                if (net.QualFlag == QualType.TRACE) {
 
-                    tok[0] = "";
+                this.net.QualFlag = EnumsTxt.TryParse(this.Tok[1], out type) 
+                    ? type
+                    : QualType.CHEM;
+
+                switch (this.net.QualFlag) {
+                case QualType.CHEM:
+                    this.net.ChemName = this.Tok[1];
+                    if(n >= 2)
+                        this.net.ChemUnits = this.Tok[2];
+                    break;
+
+                case QualType.TRACE:
+
+                    this.Tok[0] = "";
                     if (n < 2)
-                        throw new ENException(ErrorCode.Err212);
-                    tok[0] = tok[2];
-                    Node nodeRef = net.GetNode(tok[2]);
-                    if (nodeRef == null)
-                        throw new ENException(ErrorCode.Err212);
-                    net.TraceNode = nodeRef.Name;
-                    net.ChemName = Keywords.u_PERCENT;
-                    net.ChemUnits = tok[2];
+                        throw new InputException(ErrorCode.Err212, SectType.OPTIONS, this.line);
+
+                    this.Tok[0] = this.Tok[2];
+                    Node node = this.net.GetNode(this.Tok[2]);
+
+                    if (node == null)
+                        throw new InputException(ErrorCode.Err212, SectType.OPTIONS, this.line);
+
+                    this.net.TraceNode = node.Name;
+                    this.net.ChemName = Keywords.u_PERCENT;
+                    this.net.ChemUnits = this.Tok[2];
+                    break;
+
+                case QualType.AGE:
+                    this.net.ChemName = Keywords.w_AGE;
+                    this.net.ChemUnits = Keywords.u_HOURS;
+                    break;
                 }
-                if (net.QualFlag == QualType.AGE) {
-                    net.ChemName = Keywords.w_AGE;
-                    net.ChemUnits = Keywords.u_HOURS;
-                }
+
             }
-            else if (tok[0].Match(Keywords.w_MAP)) {
+            else if (this.Tok[0].Match(Keywords.w_MAP)) {
                 if (n < 1)
                     return false;
-                net.MapFname = tok[1];
+
+                this.net.MapFname = this.Tok[1];
             }
-            else if (tok[0].Match(Keywords.w_UNBALANCED)) {
+            else if (this.Tok[0].Match(Keywords.w_UNBALANCED)) {
                 if (n < 1)
                     return false;
-                if (tok[1].Match(Keywords.w_STOP))
-                    net.ExtraIter = -1;
-                else if (tok[1].Match(Keywords.w_CONTINUE)) {
+
+                if (this.Tok[1].Match(Keywords.w_STOP)) {
+                    this.net.ExtraIter = -1;
+                }
+                else if (this.Tok[1].Match(Keywords.w_CONTINUE)) {
                     if (n >= 2) {
                         double d;
-                        if (tok[2].ToDouble(out d)) {
-                            net.ExtraIter = (int)d;
-                        }
-                        else {
-                            throw new ENException(ErrorCode.Err201);
-                        }
+
+                        if (!this.Tok[2].ToDouble(out d))
+                            throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
+
+                        this.net.ExtraIter = (int)d;
                     }
                     else
-                        net.ExtraIter = 0;
+                        this.net.ExtraIter = 0;
                 }
-                else throw new ENException(ErrorCode.Err201);
+                else {
+                    throw new InputException(ErrorCode.Err201, SectType.OPTIONS, this.line);
+                }
             }
-            else if (tok[0].Match(Keywords.w_PATTERN)) {
+            else if (this.Tok[0].Match(Keywords.w_PATTERN)) {
                 if (n < 1)
                     return false;
-                net.DefPatId = tok[1];
+
+                this.net.DefPatId = this.Tok[1];
             }
             else
                 return true;
             return false;
         }
 
-        protected bool OptionValue(Network net, string[] tok, int n) {
-            int nvalue = 1;
-            
-            string name = tok[0];
+        private bool OptionValue(int n) {
+            string name = this.Tok[0];
 
-            if (name.Match(Keywords.w_SPECGRAV) || name.Match(Keywords.w_EMITTER)
-                || name.Match(Keywords.w_DEMAND)) nvalue = 2;
+            /* Check for obsolete SEGMENTS keyword */
+            if(name.Match(Keywords.w_SEGMENTS))
+                return false;
+
+            /* Check for missing value (which is permissible) */
+            int nvalue = name.Match(Keywords.w_SPECGRAV) ||
+                         name.Match(Keywords.w_EMITTER) ||
+                         name.Match(Keywords.w_DEMAND)
+                ? 2
+                : 1;
 
             string keyword = null;
             foreach (string k  in  OptionValueKeywords) {
@@ -1633,121 +1540,129 @@ namespace Epanet.Network.IO.Input {
                     break;
                 }
             }
+
             if (keyword == null) return true;
             name = keyword;
 
             double y;
 
-            if (!tok[nvalue].ToDouble(out y))
-                throw new ENException(ErrorCode.Err213);
+            if (!this.Tok[nvalue].ToDouble(out y))
+                throw new InputException(ErrorCode.Err213, SectType.OPTIONS, this.line);
 
             if (name.Match(Keywords.w_TOLERANCE)) {
                 if (y < 0.0)
-                    throw new ENException(ErrorCode.Err213);
-                net.Ctol = y;
+                    throw new InputException(ErrorCode.Err213, SectType.OPTIONS, this.line);
+
+                this.net.Ctol = y;
                 return false;
             }
 
             if (name.Match(Keywords.w_DIFFUSIVITY)) {
                 if (y < 0.0)
-                    throw new ENException(ErrorCode.Err213);
-                net.Diffus = y;
+                    throw new InputException(ErrorCode.Err213, SectType.OPTIONS, this.line);
+
+                this.net.Diffus = y;
                 return false;
             }
 
             if (name.Match(Keywords.w_DAMPLIMIT)) {
-                net.DampLimit = y;
+                this.net.DampLimit = y;
                 return false;
             }
 
-            if (y <= 0.0) throw new ENException(ErrorCode.Err213);
+            if(y <= 0.0)
+                throw new InputException(ErrorCode.Err213, SectType.OPTIONS, this.line);
 
-            if (name.Match(Keywords.w_VISCOSITY)) net.Viscos = y;
-            else if (name.Match(Keywords.w_SPECGRAV)) net.SpGrav = y;
-            else if (name.Match(Keywords.w_TRIALS)) net.MaxIter = (int)y;
+            if (name.Match(Keywords.w_VISCOSITY)) this.net.Viscos = y;
+            else if (name.Match(Keywords.w_SPECGRAV)) this.net.SpGrav = y;
+            else if (name.Match(Keywords.w_TRIALS)) this.net.MaxIter = (int)y;
             else if (name.Match(Keywords.w_ACCURACY)) {
                 y = Math.Max(y, 1e-5);
                 y = Math.Min(y, 1e-1);
-                net.HAcc = y;
+                this.net.HAcc = y;
             }
-            else if (name.Match(Keywords.w_HTOL)) net.HTol = y;
-            else if (name.Match(Keywords.w_QTOL)) net.QTol = y;
+            else if (name.Match(Keywords.w_HTOL)) this.net.HTol = y;
+            else if (name.Match(Keywords.w_QTOL)) this.net.QTol = y;
             else if (name.Match(Keywords.w_RQTOL)) {
-                if (y >= 1.0) throw new ENException(ErrorCode.Err213);
-                net.RQtol = y;
+
+                if(y >= 1.0)
+                    throw new InputException(ErrorCode.Err213, SectType.OPTIONS, this.line);
+
+                this.net.RQtol = y;
             }
-            else if (name.Match(Keywords.w_CHECKFREQ)) net.CheckFreq = (int)y;
-            else if (name.Match(Keywords.w_MAXCHECK)) net.MaxCheck = (int)y;
-            else if (name.Match(Keywords.w_EMITTER)) net.QExp = 1.0d / y;
-            else if (name.Match(Keywords.w_DEMAND)) net.DMult = y;
+            else if (name.Match(Keywords.w_CHECKFREQ)) this.net.CheckFreq = (int)y;
+            else if (name.Match(Keywords.w_MAXCHECK)) this.net.MaxCheck = (int)y;
+            else if (name.Match(Keywords.w_EMITTER)) this.net.QExp = 1.0 / y;
+            else if (name.Match(Keywords.w_DEMAND)) this.net.DMult = y;
 
             return false;
         }
 
-        protected void ParseTime(Network net, string[] tok) {
-            int n = tok.Length - 1;
+        private void ParseTime() {
+            int n = this.Tok.Count - 1;
             double y;
             
             if (n < 1)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.TIMES, this.line);
 
-            if (tok[0].Match(Keywords.w_STATISTIC)) {
+            if (this.Tok[0].Match(Keywords.w_STATISTIC)) {
                 TStatType type;
 
-                if (!EnumsTxt.TryParse(tok[n], out type))
-                    throw new ENException(ErrorCode.Err201);
+                if (!EnumsTxt.TryParse(this.Tok[n], out type))
+                    throw new InputException(ErrorCode.Err201, SectType.TIMES, this.line);
 
-                net.TStatFlag = type;
+                this.net.TStatFlag = type;
     
                 return;
             }
 
-            if (!tok[n].ToDouble(out y)) {
-                if ((y = Utilities.GetHour(tok[n])) < 0.0) {
-                    if ((y = Utilities.GetHour(tok[n - 1], tok[n])) < 0.0)
-                        throw new ENException(ErrorCode.Err213);
+            if (!this.Tok[n].ToDouble(out y)) {
+                if ((y = Utilities.GetHour(this.Tok[n])) < 0.0) {
+                    if ((y = Utilities.GetHour(this.Tok[n - 1], this.Tok[n])) < 0.0)
+                        throw new InputException(ErrorCode.Err213, SectType.TIMES, this.line);
                 }
             }
 
             var t = (long)(3600.0 * y);
 
-            if (tok[0].Match(Keywords.w_DURATION))
-                net.Duration = t;
-            else if (tok[0].Match(Keywords.w_HYDRAULIC))
-                net.HStep = t;
-            else if (tok[0].Match(Keywords.w_QUALITY))
-                net.QStep = t;
-            else if (tok[0].Match(Keywords.w_RULE))
-                net.RuleStep = t;
-            else if (tok[0].Match(Keywords.w_MINIMUM))
-                return;
-            else if (tok[0].Match(Keywords.w_PATTERN)) {
-                if (tok[1].Match(Keywords.w_TIME))
-                    net.PStep = t;
-                else if (tok[1].Match(Keywords.w_START))
-                    net.PStart = t;
-                else
-                    throw new ENException(ErrorCode.Err201);
+            if (this.Tok[0].Match(Keywords.w_DURATION))
+                this.net.Duration = t;
+            else if (this.Tok[0].Match(Keywords.w_HYDRAULIC))
+                this.net.HStep = t;
+            else if (this.Tok[0].Match(Keywords.w_QUALITY))
+                this.net.QStep = t;
+            else if (this.Tok[0].Match(Keywords.w_RULE))
+                this.net.RuleStep = t;
+            else if (this.Tok[0].Match(Keywords.w_MINIMUM)) {
+                
             }
-            else if (tok[0].Match(Keywords.w_REPORT)) {
-                if (tok[1].Match(Keywords.w_TIME))
-                    net.RStep = t;
-                else if (tok[1].Match(Keywords.w_START))
-                    net.RStart = t;
+            else if (this.Tok[0].Match(Keywords.w_PATTERN)) {
+                if (this.Tok[1].Match(Keywords.w_TIME))
+                    this.net.PStep = t;
+                else if (this.Tok[1].Match(Keywords.w_START))
+                    this.net.PStart = t;
                 else
-                    throw new ENException(ErrorCode.Err201);
+                    throw new InputException(ErrorCode.Err201, SectType.TIMES, this.line);
             }
-            else if (tok[0].Match(Keywords.w_START))
-                net.TStart = t % Constants.SECperDAY;
-            else throw new ENException(ErrorCode.Err201);
+            else if (this.Tok[0].Match(Keywords.w_REPORT)) {
+                if (this.Tok[1].Match(Keywords.w_TIME))
+                    this.net.RStep = t;
+                else if (this.Tok[1].Match(Keywords.w_START))
+                    this.net.RStart = t;
+                else
+                    throw new InputException(ErrorCode.Err201, SectType.TIMES, this.line);
+            }
+            else if (this.Tok[0].Match(Keywords.w_START))
+                this.net.TStart = t % Constants.SECperDAY;
+
+            else
+                throw new InputException(ErrorCode.Err201, SectType.TIMES, this.line);
 
         }
 
         private static SectType FindSectionType(string line) {
-            if (string.IsNullOrEmpty(line))
-                return (SectType)(-1);
+            if (string.IsNullOrEmpty(line)) return (SectType)(-1);
 
-            line = line.TrimStart();
             for (var type = SectType.TITLE; type <= SectType.END; type++) {
                 string sectName = '[' + type.ToString() + ']';
 
@@ -1757,68 +1672,53 @@ namespace Epanet.Network.IO.Input {
                     return type;
                 }
             }
-            return (SectType)(-1);
 
+            return (SectType)(-1);
         }
 
-        protected void ParseDemand(Network net, string[] tok) {
-            int n = tok.Length;
+        private void ParseDemand() {
+            int n = this.Tok.Count;
             double y;
-            Demand demand = null;
             Pattern pat = null;
 
             if (n < 2)
-                throw new ENException(ErrorCode.Err201);
+                throw new InputException(ErrorCode.Err201, SectType.DEMANDS, this.line);
 
-            if (!tok[1].ToDouble(out y)) {
-                throw new ENException(ErrorCode.Err202);
-            }
+            if (!this.Tok[1].ToDouble(out y))
+                throw new InputException(ErrorCode.Err202, SectType.DEMANDS, this.Tok[0]);
 
-            if (tok[0].Match(Keywords.w_MULTIPLY)) {
+            if (this.Tok[0].Match(Keywords.w_MULTIPLY)) {
                 if (y <= 0.0)
-                    throw new ENException(ErrorCode.Err202);
-                else
-                    net.DMult = y;
+                    throw new InputException(ErrorCode.Err202, SectType.DEMANDS, this.Tok[0]);
+
+                this.net.DMult = y;
                 return;
             }
 
-            Node nodeRef;
-            if ((nodeRef = net.GetNode(tok[0])) == null)
-                throw new ENException(ErrorCode.Err208);
+            Node node  = this.net.GetNode(this.Tok[0]);
 
-            if (nodeRef is Tank)
-                throw new ENException(ErrorCode.Err208);
+            if(node == null || node.Type != NodeType.JUNC)
+                throw new InputException(ErrorCode.Err208, SectType.DEMANDS, this.Tok[0]);
 
             if (n >= 3) {
-                pat = net.GetPattern(tok[2]);
+                pat = this.net.GetPattern(this.Tok[2]);
                 if (pat == null)
-                    throw new ENException(ErrorCode.Err205);
+                    throw new InputException(ErrorCode.Err205, SectType.DEMANDS, this.line);
             }
 
-            if (nodeRef.Demand.Count > 0)
-                demand = nodeRef.Demand[0];
-
-            if (demand != null && !nodeRef.InitDemand.IsMissing()) {
-                demand.Base = y;
-                demand.Pattern = pat;
-                nodeRef.InitDemand = Constants.MISSING;
-            }
-            else {
-                demand = new Demand(y, pat);
-                nodeRef.Demand.Add(demand);
-            }
+            node.Demands.Add(new Demand(y, pat));
 
         }
 
-        protected void ParseRule(Network net, string[] tok, string line) {
+        private void ParseRule() {
             Rulewords key;
-            EnumsTxt.TryParse(tok[0], out key);
+            EnumsTxt.TryParse(this.Tok[0], out key);
             if (key == Rulewords.RULE) {
-                this.currentRule = new Rule(tok[1]);
-                net.Rules.Add(this.currentRule);
+                this.currentRule = new Rule(this.Tok[1]);
+                this.net.Rules.Add(this.currentRule);
             }
             else if (this.currentRule != null) {
-                this.currentRule.Code.Add(line);
+                this.currentRule.Code.Add(this.line);
             }
 
         }

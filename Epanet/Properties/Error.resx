@@ -187,13 +187,13 @@
     <value>Input Error 211: illegal {0} value for Link {1}.</value>
   </data>
   <data name="ERR212" xml:space="preserve">
-    <value>Input Error 212: trace node {0} {1} is undefined.</value>
+    <value>Input Error 212: trace node {1} is undefined.</value>
   </data>
   <data name="ERR213" xml:space="preserve">
     <value>Input Error 213: illegal option value in [{0}] section: {1}</value>
   </data>
   <data name="ERR214" xml:space="preserve">
-    <value>Input Error 214: following line of [{0}] section contains too many characters:</value>
+    <value>Input Error 214: following line of [{0}] section contains too many characters:{1}</value>
   </data>
   <data name="ERR215" xml:space="preserve">
     <value>Input Error 215: {0} {1} is a duplicate ID.</value>
@@ -214,7 +214,7 @@
     <value>Input Error 222: {0} {1} has same start and end nodes.</value>
   </data>
   <data name="ERR223" xml:space="preserve">
-    <value>Input Error 201: syntax error in following line of [{0}] section:</value>
+    <value>Input Error 201: syntax error in following line of [{0}] section:{1}</value>
   </data>
   <data name="ERR224" xml:space="preserve">
     <value>Input Error 224: no tanks or reservoirs in network.</value>

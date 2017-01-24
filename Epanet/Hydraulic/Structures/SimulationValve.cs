@@ -236,7 +236,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (link.Type == LinkType.PRV || link.Type == LinkType.PSV
                         || link.Type == LinkType.FCV) {
                         if (link.status == StatType.ACTIVE) {
-                            if (net.Stat_Flag == StatFlag.FULL) {
+                            if (net.StatFlag == StatFlag.FULL) {
                                 LogBadValve(log, link, htime);
                             }
 
@@ -416,7 +416,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (s != v.status) {
-                    if (net.Stat_Flag == StatFlag.FULL)
+                    if (net.StatFlag == StatFlag.FULL)
                         LogStatChange(net.FieldsMap, log, v, s, v.status);
                     change = true;
                 }

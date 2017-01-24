@@ -85,14 +85,14 @@
         ///<summary>Inflow concentration.</summary>
         CONCEN = 0,
 
-        ///<summary>Flow paced booster.</summary>
-        FLOWPACED = 3,
-
         ///<summary>Mass inflow booster.</summary>
         MASS = 1,
 
         ///<summary>Setpoint booster.</summary>
-        SETPOINT = 2
+        SETPOINT = 2,
+
+        ///<summary>Flow paced booster.</summary>
+        FLOWPACED = 3,
     }
 
     ///<summary>Available section types.</summary>
@@ -309,7 +309,7 @@
 
     ///<summary>Available files types.</summary>
     public enum FileType {
-        EXCEL_FILE,
+        NET_FILE,
         INP_FILE,
         NULL_FILE,
         XML_FILE,
@@ -367,16 +367,16 @@
     /// <summary>Type of curve</summary>
     public enum CurveType {
         /// <summary>volume curve</summary>
-        V_CURVE = 0,
+        Volume = 0,
 
         /// <summary>pump curve</summary>
-        P_CURVE = 1,
+        Pump = 1,
 
         /// <summary>efficiency curve</summary>
-        E_CURVE = 2,
+        Efficiency = 2,
 
         /// <summary>head loss curve</summary>
-        H_CURVE = 3
+        HeadLoss = 3
     }
 
     ///<summary>Control condition type</summary>

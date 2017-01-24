@@ -24,7 +24,15 @@ namespace Epanet.Network.Structures {
         ///<summary>Energy usage statistics.</summary>
         private readonly double[] energy = {0, 0, 0, 0, 0, 0};
 
-        public Pump(string name):base(name) { }
+        public Pump(string name):base(name) {
+            // Link attributes
+            this.Kc = 1.0;
+            this.Type = LinkType.PUMP;
+            this.Status = StatType.OPEN;
+            
+            // Pump attributes
+            this.Ptype = PumpType.NOCURVE;
+        }
 
         ///<summary>Unit energy cost.</summary>
         public double ECost { get; set; }
@@ -66,45 +74,45 @@ namespace Epanet.Network.Structures {
 
 #if NUCONVERT
 
-        public double GetNuFlowCoefficient(PropertiesMap.UnitsType utype) {
+        public double GetNuFlowCoefficient(UnitsType utype) {
             return NUConvert.revertPower(utype, this.FlowCoefficient);
         }
 
 
-        public double GetNuInitialFlow(PropertiesMap.FlowUnitsType utype) {
+        public double GetNuInitialFlow(FlowUnitsType utype) {
             return NUConvert.revertFlow(utype, this.Q0);
         }
 
-        public double GetNuMaxFlow(PropertiesMap.FlowUnitsType utype) {
+        public double GetNuMaxFlow(FlowUnitsType utype) {
             return NUConvert.revertFlow(utype, this.Qmax);
         }
 
-        public double GetNuMaxHead(PropertiesMap.UnitsType utype) {
+        public double GetNuMaxHead(UnitsType utype) {
             return NUConvert.revertDistance(utype, this.Hmax);
         }
 
-        public double GetNuShutoffHead(PropertiesMap.UnitsType utype) {
+        public double GetNuShutoffHead(UnitsType utype) {
             return NUConvert.revertDistance(utype, this.Hmax);
         }
 
 
-        public void SetNuFlowCoefficient(PropertiesMap.UnitsType utype, double value) {
+        public void SetNuFlowCoefficient(UnitsType utype, double value) {
             this.FlowCoefficient = NUConvert.convertPower(utype, value);
         }
 
-        public void SetNuInitialFlow(PropertiesMap.FlowUnitsType utype, double value) {
+        public void SetNuInitialFlow(FlowUnitsType utype, double value) {
             this.Q0 = NUConvert.convertFlow(utype, value);
         }
 
-        public void SetNuMaxFlow(PropertiesMap.FlowUnitsType utype, double value) {
+        public void SetNuMaxFlow(FlowUnitsType utype, double value) {
             this.Qmax = NUConvert.convertFlow(utype, value);
         }
 
-        public void SetNuMaxHead(PropertiesMap.UnitsType utype, double value) {
+        public void SetNuMaxHead(UnitsType utype, double value) {
             this.Hmax = NUConvert.convertDistance(utype, value);
         }
 
-        public void SetNuShutoffHead(PropertiesMap.UnitsType utype, double value) {
+        public void SetNuShutoffHead(UnitsType utype, double value) {
             this.H0 = NUConvert.convertDistance(utype, value);
         }
 

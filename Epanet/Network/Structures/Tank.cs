@@ -25,13 +25,17 @@ namespace Epanet.Network.Structures {
     public class Tank:Node {
         public Tank(string name):base(name) { }
 
-        public override NodeType Type { get { return NodeType.TANK; } }
+        public override NodeType Type {
+            get {
+                return Math.Abs(this.Area) < double.Epsilon * 10 ? NodeType.RESERV : NodeType.TANK;
+            }
+        }
 
         ///<summary>Tank area (feet^2).</summary>
         public double Area { get; set; }
 
         ///<summary>Species concentration.</summary>
-        public double Concentration { get; set; }
+        public double C { get; set; }
 
         ///<summary>Initial water elev.</summary>
         public double H0 { get; set; }
@@ -66,64 +70,62 @@ namespace Epanet.Network.Structures {
         ///<summary>Minimum volume (feet^3).</summary>
         public double Vmin { get; set; }
 
-        public bool IsReservoir { get { return Math.Abs(this.Area) < double.Epsilon * 10; } }
-
 #if NUCONVERT
 
-        public double GetNuArea(PropertiesMap.UnitsType type) { return NUConvert.revertArea(type, this.Area); }
+        public double GetNuArea(UnitsType type) { return NUConvert.revertArea(type, this.Area); }
 
-        public double GetNuInitHead(PropertiesMap.UnitsType type) { return NUConvert.revertDistance(type, this.H0); }
+        public double GetNuInitHead(UnitsType type) { return NUConvert.revertDistance(type, this.H0); }
 
-        public double GetNuInitVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.V0); }
+        public double GetNuInitVolume(UnitsType type) { return NUConvert.revertVolume(type, this.V0); }
 
-        public double GetNuMaximumHead(PropertiesMap.UnitsType type) {
+        public double GetNuMaximumHead(UnitsType type) {
             return NUConvert.revertDistance(type, this.Hmax);
         }
 
-        public double GetNuMaxVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.Vmax); }
+        public double GetNuMaxVolume(UnitsType type) { return NUConvert.revertVolume(type, this.Vmax); }
 
-        public double GetNuMinimumHead(PropertiesMap.UnitsType type) {
+        public double GetNuMinimumHead(UnitsType type) {
             return NUConvert.revertDistance(type, this.Hmin);
         }
 
-        public double GetNuMinVolume(PropertiesMap.UnitsType type) { return NUConvert.revertVolume(type, this.Vmin); }
+        public double GetNuMinVolume(UnitsType type) { return NUConvert.revertVolume(type, this.Vmin); }
 
-        public void SetNuMinVolume(PropertiesMap.UnitsType type, double value) {
+        public void SetNuMinVolume(UnitsType type, double value) {
             this.Vmin = NUConvert.convertVolume(type, value);
         }
 
 
-        public double GetNuMixCompartimentSize(PropertiesMap.UnitsType type) {
+        public double GetNuMixCompartimentSize(UnitsType type) {
             return NUConvert.revertVolume(type, this.V1Max);
         }
 
 
-        public void SetNuArea(PropertiesMap.UnitsType type, double value) {
+        public void SetNuArea(UnitsType type, double value) {
             this.Area = NUConvert.convertArea(type, value);
         }
 
-        public void SetNuInitHead(PropertiesMap.UnitsType type, double value) {
+        public void SetNuInitHead(UnitsType type, double value) {
             this.H0 = NUConvert.revertDistance(type, value);
         }
 
-        public void SetNuInitVolume(PropertiesMap.UnitsType type, double value) {
+        public void SetNuInitVolume(UnitsType type, double value) {
             this.V0 = NUConvert.convertVolume(type, value);
         }
 
 
-        public void SetNuMaximumHead(PropertiesMap.UnitsType type, double value) {
+        public void SetNuMaximumHead(UnitsType type, double value) {
             this.Hmax = NUConvert.revertDistance(type, value);
         }
 
-        public void SetNuMaxVolume(PropertiesMap.UnitsType type, double value) {
+        public void SetNuMaxVolume(UnitsType type, double value) {
             this.Vmax = NUConvert.convertVolume(type, value);
         }
 
-        public void SetNuMinimumHead(PropertiesMap.UnitsType type, double value) {
+        public void SetNuMinimumHead(UnitsType type, double value) {
             this.Hmin = NUConvert.convertArea(type, value);
         }
 
-        public void SetNuMixCompartimentSize(PropertiesMap.UnitsType type, double value) {
+        public void SetNuMixCompartimentSize(UnitsType type, double value) {
             this.V1Max = NUConvert.convertVolume(type, value);
         }
 

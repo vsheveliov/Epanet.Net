@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Epanet.Network.Structures {
 
     ///<summary>Temporal pattern.</summary>
+    [DebuggerDisplay("{Name}:{factors}")]
     public class Pattern:Element, IEnumerable<double> {
         ///<summary>Pattern factors list.</summary>
         private readonly List<double> factors = new List<double>();

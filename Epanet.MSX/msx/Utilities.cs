@@ -48,45 +48,52 @@ namespace Epanet.MSX {
 
         /// <summary>Performs an LU decomposition of a matrix.</summary>
         public static int Factorize(double[,] a, int n, double[] w, int[] indx) {
-            double big, dum, sum, temp;
+            double big;
 
             for (int i = 1; i <= n; i++) {
                 //Loop over rows to get the implicit scaling information.
                 big = 0.0;
-                for (int j = 1; j <= n; j++)
+                for (int j = 1; j <= n; j++) {
+                    double temp;
                     if ((temp = Math.Abs(a[i, j])) > big) big = temp;
+                }
 
                 if (big == 0.0)
                     return 0; // Warning for singular matrix
                 //No nonzero largest element.
                 w[i] = 1.0 / big; //Save the scaling.
             }
+
             for (int j = 1; j <= n; j++) //for each column
             {
                 //This is the loop over columns of Croutís method.
 
                 for (int i = 1; i < j; i++) {
                     //Up from the diagonal
-                    sum = a[i, j];
+                    var sum = a[i, j];
                     for (int k = 1; k < i; k++) sum -= a[i,k] * a[k,j];
                     a[i,j] = sum;
                 }
                 big = 0.0; //Initialize for the search for largest pivot element.
                 int imax = j;
+                
                 for (int i = j; i <= n; i++) {
-                    sum = a[i,j];
+                    var sum = a[i,j];
                     for (int k = 1; k < j; k++) sum -= a[i,k] * a[k,j];
                     a[i,j] = sum;
-                    if ((dum = w[i] * Math.Abs(sum)) >= big) {
+                    var dum = w[i] * Math.Abs(sum);
+
+                    if (dum >= big) {
                         big = dum;
                         imax = i;
                     }
                 }
+
                 if (j != imax) {
                     //Do we need to interchange rows?
                     for (int i = 1; i <= n; i++) {
                         //Yes,do so...
-                        dum = a[imax,i];
+                        var dum = a[imax,i];
                         a[imax,i] = a[j,i];
                         a[j,i] = dum;
                     }
@@ -96,7 +103,7 @@ namespace Epanet.MSX {
                 if (a[j, j] == 0.0) a[j, j] = Constants.TINY1;
                 if (j != n) // divide by the pivot element.
                 {
-                    dum = 1.0 / a[j, j];
+                    var dum = 1.0 / a[j, j];
                     for (int i = j + 1; i <= n; i++) a[i, j] *= dum;
                 }
             }

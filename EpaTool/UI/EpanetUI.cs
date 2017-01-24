@@ -20,7 +20,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
+
+using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network.IO.Input;
 using Epanet.Network.IO.Output;
@@ -32,7 +35,6 @@ namespace Epanet.UI {
 
     public sealed partial class EpanetUI : Form {
         private const string WEBLINK = "https://github.com/vsheveliov/Epanet.Net";
-        private const string LASTDOC = @"E:\LPRO\_WORK\EN_goefis.inp";
 
         /// <summary>Application title string.</summary>
         private const string APP_TITTLE = "Epanet.NET";
@@ -42,16 +44,16 @@ namespace Epanet.UI {
         private const string SaveFileDialogFilter =
             "Epanet INP network file (*.inp)|*.inp|" +
             "Epanet XML network file (*.xml)|*.xml|" +
-            "Epanet XLSX network file (*.xlsx)|*.xlsx|" +
+            "Epanet2 network project (*.net)|*.net|" +
             "Epanet GZIP'ped XML network file (*.xml.gz)|*.xml.gz";
 
         private const string OpenFileDialogFilter =
             "Epanet INP network file (*.inp)|*.inp|" +
             "Epanet XML network file (*.xml)|*.xml|" +
-            "Epanet XLSX network file (*.xlsx)|*.xlsx|" +
-            "All supported files (*.inp, *.xlsx, *.xml)|*.inp *.xlsx *.xml";
+            "Epanet2 network project (*.net)|*.net|" +
+            "All supported files (*.inp, *.net, *.xml)|*.inp *.net *.xml";
 
-        /// <summary>Abstract representation of the network file(INP/XLSX/XML).</summary>
+        /// <summary>Abstract representation of the network file(INP/NET/XML).</summary>
         private string inpFile;
 
         private EpanetNetwork net;
@@ -74,9 +76,13 @@ namespace Epanet.UI {
             this.Text = APP_TITTLE;
             this.MinimumSize = new Size(848, 500);
             this.ClearInterface();
-#if DEBUG
-            this.DoOpen(LASTDOC);
-#endif
+
+            string[] args = Environment.GetCommandLineArgs();
+
+            if (args.Length > 1) {
+                this.DoOpen(args[1]);
+            }
+
         }
 
 
@@ -129,18 +135,8 @@ namespace Epanet.UI {
 
         private void UnlockInterface() {
 
-            int resrvCount = 0;
-            int tanksCount = 0;
-
-            foreach (var tank in this.Net.Tanks) {
-                if (tank.IsReservoir)
-                    resrvCount++;
-                else
-                    tanksCount++;
-            }
-
-            this.textReservoirs.Text = resrvCount.ToString(CultureInfo.CurrentCulture);
-            this.textTanks.Text = tanksCount.ToString(CultureInfo.CurrentCulture);
+            this.textReservoirs.Text = this.net.Reservoirs.Count().ToString(CultureInfo.CurrentCulture);
+            this.textTanks.Text = this.net.Tanks.Count().ToString(CultureInfo.CurrentCulture);
             this.textPipes.Text = this.net.Links.Count.ToString(CultureInfo.CurrentCulture);
             this.textNodes.Text = this.net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
 
@@ -196,7 +192,7 @@ namespace Epanet.UI {
         /// <summary>Show report options window to configure and run the simulation.</summary>
         private void RunSimulation(object sender, EventArgs e) {
             if (this.reportOptions == null)
-                this.reportOptions = new ReportOptions(this.inpFile, null, this.Log);
+                this.reportOptions = new ReportOptions(this.inpFile, null);
 
             this.reportOptions.ShowDialog(this);
         }
@@ -216,38 +212,34 @@ namespace Epanet.UI {
 
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-            OutputComposer compose;
+            OutputComposer composer;
 
             string fileName = Path.GetFullPath(dlg.FileName);
             string extension = Path.GetExtension(dlg.FileName);
 
             switch (extension) {
                 case ".inp":
-                    compose = new InpComposer();
-                    break;
-
-                case ".xlsx":
-                    compose = new ExcelComposer();
+                    composer = new InpComposer();
                     break;
 
                 case ".xml":
-                    compose = new XMLComposer(false);
+                    composer = new XMLComposer(false);
                     break;
 
                 case ".gz":
-                    compose = new XMLComposer(true);
+                    composer = new XMLComposer(true);
                     break;
 
                 default:
                     extension = ".inp";
-                    compose = new InpComposer();
+                    composer = new InpComposer();
                     break;
             }
 
             fileName = Path.ChangeExtension(fileName, extension);
 
             try {
-                compose.Composer(this.networkPanel.Net, fileName);
+                composer.Composer(this.networkPanel.Net, fileName);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -269,14 +261,14 @@ namespace Epanet.UI {
             }
         }
 
-        //<summary>Show the open dialog and open the INP/XLSX and XML files.</summary>
+        //<summary>Show the open dialog and open the INP/NET and XML files.</summary>
         private void OpenEvent(object sender, EventArgs e) {
             //fileChooser = new FileDialog(frame);
 
             var fileChooser = new OpenFileDialog {
                 Multiselect = false,
                 Filter = OpenFileDialogFilter,
-                FilterIndex = 3
+                // FilterIndex = 0
             };
 
             if (fileChooser.ShowDialog(this) != DialogResult.OK)
@@ -293,35 +285,39 @@ namespace Epanet.UI {
         private void DoOpen(string netFile) {
             string fileExtension = (Path.GetExtension(netFile) ?? string.Empty).ToLowerInvariant();
 
-            if (  fileExtension != ".xlsx" && 
-                fileExtension != ".inp" && fileExtension != ".xml" && fileExtension != ".gz") return;
+            if (fileExtension != ".net" &&
+                fileExtension != ".inp" &&
+                fileExtension != ".xml" &&
+                fileExtension != ".gz") return;
 
             this.inpFile = netFile;
 
             InputParser inpParser;
 
-            switch (fileExtension.ToLowerInvariant()) {                    
-                case ".xlsx":
-                    inpParser = new ExcelParser();
-                    break;
-                
-                case ".xml":
-                    inpParser = new XmlParser(false);
-                    break;
+            switch (fileExtension.ToLowerInvariant()) {
+            case ".inp":
+                inpParser = new InpParser();
+                break;
 
-                case ".gz":
-                    inpParser = new XmlParser(true);
-                    break;
-                case ".inp":
-                    inpParser = new InpParser();
-                    break;
-                default:
-                    MessageBox.Show(
-                        "Not supported file type: *" + fileExtension,
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return;
+            case ".net":
+                inpParser = new NetParser();
+                break;
+
+            case ".xml":
+                inpParser = new XmlParser(false);
+                break;
+
+            case ".gz":
+                inpParser = new XmlParser(true);
+                break;
+
+            default:
+                MessageBox.Show(
+                    "Not supported file type: *" + fileExtension,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
             }
 
             var epanetNetwork = new EpanetNetwork();

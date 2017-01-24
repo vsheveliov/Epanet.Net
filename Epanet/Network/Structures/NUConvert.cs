@@ -15,143 +15,145 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
 #if NUCONVERT
     public static class NUConvert {
-        public static double convertArea(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double convertArea(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value / (Constants.MperFT * Constants.MperFT);
 
             return value;
         }
 
-        public static double convertDistance(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double convertDistance(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * (1 / Constants.MperFT);
 
             return value;
         }
 
-        public static double convertFlow(PropertiesMap.FlowUnitsType flow, double value) {
+        public static double convertFlow(FlowUnitsType flow, double value) {
             switch (flow) {
-            case PropertiesMap.FlowUnitsType.CFS:
+            case FlowUnitsType.CFS:
                 return value * (1 / Constants.LPSperCFS);
-            case PropertiesMap.FlowUnitsType.GPM:
+            case FlowUnitsType.GPM:
                 return value * (1 / Constants.GPMperCFS);
-            case PropertiesMap.FlowUnitsType.MGD:
+            case FlowUnitsType.MGD:
                 return value * (1 / Constants.MGDperCFS);
-            case PropertiesMap.FlowUnitsType.IMGD:
+            case FlowUnitsType.IMGD:
                 return value * (1 / Constants.IMGDperCFS);
-            case PropertiesMap.FlowUnitsType.AFD:
+            case FlowUnitsType.AFD:
                 return value * (1 / Constants.AFDperCFS);
-            case PropertiesMap.FlowUnitsType.LPS:
+            case FlowUnitsType.LPS:
                 return value * (1 / Constants.LPSperCFS);
-            case PropertiesMap.FlowUnitsType.LPM:
+            case FlowUnitsType.LPM:
                 return value * (1 / Constants.LPMperCFS);
-            case PropertiesMap.FlowUnitsType.MLD:
+            case FlowUnitsType.MLD:
                 return value * (1 / Constants.MLDperCFS);
-            case PropertiesMap.FlowUnitsType.CMH:
+            case FlowUnitsType.CMH:
                 return value * (1 / Constants.CMHperCFS);
-            case PropertiesMap.FlowUnitsType.CMD:
+            case FlowUnitsType.CMD:
                 return value * (1 / Constants.CMHperCFS);
             }
             return value;
         }
 
-        public static double convertPower(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double convertPower(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * (1 / Constants.KWperHP);
 
             return value;
         }
 
-        public static double convertPressure(PropertiesMap.PressUnitsType type, double SpGrav, double value) {
+        public static double convertPressure(PressUnitsType type, double SpGrav, double value) {
             switch (type) {
-            case PropertiesMap.PressUnitsType.PSI:
+            case PressUnitsType.PSI:
                 return value;
-            case PropertiesMap.PressUnitsType.KPA:
+            case PressUnitsType.KPA:
                 return value / (Constants.KPAperPSI * Constants.PSIperFT * SpGrav);
-            case PropertiesMap.PressUnitsType.METERS:
+            case PressUnitsType.METERS:
                 return value / (Constants.MperFT * SpGrav);
             }
             return value;
         }
 
-        public static double convertVolume(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double convertVolume(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value / (Constants.M3perFT3);
 
             return value;
         }
 
-        public static double revertArea(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double revertArea(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * (Constants.MperFT * Constants.MperFT);
 
             return value;
         }
 
-        public static double revertDistance(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double revertDistance(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * Constants.MperFT;
 
             return value;
         }
 
-        public static double revertDiameter(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double revertDiameter(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * Constants.MMperFT;
             return value * Constants.INperFT;
         }
 
-        public static double revertFlow(PropertiesMap.FlowUnitsType flow, double value) {
+        public static double revertFlow(FlowUnitsType flow, double value) {
             switch (flow) {
-            case PropertiesMap.FlowUnitsType.CFS:
+            case FlowUnitsType.CFS:
                 return value * Constants.LPSperCFS;
-            case PropertiesMap.FlowUnitsType.GPM:
+            case FlowUnitsType.GPM:
                 return value * Constants.GPMperCFS;
-            case PropertiesMap.FlowUnitsType.MGD:
+            case FlowUnitsType.MGD:
                 return value * Constants.MGDperCFS;
-            case PropertiesMap.FlowUnitsType.IMGD:
+            case FlowUnitsType.IMGD:
                 return value * Constants.IMGDperCFS;
-            case PropertiesMap.FlowUnitsType.AFD:
+            case FlowUnitsType.AFD:
                 return value * Constants.AFDperCFS;
-            case PropertiesMap.FlowUnitsType.LPS:
+            case FlowUnitsType.LPS:
                 return value * Constants.LPSperCFS;
-            case PropertiesMap.FlowUnitsType.LPM:
+            case FlowUnitsType.LPM:
                 return value * Constants.LPMperCFS;
-            case PropertiesMap.FlowUnitsType.MLD:
+            case FlowUnitsType.MLD:
                 return value * Constants.MLDperCFS;
-            case PropertiesMap.FlowUnitsType.CMH:
+            case FlowUnitsType.CMH:
                 return value * Constants.CMHperCFS;
-            case PropertiesMap.FlowUnitsType.CMD:
+            case FlowUnitsType.CMD:
                 return value * Constants.CMHperCFS;
             }
             return value;
         }
 
-        public static double revertPower(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double revertPower(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * Constants.KWperHP;
 
             return value;
         }
 
-        public static double revertPressure(PropertiesMap.PressUnitsType type, double SpGrav, double value) {
+        public static double revertPressure(PressUnitsType type, double SpGrav, double value) {
             switch (type) {
-            case PropertiesMap.PressUnitsType.PSI:
+            case PressUnitsType.PSI:
                 return value;
-            case PropertiesMap.PressUnitsType.KPA:
+            case PressUnitsType.KPA:
                 return value * (Constants.KPAperPSI * Constants.PSIperFT * SpGrav);
-            case PropertiesMap.PressUnitsType.METERS:
+            case PressUnitsType.METERS:
                 return value * (Constants.MperFT * SpGrav);
             }
             return value;
         }
 
-        public static double revertVolume(PropertiesMap.UnitsType type, double value) {
-            if (type == PropertiesMap.UnitsType.SI)
+        public static double revertVolume(UnitsType type, double value) {
+            if (type == UnitsType.SI)
                 return value * (Constants.M3perFT3);
 
             return value;

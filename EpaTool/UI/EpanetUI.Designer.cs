@@ -41,8 +41,9 @@ namespace Epanet.UI {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EpanetUI));
             System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
             System.Windows.Forms.ToolStripMenuItem menuOpen;
-            this.menuRun = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSave = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuClose = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuRun = new System.Windows.Forms.ToolStripMenuItem();
             this.bottom = new System.Windows.Forms.Panel();
             this.textDuration = new System.Windows.Forms.Label();
             this.textQuality = new System.Windows.Forms.Label();
@@ -78,8 +79,7 @@ namespace Epanet.UI {
             this.drawPipesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.networkPanel = new NetworkPanel();
-            this.menuClose = new System.Windows.Forms.ToolStripMenuItem();
+            this.networkPanel = new Epanet.UI.NetworkPanel();
             label2 = new System.Windows.Forms.Label();
             label4 = new System.Windows.Forms.Label();
             label5 = new System.Windows.Forms.Label();
@@ -155,7 +155,7 @@ namespace Epanet.UI {
             // 
             label8.Location = new System.Drawing.Point(2, 2);
             label8.Name = "label8";
-            label8.Size = new System.Drawing.Size(120, 23);
+            label8.Size = new System.Drawing.Size(112, 23);
             label8.TabIndex = 0;
             label8.Text = "Simulation Duration";
             label8.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -164,7 +164,7 @@ namespace Epanet.UI {
             // 
             label9.Location = new System.Drawing.Point(2, 71);
             label9.Name = "label9";
-            label9.Size = new System.Drawing.Size(120, 23);
+            label9.Size = new System.Drawing.Size(112, 23);
             label9.TabIndex = 0;
             label9.Text = "Units";
             label9.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -173,7 +173,7 @@ namespace Epanet.UI {
             // 
             label10.Location = new System.Drawing.Point(2, 94);
             label10.Name = "label10";
-            label10.Size = new System.Drawing.Size(120, 23);
+            label10.Size = new System.Drawing.Size(112, 23);
             label10.TabIndex = 0;
             label10.Text = "Headloss Formula";
             label10.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -182,7 +182,7 @@ namespace Epanet.UI {
             // 
             label11.Location = new System.Drawing.Point(2, 117);
             label11.Name = "label11";
-            label11.Size = new System.Drawing.Size(120, 23);
+            label11.Size = new System.Drawing.Size(112, 23);
             label11.TabIndex = 0;
             label11.Text = "Demand multiplier";
             label11.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -191,7 +191,7 @@ namespace Epanet.UI {
             // 
             label12.Location = new System.Drawing.Point(2, 140);
             label12.Name = "label12";
-            label12.Size = new System.Drawing.Size(120, 23);
+            label12.Size = new System.Drawing.Size(112, 23);
             label12.TabIndex = 0;
             label12.Text = "Quality";
             label12.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -200,7 +200,7 @@ namespace Epanet.UI {
             // 
             label13.Location = new System.Drawing.Point(2, 25);
             label13.Name = "label13";
-            label13.Size = new System.Drawing.Size(120, 23);
+            label13.Size = new System.Drawing.Size(112, 23);
             label13.TabIndex = 0;
             label13.Text = "Hydraulic timestep";
             label13.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -209,7 +209,7 @@ namespace Epanet.UI {
             // 
             label14.Location = new System.Drawing.Point(2, 48);
             label14.Name = "label14";
-            label14.Size = new System.Drawing.Size(120, 23);
+            label14.Size = new System.Drawing.Size(112, 23);
             label14.TabIndex = 0;
             label14.Text = "Pattern timestep";
             label14.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -244,14 +244,6 @@ namespace Epanet.UI {
             menuOpen.Text = "&Open";
             menuOpen.Click += new System.EventHandler(this.OpenEvent);
             // 
-            // menuRun
-            // 
-            this.menuRun.Name = "menuRun";
-            this.menuRun.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.R)));
-            this.menuRun.Size = new System.Drawing.Size(163, 22);
-            this.menuRun.Text = "&Run";
-            this.menuRun.Click += new System.EventHandler(this.RunSimulation);
-            // 
             // menuSave
             // 
             this.menuSave.Name = "menuSave";
@@ -259,6 +251,22 @@ namespace Epanet.UI {
             this.menuSave.Size = new System.Drawing.Size(163, 22);
             this.menuSave.Text = "&Save As...";
             this.menuSave.Click += new System.EventHandler(this.SaveEvent);
+            // 
+            // menuClose
+            // 
+            this.menuClose.Name = "menuClose";
+            this.menuClose.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F4)));
+            this.menuClose.Size = new System.Drawing.Size(163, 22);
+            this.menuClose.Text = "&Close";
+            this.menuClose.Click += new System.EventHandler(this.menuClose_Click);
+            // 
+            // menuRun
+            // 
+            this.menuRun.Name = "menuRun";
+            this.menuRun.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.R)));
+            this.menuRun.Size = new System.Drawing.Size(163, 22);
+            this.menuRun.Text = "&Run";
+            this.menuRun.Click += new System.EventHandler(this.RunSimulation);
             // 
             // bottom
             // 
@@ -287,7 +295,7 @@ namespace Epanet.UI {
             // 
             this.textDuration.Location = new System.Drawing.Point(123, 2);
             this.textDuration.Name = "textDuration";
-            this.textDuration.Size = new System.Drawing.Size(135, 23);
+            this.textDuration.Size = new System.Drawing.Size(131, 23);
             this.textDuration.TabIndex = 13;
             this.textDuration.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -295,7 +303,7 @@ namespace Epanet.UI {
             // 
             this.textQuality.Location = new System.Drawing.Point(123, 140);
             this.textQuality.Name = "textQuality";
-            this.textQuality.Size = new System.Drawing.Size(135, 23);
+            this.textQuality.Size = new System.Drawing.Size(131, 23);
             this.textQuality.TabIndex = 6;
             this.textQuality.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -303,7 +311,7 @@ namespace Epanet.UI {
             // 
             this.textHeadloss.Location = new System.Drawing.Point(123, 94);
             this.textHeadloss.Name = "textHeadloss";
-            this.textHeadloss.Size = new System.Drawing.Size(135, 23);
+            this.textHeadloss.Size = new System.Drawing.Size(131, 23);
             this.textHeadloss.TabIndex = 15;
             this.textHeadloss.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -311,7 +319,7 @@ namespace Epanet.UI {
             // 
             this.textUnits.Location = new System.Drawing.Point(123, 71);
             this.textUnits.Name = "textUnits";
-            this.textUnits.Size = new System.Drawing.Size(135, 23);
+            this.textUnits.Size = new System.Drawing.Size(131, 23);
             this.textUnits.TabIndex = 14;
             this.textUnits.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -319,7 +327,7 @@ namespace Epanet.UI {
             // 
             this.textDemand.Location = new System.Drawing.Point(123, 117);
             this.textDemand.Name = "textDemand";
-            this.textDemand.Size = new System.Drawing.Size(135, 23);
+            this.textDemand.Size = new System.Drawing.Size(131, 23);
             this.textDemand.TabIndex = 5;
             this.textDemand.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -327,7 +335,7 @@ namespace Epanet.UI {
             // 
             this.textPattern.Location = new System.Drawing.Point(123, 48);
             this.textPattern.Name = "textPattern";
-            this.textPattern.Size = new System.Drawing.Size(135, 23);
+            this.textPattern.Size = new System.Drawing.Size(131, 23);
             this.textPattern.TabIndex = 29;
             this.textPattern.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -335,7 +343,7 @@ namespace Epanet.UI {
             // 
             this.textHydraulic.Location = new System.Drawing.Point(123, 25);
             this.textHydraulic.Name = "textHydraulic";
-            this.textHydraulic.Size = new System.Drawing.Size(135, 23);
+            this.textHydraulic.Size = new System.Drawing.Size(131, 23);
             this.textHydraulic.TabIndex = 25;
             this.textHydraulic.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -637,14 +645,6 @@ namespace Epanet.UI {
             this.networkPanel.TabIndex = 8;
             this.networkPanel.TabStop = true;
             this.networkPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.networkPanel_MouseMove);
-            // 
-            // menuClose
-            // 
-            this.menuClose.Name = "menuClose";
-            this.menuClose.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F4)));
-            this.menuClose.Size = new System.Drawing.Size(163, 22);
-            this.menuClose.Text = "&Close";
-            this.menuClose.Click += new System.EventHandler(this.menuClose_Click);
             // 
             // EpanetUI
             // 

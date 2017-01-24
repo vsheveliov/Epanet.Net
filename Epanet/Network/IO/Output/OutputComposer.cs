@@ -28,7 +28,6 @@ namespace Epanet.Network.IO.Output {
         public static OutputComposer Create(FileType type) {
             switch (type) {
             case FileType.INP_FILE:       return new InpComposer();
-            case FileType.EXCEL_FILE:     return new ExcelComposer();
             case FileType.XML_FILE:       return new XMLComposer(false);
             case FileType.XML_GZ_FILE:    return new XMLComposer(true);
             }

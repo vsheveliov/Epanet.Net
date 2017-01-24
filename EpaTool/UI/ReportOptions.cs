@@ -49,7 +49,7 @@ namespace Epanet.UI {
         /// <summary>MSX config file.</summary>
         private readonly string fileMsx;
 
-        private readonly TraceSource log;
+        private static readonly TraceSource Log = new TraceSource("epanet", SourceLevels.All);
 
         /// <summary>Loaded INP network.</summary>
         private readonly EpanetNetwork netInp;
@@ -84,8 +84,8 @@ namespace Epanet.UI {
         }
 
         /// <summary>Report options dialog constructor.</summary>
-        public ReportOptions(string inpFile, string msxFile, TraceSource log) : this() {
-            this.log = log;
+        public ReportOptions(string inpFile, string msxFile) : this() {
+            
 
             if (inpFile == null) return;
 
@@ -98,24 +98,25 @@ namespace Epanet.UI {
                 string extension = Path.GetExtension(inpFile);
 
                 switch (extension.ToLowerInvariant()) {
-                    case  ".xlsx":
-                        inpParser = new ExcelParser();
-                        break;
-#if false
-                    // TODO: implement this
-                    case ".xml" :
-                        inpParser = new XmlParser(log, false);
-                        break;
-                    case ".gz":
-                        inpParser = new XmlParser(log, true);
-                        break;
-#endif
-                    case ".inp":
-                        inpParser = new InpParser();
-                        break;
-                    default:
-                        inpParser = new InpParser();
-                        break;
+                case ".inp":
+                    inpParser = new InpParser();
+                    break;
+
+                case ".net":
+                    inpParser = new NetParser();
+                    break;
+
+                case ".xml":
+                    inpParser = new XmlParser(false);
+
+                    break;
+                case ".gz":
+                    inpParser = new XmlParser(true);
+                    break;
+
+                default:
+                    inpParser = new InpParser();
+                    break;
                 }
 
                 inpParser.Parse(this.netInp, inpFile);
@@ -384,10 +385,10 @@ namespace Epanet.UI {
                     try {
                         simHandler = new EpanetTraceListener(logFile, false);
                         simHandler.TraceOutputOptions &= ~TraceOptions.DateTime;
-                        this.log.Listeners.Add(simHandler);
+                        Log.Listeners.Add(simHandler);
                     }
                     catch (IOException ex) {
-                        this.log.Error(ex);
+                        Log.Error(ex);
                     }
                 }
 
@@ -407,7 +408,7 @@ namespace Epanet.UI {
 
                 try {
 
-                    this.hydSim = new HydraulicSim(this.netInp, this.log);
+                    this.hydSim = new HydraulicSim(this.netInp, Log);
 
                     this.RunThread(
                         () => this.hydSim.Simulate("hydFile.bin"),
@@ -470,7 +471,7 @@ namespace Epanet.UI {
 
                 if (this.qualityCheckBox.Checked) {
                     try {
-                        QualitySim qSim = new QualitySim(this.netInp, this.log);
+                        QualitySim qSim = new QualitySim(this.netInp, Log);
                         this.statusLabel.Text = "Simulating Quality";
 
                         this.RunThread(
@@ -496,13 +497,13 @@ namespace Epanet.UI {
                 if (this.canselSimulation) return;
 
                 this.progressBar.Value = 50;
-                this.statusLabel.Text = "Writting XLSX";
+                this.statusLabel.Text = "Writting report";
 
                 this.gen = new ReportGenerator(fileName);
 
                 //log
                 try {
-                    this.log.Information("Starting xlsx write");
+                    Log.Information("Starting report write");
                     if (this.showSummaryCheckBox.Checked) this.gen.WriteSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
 
                     if (this.canselSimulation) return;
@@ -579,7 +580,7 @@ namespace Epanet.UI {
 
                     this.statusLabel.Text = "Writing workbook";
                     this.gen.writeWorksheet();
-                    this.log.Information("Ending xlsx write");
+                    Log.Information("Ending report write");
                 }
                 catch (IOException ex) {
                     Debug.Print(ex.ToString());
@@ -589,11 +590,11 @@ namespace Epanet.UI {
                 }
             }
             catch (ThreadInterruptedException) {
-                this.log.Warning(0, "Simulation aborted!");
+                Log.Warning(0, "Simulation aborted!");
             }
             finally {
                 if (simHandler != null) {
-                    this.log.Listeners.Remove(simHandler);
+                    Log.Listeners.Remove(simHandler);
                     simHandler.Close();
                 }
 

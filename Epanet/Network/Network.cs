@@ -42,7 +42,7 @@ namespace Epanet.Network {
         };
 
         private readonly ElementCollection<Rule> rules = new ElementCollection<Rule>();
-        private readonly List<string> titleText = new List<string>();
+        private readonly List<string> _title = new List<string>();
 
         public Network() {
             this.LoadDefaults();
@@ -59,7 +59,7 @@ namespace Epanet.Network {
 
         ///<summary>Transient colleciton of junctions.</summary>
         public IEnumerable<Node> Junctions {
-            get { return this.nodes.Where(x => !(x is Tank)); }
+            get { return this.nodes.Where(x => x.Type == NodeType.JUNC); }
         }
 
         public IList<Label> Labels { get { return this.labels; } }
@@ -78,24 +78,29 @@ namespace Epanet.Network {
 
         ///<summary>Transient colleciton of pumps.</summary>
         public IEnumerable<Pump> Pumps {
-            get {
-                return this.links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>();
-            } 
+            get { return this.links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>(); }
         }
 
         public Rule GetRule(string ruleName) { return this.rules.GetValueOrDefault(ruleName); }
 
         public IList<Rule> Rules { get { return this.rules; } }
 
-        ///<summary>Transient collection of tanks(and reservoirs)</summary>
-        public IEnumerable<Tank> Tanks { get { return this.nodes.OfType<Tank>(); } }
+        public IEnumerable<Tank> Tanks {
+            get { return this.nodes.Where(x => x.Type == NodeType.TANK).Cast<Tank>(); }
+        }
 
-        public List<string> TitleText { get { return this.titleText; } }
+        public IEnumerable<Tank> Reservoirs {
+            get { return this.nodes.Where(x => x.Type == NodeType.RESERV).Cast<Tank>(); }
+        }
+
+        public List<string> Title { get { return this._title; } }
 
         ///<summary>Transient colleciton of valves.</summary>
-        public IEnumerable<Valve> Valves { get { return this.links.OfType<Valve>(); } }
+        public IEnumerable<Valve> Valves {
+            get { return this.links.OfType<Valve>(); }
+        }
 
-#region properties map
+        #region properties map
 
 
         private Dictionary<string, string> extraOptions;
@@ -250,7 +255,7 @@ namespace Epanet.Network {
         public double SpGrav { get; set; }
 
         /// <summary>Status report flag.</summary>
-        public StatFlag Stat_Flag { get; set; }
+        public StatFlag StatFlag { get; set; }
 
         /// <summary>Report summary flag.</summary>
         public bool SummaryFlag { get; set; }
@@ -284,7 +289,6 @@ namespace Epanet.Network {
             }
         }
 
-
         /// <summary>Init properties with default value.</summary>
         private void LoadDefaults() {
             this.BulkOrder = 1.0d; // 1st-order bulk reaction rate
@@ -299,7 +303,7 @@ namespace Epanet.Network {
             this.EPatId = string.Empty; // No energy price pattern
             this.EPump = Constants.EPUMP; // Default pump efficiency
             this.PageSize = Constants.PAGESIZE;
-            this.Stat_Flag = StatFlag.NO;
+            this.StatFlag = StatFlag.NO;
             this.SummaryFlag = true;
             this.MessageFlag = true;
             this.EnergyFlag = false;
@@ -354,61 +358,19 @@ namespace Epanet.Network {
             
             return new System.Text.StringBuilder(0x200)
                 .AppendLine(" Network")
-                .Append("  Nodes    : ").Append(this.nodes.Count).AppendLine()
-                .Append("  Links    : ").Append(this.links.Count).AppendLine()
-                .Append("  Pattern  : ").Append(this.patterns.Count).AppendLine()
-                .Append("  Curves   : ").Append(this.curves.Count).AppendLine()
-                .Append("  Controls : ").Append(this.controls.Count).AppendLine()
-                .Append("  Labels   : ").Append(this.labels.Count).AppendLine()
-                .Append("  Rules    : ").Append(this.rules.Count).AppendLine()
-                .Append("  Tanks    : ").Append(this.Tanks.Count()).AppendLine()
-                .Append("  Pumps    : ").Append(this.Pumps.Count()).AppendLine()
-                .Append("  Valves   : ").Append(this.Valves.Count()).AppendLine()
+                .Append("  Nodes      : ").Append(this.nodes.Count).AppendLine()
+                .Append("  Links      : ").Append(this.links.Count).AppendLine()
+                .Append("  Pattern    : ").Append(this.patterns.Count).AppendLine()
+                .Append("  Curves     : ").Append(this.curves.Count).AppendLine()
+                .Append("  Controls   : ").Append(this.controls.Count).AppendLine()
+                .Append("  Labels     : ").Append(this.labels.Count).AppendLine()
+                .Append("  Rules      : ").Append(this.rules.Count).AppendLine()
+                .Append("  Tanks      : ").Append(this.Tanks.Count()).AppendLine()
+                .Append("  Reservoirs : ").Append(this.Reservoirs.Count()).AppendLine()
+                .Append("  Pumps      : ").Append(this.Pumps.Count()).AppendLine()
+                .Append("  Valves     : ").Append(this.Valves.Count()).AppendLine()
                 .ToString();
             
-
-            /*
-            return " Network" + Environment.NewLine +
-                   "  Nodes    : " + this.nodes.Count + Environment.NewLine +
-                   "  Links    : " + this.links.Count + Environment.NewLine +
-                   "  Pattern  : " + this.patterns.Count + Environment.NewLine +
-                   "  Curves   : " + this.curves.Count + Environment.NewLine +
-                   "  Controls : " + this.controls.Count + Environment.NewLine +
-                   "  Labels   : " + this.labels.Count + Environment.NewLine +
-                   "  Rules    : " + this.rules.Count + Environment.NewLine +
-                   "  Tanks    : " + this.Tanks.Count() + Environment.NewLine +
-                   "  Pumps    : " + this.Pumps.Count() + Environment.NewLine +
-                   "  Valves   : " + this.Valves.Count() + Environment.NewLine;
-            */
-
-            /*
-            return
-                string.Format(
-                    " Network{0}" +
-                    "  Nodes    : {1}{0}" +
-                    "  Links    : {2}{0}" +
-                    "  Pattern  : {3}{0}" +
-                    "  Curves   : {4}{0}" +
-                    "  Controls : {5}{0}" +
-                    "  Labels   : {6}{0}" +
-                    "  Rules    : {7}{0}" +
-                    "  Tanks    : {8}{0}" +
-                    "  Pumps    : {9}{0}" +
-                    "  Valves   : {10}{0}",
-
-                    Environment.NewLine,
-                    this.nodes.Count,
-                    this.links.Count,
-                    this.patterns.Count,
-                    this.curves.Count,
-                    this.controls.Count,
-                    this.labels.Count,
-                    this.rules.Count,
-                    this.Tanks.Count(),
-                    this.Pumps.Count(),
-                    this.Valves.Count());
-            */
-
         }
 
     }

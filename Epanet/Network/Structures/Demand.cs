@@ -15,6 +15,8 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Node demand category.</summary>
@@ -25,17 +27,15 @@ namespace Epanet.Network.Structures {
         }
 
         ///<summary>Baseline demand (Feet^3/t)</summary>
-        public double Base { get; set; }
+        public double Base;
 
         ///<summary>Pattern reference.</summary>
-        public Pattern Pattern { get; set; }
+        public Pattern Pattern;
 
 #if NUCONVERT
-        public double GetBaseNu(PropertiesMap.FlowUnitsType units) { return NUConvert.revertFlow(units, this.Base); }
+        public double GetBaseNu(FlowUnitsType units) { return NUConvert.revertFlow(units, this.Base); }
 
-        public void SetBaseNu(PropertiesMap.FlowUnitsType units, double value) {
-            this.Base = NUConvert.convertFlow(units, value);
-        }
+        public void SetBaseNu(FlowUnitsType units, double value) { this.Base = NUConvert.convertFlow(units, value); }
 #endif
 
     }

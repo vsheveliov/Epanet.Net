@@ -58,7 +58,7 @@ namespace Epanet.Report {
 
         private void WriteWorksheet(Package package, int sheetIndex) {
             string sPos = (sheetIndex + 1).ToString(NumberFormatInfo.InvariantInfo);
-            string name = "xl/worksheets/sheet" + sPos + ".xml";
+            string name = string.Format("xl/worksheets/sheet{0}.xml", sPos);
             Uri uri = PackUriHelper.CreatePartUri(new Uri(name, UriKind.Relative));
             PackagePart wsPart = package.CreatePart(uri, NS_WORKSHEET, CompressionOption.Maximum);
 
@@ -174,7 +174,8 @@ namespace Epanet.Report {
 
         private void WriteWorkbookXml(Package package) {
             Uri uri = PackUriHelper.CreatePartUri(new Uri("xl/workbook.xml", UriKind.Relative));
-            var part = package.CreatePart(uri, NS_WORKBOOK, CompressionOption.Maximum);
+            // var part = package.CreatePart(uri, NS_WORKBOOK, CompressionOption.Maximum);
+            var part = package.CreatePart(uri, "application/xml", CompressionOption.Normal);
 
             using (XmlWriter writer = XmlWriter.Create(part.GetStream(FileMode.Create, FileAccess.Write), XmlSettings)) {
                 writer.WriteStartDocument(true);
@@ -204,6 +205,7 @@ namespace Epanet.Report {
             }
 
             package.CreateRelationship(uri, TargetMode.Internal, RELATIONSHIP_WORKBOOK, "rId1");
+            
         }
 
         public void Save(string outputFile) {

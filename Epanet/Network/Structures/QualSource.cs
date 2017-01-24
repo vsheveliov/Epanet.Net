@@ -29,6 +29,13 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Source type.</summary>
         public SourceType Type { get; set; }
+
+        public QualSource(SourceType type, double c0, Pattern pattern) {
+            C0 = c0;
+            Pattern = pattern;
+            Type = type;
+        }
+        
     }
 
 }

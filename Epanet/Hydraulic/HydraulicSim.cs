@@ -109,13 +109,13 @@ namespace Epanet.Hydraulic {
 
                 var networkNode = net.Nodes[i];
 
-                if (networkNode is Tank) {
-                    node = new SimulationTank(networkNode, i);
-                    this.tanks.Add((SimulationTank)node);
-                }
-                else {
+                if (networkNode.Type == NodeType.JUNC) {
                     node = new SimulationNode(networkNode, i);
                     this.junctions.Add(node);
+                }
+                else {
+                    node = new SimulationTank(networkNode, i);
+                    this.tanks.Add((SimulationTank)node);
                 }
 
                 this.nodes[i] = node;
@@ -333,7 +333,7 @@ namespace Epanet.Hydraulic {
             this.NetSolve(out Iter, out Relerr);
 
             // Report new status & save results
-            if (this.Net.Stat_Flag != StatFlag.NO)
+            if (this.Net.StatFlag != StatFlag.NO)
                 this.LogHydStat(Iter, Relerr);
 
             // If system unbalanced and no extra trials
@@ -356,7 +356,7 @@ namespace Epanet.Hydraulic {
 
             int nextCheck = this.Net.CheckFreq;
 
-            if (this.Net.Stat_Flag == StatFlag.FULL)
+            if (this.Net.StatFlag == StatFlag.FULL)
                 this.LogRelErr(iter, relerr);
 
             int maxTrials = this.Net.MaxIter;
@@ -408,7 +408,7 @@ namespace Epanet.Hydraulic {
                 relerr = this.NewFlows(relaxFactor);
 
                 // Write convergence error to status report if called for
-                if (this.Net.Stat_Flag == StatFlag.FULL)
+                if (this.Net.StatFlag == StatFlag.FULL)
                     this.LogRelErr(iter, relerr);
 
                 relaxFactor = 1.0;

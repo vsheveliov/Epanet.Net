@@ -30,25 +30,36 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>Abstract input file parser.</summary>
     public abstract class InputParser {
-
         protected string FileName;
+        protected Network net;
 
         ///<summary>Reference to the error logger.</summary>
         protected readonly TraceSource Log = new TraceSource("epanet", SourceLevels.All);
-        protected readonly List<ENException> Errors = new List<ENException>();
+        protected readonly List<ENException> Errors = new List<ENException>(Constants.MAXERRS + 1);
 
-        public static InputParser Create(FileType type, TraceSource log) {
+        protected ErrorCode LogException(ENException ex) {
+            this.Errors.Add(ex);
+            
+            this.Log.Error(ex);
+
+            if(this.Errors.Count > Constants.MAXERRS)
+                throw new ENException(ErrorCode.Err200);
+
+            return ex.Code;
+        }
+
+        public static InputParser Create(FileType type) {
             switch (type) {
             case FileType.INP_FILE:
                 return new InpParser();
-            case FileType.EXCEL_FILE:
-                return new ExcelParser();
+            case FileType.NET_FILE:
+                return new NetParser();
             case FileType.XML_FILE:
                 return new XmlParser(false);
             case FileType.XML_GZ_FILE:
                 return new XmlParser(true);
             case FileType.NULL_FILE:
-                return new NullParser(log);
+                return new NullParser();
             }
             return null;
         }
@@ -63,12 +74,18 @@ namespace Epanet.Network.IO.Input {
         ///     Words between " " are stored 7as a single token.
         ///     Characters to right of ';' are ignored.
         /// </summary>
-        protected static string[] Tokenize(string stringToSplit) {
+        protected static int Tokenize(string stringToSplit, List<string> results) {
             // const string SEPARATORS = " \t,\r\n";
             // char[] SEPARATORS = { ' ', '\t', ',', '\r', '\n' };
+
+            if(results == null)
+                throw new ArgumentNullException("results");
+
             bool inQuote = false;
             var tok = new StringBuilder(Constants.MAXLINE);
-            List<string> results = new List<string>();
+
+            results.Clear();
+
 
             foreach (char c in stringToSplit) {
                 if (c == ';')
@@ -104,16 +121,16 @@ namespace Epanet.Network.IO.Input {
                     results.Add(lastResult);
             }
 
-            return results.ToArray();
+            return results.Count;
         }
 
         ///<summary>Prepare the hydraulic network for simulation.</summary>
-        protected void Convert(Network net) {
-            InitTanks(net);
-            InitPumps(net);
-            InitPatterns(net);
-            this.CheckUnlinked(net);
-            ConvertUnits(net);
+        protected void Convert() {
+            InitTanks(this.net);
+            InitPumps(this.net);
+            InitPatterns(this.net);
+            this.CheckUnlinked();
+            ConvertUnits(this.net);
         }
 
         ///<summary>Adjust simulation configurations.</summary>
@@ -189,13 +206,13 @@ namespace Epanet.Network.IO.Input {
                 if (link.Kw.IsMissing()) {
                     if (rfactor == 0.0)
                         link.Kw = net.KWall;
-                    else if ((link.Roughness > 0.0) && (link.Diameter > 0.0)) {
+                    else if ((link.Kc > 0.0) && (link.Diameter > 0.0)) {
                         if (formFlag == FormType.HW)
-                            link.Kw = rfactor / link.Roughness;
+                            link.Kw = rfactor / link.Kc;
                         if (formFlag == FormType.DW)
-                            link.Kw = rfactor / Math.Abs(Math.Log(link.Roughness / link.Diameter));
+                            link.Kw = rfactor / Math.Abs(Math.Log(link.Kc / link.Diameter));
                         if (formFlag == FormType.CM)
-                            link.Kw = rfactor * link.Roughness;
+                            link.Kw = rfactor * link.Kc;
                     }
                     else
                         link.Kw = 0.0;
@@ -209,7 +226,10 @@ namespace Epanet.Network.IO.Input {
             Pattern defpat = net.GetPattern(net.DefPatId) ?? net.GetPattern("");
 
             foreach (Node node  in  net.Nodes) {
-                foreach (Demand d  in  node.Demand) {
+                if (node.Demands.Count == 0) 
+                    node.Demands.Add(node.PrimaryDemand);
+
+                foreach (Demand d  in  node.Demands) {
                     if (d.Pattern == null)
                         d.Pattern = defpat;
                 }
@@ -226,14 +246,10 @@ namespace Epanet.Network.IO.Input {
             int n = 0;
 
             foreach (Tank tank  in  net.Tanks) {
-                if (tank.IsReservoir)
-                    continue;
-
                 int levelerr = 0;
-                if (tank.H0 > tank.Hmax ||
-                    tank.Hmin > tank.Hmax ||
-                    tank.H0 < tank.Hmin
-                ) levelerr = 1;
+
+                if (tank.H0 > tank.Hmax || tank.Hmin > tank.Hmax || tank.H0 < tank.Hmin) 
+                    levelerr = 1;
 
                 Curve curv = tank.Vcurve;
 
@@ -273,12 +289,9 @@ namespace Epanet.Network.IO.Input {
             }
 
 
-            foreach (Node node  in  net.Nodes) {
-                if(node.Type == NodeType.TANK)
-                    continue;
-
-                foreach (Demand d  in  node.Demand) {
-                    d.Base = d.Base / fMap.GetUnits(FieldType.DEMAND);
+            foreach (Node node  in  net.Junctions) {
+                foreach (Demand d  in  node.Demands) {
+                    d.Base /= fMap.GetUnits(FieldType.DEMAND);
                 }
             }
 
@@ -286,12 +299,13 @@ namespace Epanet.Network.IO.Input {
             double ucf = Math.Pow(fMap.GetUnits(FieldType.FLOW), net.QExp)
                          / fMap.GetUnits(FieldType.PRESSURE);
 
-            foreach (Node node  in  net.Nodes) {
-                if (!(node is Tank))
-                    if (node.Ke > 0.0)
-                        node.Ke = ucf / Math.Pow(node.Ke, net.QExp);
+            foreach (Node node  in  net.Junctions) {
+                if (node.Ke > 0.0)
+                    node.Ke = ucf / Math.Pow(node.Ke, net.QExp);
             }
 
+
+            // FIXME:Tanks and reservoirs here?
             foreach (Tank tk  in  net.Tanks) {
                 tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldType.ELEV);
                 tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldType.ELEV);
@@ -301,24 +315,23 @@ namespace Epanet.Network.IO.Input {
                 tk.Vmin = tk.Vmin / fMap.GetUnits(FieldType.VOLUME);
                 tk.Vmax = tk.Vmax / fMap.GetUnits(FieldType.VOLUME);
                 tk.Kb = tk.Kb / Constants.SECperDAY;
-                //tk.setVolume(tk.getV0());
-                tk.Concentration = tk.C0;
+                // tk.Volume = tk.V0;
+                tk.C = tk.C0;
                 tk.V1Max = tk.V1Max * tk.Vmax;
             }
-
-
+            
             net.CLimit = net.CLimit / fMap.GetUnits(FieldType.QUALITY);
             net.Ctol = net.Ctol / fMap.GetUnits(FieldType.QUALITY);
 
             net.KBulk = net.KBulk / Constants.SECperDAY;
             net.KWall = net.KWall / Constants.SECperDAY;
 
-
             foreach (Link lk  in  net.Links) {
-
-                if (lk.Type <= LinkType.PIPE) {
+                switch (lk.Type) {
+                case LinkType.CV:
+                case LinkType.PIPE:
                     if (net.FormFlag == FormType.DW)
-                        lk.Roughness = lk.Roughness / (1000.0 * fMap.GetUnits(FieldType.ELEV));
+                        lk.Kc = lk.Kc / (1000.0 * fMap.GetUnits(FieldType.ELEV));
                     lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
                     lk.Lenght = lk.Lenght / fMap.GetUnits(FieldType.LENGTH);
 
@@ -326,8 +339,9 @@ namespace Epanet.Network.IO.Input {
 
                     lk.Kb = lk.Kb / Constants.SECperDAY;
                     lk.Kw = lk.Kw / Constants.SECperDAY;
-                }
-                else if (lk is Pump) {
+                    break;
+
+                case LinkType.PUMP:
                     Pump pump = (Pump)lk;
 
                     if (pump.Ptype == PumpType.CONST_HP) {
@@ -346,22 +360,25 @@ namespace Epanet.Network.IO.Input {
                         pump.Qmax = pump.Qmax / fMap.GetUnits(FieldType.FLOW);
                         pump.Hmax = pump.Hmax / fMap.GetUnits(FieldType.HEAD);
                     }
-                }
-                else {
+                    break;
+
+                default:
                     lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
                     lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
                    
-                    if (!lk.Roughness.IsMissing())
+                    if (!lk.Kc.IsMissing())
                         switch (lk.Type) {
                         case LinkType.FCV:
-                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldType.FLOW);
+                            lk.Kc = lk.Kc / fMap.GetUnits(FieldType.FLOW);
                             break;
                         case LinkType.PRV:
                         case LinkType.PSV:
                         case LinkType.PBV:
-                            lk.Roughness = lk.Roughness / fMap.GetUnits(FieldType.PRESSURE);
+                            lk.Kc = lk.Kc / fMap.GetUnits(FieldType.PRESSURE);
                             break;
                         }
+
+                    break;
                 }
 
                 lk.initResistance(net.FormFlag, net.HExp);
@@ -372,12 +389,9 @@ namespace Epanet.Network.IO.Input {
 
                 if (c.Link == null) continue;
                 if (c.Node != null) {
-                    Node node = c.Node;
-                    if (node is Tank)
-                        c.Grade = node.Elevation +
-                                  c.Grade / fMap.GetUnits(FieldType.ELEV);
-                    else
-                        c.Grade = node.Elevation + c.Grade / fMap.GetUnits(FieldType.PRESSURE);
+                    c.Grade = c.Node.Type == NodeType.JUNC
+                        ? c.Node.Elevation + c.Grade / fMap.GetUnits(FieldType.PRESSURE)
+                        : c.Node.Elevation + c.Grade / fMap.GetUnits(FieldType.ELEV);
                 }
 
                 if (!c.Setting.IsMissing())
@@ -502,7 +516,7 @@ namespace Epanet.Network.IO.Input {
             foreach (Node node in nodes) {
                 if (marked[node] == 0) {
                     err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, node.Name));
+                    this.LogException(new ENException(ErrorCode.Err233, node.Name));
                 }
 
                 if (err >= Constants.MAXERRS)
@@ -515,14 +529,12 @@ namespace Epanet.Network.IO.Input {
 
         ///<summary>Check for unlinked nodes.</summary>
         /// <param name="net">Hydraulic network reference.</param>
-        private void CheckUnlinked2(Network net) {
+        private void CheckUnlinked2() {
             //int[] marked = new int[net.Nodes.Count + 1];
             var nodes = net.Nodes;
             Dictionary<string, int> marked = new Dictionary<string, int>(
                 nodes.Count + 1,
                 StringComparer.OrdinalIgnoreCase);
-
-            int err = 0;
 
             foreach (Link link in net.Links) {
                 marked[link.FirstNode.Name] = 1;
@@ -531,74 +543,49 @@ namespace Epanet.Network.IO.Input {
 
             foreach (Node node in nodes) {
                 if (marked[node.Name] == 0) {
-                    err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, node.Name));
+                    this.LogException(new ENException(ErrorCode.Err233, node.Name));
                 }
 
-                if (err >= Constants.MAXERRS)
-                    break;
             }
 
-            //        if (err > 0)
-            //            throw new ENException(200);
         }
 
         ///<summary>Check for unlinked nodes.</summary>
         /// <param name="net">Hydraulic network reference.</param>
-        private void checkUnlinked(Network net) {
-            int[] marked = new int[net.Nodes.Count + 1];
-            IList<Link> links = net.Links;
-            IList<Node> nodes = net.Nodes;
-
-            int err = 0;
-
-            foreach (Link link in links) {
-                marked[nodes.IndexOf(link.FirstNode)]++;
-                marked[nodes.IndexOf(link.SecondNode)]++;
-            }
-
-            int i = 0;
-            foreach (Node node in nodes) {
-                if (marked[i] == 0) {
-                    err++;
-                    this.Log.Error("checkUnlinked", new ENException(ErrorCode.Err233, node.Name));
-                }
-
-                if (err >= Constants.MAXERRS)
-                    break;
-
-                i++;
-            }
-
-//        if (err > 0)
-//            throw new ENException(200);
-        }
-
-        ///<summary>Check for unlinked nodes.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
-        private void CheckUnlinked(Network net) {
+        private void checkUnlinked() {
             int[] marked = new int[net.Nodes.Count + 1];
             var nodes = net.Nodes;
 
-            int err = 0;
-
-            foreach (Link link in net.Links) {
+            foreach(Link link in net.Links) {
                 marked[nodes.IndexOf(link.FirstNode)]++;
                 marked[nodes.IndexOf(link.SecondNode)]++;
             }
 
             for (int i = 0; i < nodes.Count; i++) {
                 if (marked[i] == 0) {
-                    err++;
-                    this.Log.Error(new ENException(ErrorCode.Err233, nodes[i].Name));
+                    this.LogException(new ENException(ErrorCode.Err233, nodes[i].Name));
                 }
-
-                if (err >= Constants.MAXERRS)
-                    break;
             }
 
-//        if (err > 0)
-//            throw new ENException(200);
+        }
+
+        ///<summary>Check for unlinked nodes.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
+        private void CheckUnlinked() {
+            int[] marked = new int[this.net.Nodes.Count + 1];
+            var nodes = this.net.Nodes;
+
+            foreach (Link link in this.net.Links) {
+                marked[nodes.IndexOf(link.FirstNode)]++;
+                marked[nodes.IndexOf(link.SecondNode)]++;
+            }
+
+            for (int i = 0; i < nodes.Count; i++) {
+                if (marked[i] == 0) {
+                    this.LogException(new ENException(ErrorCode.Err233, nodes[i].Name));
+                }
+            }
+
         }
 
         /// <summary>Computes coeffs. for pump curve.</summary>
@@ -611,15 +598,8 @@ namespace Epanet.Network.IO.Input {
         /// <param name="b">pump curve coeffs. (H = a-bQ^c)</param>
         /// <param name="c">pump curve coeffs. (H = a-bQ^c)</param>
         ///  <returns>Returns true if sucessful, false otherwise.</returns>
-        protected static bool GetPowerCurve(
-            double h0,
-            double h1,
-            double h2,
-            double q1,
-            double q2,
-            out double a,
-            out double b,
-            out double c) {
+        protected static bool GetPowerCurve(double h0, double h1, double h2, double q1, double q2, out double a, out double b, out double c) 
+        {
             a = b = c = 0;
 
             if (
@@ -639,7 +619,149 @@ namespace Epanet.Network.IO.Input {
 
             return !(b >= 0.0);
         }
+
+        /// <summary>checks for legal connections between PRVs & PSVs</summary>
+        /// <param name="net"></param>
+        /// <param name="type">valve type</param>
+        /// <param name="j1">upstream node</param>
+        /// <param name="j2">downstream node</param>
+        /// <returns>returns true for legal connection, false otherwise</returns>
+        protected static bool Valvecheck(Network net, LinkType type, Node j1, Node j2) {
+            // Examine each existing valve
+            foreach(Valve vk in net.Valves) {
+                Node vj1 = vk.FirstNode;
+                Node vj2 = vk.SecondNode;
+                LinkType vtype = vk.Type;
+
+                /* Cannot have two PRVs sharing downstream nodes or in series */
+                if(vtype == LinkType.PRV && type == LinkType.PRV) {
+                    if(Equals(vj2, j2) ||
+                        Equals(vj2, j1) ||
+                        Equals(vj1, j2))
+                        return false;
+                }
+
+                /* Cannot have two PSVs sharing upstream nodes or in series */
+                if(vtype == LinkType.PSV && type == LinkType.PSV) {
+                    if(Equals(vj1, j1) ||
+                        Equals(vj1, j2) ||
+                        Equals(vj2, j1))
+                        return false;
+                }
+
+                /* Cannot have PSV connected to downstream node of PRV */
+                if(vtype == LinkType.PSV && type == LinkType.PRV && vj1 == j2)
+                    return false;
+                if(vtype == LinkType.PRV && type == LinkType.PSV && vj2 == j1)
+                    return false;
+
+                /* Cannot have PSV connected to downstream node of FCV */
+                /* nor have PRV connected to upstream node of FCV */
+                if(vtype == LinkType.FCV && type == LinkType.PSV && vj2 == j1)
+                    return false;
+                if(vtype == LinkType.FCV && type == LinkType.PRV && vj1 == j2)
+                    return false;
+
+                if(vtype == LinkType.PSV && type == LinkType.FCV && vj1 == j2)
+                    return false;
+                if(vtype == LinkType.PRV && type == LinkType.FCV && vj2 == j1)
+                    return false;
+            }
+
+            return true;
+        }
+
+        protected static void GetPumpCurve(Pump pump, int n, double[] x) {
+
+
+            if(n == 1) {
+                if(x[0] <= 0.0)
+                    throw new ENException(ErrorCode.Err202);
+                pump.Ptype = PumpType.CONST_HP;
+                pump.Km = x[0];
+            }
+            else {
+                double h0, h1, h2, q1, q2;
+
+                if(n == 2) {
+                    q1 = x[1];
+                    h1 = x[0];
+                    h0 = 1.33334 * h1;
+                    q2 = 2.0 * q1;
+                    h2 = 0.0;
+                }
+                else if(n >= 5) {
+                    h0 = x[0];
+                    h1 = x[1];
+                    q1 = x[2];
+                    h2 = x[3];
+                    q2 = x[4];
+                }
+                else
+                    throw new ENException(ErrorCode.Err202);
+
+                pump.Ptype = PumpType.POWER_FUNC;
+                double a, b, c;
+
+                if(!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
+                    throw new ENException(ErrorCode.Err206);
+
+                pump.H0 = -a;
+                pump.FlowCoefficient = -b;
+                pump.N = c;
+                pump.Q0 = q1;
+                pump.Qmax = Math.Pow(-a / b, 1.0 / c);
+                pump.Hmax = h0;
+            }
+        }
+
+        // TODO: move to link class
+        protected static void ChangeStatus(Link link, StatType status, double y) {
+
+            switch (link.Type) {
+            case LinkType.PIPE:
+            case LinkType.GPV:
+                if (status != StatType.ACTIVE)
+                    link.Status = status;
+                break;
+
+            case LinkType.PUMP:
+
+                switch (status) {
+                case StatType.ACTIVE:
+                    link.Kc = y;
+                    link.Status = y == 0.0 ? StatType.CLOSED : StatType.OPEN;
+                    break;
+                case StatType.OPEN:
+                    link.Kc = 1.0; 
+                    break;
+                }
+
+                link.Status = status;
+                break;
+
+            case LinkType.CV:
+                break;
+
+            case LinkType.PRV:
+            case LinkType.PSV:
+            case LinkType.PBV:
+            case LinkType.FCV:
+            case LinkType.TCV:
+                link.Status = status;
+                link.Kc = status == StatType.ACTIVE
+                    ? y //lLink.setKc(y);
+                    : Constants.MISSING; //lLink.setKc(Constants.MISSING);
+
+                break;
+            }
+        }
+
     }
+
+
+
+
 
 }
 

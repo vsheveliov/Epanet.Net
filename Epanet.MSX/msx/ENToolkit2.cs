@@ -110,23 +110,21 @@ namespace Epanet.MSX {
         }
 
         public FlowUnitsType ENgetflowunits() {
-            try {
-                return (FlowUnitsType)this.net.FlowFlag;
-            }
-            catch (ENException e) {
-                Debug.Print(e.ToString());
-            }
-            return 0;
+            return (FlowUnitsType)this.net.FlowFlag;
         }
 
         public int ENgetnodetype(int i) {
             var n = this.nodes[i - 1];
-            var tank = n as Tank;
-            if (tank != null) {
-                return tank.IsReservoir ? EN_RESERVOIR : EN_TANK;
+
+            switch (n.Type) {
+            case NodeType.TANK:
+                return EN_TANK;
+            case NodeType.RESERV:
+                return EN_RESERVOIR;
+            default:
+                return EN_JUNCTION;
             }
 
-            return EN_JUNCTION;
         }
 
         public float ENgetlinkvalue(int index, int code) {
@@ -153,8 +151,8 @@ namespace Epanet.MSX {
             case EN_ROUGHNESS:
                 if (link.Type <= LinkType.PIPE) {
                     v = this.net.FormFlag == FormType.DW
-                        ? fMap.RevertUnit(FieldType.ELEV, link.Roughness * 1000.00)
-                        : link.Roughness;
+                        ? fMap.RevertUnit(FieldType.ELEV, link.Kc * 1000.00)
+                        : link.Kc;
                 }
                 else
                     v = 0.0;
@@ -170,7 +168,7 @@ namespace Epanet.MSX {
             case EN_NODECOUNT:
                 return this.nodes.Count;
             case EN_TANKCOUNT:
-                return this.net.Tanks.Count();
+                return this.net.Tanks.Count() + this.net.Reservoirs.Count();
             case EN_LINKCOUNT:
                 return this.links.Count;
             case EN_PATCOUNT:

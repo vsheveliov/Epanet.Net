@@ -16,105 +16,315 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Text;
 using System.Xml;
 
 using Epanet.Enums;
-using Epanet.Log;
 using Epanet.Network.Structures;
 using Epanet.Util;
 
 namespace Epanet.Network.IO.Input {
 
     public class XmlParser:InputParser {
+        private SectType sectionType;
         private XmlReader reader;
+        private Network net;
         private readonly bool gzipped;
-
+        
         public XmlParser(bool gzipped) { this.gzipped = gzipped; }
 
-        protected void LogException(SectType section, ErrorCode err, string line, IList<string> tokens) {
+        private void LogException(ErrorCode err, string line) {
             if(err == ErrorCode.Ok)
                 return;
 
-            string arg = section == SectType.OPTIONS ? line : tokens[0];
+            var ex = new InputException(err, this.sectionType, line);
 
-            EpanetParseException parseException = new EpanetParseException(
-                err,
-                this.reader.,
-                this.FileName,
-                section.ReportStr(),
-                arg);
+            base.Errors.Add(ex);
 
-            base.Errors.Add(parseException);
-
-            this.Log.Error(parseException.ToString());
+            base.LogException(ex);
 
         }
 
-        public override Network Parse(Network net, string f) {
+        public override Network Parse(Network net_, string f) {
+            this.net = net_;
             this.FileName = Path.GetFullPath(f);
 
+            XmlReaderSettings settings = new XmlReaderSettings {
+                CloseInput = false,
+                ValidationType = ValidationType.None,
+                CheckCharacters = true,
+                IgnoreComments = false,
+                IgnoreWhitespace = true,
+                
+            };
+
             try {
+
+
                 Stream stream = this.gzipped
                     ? (Stream)new GZipStream(File.OpenRead(f), CompressionMode.Decompress)
                     : File.OpenRead(f);
 
-                XmlReaderSettings settings = new XmlReaderSettings {
-                    CloseInput = true,
-                    ValidationType = ValidationType.None,
-                    CheckCharacters = true,
-                    IgnoreComments = true,
-                    IgnoreWhitespace = true
-                };
-                
+                using (stream) {
 
-                using (reader = XmlReader.Create(stream, settings)) {
-                    reader.MoveToContent();
+                    using (this.reader = XmlReader.Create(stream, settings)) {
+                        this.reader.ReadToFollowing("network");
+                        this.ParsePc(this.reader);
+                    }
 
-                    ParsePc(net);
+                    stream.Position = 0;
 
+                    using (this.reader = XmlReader.Create(stream, settings)) {
+                        this.reader.ReadToFollowing("network");
+                        // this.reader.Read(); // skip "network"
+                        // this.reader.MoveToContent(); // If that node is whitespace, skip to content.
+
+
+
+                        while (this.reader.Read()) {
+                            if (this.reader.NodeType != XmlNodeType.Element || this.reader.IsEmptyElement)
+                                continue;
+
+                            try {
+                                this.sectionType = (SectType)Enum.Parse(typeof(SectType), reader.Name, true);
+                            }
+                            catch (ArgumentException) {
+                                continue;
+                            }
+
+
+                            var r = this.reader.ReadSubtree();
+
+                            switch (this.sectionType) {
+                            case SectType.TITLE:
+                                this.ParseTitle(r);
+                                break;
+
+                            case SectType.JUNCTIONS:
+                                this.ParseJunction(r);
+                                break;
+
+                            case SectType.RESERVOIRS:
+                            case SectType.TANKS:
+                                this.ParseTank(r);
+                                break;
+
+                            case SectType.PIPES:
+                                this.ParsePipe(r);
+                                break;
+                            case SectType.PUMPS:
+                                this.ParsePump(r);
+                                break;
+                            case SectType.VALVES:
+                                this.ParseValve(r);
+                                break;
+                            case SectType.CONTROLS:
+                                this.ParseControl(r);
+                                break;
+
+                            case SectType.RULES:
+                                this.ParseRule(r);
+                                break;
+
+                            case SectType.DEMANDS:
+                                this.ParseDemand(r);
+                                break;
+                            case SectType.SOURCES:
+                                this.ParseSource(r);
+                                break;
+                            case SectType.EMITTERS:
+                                this.ParseEmitter(r);
+                                break;
+                            case SectType.QUALITY:
+                                this.ParseQuality(r);
+                                break;
+                            case SectType.STATUS:
+                                this.ParseStatus(r);
+                                break;
+                            case SectType.ENERGY:
+                                this.ParseEnergy(r);
+                                break;
+                            case SectType.REACTIONS:
+                                this.ParseReact(r);
+                                break;
+                            case SectType.MIXING:
+                                this.ParseMixing(r);
+                                break;
+                            case SectType.REPORT:
+                                this.ParseReport(r);
+                                break;
+                            case SectType.TIMES:
+                                this.ParseTime(r);
+                                break;
+                            case SectType.OPTIONS:
+                                this.ParseOption(r);
+                                break;
+                            case SectType.COORDINATES:
+                                this.ParseCoordinate(r);
+                                break;
+                            case SectType.VERTICES:
+                                this.ParseVertice(r);
+                                break;
+                            case SectType.LABELS:
+                                this.ParseLabel(r);
+                                break;
+                            }
+                        }
+                    }
                 }
-
-
             }
             catch (IOException) {
                 throw new ENException(ErrorCode.Err302);
             }
 
-            return net;
+            return this.net;
         }
 
-        private void ParsePc(Network net) {
-            while (this.reader.Read()) {
-                if (this.reader.NodeType != XmlNodeType.Element) continue;
+        private void ParseTitle(XmlReader r) {
+          
+            int i = Constants.MAXTITLE;
+            
+            while (r.ReadToFollowing("line") && i-- > 0) {
+                string s = r.ReadString();
+                this.net.Title.Add(s);
+            } 
+        }
 
-                SectType sectionType;
+        private void ParseJunction(XmlReader r) {
+            while (r.ReadToFollowing("node")) {
+                
+                Node node = new Node(r.GetAttribute("name"));
+
                 try {
-                    sectionType = (SectType)Enum.Parse(typeof(SectType), this.reader.Name, true);
+                    node.Elevation = XmlConvert.ToDouble(r.GetAttribute("elevation") ?? "0");
                 }
                 catch (ArgumentException) {
-                    sectionType = (SectType)(-1);
+                    this.LogException(ErrorCode.Err202, r.ReadOuterXml());
                 }
 
 
                 try {
-                switch (sectionType) {
-                case SectType.PATTERNS:
-                    this.ParsePattern(net);
-                    break;
-                case SectType.CURVES:
-                    this.ParseCurve(net);
-                    break;
+                    node.Position = new EnPoint(
+                        XmlConvert.ToDouble(r.GetAttribute("x") ?? "0"),
+                        XmlConvert.ToDouble(r.GetAttribute("y") ?? "0"));
                 }
-                }
-                catch(ENException e) {
-                    this.LogException(sectionType, e.Code, this.reader.Name, null);
+                catch(ArgumentException) {
+                    this.LogException(ErrorCode.Err202, r.ReadOuterXml());
                 }
 
-                    
+                using(var rr = r.ReadSubtree()) {
+                    rr.Read();
+                    while(rr.Read()) {
+                        switch(rr.NodeType) {
+                        case XmlNodeType.Element:
+
+                        if(rr.Name.Equals("demand", StringComparison.Ordinal)) {
+
+                            string sx = rr.GetAttribute("base") ?? string.Empty;
+                            string sy = rr.GetAttribute("pattern") ?? string.Empty;
+
+                            try {
+                                // cur.Add(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
+                            }
+                            catch(FormatException) {
+                                this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                            }
+                        }
+
+                        break;
+
+                        case XmlNodeType.Comment:
+                        node.Comment = rr.Value;
+                        break;
+                        }
+                    }
+                }
+
+
+
+
+
+                try {
+                    this.net.Nodes.Add(node);
+                }
+                catch(ArgumentException) {
+                    this.LogException(ErrorCode.Err215, node.Name);
+                }
+
+
+            }
+        }
+
+        private void ParseTank(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParsePipe(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParsePump(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseValve(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseControl(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseRule(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseDemand(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseSource(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseEmitter(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseQuality(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseStatus(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseEnergy(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseReact(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseMixing(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseReport(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseTime(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseOption(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseCoordinate(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseVertice(XmlReader r) { throw new NotImplementedException(); }
+
+        private void ParseLabel(XmlReader r) { throw new NotImplementedException(); }
+        
+
+        private void ParsePc(XmlReader r) {
+            this.reader.ReadStartElement();
+           
+            while(!r.EOF) {
+
+                try {
+                    this.sectionType = (SectType)Enum.Parse(typeof(SectType), r.Name, true);
+                }
+                catch (ArgumentException) {
+                    this.sectionType = (SectType)(-1);
+                }
+
+
+                try {
+                    switch (this.sectionType) {
+                    case SectType.PATTERNS:
+                        this.ParsePattern(r.ReadSubtree());
+                        break;
+                    case SectType.CURVES:
+                        this.ParseCurve(r.ReadSubtree());
+                        break;
+                    }
+                }
+                catch (InputException ex) {
+                    base.LogException(ex);
+                }
+
+                r.Skip();
 
             }
 
@@ -123,40 +333,116 @@ namespace Epanet.Network.IO.Input {
 
         }
 
+        private void ParsePattern(XmlReader r) {
+            
+            if (!r.ReadToDescendant("pattern")) 
+                return;
+            
+            do {
+                if (r.IsEmptyElement) 
+                    continue;
 
-        protected void ParsePattern(Network net) {
-            this.reader.ReadElementString();
-            Pattern pat = net.GetPattern(tok[0]);
+                string name = r.GetAttribute("name"); // this.reader["name"];
 
-            if(pat == null) {
-                pat = new Pattern(tok[0]);
-                net.Patterns.Add(pat);
-            }
+                if (string.IsNullOrEmpty(name))
+                    continue;
 
-            for(int i = 1; i < tok.Length; i++) {
-                double x;
+                var pat = new Pattern(name);
 
-                if(!tok[i].ToDouble(out x))
-                    throw new ENException(ErrorCode.Err202);
+                using (var rr = r.ReadSubtree()) {
+                    rr.Read();
+                    while (rr.Read()) {
+                        switch (rr.NodeType) {
+                        case XmlNodeType.Element:
+                            if (rr.Name.Equals("factor", StringComparison.Ordinal)) {
 
-                pat.Add(x);
-            }
+                                string s = rr.GetAttribute("value") ?? string.Empty;
+
+                                try {
+                                    pat.Add(XmlConvert.ToDouble(s));
+                                }
+                                catch (FormatException) {
+                                    this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                                }
+                            }
+
+                            break;
+
+                        case XmlNodeType.Comment:
+                            pat.Comment = rr.Value;
+                            break;
+                        }
+                    }
+                }
+
+
+                try {
+                    this.net.Patterns.Add(pat);
+                }
+                catch(ArgumentException) {
+                    this.LogException(ErrorCode.Err215, pat.Name);
+                }
+
+
+            } while (r.ReadToNextSibling("pattern"));
+
         }
 
-        protected void ParseCurve(Network net) {
-            Curve cur = net.GetCurve(tok[0]);
+        private void ParseCurve(XmlReader r) {
 
-            if(cur == null) {
-                cur = new Curve(tok[0]);
-                net.Curves.Add(cur);
-            }
+            if(!r.ReadToDescendant("curve"))
+                return;
 
-            double x, y;
+            do {
+                if(r.IsEmptyElement)
+                    continue;
 
-            if(!tok[1].ToDouble(out x) || !tok[2].ToDouble(out y))
-                throw new ENException(ErrorCode.Err202);
+                string name = r.GetAttribute("name"); // this.reader["name"];
 
-            cur.Add(x, y);
+                if(string.IsNullOrEmpty(name))
+                    continue;
+                
+                var cur = new Curve(name);
+                
+                using (var rr = r.ReadSubtree()) {
+                    rr.Read();
+                    while (rr.Read()) {
+                        switch (rr.NodeType) {
+                        case XmlNodeType.Element:
+                            if (rr.Name.Equals("point", StringComparison.Ordinal)) {
+
+                                string sx = rr.GetAttribute("x") ?? string.Empty;
+                                string sy = rr.GetAttribute("y") ?? string.Empty;
+
+                                try {
+                                    cur.Add(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
+                                }
+                                catch (FormatException) {
+                                    this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                                }
+                            }
+
+                            break;
+
+                        case XmlNodeType.Comment:
+                            cur.Comment = rr.Value;
+                            break;
+                        }
+                    }
+                }
+
+                try {
+                    this.net.Curves.Add(cur);
+                }
+                catch(ArgumentException) {
+                    this.LogException(ErrorCode.Err215, cur.Name);
+                }
+
+            } while(r.ReadToNextSibling("curve"));
+
+            r.ReadEndElement();
+
+          
         }
     }
 

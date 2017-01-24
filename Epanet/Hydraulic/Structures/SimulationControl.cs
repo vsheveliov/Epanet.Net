@@ -208,7 +208,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (s1 != s2 || k1 != k2) {
                         link.SimStatus = s2;
                         link.SimSetting = k2;
-                        if (net.Stat_Flag != StatFlag.NO)
+                        if (net.StatFlag != StatFlag.NO)
                             LogControlAction(log, control, htime);
                         setsum++;
                     }
@@ -272,7 +272,7 @@ namespace Epanet.Hydraulic.Structures {
                         link.SimStatus = control.Status;
                         if (link.Type > LinkType.PIPE)
                             link.SimSetting = control.Setting;
-                        if (net.Stat_Flag == StatFlag.FULL)
+                        if (net.StatFlag == StatFlag.FULL)
                             LogStatChange(log, net.FieldsMap, link, s);
 
                         anychange = true;

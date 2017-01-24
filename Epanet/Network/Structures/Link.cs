@@ -32,7 +32,7 @@ namespace Epanet.Network.Structures {
             switch (this.Type) {
             case LinkType.CV:
             case LinkType.PIPE:
-                double e = this.Roughness;
+                double e = this.Kc;
                 double d = this.Diameter;
                 double L = this.Lenght;
 
@@ -96,7 +96,7 @@ namespace Epanet.Network.Structures {
         public double[] Param { get; set; }
 
         ///<summary>Roughness factor.</summary>
-        public double Roughness { get; set; }
+        public double Kc { get; set; }
 
         ///<summary>Second node.</summary>
         public Node SecondNode { get; set; }
@@ -121,35 +121,35 @@ namespace Epanet.Network.Structures {
         }
 
 #if NUCONVERT
-        public double GetNuDiameter(PropertiesMap.UnitsType utype) {
+        public double GetNuDiameter(UnitsType utype) {
             return NUConvert.revertDiameter(utype, this.Diameter);
         }
 
-        public double GetNuLength(PropertiesMap.UnitsType utype) {
+        public double GetNuLength(UnitsType utype) {
             return NUConvert.revertDistance(utype, this.Lenght);
         }
 
-        public void SetNuDiameter(PropertiesMap.UnitsType utype, double value) {
+        public void SetNuDiameter(UnitsType utype, double value) {
             this.Diameter = NUConvert.convertDistance(utype, value);
         }
 
-        public void SetNuLenght(PropertiesMap.UnitsType utype, double value) {
+        public void SetNuLenght(UnitsType utype, double value) {
             this.Lenght = NUConvert.convertDistance(utype, value);
         }
 
         public double GetNuRoughness(
-            PropertiesMap.FlowUnitsType fType,
-            PropertiesMap.PressUnitsType pType,
+            FlowUnitsType fType,
+            PressUnitsType pType,
             double spGrav) {
             switch (this.Type) {
             case LinkType.FCV:
-                return NUConvert.revertFlow(fType, this.Roughness);
+                return NUConvert.revertFlow(fType, this.Kc);
             case LinkType.PRV:
             case LinkType.PSV:
             case LinkType.PBV:
-                return NUConvert.revertPressure(pType, spGrav, this.Roughness);
+                return NUConvert.revertPressure(pType, spGrav, this.Kc);
             }
-            return this.Roughness;
+            return this.Kc;
         }
 
 #endif

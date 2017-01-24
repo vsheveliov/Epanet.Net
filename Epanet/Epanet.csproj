@@ -17,13 +17,14 @@
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
     <OldToolsVersion>3.5</OldToolsVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;COMMENTED</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;COMMENTED NUCONVERT</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -36,16 +37,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NPOI">
-      <HintPath>..\lib\NPOI.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI.OOXML">
-      <HintPath>..\lib\NPOI.OOXML.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI.OpenXml4Net">
-      <HintPath>..\lib\NPOI.OpenXml4Net.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -54,7 +47,8 @@
     <Compile Include="ErrorCode.cs" />
     <Compile Include="Log\EpanetTraceListener.cs" />
     <Compile Include="Log\TraceExtensions.cs" />
-    <Compile Include="Network\IO\Input\ParseException.cs" />
+    <Compile Include="Network\IO\InputException.cs" />
+    <Compile Include="Network\IO\Input\NetParser.cs" />
     <Compile Include="Hydraulic\HydraulicSim.cs" />
     <Compile Include="Hydraulic\IO\AwareStep.cs" />
     <Compile Include="Hydraulic\IO\HydraulicReader.cs" />
@@ -69,13 +63,11 @@
     <Compile Include="Hydraulic\Structures\SimulationTank.cs" />
     <Compile Include="Hydraulic\Structures\SimulationValve.cs" />
     <Compile Include="Network\FieldsMap.cs" />
-    <Compile Include="Network\IO\Input\ExcelParser.cs" />
     <Compile Include="Network\IO\Input\InpParser.cs" />
     <Compile Include="Network\IO\Input\InputParser.cs" />
     <Compile Include="Network\IO\Input\NullParser.cs" />
     <Compile Include="Network\IO\Input\XMLParser.cs" />
     <Compile Include="Enums\Keywords.cs" />
-    <Compile Include="Network\IO\Output\ExcelComposer.cs" />
     <Compile Include="Network\IO\Output\InpComposer.cs" />
     <Compile Include="Network\IO\Output\OutputComposer.cs" />
     <Compile Include="Network\IO\Output\XMLComposer.cs" />
@@ -114,7 +106,7 @@
     <Compile Include="Quality\Structures\QualityNode.cs" />
     <Compile Include="Quality\Structures\QualitySegment.cs" />
     <Compile Include="Quality\Structures\QualityTank.cs" />
-    <Compile Include="Util\ENException.cs" />
+    <Compile Include="ENException.cs" />
     <Compile Include="Enums\EnumsTxt.cs" />
     <Compile Include="Util\Utilities.cs" />
   </ItemGroup>

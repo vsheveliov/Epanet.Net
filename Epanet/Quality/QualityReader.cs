@@ -111,11 +111,10 @@ namespace Epanet.Quality {
 
             // Read the last 4 bytes which contain the number of periods
             this.inputStream = new BinaryReader(File.OpenRead(qualFile));
-            this.inputStream.BaseStream.Position = qualFile.Length - sizeof(int);
+            this.inputStream.BaseStream.Seek(-sizeof(int), SeekOrigin.End);
             this.nPeriods = this.inputStream.ReadInt32();
-            this.inputStream.Close();
+            this.inputStream.BaseStream.Position = 0;
 
-            this.inputStream = new BinaryReader(File.OpenRead(qualFile));
             this.nodeCount = this.inputStream.ReadInt32();
             this.linkCount = this.inputStream.ReadInt32();
             this.qStep = new Step(this.fMap, this.inputStream, this.linkCount, this.nodeCount);

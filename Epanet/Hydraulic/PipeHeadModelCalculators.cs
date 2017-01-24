@@ -63,7 +63,7 @@ namespace Epanet.Hydraulic.Models {
             double q = Math.Abs(simFlow); // Absolute flow
             double km = link.Km; // Minor loss coeff.
             double flowResistance = link.FlowResistance; // Resistance coeff.
-            double roughness = link.Roughness;
+            double roughness = link.Kc;
             double diameter = link.Diameter;
             bool isOne = sL.Type > LinkType.PIPE;
 

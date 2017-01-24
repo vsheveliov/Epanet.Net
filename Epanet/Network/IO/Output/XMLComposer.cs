@@ -35,10 +35,7 @@ namespace Epanet.Network.IO.Output {
         private XmlWriter writer;
         private Network net;
 
-        public XMLComposer(bool gzip) {
-            // this.gzip = gzip;
-            this.gzip = true;
-        }
+        public XMLComposer(bool gzip) { this.gzip = gzip; }
 
         public override void Composer(Network net_, string f) {
             this.net = net_;
@@ -90,18 +87,18 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeTitle() {
-            if (this.net.TitleText.Count <= 0) return;
+            if (this.net.Title.Count <= 0) return;
 
             this.writer.WriteStartElement(SectType.TITLE.ToString().ToLower());
-            foreach(string s in this.net.TitleText) {
+            foreach(string s in this.net.Title) {
                 this.writer.WriteElementString("line", s);
             }
             this.writer.WriteEndElement();
         }
 
         private void ComposeElement(Element el) {
-            if(!string.IsNullOrEmpty(el.Comment))
-                this.writer.WriteElementString("comment", el.Comment);
+            if (!string.IsNullOrEmpty(el.Comment))
+                this.writer.WriteComment(el.Comment);
 
             if(!string.IsNullOrEmpty(el.Tag))
                 this.writer.WriteElementString("tag", el.Tag);            
@@ -109,9 +106,9 @@ namespace Epanet.Network.IO.Output {
 
        
         private void ComposeJunctions() {
-            if (!net.Junctions.Any()) return;
+            if (!this.net.Junctions.Any()) return;
 
-            var fMap = net.FieldsMap;
+            var fMap = this.net.FieldsMap;
 
             double dUcf = fMap.GetUnits(FieldType.DEMAND);
             double fUcf = fMap.GetUnits(FieldType.FLOW);
@@ -120,7 +117,7 @@ namespace Epanet.Network.IO.Output {
 
             this.writer.WriteStartElement(SectType.JUNCTIONS.ToString().ToLower());
           
-            foreach(Node node in net.Junctions) {
+            foreach(Node node in this.net.Junctions) {
                 this.writer.WriteStartElement("node");
                 this.writer.WriteAttributeString("name", node.Name);
                 this.writer.WriteAttributeString("elevation", XmlConvert.ToString(eUcf * node.Elevation));
@@ -128,21 +125,23 @@ namespace Epanet.Network.IO.Output {
                 double ke = node.Ke;
 
                 if(ke != 0.0) {
-                    ke = fUcf / Math.Pow(pUcf * ke, (1.0 / net.QExp));
+                    ke = fUcf / Math.Pow(pUcf * ke, (1.0 / this.net.QExp));
                     this.writer.WriteAttributeString("emmiter", XmlConvert.ToString(ke));
-
                 }
-                
-                this.ComposeCoordinate(node);
 
-                foreach(Demand d in node.Demand) {
+                if (!node.Position.IsInvalid) {
+                    this.writer.WriteAttributeString("x", XmlConvert.ToString(node.Position.X));
+                    this.writer.WriteAttributeString("y", XmlConvert.ToString(node.Position.Y));
+                }
+
+                foreach(Demand d in node.Demands) {
                     this.writer.WriteStartElement("demand");
 
                     this.writer.WriteAttributeString("base", XmlConvert.ToString(dUcf * d.Base));
                     if(d.Pattern != null) {
                         var patName = d.Pattern.Name;
                         if (!string.IsNullOrEmpty(patName)
-                            && !net.DefPatId.Equals(patName, StringComparison.OrdinalIgnoreCase))
+                            && !this.net.DefPatId.Equals(patName, StringComparison.OrdinalIgnoreCase))
                         {
                             this.writer.WriteAttributeString("pattern", patName);
                         }
@@ -164,16 +163,14 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeReservoirs() {
             
-            var reservoirs = net.Tanks.Where(x => x.IsReservoir).ToArray();
-
-            if(reservoirs.Length == 0)
+            if(!this.net.Reservoirs.Any())
                 return;
 
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.RESERVOIRS.ToString().ToLower());
 
-            foreach(Tank r in reservoirs) {
+            foreach(Tank r in this.net.Reservoirs) {
                 this.writer.WriteStartElement("node");
                 this.writer.WriteAttributeString("name", r.Name);
                 this.writer.WriteAttributeString("head", XmlConvert.ToString(fMap.RevertUnit(FieldType.ELEV, r.Elevation)));
@@ -182,7 +179,10 @@ namespace Epanet.Network.IO.Output {
                 if(r.Pattern != null)
                     this.writer.WriteAttributeString("pattern", r.Pattern.Name);
 
-                this.ComposeCoordinate(r);
+                if (!r.Position.IsInvalid) {
+                    this.writer.WriteAttributeString("x", XmlConvert.ToString(r.Position.X));
+                    this.writer.WriteAttributeString("y", XmlConvert.ToString(r.Position.Y));
+                }
 
                 this.ComposeElement(r);
 
@@ -196,18 +196,14 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeTanks() {
 
-            var tanks = net.Tanks.Where(x => !x.IsReservoir).ToArray();
-        
-           // var tanks2 = net.Nodes.OfType<Tank>().Where(x => !x.IsReservoir).ToList();
-
-            if(tanks.Length == 0)
+            if(!this.net.Tanks.Any())
                 return;
 
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.TANKS.ToString().ToLower());
 
-            foreach(Tank tank in tanks) {
+            foreach(Tank tank in this.net.Tanks) {
                 double vmin = tank.Vmin;
                 if(Math.Round(vmin / tank.Area) == Math.Round(tank.Hmin - tank.Elevation))
                     vmin = 0;
@@ -231,7 +227,10 @@ namespace Epanet.Network.IO.Output {
                 if(tank.Vcurve != null)
                     this.writer.WriteAttributeString("volcurve", tank.Vcurve.Name);
 
-                this.ComposeCoordinate(tank);
+                if (!tank.Position.IsInvalid) {
+                    this.writer.WriteAttributeString("x", XmlConvert.ToString(tank.Position.X));
+                    this.writer.WriteAttributeString("y", XmlConvert.ToString(tank.Position.Y));
+                }
 
                 if (tank.MixModel != MixType.MIX1) {
                     this.writer.WriteStartElement(SectType.MIXING.ToString().ToLower());
@@ -253,19 +252,19 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePipes() {
             
-            var pipes = net.Links.Where(x => x.Type == LinkType.PIPE || x.Type == LinkType.CV).ToArray();
+            var pipes = this.net.Links.Where(x => x.Type == LinkType.PIPE || x.Type == LinkType.CV).ToArray();
 
             if(pipes.Length == 0)
                 return;
 
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.PIPES.ToString().ToLower());
             
             foreach(Link link in pipes) {
                 double d = link.Diameter;
-                double kc = link.Roughness;
-                if(net.FormFlag == FormType.DW)
+                double kc = link.Kc;
+                if(this.net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
@@ -299,12 +298,12 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePumps() {
 
-            var pumps = net.Pumps.ToArray();
+            var pumps = this.net.Pumps.ToArray();
 
             if(pumps.Length == 0)
                 return;
             
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.PUMPS.ToString().ToLower());
             
@@ -339,8 +338,8 @@ namespace Epanet.Network.IO.Output {
                     if (pump.UPat != null)
                         this.writer.WriteAttributeString("pattern", pump.UPat.Name);
 
-                    if (pump.Roughness != 1.0)
-                        this.writer.WriteAttributeString("speed", XmlConvert.ToString(pump.Roughness));
+                    if (pump.Kc != 1.0)
+                        this.writer.WriteAttributeString("speed", XmlConvert.ToString(pump.Kc));
                 }
 
                 this.ComposeElement(pump);
@@ -365,18 +364,18 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeValves() {
             
-            var valves = net.Valves.ToArray();
+            var valves = this.net.Valves.ToArray();
 
             if(valves.Length == 0)
                 return;
 
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
             
             this.writer.WriteStartElement(SectType.VALVES.ToString().ToLower());
             
             foreach(Valve valve in valves) {
                 double d = valve.Diameter;
-                double kc = valve.Roughness;
+                double kc = valve.Kc;
                 if(kc.IsMissing())
                     kc = 0.0;
                 
@@ -423,17 +422,17 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeStatus() {
 
-            if(net.Links.Count == 0)
+            if(this.net.Links.Count == 0)
                 return;
 
             this.writer.WriteStartElement(SectType.STATUS.ToString().ToLower());
             
-            foreach(Link link in net.Links) {
+            foreach(Link link in this.net.Links) {
                 if(link.Type <= LinkType.PUMP) {
                     if (link.Status == StatType.CLOSED) {
                         this.writer.WriteStartElement("link");
                         this.writer.WriteAttributeString("name", link.Name);
-                        this.writer.WriteAttributeString("setting", StatType.CLOSED.ParseStr());
+                        this.writer.WriteAttributeString("setting", link.Status.ToString());
                         this.writer.WriteEndElement();
                     }
                     else if(link.Type == LinkType.PUMP) {
@@ -441,27 +440,22 @@ namespace Epanet.Network.IO.Output {
                         Pump pump = (Pump)link;
                         if (pump.HCurve == null &&
                             pump.Ptype != PumpType.CONST_HP &&
-                            pump.Roughness != 1.0) {
+                            pump.Kc != 1.0) {
                             this.writer.WriteStartElement("link");
                             this.writer.WriteAttributeString("name", link.Name);
-                            this.writer.WriteAttributeString("setting", XmlConvert.ToString(link.Roughness));
+                            this.writer.WriteAttributeString("setting", XmlConvert.ToString(link.Kc));
                             this.writer.WriteEndElement();
                         }
                     }
                 }
-                else if(link.Roughness.IsMissing()) {
+                else if(link.Kc.IsMissing()) {
                     // Write fixed-status PRVs & PSVs (setting = MISSING)
                     switch (link.Status) {
                     case StatType.OPEN:
-                        this.writer.WriteStartElement("link");
-                        this.writer.WriteAttributeString("name", link.Name);
-                        this.writer.WriteAttributeString("setting", StatType.OPEN.ParseStr());
-                        this.writer.WriteEndElement();
-                        break;
                     case StatType.CLOSED:
                         this.writer.WriteStartElement("link");
                         this.writer.WriteAttributeString("name", link.Name);
-                        this.writer.WriteAttributeString("setting", StatType.CLOSED.ParseStr());
+                        this.writer.WriteAttributeString("setting", link.Status.ToString());
                         this.writer.WriteEndElement();
                         break;
                     }
@@ -475,7 +469,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePatterns() {
 
-            var pats = net.Patterns;
+            var pats = this.net.Patterns;
 
             if(pats.Count <= 1)
                 return;
@@ -502,7 +496,7 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeCurves() {
 
-            var curves = net.Curves;
+            var curves = this.net.Curves;
 
             if(curves.Count == 0)
                 return;
@@ -527,8 +521,8 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeControls() {
-            var controls = net.Controls;
-            FieldsMap fmap = net.FieldsMap;
+            var controls = this.net.Controls;
+            FieldsMap fmap = this.net.FieldsMap;
 
             if(controls.Count == 0)
                 return;
@@ -545,7 +539,7 @@ namespace Epanet.Network.IO.Output {
                 // Get text of control's link status/setting
                 if (control.Setting.IsMissing()) {
                     this.writer.WriteAttributeString("link", control.Link.Name);
-                    this.writer.WriteAttributeString("status", control.Status.ParseStr());
+                    this.writer.WriteAttributeString("status", control.Status.ToString());
                 }
                 else {
                     double kc = control.Setting;
@@ -570,13 +564,8 @@ namespace Epanet.Network.IO.Output {
                 case ControlType.LOWLEVEL:
                 case ControlType.HILEVEL:
                 double kc = control.Grade - control.Node.Elevation;
-               
-                if(control.Node is Tank)
-                    kc = fmap.RevertUnit(FieldType.HEAD, kc);
-                else
-                    kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
-
-
+                kc = fmap.RevertUnit(control.Node.Type == NodeType.JUNC ? FieldType.PRESSURE : FieldType.HEAD, kc);
+                
                 this.writer.WriteAttributeString("type", control.Type.ParseStr());
                 this.writer.WriteAttributeString("node", control.Node.Name);
                 this.writer.WriteAttributeString("value", XmlConvert.ToString(kc));
@@ -601,14 +590,14 @@ namespace Epanet.Network.IO.Output {
         }
 
         private void ComposeQuality() {
-            FieldsMap fmap = net.FieldsMap;
+            FieldsMap fmap = this.net.FieldsMap;
 
-            if(net.Nodes.Count == 0)
+            if(this.net.Nodes.Count == 0)
                 return;
 
             this.writer.WriteStartElement(SectType.QUALITY.ToString().ToLower());
             
-            foreach(Node node in net.Nodes) {
+            foreach(Node node in this.net.Nodes) {
                 if (node.C0 == 0.0) continue;
 
                 this.writer.WriteStartElement("node");
@@ -622,19 +611,19 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposeSource() {
 
-            if(net.Nodes.Count == 0)
+            if(this.net.Nodes.Count == 0)
                 return;
 
             this.writer.WriteStartElement(SectType.SOURCES.ToString().ToLower());
             
-            foreach(Node node in net.Nodes) {
+            foreach(Node node in this.net.Nodes) {
                 QualSource source = node.QualSource;
                 if(source == null)
                     continue;
 
                 this.writer.WriteStartElement("node");
                 this.writer.WriteAttributeString("name", node.Name);
-                this.writer.WriteAttributeString("type", source.Type.ParseStr());
+                this.writer.WriteAttributeString("type", source.Type.ToString());
                 this.writer.WriteAttributeString("quality", XmlConvert.ToString(source.C0));
 
 
@@ -654,21 +643,21 @@ namespace Epanet.Network.IO.Output {
             
             this.writer.WriteStartElement(SectType.REACTIONS.ToString().ToLower());
 
-            this.WriteOption("order bulk", XmlConvert.ToString(net.BulkOrder));
-            this.WriteOption("order wall", XmlConvert.ToString(net.WallOrder));
-            this.WriteOption("order tank", XmlConvert.ToString(net.TankOrder));
-            this.WriteOption("global bulk", XmlConvert.ToString(net.KBulk * Constants.SECperDAY));
-            this.WriteOption("global wall", XmlConvert.ToString(net.KWall * Constants.SECperDAY));
-            this.WriteOption("limiting potential", XmlConvert.ToString(net.CLimit));
-            this.WriteOption("roughness correlation", XmlConvert.ToString(net.RFactor));
+            this.WriteOption("order bulk", XmlConvert.ToString(this.net.BulkOrder));
+            this.WriteOption("order wall", XmlConvert.ToString(this.net.WallOrder));
+            this.WriteOption("order tank", XmlConvert.ToString(this.net.TankOrder));
+            this.WriteOption("global bulk", XmlConvert.ToString(this.net.KBulk * Constants.SECperDAY));
+            this.WriteOption("global wall", XmlConvert.ToString(this.net.KWall * Constants.SECperDAY));
+            this.WriteOption("limiting potential", XmlConvert.ToString(this.net.CLimit));
+            this.WriteOption("roughness correlation", XmlConvert.ToString(this.net.RFactor));
 
 
 
-            foreach(Link link in net.Links) {
+            foreach(Link link in this.net.Links) {
                 if(link.Type > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != net.KBulk) {
+                if (link.Kb != this.net.KBulk) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "bulk");
                     this.writer.WriteAttributeString("link", link.Name);
@@ -676,7 +665,7 @@ namespace Epanet.Network.IO.Output {
                     this.writer.WriteEndElement();                    
                 }
 
-                if (link.Kw != net.KWall) {
+                if (link.Kw != this.net.KWall) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "wall");
                     this.writer.WriteAttributeString("link", link.Name);
@@ -685,10 +674,8 @@ namespace Epanet.Network.IO.Output {
                 }
             }
 
-            foreach(Tank tank in net.Tanks) {
-                if(tank.IsReservoir)
-                    continue;
-                if (tank.Kb != net.KBulk) {
+            foreach(Tank tank in this.net.Tanks) {
+                if (tank.Kb != this.net.KBulk) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("name", "tank");
                     this.writer.WriteAttributeString("name", tank.Name);
@@ -704,16 +691,16 @@ namespace Epanet.Network.IO.Output {
             
             this.writer.WriteStartElement(SectType.ENERGY.ToString().ToLower());
 
-            if (net.ECost != 0.0)
-                this.WriteOption("global price", XmlConvert.ToString(net.ECost));
+            if (this.net.ECost != 0.0)
+                this.WriteOption("global price", XmlConvert.ToString(this.net.ECost));
 
-            if (!string.IsNullOrEmpty(net.EPatId))
-                this.WriteOption("global pattern", net.EPatId);
+            if (!string.IsNullOrEmpty(this.net.EPatId))
+                this.WriteOption("global pattern", this.net.EPatId);
 
-            this.WriteOption("global effic", XmlConvert.ToString(net.EPump));
-            this.WriteOption("demand charge", XmlConvert.ToString(net.DCost));
+            this.WriteOption("global effic", XmlConvert.ToString(this.net.EPump));
+            this.WriteOption("demand charge", XmlConvert.ToString(this.net.DCost));
 
-            foreach(Pump pump in net.Pumps) {
+            foreach(Pump pump in this.net.Pumps) {
                 if (pump.ECost > 0.0) {
                     this.writer.WriteStartElement("option");
                     this.writer.WriteAttributeString("pump", pump.Name);
@@ -751,16 +738,16 @@ namespace Epanet.Network.IO.Output {
             
             this.writer.WriteStartElement(SectType.TIMES.ToString().ToLower());
 
-            this.WriteOption("DURATION", net.Duration.GetClockTime());
-            this.WriteOption("HYDRAULIC_TIMESTEP", net.HStep.GetClockTime());
-            this.WriteOption("QUALITY_TIMESTEP", net.QStep.GetClockTime());
-            this.WriteOption("REPORT_TIMESTEP", net.RStep.GetClockTime());
-            this.WriteOption("REPORT_START", net.RStart.GetClockTime());
-            this.WriteOption("PATTERN_TIMESTEP", net.PStep.GetClockTime());
-            this.WriteOption("PATTERN_START", net.PStart.GetClockTime());
-            this.WriteOption("RULE_TIMESTEP", net.RuleStep.GetClockTime());
-            this.WriteOption("START_CLOCKTIME", net.TStart.GetClockTime());
-            this.WriteOption("STATISTIC", net.TStatFlag.ParseStr());
+            this.WriteOption("DURATION", this.net.Duration.GetClockTime());
+            this.WriteOption("HYDRAULIC_TIMESTEP", this.net.HStep.GetClockTime());
+            this.WriteOption("QUALITY_TIMESTEP", this.net.QStep.GetClockTime());
+            this.WriteOption("REPORT_TIMESTEP", this.net.RStep.GetClockTime());
+            this.WriteOption("REPORT_START", this.net.RStart.GetClockTime());
+            this.WriteOption("PATTERN_TIMESTEP", this.net.PStep.GetClockTime());
+            this.WriteOption("PATTERN_START", this.net.PStart.GetClockTime());
+            this.WriteOption("RULE_TIMESTEP", this.net.RuleStep.GetClockTime());
+            this.WriteOption("START_CLOCKTIME", this.net.TStart.GetClockTime());
+            this.WriteOption("STATISTIC", this.net.TStatFlag.ParseStr());
 
             this.writer.WriteEndElement();
         }
@@ -768,47 +755,47 @@ namespace Epanet.Network.IO.Output {
 
 
         private void ComposeOptions() {
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = this.net.FieldsMap;
 
             this.writer.WriteStartElement(SectType.OPTIONS.ToString().ToLower());
 
-            this.WriteOption("units", net.FlowFlag.ParseStr());
-            this.WriteOption("pressure", net.PressFlag.ParseStr());
-            this.WriteOption("headloss", net.FormFlag.ParseStr());
+            this.WriteOption("units", this.net.FlowFlag.ParseStr());
+            this.WriteOption("pressure", this.net.PressFlag.ParseStr());
+            this.WriteOption("headloss", this.net.FormFlag.ParseStr());
 
-            if(!string.IsNullOrEmpty(net.DefPatId))
-                this.WriteOption("pattern", net.DefPatId);
+            if(!string.IsNullOrEmpty(this.net.DefPatId))
+                this.WriteOption("pattern", this.net.DefPatId);
 
-            switch (net.HydFlag) {
+            switch (this.net.HydFlag) {
             case HydType.USE:
-                this.WriteOption("hydraulics use", net.HydFname);
+                this.WriteOption("hydraulics use", this.net.HydFname);
                 break;
             case HydType.SAVE:
-                this.WriteOption("hydraulics save", net.HydFname);
+                this.WriteOption("hydraulics save", this.net.HydFname);
                 break;
             }
 
-            if (net.ExtraIter == -1) {
+            if (this.net.ExtraIter == -1) {
                 this.WriteOption("unbalanced stop", "");
             }
-            else if (net.ExtraIter >= 0) {
-                this.WriteOption("unbalanced continue", net.ExtraIter.ToString());
+            else if (this.net.ExtraIter >= 0) {
+                this.WriteOption("unbalanced continue", this.net.ExtraIter.ToString());
             }
 
-            switch (net.QualFlag) {
+            switch (this.net.QualFlag) {
             case QualType.CHEM:
             this.writer.WriteStartElement("option");
                 this.writer.WriteAttributeString("name", "quality");
                 this.writer.WriteAttributeString("value", "chem");
-                this.writer.WriteAttributeString("chemname", net.ChemName);
-                this.writer.WriteAttributeString("chemunits", net.ChemUnits);
+                this.writer.WriteAttributeString("chemname", this.net.ChemName);
+                this.writer.WriteAttributeString("chemunits", this.net.ChemUnits);
                 this.writer.WriteEndElement();
                 break;
             case QualType.TRACE:
             this.writer.WriteStartElement("option");
                 this.writer.WriteAttributeString("name", "quality");
                 this.writer.WriteAttributeString("value", "trace");
-                this.writer.WriteAttributeString("node", net.TraceNode);
+                this.writer.WriteAttributeString("node", this.net.TraceNode);
                 this.writer.WriteEndElement();
                 break;
             case QualType.AGE:
@@ -819,25 +806,25 @@ namespace Epanet.Network.IO.Output {
                 break;
             }
 
-            this.WriteOption("demand_multiplier", XmlConvert.ToString(net.DMult));
-            this.WriteOption("emitter_exponent", XmlConvert.ToString(1.0 / net.QExp));
-            this.WriteOption("viscosity", XmlConvert.ToString(net.Viscos / Constants.VISCOS));
-            this.WriteOption("diffusivity", XmlConvert.ToString(net.Diffus / Constants.DIFFUS));
-            this.WriteOption("specific_gravity", XmlConvert.ToString(net.SpGrav));
-            this.WriteOption("trials", net.MaxIter.ToString());
-            this.WriteOption("accuracy", net.HAcc.ToString(CultureInfo.InvariantCulture));
-            this.WriteOption("tolerance", fMap.RevertUnit(FieldType.QUALITY, net.Ctol).ToString(CultureInfo.InvariantCulture));
-            this.WriteOption("checkfreq", net.CheckFreq.ToString());
-            this.WriteOption("maxcheck", net.MaxCheck.ToString());
-            this.WriteOption("damplimit", net.DampLimit.ToString(CultureInfo.InvariantCulture));
+            this.WriteOption("demand_multiplier", XmlConvert.ToString(this.net.DMult));
+            this.WriteOption("emitter_exponent", XmlConvert.ToString(1.0 / this.net.QExp));
+            this.WriteOption("viscosity", XmlConvert.ToString(this.net.Viscos / Constants.VISCOS));
+            this.WriteOption("diffusivity", XmlConvert.ToString(this.net.Diffus / Constants.DIFFUS));
+            this.WriteOption("specific_gravity", XmlConvert.ToString(this.net.SpGrav));
+            this.WriteOption("trials", this.net.MaxIter.ToString());
+            this.WriteOption("accuracy", this.net.HAcc.ToString(CultureInfo.InvariantCulture));
+            this.WriteOption("tolerance", fMap.RevertUnit(FieldType.QUALITY, this.net.Ctol).ToString(CultureInfo.InvariantCulture));
+            this.WriteOption("checkfreq", this.net.CheckFreq.ToString());
+            this.WriteOption("maxcheck", this.net.MaxCheck.ToString());
+            this.WriteOption("damplimit", this.net.DampLimit.ToString(CultureInfo.InvariantCulture));
 
-            ComposeExtraOptions();
+            this.ComposeExtraOptions();
 
             this.writer.WriteEndElement();
         }
 
         private void ComposeExtraOptions() {
-            var extraOptions = net.ExtraOptions;
+            var extraOptions = this.net.ExtraOptions;
 
             if(extraOptions.Count == 0)
                 return;
@@ -853,13 +840,13 @@ namespace Epanet.Network.IO.Output {
 
             this.writer.WriteStartElement(SectType.REPORT.ToString().ToLower());
 
-            FieldsMap fMap = net.FieldsMap;
-            this.WriteOption("pagesize", net.PageSize.ToString());
-            this.WriteOption("status", net.Stat_Flag.ParseStr());
-            this.WriteOption("summary", (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            this.WriteOption("energy", (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            FieldsMap fMap = this.net.FieldsMap;
+            this.WriteOption("pagesize", this.net.PageSize.ToString());
+            this.WriteOption("status", this.net.StatFlag.ParseStr());
+            this.WriteOption("summary", (this.net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
+            this.WriteOption("energy", (this.net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
-            switch (net.NodeFlag) {
+            switch (this.net.NodeFlag) {
             case ReportFlag.FALSE:
                 this.WriteOption("nodes", "none");
                 break;
@@ -871,7 +858,7 @@ namespace Epanet.Network.IO.Output {
                     this.writer.WriteAttributeString("name", "nodes");
                     this.writer.WriteAttributeString("value", "some");
 
-                foreach (Node node in net.Nodes) {
+                foreach (Node node in this.net.Nodes) {
                     if (node.RptFlag) {
                         this.writer.WriteStartElement("node");
                         this.writer.WriteAttributeString("name", node.Name);
@@ -884,7 +871,7 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            switch (net.LinkFlag) {
+            switch (this.net.LinkFlag) {
             case ReportFlag.FALSE:
                 this.WriteOption("links", "none");
                 break;
@@ -896,7 +883,7 @@ namespace Epanet.Network.IO.Output {
                 this.writer.WriteAttributeString("name", "links");
                 this.writer.WriteAttributeString("value", "some");
 
-                foreach (Link link in net.Links) {
+                foreach (Link link in this.net.Links) {
                     if (link.RptFlag) {
                         this.writer.WriteStartElement("link");
                         this.writer.WriteAttributeString("name", link.Name);
@@ -937,21 +924,13 @@ namespace Epanet.Network.IO.Output {
             this.writer.WriteEndElement();
         }
 
-        private void ComposeCoordinate(Node node) {
-            if(node.Position.IsInvalid) return;
-            // this.writer.WriteStartElement("point");
-            this.writer.WriteAttributeString("x", XmlConvert.ToString(node.Position.X));
-            this.writer.WriteAttributeString("y", XmlConvert.ToString(node.Position.Y));
-            // this.writer.WriteEndElement();            
-        }
-
         private void ComposeLabels() {
-            if (net.Labels.Count == 0)
+            if (this.net.Labels.Count == 0)
                 return;
 
             this.writer.WriteStartElement(SectType.LABELS.ToString().ToLower());
             
-            foreach(Label label in net.Labels) {
+            foreach(Label label in this.net.Labels) {
                 this.writer.WriteStartElement("label");
                 this.writer.WriteAttributeString("x", XmlConvert.ToString(label.Position.X));
                 this.writer.WriteAttributeString("y", XmlConvert.ToString(label.Position.Y));
@@ -968,12 +947,12 @@ namespace Epanet.Network.IO.Output {
        
 
         private void ComposeRules() {
-            if(net.Rules.Count == 0)
+            if(this.net.Rules.Count == 0)
                 return;
 
             this.writer.WriteStartElement(SectType.RULES.ToString().ToLower());
             
-            foreach(Rule r in net.Rules) {
+            foreach(Rule r in this.net.Rules) {
                 this.writer.WriteStartElement("rule");
                 this.writer.WriteAttributeString("name", r.Name);
 

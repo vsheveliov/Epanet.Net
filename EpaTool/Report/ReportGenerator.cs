@@ -394,14 +394,13 @@ namespace Epanet.Report {
             try {
                 FieldsMap fMap = net.FieldsMap;
 
-                if (net.TitleText != null)
-                    for (int i = 0; i < net.TitleText.Count && i < 3; i++) {
-                        if (!string.IsNullOrEmpty(net.TitleText[i])) {
-                            if (net.TitleText[i].Length <= 70)
-                                sh.AddData(net.TitleText[i]);
-                            else {
-                                sh.AddData(net.TitleText[i].Substring(0, 70));
-                            }
+                if (net.Title != null)
+                    for (int i = 0; i < net.Title.Count && i < 3; i++) {
+                        if (!string.IsNullOrEmpty(net.Title[i])) {
+                            sh.AddData(
+                                net.Title[i].Length > 70
+                                ? net.Title[i].Substring(0, 70)
+                                : net.Title[i]);
                         }
                     }
 
@@ -409,15 +408,8 @@ namespace Epanet.Report {
                 sh.AddData(Text.FMT19, inpFile);
                 sh.AddData(Text.FMT20, net.Junctions.Count());
 
-                int nReservoirs = 0;
-                int nTanks = 0;
-
-                foreach (var tk  in  net.Tanks)
-                    if (tk.IsReservoir)
-                        nReservoirs++;
-                    else
-                        nTanks++;
-
+                int nReservoirs = net.Reservoirs.Count();
+                int nTanks = net.Tanks.Count();
                 int nValves = net.Valves.Count();
                 int nPumps = net.Pumps.Count();
                 int nPipes = net.Links.Count - nPumps - nValves;

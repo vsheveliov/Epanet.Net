@@ -46,7 +46,7 @@ namespace Epanet.MSX.Solvers {
             this.Indx = new int[n + 1];
             this.F = new double[n + 1];
             this.W = new double[n + 1];
-            this.J = new double[n + 1,n + 1];
+            this.J = new double[n + 1, n + 1];
             this.Nmax = n;
         }
 
@@ -58,7 +58,7 @@ namespace Epanet.MSX.Solvers {
             int numsig,
             JacobianInterface jint,
             Operation op) {
-            double errx, errmax, cscal, relconvg = Math.Pow(10.0, -numsig);
+            double relconvg = Math.Pow(10.0, -numsig);
 
             // check that system was sized adequetely
 
@@ -82,12 +82,12 @@ namespace Epanet.MSX.Solvers {
 
                 // update solution x & check for convergence
 
-                errmax = 0.0;
+                var errmax = 0.0;
                 for (int j = 1; j <= n; j++) {
-                    cscal = x[j];
+                    double cscal = x[j];
                     if (cscal < relconvg) cscal = relconvg;
                     x[j] += this.F[j];
-                    errx = Math.Abs(this.F[j] / cscal);
+                    double errx = Math.Abs(this.F[j] / cscal);
                     if (errx > errmax) errmax = errx;
                 }
                 if (errmax <= relconvg) return i;

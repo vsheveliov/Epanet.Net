@@ -199,16 +199,6 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static string ParseStr(this SourceType value) {
-            switch (value) {
-            case SourceType.CONCEN:    return Keywords.w_CONCEN;
-            case SourceType.FLOWPACED: return Keywords.w_FLOWPACED;
-            case SourceType.MASS:      return Keywords.w_MASS;
-            case SourceType.SETPOINT:  return Keywords.w_SETPOINT;
-            default:                          return null;
-            }
-        }
-
         public static string ReportStr(this StatType value) {
             switch (value) {
             case StatType.XHEAD:      return Keywords.t_XHEAD;
@@ -225,29 +215,13 @@ namespace Epanet.Enums {
             }
         }
 
-        public static string ParseStr(this StatType value) {
-            switch (value) {
-            case StatType.ACTIVE:     return Keywords.w_ACTIVE;
-            case StatType.CLOSED:     return Keywords.w_CLOSED;
-            case StatType.EMPTYING:   return string.Empty;
-            case StatType.FILLING:    return string.Empty;
-            case StatType.OPEN:       return Keywords.w_OPEN;
-            case StatType.TEMPCLOSED: return string.Empty;
-            case StatType.XFCV:       return string.Empty;
-            case StatType.XFLOW:      return string.Empty;
-            case StatType.XHEAD:      return string.Empty;
-            case StatType.XPRESSURE:  return string.Empty;
-            default:                       return null;
-            }
-        }
-
         public static string ParseStr(this ControlType value) {
             switch (value) {
             case ControlType.HILEVEL:   return Keywords.w_ABOVE;
             case ControlType.LOWLEVEL:  return Keywords.w_BELOW;
             case ControlType.TIMEOFDAY: return Keywords.w_CLOCKTIME;
             case ControlType.TIMER:     return Keywords.w_TIME;
-            default:                            return null;
+            default:                    return null;
             }
         }
 
@@ -268,7 +242,7 @@ namespace Epanet.Enums {
             case FieldType.SETTING:   return Keywords.t_SETTING;
             case FieldType.REACTRATE: return Keywords.t_REACTRATE;
             case FieldType.FRICTION:  return Keywords.t_FRICTION;
-            default:                            return null;
+            default:                  return null;
             }
         }
 

@@ -17,7 +17,7 @@
 
 using System;
 
-namespace Epanet.Util {
+namespace Epanet {
 
     ///<summary>Epanet exception codes handler.</summary>
     public class ENException:Exception {
@@ -26,7 +26,7 @@ namespace Epanet.Util {
         private readonly object[] _arguments;
 
         ///<summary>Epanet error code.</summary>
-        private readonly ErrorCode _code;
+        protected readonly ErrorCode _code;
 
         /// <summary>Get error code.</summary>
         /// <value>Code id.</value>
@@ -51,10 +51,14 @@ namespace Epanet.Util {
             this._arguments = arg;
         }
 
-        ///<summary>Contructor from other exception and multiple arguments.</summary>
-        public ENException(ENException e, params object[] arg) {
-            this._arguments = arg;
-            this._code = e.Code;
+        /// <summary>Contructor from error code id and inner exception.</summary>
+        ///  <param name="code">Error code id.</param>
+        /// <param name="innerException"></param>
+        ///  
+        public ENException(ErrorCode code, Exception innerException)
+            : base(null, innerException)
+        {
+            this._code = code;
         }
 
         ///<summary>Get arguments array.</summary>

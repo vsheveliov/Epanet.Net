@@ -352,10 +352,10 @@ namespace Epanet.Quality {
 
             // Initialize segments in tanks that use them
             foreach (QualityTank qT  in  this.tanks) {
+                Tank tank = (Tank)qT.Node;
 
                 // Skip reservoirs & complete mix tanks
-                if (((Tank)qT.Node).IsReservoir ||
-                    ((Tank)qT.Node).MixModel == MixType.MIX1)
+                if(tank.Type == NodeType.RESERV || tank.MixModel == MixType.MIX1)
                     continue;
 
                 double c = qT.Concentration;
@@ -363,8 +363,8 @@ namespace Epanet.Quality {
                 qT.Segments.Clear();
 
                 // Add 2 segments for 2-compartment model
-                if (((Tank)qT.Node).MixModel == MixType.MIX2) {
-                    double v = Math.Max(0, qT.Volume - ((Tank)qT.Node).V1Max);
+                if(tank.MixModel == MixType.MIX2) {
+                    double v = Math.Max(0, qT.Volume - tank.V1Max);
                     qT.Segments.AddLast(new QualitySegment(v, c));
                     v = qT.Volume - v;
                     qT.Segments.AddLast(new QualitySegment(v, c));
@@ -648,13 +648,8 @@ namespace Epanet.Quality {
                 if (source.C0 == 0.0)
                     continue;
 
-                double volout;
-
                 // Find total flow volume leaving node
-                if (!(qN.Node is Tank))
-                    volout = qN.VolumeIn; // Junctions
-                else // Tanks
-                    volout = qN.VolumeIn - qN.Demand * dt;
+                double volout = qN.Node.Type == NodeType.JUNC ? qN.VolumeIn : qN.VolumeIn - qN.Demand * dt;
 
                 double qout = volout / dt;
 
@@ -670,7 +665,7 @@ namespace Epanet.Quality {
                         // Only add source mass if demand is negative
                         if (qN.Demand < 0.0) {
                             massadded = -s * qN.Demand * dt;
-                            if (qN.Node is Tank)
+                            if (qN.Node.Type > NodeType.JUNC)
                                 qN.Quality = 0.0;
                         }
                         else
@@ -709,7 +704,7 @@ namespace Epanet.Quality {
             // Add mass inflows from reservoirs to Wsource
             if (this.htime >= this.net.RStart) {
                 foreach (QualityTank qT  in  this.tanks) {
-                    if (((Tank)qT.Node).IsReservoir) {
+                    if (((Tank)qT.Node).Type == NodeType.RESERV) {
                         double volout = qT.VolumeIn - qT.Demand * dt;
                         if (volout > 0.0)
                             this.wsource += volout * qT.Concentration;
@@ -783,13 +778,7 @@ namespace Epanet.Quality {
             // Find inflows & outflows
             double vnet = tank.Demand * dt;
             double vin = tank.VolumeIn;
-
-            double cin;
-            if (vin > 0.0)
-                cin = tank.MassIn / vin;
-            else
-                cin = 0.0;
-
+            double cin = vin > 0.0 ? tank.MassIn / vin : 0.0;
             double v1Max = ((Tank)tank.Node).V1Max;
 
             // Tank is filling
@@ -820,7 +809,7 @@ namespace Epanet.Quality {
                 if (vnet > 0.0)
                     seg2.V += vt;
                 else
-                    seg2.V = Math.Max(0.0, ((seg2.V) - vt));
+                    seg2.V = Math.Max(0.0, seg2.V - vt);
             }
             else {
                 seg1.V += vnet;
@@ -1097,9 +1086,8 @@ namespace Epanet.Quality {
                 qN.Quality = qN.Quality + qN.SourceContribution;
 
 
-                if (qN.Node is Tank) {
-                    if (!((Tank)qN.Node).IsReservoir)
-                        qN.Quality = ((Tank)qN.Node).Concentration;
+                if (qN.Node.Type == NodeType.TANK) {
+                    qN.Quality = ((Tank)qN.Node).C;
                 }
 
                 qN.MassRate = qN.MassRate / dt;
@@ -1113,7 +1101,7 @@ namespace Epanet.Quality {
             foreach (QualityTank tank  in  this.tanks) {
 
                 // Use initial quality for reservoirs
-                if (((Tank)tank.Node).IsReservoir) {
+                if (tank.Node.Type == NodeType.RESERV) {
                     tank.Quality = tank.Node.C0;
                 }
 

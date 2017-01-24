@@ -39,9 +39,7 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Number of decimal places.</summary>
         public int Precision { get; set; }
-
-        public double GetRptLim(RangeType type) { return this.rptLim[(int)type]; }
-
+        
         ///<summary>Units of reported variable.</summary>
         public string Units { get; set; }
 
@@ -49,6 +47,7 @@ namespace Epanet.Network.Structures {
         public bool Enabled { get; set; }
 
         public void SetRptLim(RangeType type, double value) { this.rptLim[(int)type] = value; }
+        public double GetRptLim(RangeType type) { return this.rptLim[(int)type]; }
     }
 
 }

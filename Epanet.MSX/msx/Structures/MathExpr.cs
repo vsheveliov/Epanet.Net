@@ -156,8 +156,9 @@ namespace Epanet.MSX.Structures {
             };
 
 
-            foreach (string word  in  colWords) {
-                if (word.Trim().Length == 0) continue;
+            foreach (string s  in  colWords) {
+                var word = (s ?? "").Trim();
+                if (string.IsNullOrEmpty(word)) continue;
 
                 if (!PatNumber.IsMatch(word)) { // if it isn't a number
                     // its a word

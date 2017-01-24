@@ -60,7 +60,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Kb { get { return ((Tank)this.node).Kb; } }
 
-        public double Concentration { get { return ((Tank)this.node).Concentration; } }
+        public double Concentration { get { return ((Tank)this.node).C; } }
 
         public MixType MixModel { get { return ((Tank)this.node).MixModel; } }
 

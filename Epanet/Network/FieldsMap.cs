@@ -87,7 +87,6 @@ namespace Epanet.Network {
         }
 
         ///<summary>Update fields and units, after loading the INP.</summary>
-
         public void Prepare(
             UnitsType targetUnits,
             FlowUnitsType flowFlag,
@@ -158,17 +157,23 @@ namespace Epanet.Network {
                 pcf = Constants.PSIperFT * spGrav;
                 wcf = 1.0;
             }
+
             this.GetField(FieldType.QUALITY).Units = "";
             ccf = 1.0;
-            if (qualFlag == QualType.CHEM) {
+
+            switch (qualFlag) {
+            case QualType.CHEM:
                 ccf = 1.0 / Constants.LperFT3;
                 this.GetField(FieldType.QUALITY).Units = chemUnits;
                 this.GetField(FieldType.REACTRATE).Units = chemUnits + Keywords.t_PERDAY;
-            }
-            else if (qualFlag == QualType.AGE)
+                break;
+            case QualType.AGE:
                 this.GetField(FieldType.QUALITY).Units = Keywords.u_HOURS;
-            else if (qualFlag == QualType.TRACE)
+                break;
+            case QualType.TRACE:
                 this.GetField(FieldType.QUALITY).Units = Keywords.u_PERCENT;
+                break;
+            }
 
             this.SetUnits(FieldType.DEMAND, qcf);
             this.SetUnits(FieldType.ELEV, hcf);

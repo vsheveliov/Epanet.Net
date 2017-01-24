@@ -31,16 +31,17 @@ using EpanetNetwork = Epanet.Network.Network;
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationRule {
+        private static TraceSource Log = new TraceSource("epanet", SourceLevels.All);
 
         /// <summary>Temporary action item</summary>
-        private class ActItem {
+        private struct ActItem {
             public ActItem(SimulationRule rule, Action action) {
                 this.Rule = rule;
                 this.Action = action;
             }
 
-            public SimulationRule Rule;
-            public Action Action;
+            public readonly SimulationRule Rule;
+            public readonly Action Action;
         }
 
         /// <summary>Rule premise.</summary>
@@ -92,7 +93,8 @@ namespace Epanet.Hydraulic.Structures {
 
                     if (loType == Objects.NODE) {
                         //Node nodeRef = net.getNode(Tok[2]);
-                        SimulationNode nodeRef = nodes.FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationNode nodeRef = nodes
+                            .FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (nodeRef == null)
                             throw new ENException(ErrorCode.Err203);
@@ -117,7 +119,8 @@ namespace Epanet.Hydraulic.Structures {
                     }
                     else {
                         //Link linkRef = net.getLink(Tok[2]);
-                        SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationLink linkRef = links
+                            .FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (linkRef == null)
                             throw new ENException(ErrorCode.Err204);
@@ -501,7 +504,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
 
                 if (flag) {
-                    if (net.Stat_Flag > 0) // Report rule action
+                    if (net.StatFlag > 0) // Report rule action
                         this.LogRuleExecution(log, htime);
                     return true;
                 }
@@ -572,29 +575,27 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Checks if an action with the same link is already on the Action List.</summary>
         private static bool CheckAction(SimulationRule rule, Action action, List<ActItem> actionList) {
+           
+            
+            for (int i = 0; i < actionList.Count; i++) {
 
-            foreach (ActItem item  in  actionList) {
-                if (item.Action.link == action.link) {
-                    // Action with same link
-                    if (rule.priority > item.Rule.priority) {
-                        // Replace Actitem action with higher priority rule
-                        item.Rule = rule;
-                        item.Action = action;
-                    }
+                if(actionList[i].Action.link != action.link)
+                    continue;
 
-                    return true;
+                // Action with same link
+                if(rule.priority > actionList[i].Rule.priority) {
+                    // Replace Actitem action with higher priority rule
+                    actionList[i] = new ActItem(rule, action);
                 }
+
+                return true;
             }
 
             return false;
         }
 
         /// <summary>Implements actions on action list, returns the number of actions executed.</summary>
-        private static int TakeActions(
-            EpanetNetwork net,
-            TraceSource log,
-            List<ActItem> actionList,
-            long htime) {
+        private static int TakeActions(EpanetNetwork net, TraceSource log, List<ActItem> actionList, long htime) {
             double tol = 1e-3;
             int n = 0;
 

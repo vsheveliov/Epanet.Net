@@ -24,17 +24,16 @@ namespace Epanet.Network.Structures {
     ///<summary>Hydraulic node structure  (junction)</summary>
 
     public class Node: Element {
-        private readonly List<Demand> demand = new List<Demand>();
+        private readonly List<Demand> _demands = new List<Demand>(1);
+        private readonly Demand primaryDemand = new Demand(0, null);
 
         public Node(string name):base(name) {
-            this.C0 = 0.0;
-            this.InitDemand = 0;
             this.Position = EnPoint.Invalid;
         }
 
         public override ElementType ElementType { get { return ElementType.Node; } }
 
-        public double InitDemand { get; set; }
+        public Demand PrimaryDemand { get { return this.primaryDemand; } }
 
         public virtual NodeType Type { get { return NodeType.JUNC; } }
 
@@ -45,7 +44,7 @@ namespace Epanet.Network.Structures {
         public double Elevation { get; set; }
 
         ///<summary>Node demand list.</summary>
-        public List<Demand> Demand { get { return this.demand; } }
+        public List<Demand> Demands { get { return this._demands; } }
 
         ///<summary>Water quality source.</summary>
         public QualSource QualSource { get; set; }
@@ -64,11 +63,11 @@ namespace Epanet.Network.Structures {
 
 #if NUCONVERT
 
-        public double GetNuElevation(PropertiesMap.UnitsType units) {
+        public double GetNuElevation(UnitsType units) {
             return NUConvert.revertDistance(units, this.Elevation);
         }
 
-        public void SetNuElevation(PropertiesMap.UnitsType units, double elev) {
+        public void SetNuElevation(UnitsType units, double elev) {
             this.Elevation = NUConvert.convertDistance(units, elev);
         }
 

@@ -1,26 +1,15 @@
-/*
- * Copyright (C) 2016 Vyacheslav Shevelyov (slavash at aha dot ru)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-
 namespace Epanet.Network.Structures {
 
     ///<summary>Text label</summary>
     public class Label {
-        public Label() {
-            this.Text = "";
+        public enum MeterTypes {
+            None,
+            Node,
+            Link
+        }
+
+        public Label(string text) {
+            this.Text = text;
             this.Position = EnPoint.Invalid;
         }
 
@@ -29,6 +18,13 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Label text.</summary>
         public string Text { get; set; }
+        public Node Anchor { get; set; }
+        public string FontName { get; set; }
+        public int FontSize { get; set; }
+        public bool FontBold { get; set; }
+        public bool FontItalic { get; set; }
+        public MeterTypes MeterType { get; set; }
+        public string MeterId { get; set; }
     }
 
 }

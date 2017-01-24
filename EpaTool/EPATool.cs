@@ -72,7 +72,7 @@ namespace Epanet {
         private static double GetNodeValue(NodeVariableType type, FieldsMap fmap, AwareStep step, Node node, int index) {
             switch (type) {
             case NodeVariableType.BASEDEMAND: {
-                double dsum = node.Demand.Sum(demand => demand.Base);
+                double dsum = node.Demands.Sum(demand => demand.Base);
                 return fmap.RevertUnit((FieldType)type, dsum);
             }
             case NodeVariableType.ELEVATION:
@@ -121,8 +121,8 @@ namespace Epanet {
          
             case LinkVariableType.ROUGHNESS:
                 return link.Type == LinkType.PIPE && formType == FormType.DW
-                    ? fmap.RevertUnit(FieldType.DIAM, link.Roughness)
-                    : link.Roughness;
+                    ? fmap.RevertUnit(FieldType.DIAM, link.Kc)
+                    : link.Kc;
 
             case LinkVariableType.FLOW:
                 return step != null ? Math.Abs(step.GetLinkFlow(index, link, fmap)) : 0;
@@ -201,7 +201,7 @@ namespace Epanet {
             }
 
             try {
-                InputParser parserINP = InputParser.Create(FileType.INP_FILE, log);
+                InputParser parserINP = InputParser.Create(FileType.INP_FILE);
                 parserINP.Parse(net, inFile);
                 
 

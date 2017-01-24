@@ -22,6 +22,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
+
+using Epanet.Enums;
 using Epanet.Network.Structures;
 
 using EpanetNetwork = Epanet.Network.Network;
@@ -140,7 +142,7 @@ namespace Epanet.UI {
                 var pos = n.Position;
                 if (pos.IsInvalid) continue;
                 
-                double distMin = (n is Tank)
+                double distMin = (n.Type > NodeType.JUNC)
                     ? TANK_DIAM / this.Zoom
                     : NODE_DIAM / this.Zoom;
 
@@ -268,42 +270,41 @@ namespace Epanet.UI {
             using (Pen pen = new Pen(tankPenColor, -1f))
             using (Pen reservoirPen = new Pen(reservoirsColor, -1f))
             using(Pen tankPen = new Pen(tankPenColor, -1f)) {
-                foreach (Tank tank in this.net.Tanks) {
+                foreach (var tank in this.net.Tanks) {
                     var pos = tank.Position;
                     if (pos.IsInvalid)
                         continue;
+       
+                    var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
+                    rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
-
-                    if (tank.IsReservoir) {
-                        // Reservoir
-
-                        var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
-                        rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
-
-                        g.FillRectangle(reservoirsBrush, rect);
-                        g.DrawRectangle(reservoirPen, rect.X, rect.Y, rect.Width, rect.Height);
-
-
-                    }
-                    else {
-                        // Tank
-                        var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
-                        rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
-
-                        g.FillRectangle(tankBrush, rect);
-                        g.DrawRectangle(tankPen, rect.X, rect.Y, rect.Width, rect.Height);
-
-                    }
+                    g.FillRectangle(tankBrush, rect);
+                    g.DrawRectangle(tankPen, rect.X, rect.Y, rect.Width, rect.Height);
 
                     var fillRect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
                     fillRect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
                     g.FillRectangle(tankBrush, fillRect);
                     g.DrawRectangle(pen, fillRect.X, fillRect.Y, fillRect.Width, fillRect.Height);
-
                 }
 
+                foreach(Tank tank in this.net.Reservoirs) {
+                    var pos = tank.Position;
+                    if (pos.IsInvalid)
+                        continue;
+                   
+                    var rect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
+                    rect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
 
+                    g.FillRectangle(reservoirsBrush, rect);
+                    g.DrawRectangle(reservoirPen, rect.X, rect.Y, rect.Width, rect.Height);
+
+                    var fillRect = new RectangleF((float)pos.X, (float)pos.Y, tankDiam, tankDiam);
+                    fillRect.Offset(tankDiam * -0.5f, tankDiam * -0.5f);
+
+                    g.FillRectangle(tankBrush, fillRect);
+                    g.DrawRectangle(pen, fillRect.X, fillRect.Y, fillRect.Width, fillRect.Height);
+                }
             }
 
         }
@@ -330,8 +331,7 @@ namespace Epanet.UI {
             float diam = NODE_DIAM / this.Zoom;
 
             using(Pen pen = new Pen(nodePenColor, -1f)) {
-                foreach (Node node in this.net.Nodes) {
-                    if (node is Tank) continue;
+                foreach (Node node in this.net.Junctions) {
                     var pos = node.Position;
                     if (pos.IsInvalid) continue;
                     

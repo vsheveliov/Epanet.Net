@@ -15,14 +15,10 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-using System.Diagnostics;
-
 namespace Epanet.Network.IO.Input {
 
     ///<summary>Network conversion units only class.</summary>
     public class NullParser:InputParser {
-        public NullParser(TraceSource log):base() { }
-
         public override Network Parse(Network net, string f) {
             AdjustData(net);
             net.FieldsMap.Prepare(
@@ -34,7 +30,8 @@ namespace Epanet.Network.IO.Input {
                    net.SpGrav,
                    net.HStep);
 
-            this.Convert(net);
+            this.Convert();
+
             return net;
         }
     }

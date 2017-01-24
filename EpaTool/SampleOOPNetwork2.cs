@@ -44,18 +44,19 @@ namespace Epanet {
             for (i = 1; i < 7; i++)
                 node[i] = new Node(i.ToString());
 
+
             node[1].Elevation = 150;
-            node[1].InitDemand = 100;
+            node[1].Demands.Add(new Demand(100, null));
             node[2].Elevation = 160;
-            node[2].InitDemand = 100;
+            node[2].Demands.Add(new Demand(100, null));
             node[3].Elevation = 155;
-            node[3].InitDemand = 120;
+            node[3].Demands.Add(new Demand(120, null));
             node[4].Elevation = 150;
-            node[4].InitDemand = 270;
+            node[4].Demands.Add(new Demand(270, null));
             node[5].Elevation = 165;
-            node[5].InitDemand = 330;
+            node[5].Demands.Add(new Demand(330, null));
             node[6].Elevation = 160;
-            node[6].InitDemand = 200;
+            node[6].Demands.Add(new Demand(200, null));
 
             //Links
             Link[] pipe = new Link[8];
@@ -84,7 +85,7 @@ namespace Epanet {
 
             //Prepare Network
             TraceSource log = new TraceSource(typeof(SampleOOPNetwork2).FullName, SourceLevels.All);
-            NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE, log);
+            NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE);
             Debug.Assert(nP != null);
             nP.Parse(net, null);
 

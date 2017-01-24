@@ -83,12 +83,12 @@ namespace Epanet.MSX {
                 if (comentPosition != -1)
                     line = line.Substring(0, comentPosition);
 
-                if (line.Length == 0)
+                if (string.IsNullOrEmpty(line))
                     continue;
 
                 string[] tok = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
-                if (tok.Length == 0 || tok[0].Length > 0 && tok[0][0] == ';') continue;
+                if (tok.Length == 0 || !string.IsNullOrEmpty(tok[0]) && tok[0][0] == ';') continue;
 
                 SectionType sectTemp;
                 if (GetNewSection(tok[0], Constants.MsxSectWords, out sectTemp) != 0) {
@@ -237,7 +237,7 @@ namespace Epanet.MSX {
                 if (comentPosition != -1)
                     line = line.Substring(0, comentPosition);
 
-                if (line.Length == 0)
+                if (string.IsNullOrEmpty(line))
                     continue;
 
                 string[] tok = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
@@ -296,7 +296,7 @@ namespace Epanet.MSX {
         /// <summary>Checks if a line begins a new section in the input file.</summary>
         private static int GetNewSection(string tok, string[] sectWords, out SectionType sect) {
             sect = (SectionType)(-1);
-            if (tok.Length == 0)
+            if (string.IsNullOrEmpty(tok))
                 return 0;
             // --- check if line begins with a new section heading
 

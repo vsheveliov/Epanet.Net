@@ -56,7 +56,7 @@ namespace Epanet.Network.Structures {
         }
 
         ///<summary>Curve type.</summary>
-        public CurveType Type { get; set; }
+        public CurveType Type { get; set; } //TODO: parse it correctly
 
         public List<EnPoint> Points { get { return this.points; } }
 

@@ -55,7 +55,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Elevation { get { return this.node.Elevation; } }
 
-        public List<Demand> Demand { get { return this.node.Demand; } }
+        public List<Demand> Demand { get { return this.node.Demands; } }
 
         public QualSource QualSource { get { return this.node.QualSource; } }
 

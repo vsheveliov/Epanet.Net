@@ -27,6 +27,8 @@ namespace Epanet {
         public const int MAXTITLE = 3;
         /// <summary>Max. # characters read from input line.</summary>
         public const int MAXLINE = 255;
+        /// <summary>Max. items per line of input</summary>
+        public const int MAXTOKS = 40;       
         ///<summary>Max. input errors reported</summary>
         public const int MAXERRS = 10;
         //public const int     MAXMSG = 79;

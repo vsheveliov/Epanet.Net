@@ -65,7 +65,7 @@ namespace Epanet.Hydraulic.Structures {
             this.index = idx;
 
             // Init
-            this.setting = this.link.Roughness;
+            this.setting = this.link.Kc;
             this.status = this.link.Status;
 
         }
@@ -83,7 +83,7 @@ namespace Epanet.Hydraulic.Structures {
             this.index = idx;
 
             // Init
-            this.setting = this.link.Roughness;
+            this.setting = this.link.Kc;
             this.status = this.link.Status;
         }
 
@@ -105,7 +105,7 @@ namespace Epanet.Hydraulic.Structures {
 
         public double Diameter { get { return this.link.Diameter; } }
 
-        public double Roughness { get { return this.link.Roughness; } }
+        public double Roughness { get { return this.link.Kc; } }
 
         public double Km { get { return this.link.Km; } }
 
@@ -369,7 +369,7 @@ namespace Epanet.Hydraulic.Structures {
 
             if (tStatus != this.status) {
                 change = true;
-                if (net.Stat_Flag == StatFlag.FULL)
+                if (net.StatFlag == StatFlag.FULL)
                     LogStatChange(net.FieldsMap, log, this, tStatus, this.status);
             }
 
