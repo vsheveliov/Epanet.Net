@@ -90,8 +90,6 @@ namespace Epanet {
         public const double BIG = 1E10d;
         public const double TINY = 1E-6d;
 
-        public const double MISSING = -1E10d;
-
         // ReSharper disable InconsistentNaming
         public const double GPMperCFS = 448.831d;
         public const double AFDperCFS = 1.9837d;

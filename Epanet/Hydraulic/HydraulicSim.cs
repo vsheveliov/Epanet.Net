@@ -184,7 +184,7 @@ namespace Epanet.Hydraulic {
                 if((link.Type == LinkType.PRV ||
                      link.Type == LinkType.PSV ||
                      link.Type == LinkType.FCV)
-                    && !link.Roughness.IsMissing())
+                    && !double.IsNaN(link.Roughness))
                     link.SimStatus = StatType.ACTIVE;
 
 

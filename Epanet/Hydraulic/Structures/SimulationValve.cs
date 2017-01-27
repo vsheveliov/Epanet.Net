@@ -88,7 +88,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes P & Y coeffs. for pressure breaker valve.</summary>
         private void PbvCoeff(EpanetNetwork net) {
-            if (setting.IsMissing() || setting == 0.0)
+            if (double.IsNaN(setting) || setting == 0.0)
                 ValveCoeff(net);
             else if (Km * (flow * flow) > setting)
                 ValveCoeff(net);
@@ -102,7 +102,7 @@ namespace Epanet.Hydraulic.Structures {
         private void TcvCoeff(EpanetNetwork net) {
             double km = Km;
 
-            if (!setting.IsMissing())
+            if (!double.IsNaN(setting))
                 km = 0.02517 * setting / Math.Pow(Diameter, 4);
 
             ValveCoeff(net, km);
@@ -260,7 +260,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure reducing valve.</summary>
         private StatType PrvStatus(EpanetNetwork net, double hset) {
-            if (setting.IsMissing())
+            if (double.IsNaN(setting))
                 return status;
 
             double htol = net.HTol;
@@ -309,7 +309,7 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure sustaining valve.</summary>
         private StatType PsvStatus(EpanetNetwork net, double hset) {
-            if (setting.IsMissing())
+            if (double.IsNaN(setting))
                 return status;
 
             double h1 = first.SimHead;
@@ -374,7 +374,7 @@ namespace Epanet.Hydraulic.Structures {
             case LinkType.PRV:
             case LinkType.PSV:
 
-                if (SimSetting.IsMissing())
+                if (double.IsNaN(SimSetting))
                     ValveCoeff(net);
                 else
                     return false;
@@ -394,7 +394,7 @@ namespace Epanet.Hydraulic.Structures {
 
             foreach (SimulationValve v  in  valves) {
 
-                if (v.setting.IsMissing()) continue;
+                if (double.IsNaN(v.setting)) continue;
 
                 StatType s = v.status;
 
@@ -436,7 +436,7 @@ namespace Epanet.Hydraulic.Structures {
             SparseMatrix smat,
             List<SimulationValve> valves) {
             foreach (SimulationValve valve  in  valves) {
-                if (valve.SimSetting.IsMissing())
+                if (double.IsNaN(valve.SimSetting))
                     continue;
 
                 switch (valve.Type) {

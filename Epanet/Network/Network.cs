@@ -333,10 +333,10 @@ namespace Epanet.Network {
             AltReport = "";
             TraceNode = ""; // No source tracing
             ExtraIter = -1; // Stop if network unbalanced
-            Ctol = Constants.MISSING; // No pre-set quality tolerance
-            Diffus = Constants.MISSING; // Temporary diffusivity
+            Ctol = double.NaN; // No pre-set quality tolerance
+            Diffus = double.NaN; // Temporary diffusivity
             DampLimit = Constants.DAMPLIMIT;
-            Viscos = Constants.MISSING; // Temporary viscosity
+            Viscos = double.NaN; // Temporary viscosity
             SpGrav = Constants.SPGRAV; // Default specific gravity
             MaxIter = Constants.MAXITER; // Default max. hydraulic trials
             HAcc = Constants.HACC; // Default hydraulic accuracy

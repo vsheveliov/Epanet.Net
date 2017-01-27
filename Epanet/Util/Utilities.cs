@@ -196,11 +196,6 @@ namespace Epanet.Util {
                 NumberFormatInfo.InvariantInfo,
                 out result);
         }
-
-        public static bool IsMissing(this double value) {
-            return value == Constants.MISSING;
-        }
-
     }
 
 }

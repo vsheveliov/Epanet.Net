@@ -318,7 +318,7 @@ namespace Epanet.Network.IO.Input {
                     int n = tok.Count;
                     StatType status = StatType.ACTIVE;
 
-                    double setting = Constants.MISSING, time = 0.0, level = 0.0;
+                    double setting = double.NaN, time = 0.0, level = 0.0;
 
                     if(n < 6)
                         throw new ENException(ErrorCode.Err201, SectType.CONTROLS, line);
@@ -356,7 +356,7 @@ namespace Epanet.Network.IO.Input {
                     }
 
                     if(ltype == LinkType.PUMP || ltype == LinkType.PIPE) {
-                        if(!setting.IsMissing()) {
+                        if(!double.IsNaN(setting)) {
                             if(setting < 0.0)
                                 throw new ENException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
 
@@ -661,8 +661,8 @@ namespace Epanet.Network.IO.Input {
                 valve.Diameter = diam;
                 valve.Kc = rcoeff;
                 valve.Km = lcoeff;
-                valve.Kb = Constants.MISSING;
-                valve.Kw = Constants.MISSING;
+                valve.Kb = double.NaN;
+                valve.Kw = double.NaN;
                 valve.Type = type;
                 valve.Status = status;
 
@@ -745,8 +745,8 @@ namespace Epanet.Network.IO.Input {
                 link.Diameter = diam;
                 link.Kc = rcoeff;
                 link.Km = lcoeff;
-                link.Kb = Constants.MISSING;
-                link.Kw = Constants.MISSING;
+                link.Kb = double.NaN;
+                link.Kw = double.NaN;
                 link.Type = type;
                 link.Status = status;
                 
@@ -855,7 +855,7 @@ namespace Epanet.Network.IO.Input {
                 tank.Hmax = maxlevel;
                 tank.Area = diam;
                 tank.Pattern = null;
-                tank.Kb = Constants.MISSING;
+                tank.Kb = double.NaN;
 
                 double area = Math.PI * diam * diam / 4.0d;
 
@@ -869,8 +869,6 @@ namespace Epanet.Network.IO.Input {
                 tank.Vcurve = vcurve;
                 tank.MixModel = MixType.MIX1;
                 tank.V1Max = 1.0;
-
-                tank.Kb = 0;
 
                 if (!string.IsNullOrEmpty(data[TANK_MIXMODEL_INDEX])) {
                     MixType type;
@@ -1381,13 +1379,13 @@ namespace Epanet.Network.IO.Input {
 
                 case QualType.TRACE:
                     // FIXME: parse nodes first!
-                    Node nodeRef = net.GetNode(options[TRACE_NODE_INDEX]);
+                    Node node = net.GetNode(options[TRACE_NODE_INDEX]);
                 
-                    if (nodeRef == null) {
+                    if (node == null) {
                         LogException(new ENException(ErrorCode.Err212, SectType.OPTIONS, "QUALITY TRACE " + line));
                     }
                     else {
-                        net.TraceNode = nodeRef.Name;
+                        net.TraceNode = node.Name;
                         net.ChemName = Keywords.u_PERCENT;
                         net.ChemUnits = units;
                     }

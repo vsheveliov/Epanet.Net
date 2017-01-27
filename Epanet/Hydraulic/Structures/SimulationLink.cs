@@ -136,12 +136,13 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Sets link status to OPEN(true) or CLOSED(false).</summary>
         public void SetLinkStatus(bool value) {
+            
             if (value) {
                 if (this is SimulationPump)
                     setting = 1.0;
 
                 else if (Type != LinkType.GPV)
-                    setting = Constants.MISSING;
+                    setting = double.NaN;
 
                 status = StatType.OPEN;
             }
@@ -149,7 +150,7 @@ namespace Epanet.Hydraulic.Structures {
                 if (this is SimulationPump)
                     setting = 0.0;
                 else if (Type != LinkType.GPV)
-                    setting = Constants.MISSING;
+                    setting = double.NaN;
 
                 status = StatType.CLOSED;
             }
@@ -171,7 +172,7 @@ namespace Epanet.Hydraulic.Structures {
                 status = StatType.ACTIVE;
             }
             else {
-                if (setting.IsMissing() && status <= StatType.CLOSED)
+                if (double.IsNaN(setting) && status <= StatType.CLOSED)
                     status = StatType.OPEN;
 
                 setting = value;
@@ -353,7 +354,7 @@ namespace Epanet.Hydraulic.Structures {
             if (pump != null && status >= StatType.OPEN && setting > 0.0)
                 status = pump.PumpStatus(net, -dh);
 
-            if (Type == LinkType.FCV && !setting.IsMissing())
+            if (Type == LinkType.FCV && !double.IsNaN(setting))
                 status = ((SimulationValve)this).FcvStatus(net, tStatus);
 
             if (first is SimulationTank || second is SimulationTank)

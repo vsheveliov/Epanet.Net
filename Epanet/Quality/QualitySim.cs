@@ -252,7 +252,7 @@ namespace Epanet.Quality {
             else if (order < 0.0) {
                 c1 = _net.CLimit + Utilities.GetSignal(kb) * c;
                 if (Math.Abs(c1) < Constants.TINY) c1 = Utilities.GetSignal(c1) * Constants.TINY;
-                c = c / c1;
+                c /= c1;
             }
             else {
                 if (_net.CLimit == 0.0)
@@ -1090,7 +1090,7 @@ namespace Epanet.Quality {
                     qN.Quality = ((Tank)qN.Node).C;
                 }
 
-                qN.MassRate = qN.MassRate / dt;
+                qN.MassRate /= dt;
             }
         }
 
@@ -1131,7 +1131,7 @@ namespace Epanet.Quality {
 
             if (_net.WallOrder == 0.0) {
                 kf = Utilities.GetSignal(kw) * c * kf;
-                kw = kw * Math.Pow(_elevUnits, 2);
+                kw *= Math.Pow(_elevUnits, 2);
                 if (Math.Abs(kf) < Math.Abs(kw))
                     kw = kf;
                 return kw * 4.0 / d;

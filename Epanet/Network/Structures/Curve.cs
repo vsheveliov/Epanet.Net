@@ -50,8 +50,8 @@ namespace Epanet.Network.Structures {
             r = (points[k2].Y - points[k1].Y) / (points[k2].X - points[k1].X);
             h0 = points[k1].Y - r * points[k1].X;
 
-            h0 = h0 / fMap.GetUnits(FieldType.HEAD);
-            r = r * fMap.GetUnits(FieldType.FLOW) / fMap.GetUnits(FieldType.HEAD);
+            h0 /= fMap.GetUnits(FieldType.HEAD);
+            r *= fMap.GetUnits(FieldType.FLOW) / fMap.GetUnits(FieldType.HEAD);
 
         }
 

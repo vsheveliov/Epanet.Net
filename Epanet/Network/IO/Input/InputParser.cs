@@ -144,7 +144,7 @@ namespace Epanet.Network.IO.Input {
             net.RuleStep = Math.Min(net.RuleStep, net.HStep);
             net.QStep = Math.Min(net.QStep, net.HStep);
 
-            if (net.Ctol.IsMissing()) {
+            if (double.IsNaN(net.Ctol)) {
                 net.Ctol = net.QualFlag == QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
             }
 
@@ -171,19 +171,19 @@ namespace Epanet.Network.IO.Input {
             if (net.UnitsFlag == UnitsType.SI)
                 ucf = Math.Pow(Constants.MperFT, 2);
 
-            if (net.Viscos.IsMissing())
+            if (double.IsNaN(net.Viscos))
                 net.Viscos = Constants.VISCOS;
             else if (net.Viscos > 1e-3)
-                net.Viscos = net.Viscos * Constants.VISCOS;
+                net.Viscos *= Constants.VISCOS;
             else
-                net.Viscos = net.Viscos / ucf;
+                net.Viscos /=  ucf;
 
-            if (net.Diffus.IsMissing())
+            if (double.IsNaN(net.Diffus))
                 net.Diffus = Constants.DIFFUS;
             else if (net.Diffus > 1e-4)
-                net.Diffus = net.Diffus * Constants.DIFFUS;
+                net.Diffus *= Constants.DIFFUS;
             else
-                net.Diffus = net.Diffus / ucf;
+                net.Diffus /= ucf;
 
             net.HExp = net.FormFlag == FormType.HW ? 1.852 : 2.0;
 
@@ -195,10 +195,10 @@ namespace Epanet.Network.IO.Input {
                 if (link.Type > LinkType.PIPE)
                     continue;
 
-                if (link.Kb.IsMissing())
+                if (double.IsNaN(link.Kb))
                     link.Kb = kbulk;
 
-                if (link.Kw.IsMissing()) {
+                if (double.IsNaN(link.Kw)) {
                     if (rfactor == 0.0)
                         link.Kw = net.KWall;
                     else if ((link.Kc > 0.0) && (link.Diameter > 0.0)) {
@@ -215,7 +215,7 @@ namespace Epanet.Network.IO.Input {
             }
 
             foreach (Tank tank  in  net.Tanks)
-                if (tank.Kb.IsMissing())
+                if (double.IsNaN(tank.Kb))
                     tank.Kb = kbulk;
 
             Pattern defpat = net.GetPattern(net.DefPatId) ?? net.GetPattern("");
@@ -308,34 +308,35 @@ namespace Epanet.Network.IO.Input {
                 tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldType.ELEV);
                 tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldType.ELEV);
                 tk.Area = Math.PI * Math.Pow(tk.Area / fMap.GetUnits(FieldType.ELEV), 2) / 4.0;
-                tk.V0 = tk.V0 / fMap.GetUnits(FieldType.VOLUME);
-                tk.Vmin = tk.Vmin / fMap.GetUnits(FieldType.VOLUME);
-                tk.Vmax = tk.Vmax / fMap.GetUnits(FieldType.VOLUME);
-                tk.Kb = tk.Kb / Constants.SECperDAY;
+                tk.V0 /= fMap.GetUnits(FieldType.VOLUME);
+                tk.Vmin /= fMap.GetUnits(FieldType.VOLUME);
+                tk.Vmax /= fMap.GetUnits(FieldType.VOLUME);
+                tk.Kb /= Constants.SECperDAY;
                 // tk.Volume = tk.V0;
                 tk.C = tk.C0;
-                tk.V1Max = tk.V1Max * tk.Vmax;
+                tk.V1Max *= tk.Vmax;
             }
             
-            net.CLimit = net.CLimit / fMap.GetUnits(FieldType.QUALITY);
-            net.Ctol = net.Ctol / fMap.GetUnits(FieldType.QUALITY);
+            net.CLimit /= fMap.GetUnits(FieldType.QUALITY);
+            net.Ctol /= fMap.GetUnits(FieldType.QUALITY);
 
-            net.KBulk = net.KBulk / Constants.SECperDAY;
-            net.KWall = net.KWall / Constants.SECperDAY;
+            net.KBulk /= Constants.SECperDAY;
+            net.KWall /= Constants.SECperDAY;
 
             foreach (Link link  in  net.Links) {
                 switch (link.Type) {
                 case LinkType.CV:
                 case LinkType.PIPE:
                     if (net.FormFlag == FormType.DW)
-                        link.Kc = link.Kc / (1000.0 * fMap.GetUnits(FieldType.ELEV));
-                    link.Diameter = link.Diameter / fMap.GetUnits(FieldType.DIAM);
-                    link.Lenght = link.Lenght / fMap.GetUnits(FieldType.LENGTH);
+                        link.Kc /= 1000.0 * fMap.GetUnits(FieldType.ELEV);
+
+                    link.Diameter /= fMap.GetUnits(FieldType.DIAM);
+                    link.Lenght /= fMap.GetUnits(FieldType.LENGTH);
 
                     link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
 
-                    link.Kb = link.Kb / Constants.SECperDAY;
-                    link.Kw = link.Kw / Constants.SECperDAY;
+                    link.Kb /= Constants.SECperDAY;
+                    link.Kw /= Constants.SECperDAY;
                     break;
 
                 case LinkType.PUMP:
@@ -343,35 +344,36 @@ namespace Epanet.Network.IO.Input {
 
                     if (pump.Ptype == PumpType.CONST_HP) {
                         if (net.UnitsFlag == UnitsType.SI)
-                            pump.FlowCoefficient = pump.FlowCoefficient / fMap.GetUnits(FieldType.POWER);
+                            pump.FlowCoefficient /= fMap.GetUnits(FieldType.POWER);
                     }
                     else {
                         if (pump.Ptype == PumpType.POWER_FUNC) {
-                            pump.H0 = pump.H0 / fMap.GetUnits(FieldType.HEAD);
-                            pump.FlowCoefficient = pump.FlowCoefficient *
+                            pump.H0 /= fMap.GetUnits(FieldType.HEAD);
+
+                            pump.FlowCoefficient *=
                                                    Math.Pow(fMap.GetUnits(FieldType.FLOW), pump.N) /
                                                    fMap.GetUnits(FieldType.HEAD);
                         }
 
-                        pump.Q0 = pump.Q0 / fMap.GetUnits(FieldType.FLOW);
-                        pump.Qmax = pump.Qmax / fMap.GetUnits(FieldType.FLOW);
-                        pump.Hmax = pump.Hmax / fMap.GetUnits(FieldType.HEAD);
+                        pump.Q0 /= fMap.GetUnits(FieldType.FLOW);
+                        pump.Qmax /= fMap.GetUnits(FieldType.FLOW);
+                        pump.Hmax /= fMap.GetUnits(FieldType.HEAD);
                     }
                     break;
 
                 default:
-                    link.Diameter = link.Diameter / fMap.GetUnits(FieldType.DIAM);
+                    link.Diameter /= fMap.GetUnits(FieldType.DIAM);
                     link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
                    
-                    if (!link.Kc.IsMissing())
+                    if (!double.IsNaN(link.Kc))
                         switch (link.Type) {
                         case LinkType.FCV:
-                            link.Kc = link.Kc / fMap.GetUnits(FieldType.FLOW);
+                            link.Kc /= fMap.GetUnits(FieldType.FLOW);
                             break;
                         case LinkType.PRV:
                         case LinkType.PSV:
                         case LinkType.PBV:
-                            link.Kc = link.Kc / fMap.GetUnits(FieldType.PRESSURE);
+                            link.Kc /= fMap.GetUnits(FieldType.PRESSURE);
                             break;
                         }
 
@@ -391,15 +393,15 @@ namespace Epanet.Network.IO.Input {
                         : ctl.Node.Elevation + ctl.Grade / fMap.GetUnits(FieldType.ELEV);
                 }
 
-                if (!ctl.Setting.IsMissing())
+                if (!double.IsNaN(ctl.Setting))
                     switch (ctl.Link.Type) {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
-                        ctl.Setting = ctl.Setting / fMap.GetUnits(FieldType.PRESSURE);
+                        ctl.Setting /= fMap.GetUnits(FieldType.PRESSURE);
                         break;
                     case LinkType.FCV:
-                        ctl.Setting = ctl.Setting / fMap.GetUnits(FieldType.FLOW);
+                        ctl.Setting /= fMap.GetUnits(FieldType.FLOW);
                         break;
                     }
             }
@@ -425,9 +427,8 @@ namespace Epanet.Network.IO.Input {
                     case PumpType.NOCURVE:
                         // Set parameters for pump curves
                         Curve curve = pump.HCurve;
-                        if (curve == null) {
+                        if (curve == null)
                             throw new ENException(ErrorCode.Err226, pump.Name);
-                        }
 
                         int n = curve.Count;
 
@@ -676,10 +677,7 @@ namespace Epanet.Network.IO.Input {
             case LinkType.FCV:
             case LinkType.TCV:
                 link.Status = status;
-                link.Kc = status == StatType.ACTIVE
-                    ? y //lLink.setKc(y);
-                    : Constants.MISSING; //lLink.setKc(Constants.MISSING);
-
+                link.Kc = status == StatType.ACTIVE ? y : double.NaN; 
                 break;
             }
         }

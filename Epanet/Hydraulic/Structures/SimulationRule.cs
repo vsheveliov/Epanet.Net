@@ -90,7 +90,6 @@ namespace Epanet.Hydraulic.Structures {
                     }
 
                     if (loType == Objects.NODE) {
-                        //Node nodeRef = net.getNode(Tok[2]);
                         SimulationNode node = nodes.FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (node == null)
@@ -115,7 +114,6 @@ namespace Epanet.Hydraulic.Structures {
                         lObj = node;
                     }
                     else {
-                        //Link linkRef = net.getLink(Tok[2]);
                         SimulationLink link = links
                             .FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
@@ -159,7 +157,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 // BUG: Baseform bug lStat == Rule.Values.IS_NUMBER
                 Values lStat = Values.IS_NUMBER;
-                double lVal = Constants.MISSING;
+                double lVal = double.NaN;
 
                 if (lVar == Varwords.TIME || lVar == Varwords.CLOCKTIME) {
                     lVal = tok.Length == 6
@@ -336,7 +334,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 case Varwords.SETTING:
 
-                    if (link.SimSetting.IsMissing())
+                    if (double.IsNaN(link.SimSetting))
                         return false;
 
                     x = link.SimSetting;
@@ -344,10 +342,10 @@ namespace Epanet.Hydraulic.Structures {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
-                        x = x * fMap.GetUnits(FieldType.PRESSURE);
+                        x *= fMap.GetUnits(FieldType.PRESSURE);
                         break;
                     case LinkType.FCV:
-                        x = x * fMap.GetUnits(FieldType.FLOW);
+                        x *= fMap.GetUnits(FieldType.FLOW);
                         break;
                     }
                     break;
@@ -430,17 +428,16 @@ namespace Epanet.Hydraulic.Structures {
                 if (ntokens != 6)
                     throw new ENException(ErrorCode.Err201);
 
-                //Link linkRef = net.getLink(tok[2]);
-                SimulationLink linkRef = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                SimulationLink link = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
-                if (linkRef == null)
+                if (link == null)
                     throw new ENException(ErrorCode.Err204);
 
-                if (linkRef.Type == LinkType.CV)
+                if (link.Type == LinkType.CV)
                     throw new ENException(ErrorCode.Err207);
 
                 var s = (Values)(-1);
-                double x = Constants.MISSING;
+                double x = double.NaN;
 
                 if (EnumsTxt.TryParse(tok[5], out k) && k > Values.IS_NUMBER) {
                     s = k;
@@ -450,20 +447,20 @@ namespace Epanet.Hydraulic.Structures {
                         throw new ENException(ErrorCode.Err202);
                 }
 
-                if (!x.IsMissing() && linkRef.Type == LinkType.GPV)
+                if (!double.IsNaN(x) && link.Type == LinkType.GPV)
                     throw new ENException(ErrorCode.Err202);
 
-                if (!x.IsMissing() && linkRef.Type == LinkType.PIPE) {
+                if (!double.IsNaN(x) && link.Type == LinkType.PIPE) {
                     s = x == 0.0 ? Values.IS_CLOSED : Values.IS_OPEN;
-                    x = Constants.MISSING;
+                    x = double.NaN;
                 }
 
-                link = linkRef;
+                _link = link;
                 _status = s;
                 _setting = x;
             }
 
-            public readonly SimulationLink link;
+            internal readonly SimulationLink _link;
             private readonly Values _status;
             private readonly double _setting;
 
@@ -471,34 +468,34 @@ namespace Epanet.Hydraulic.Structures {
             public bool Execute(EpanetNetwork net, TraceSource log, double tol, long htime) {
                 bool flag = false;
 
-                StatType s = link.SimStatus;
-                double v = link.SimSetting;
+                StatType s = _link.SimStatus;
+                double v = _link.SimSetting;
                 double x = _setting;
 
                 if (_status == Values.IS_OPEN && s <= StatType.CLOSED) {
                     // Switch link from closed to open
-                    link.SetLinkStatus(true);
+                    _link.SetLinkStatus(true);
                     flag = true;
                 }
                 else if (_status == Values.IS_CLOSED && s > StatType.CLOSED) {
                     // Switch link from not closed to closed
-                    link.SetLinkStatus(false);
+                    _link.SetLinkStatus(false);
                     flag = true;
                 }
-                else if (!x.IsMissing()) {
+                else if (!double.IsNaN(x)) {
                     // Change link's setting
-                    switch (link.Type) {
+                    switch (_link.Type) {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
-                        x = x / net.FieldsMap.GetUnits(FieldType.PRESSURE);
+                        x /= net.FieldsMap.GetUnits(FieldType.PRESSURE);
                         break;
                     case LinkType.FCV:
-                        x = x / net.FieldsMap.GetUnits(FieldType.FLOW);
+                        x /= net.FieldsMap.GetUnits(FieldType.FLOW);
                         break;
                     }
                     if (Math.Abs(x - v) > tol) {
-                        link.SetLinkSetting(x);
+                        _link.SetLinkSetting(x);
                         flag = true;
                     }
                 }
@@ -516,8 +513,8 @@ namespace Epanet.Hydraulic.Structures {
                 log.Warning(
                     Properties.Text.FMT63,
                     htime.GetClockTime(),
-                    link.Type.ParseStr(),
-                    link.Link.Name,
+                    _link.Type.ParseStr(),
+                    _link.Link.Name,
                     _label);
             }
         }
@@ -579,7 +576,7 @@ namespace Epanet.Hydraulic.Structures {
             
             for (int i = 0; i < actionList.Count; i++) {
 
-                if(actionList[i].action.link != action.link)
+                if(actionList[i].action._link != action._link)
                     continue;
 
                 // Action with same link

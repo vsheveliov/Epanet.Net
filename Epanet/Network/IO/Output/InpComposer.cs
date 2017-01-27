@@ -309,7 +309,7 @@ namespace Epanet.Network.IO.Output {
             foreach (Valve valve in net.Valves) {
                 double d = valve.Diameter;
                 double kc = valve.Kc;
-                if(kc.IsMissing())
+                if(double.IsNaN(kc))
                     kc = 0.0;
 
                 switch (valve.Type) {
@@ -415,7 +415,7 @@ namespace Epanet.Network.IO.Output {
                     }
                 }
                 // Write fixed-status PRVs & PSVs (setting = MISSING)
-                else if (link.Kc.IsMissing()) {
+                else if (double.IsNaN(link.Kc)) {
                     switch (link.Status) {
                     case StatType.OPEN:
                     case StatType.CLOSED:
@@ -490,7 +490,7 @@ namespace Epanet.Network.IO.Output {
                 if (control.Link == null) continue;
 
                 // Get text of control's link status/setting
-                if (control.Setting.IsMissing()) {
+                if (double.IsNaN(control.Setting)) {
                     buffer.Write(" LINK {0} {1} ", control.Link.Name, control.Status);
                 }
                 else {

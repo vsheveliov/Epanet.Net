@@ -388,7 +388,7 @@ namespace Epanet.Network.IO.Input {
             tank.Hmax = maxlevel;
             tank.Area = diam;
             tank.Pattern = p;
-            tank.Kb = Constants.MISSING;
+            tank.Kb = double.NaN;
 
             /*
             *******************************************************************
@@ -467,8 +467,8 @@ namespace Epanet.Network.IO.Input {
             link.Diameter = diam;
             link.Kc = rcoeff;
             link.Km = lcoeff;
-            link.Kb = Constants.MISSING;
-            link.Kw = Constants.MISSING;
+            link.Kb = double.NaN;
+            link.Kw = double.NaN;
             link.Type = type;
             link.Status = status;
             link.RptFlag = false;
@@ -728,7 +728,7 @@ namespace Epanet.Network.IO.Input {
             int n = _tok.Count;
             StatType status = StatType.ACTIVE;
 
-            double setting = Constants.MISSING, time = 0.0, level = 0.0;
+            double setting = double.NaN, time = 0.0, level = 0.0;
 
             if (n < 6)
                 throw new InputException(ErrorCode.Err201, SectType.CONTROLS, _line);
@@ -762,7 +762,7 @@ namespace Epanet.Network.IO.Input {
             }
 
             if (ltype == LinkType.PUMP || ltype == LinkType.PIPE) {
-                if (!setting.IsMissing()) {
+                if (!double.IsNaN(setting)) {
                     if (setting < 0.0)
                         throw new InputException(ErrorCode.Err202, SectType.CONTROLS, _line);
 
@@ -1104,10 +1104,7 @@ namespace Epanet.Network.IO.Input {
 
             if (_tok[n].Match(Keywords.w_OPEN)) status = StatType.OPEN;
             else if (_tok[n].Match(Keywords.w_CLOSED)) status = StatType.CLOSED;
-            else if (!_tok[n].ToDouble(out y)) 
-                throw new InputException(ErrorCode.Err211, SectType.STATUS, _tok[0]);
-
-            if (y < 0.0)
+            else if(!_tok[n].ToDouble(out y) || y < 0.0) 
                 throw new InputException(ErrorCode.Err211, SectType.STATUS, _tok[0]);
 
             if (n == 1) {
@@ -1168,12 +1165,12 @@ namespace Epanet.Network.IO.Input {
                 if (n < 4)
                     throw new InputException(ErrorCode.Err201, SectType.ENERGY, _line);
 
-                Link linkRef = net.GetLink(_tok[1]);
+                Link link = net.GetLink(_tok[1]);
                 
-                if(linkRef == null || linkRef.Type != LinkType.PUMP)
+                if(link == null || link.Type != LinkType.PUMP)
                     throw new InputException(ErrorCode.Err216, SectType.ENERGY, _tok[0]);
 
-                pump = (Pump)linkRef;
+                pump = (Pump)link;
             }
             else
                 throw new InputException(ErrorCode.Err201, SectType.ENERGY, _line);

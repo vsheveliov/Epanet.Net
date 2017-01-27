@@ -264,7 +264,7 @@ namespace Epanet.Hydraulic.Structures {
                     if (link.Type >= LinkType.PRV) {
                         if (link.SimSetting != control.Setting)
                             change = true;
-                        else if (link.SimSetting.IsMissing() &&
+                        else if (double.IsNaN(link.SimSetting) &&
                                  s != control.Status) change = true;
                     }
 
