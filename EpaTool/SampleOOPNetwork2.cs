@@ -87,7 +87,7 @@ namespace Epanet {
             TraceSource log = new TraceSource(typeof(SampleOOPNetwork2).FullName, SourceLevels.All);
             NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE);
             Debug.Assert(nP != null);
-            nP.Parse(net, null);
+            nP.Parse(new EpanetNetwork(), null);
 
             //// Simulate hydraulics
             string hydFile = Path.GetTempFileName(); // ("hydSim", "bin");

@@ -26,19 +26,19 @@ namespace Epanet.MSX {
         private const int SERIES_TABLE = 0;
         private const int STATS_TABLE = 1;
 
-        private Network msx;
-        private ENToolkit2 epanet;
-        private Output @out;
-        private InpReader inpReader;
+        private Network _msx;
+        private EnToolkit2 _epanet;
+        private Output _out;
+        private InpReader _inpReader;
 
         public void LoadDependencies(EpanetMSX epa) {
-            this.msx = epa.Network;
-            this.epanet = epa.EnToolkit;
-            this.@out = epa.Output;
-            this.inpReader = epa.Reader;
+            _msx = epa.Network;
+            _epanet = epa.EnToolkit;
+            _out = epa.Output;
+            _inpReader = epa.Reader;
         }
 
-        private static readonly string[] Logo = {
+        private static readonly string[] logo = {
             "******************************************************************",
             "*                      E P A N E T  -  M S X                     *",
             "*                   Multi-Species Water Quality                  *",
@@ -48,7 +48,7 @@ namespace Epanet.MSX {
         };
 
         private const string PAGE_HDR = "  Page %d                                    ";
-        private static readonly string[] StatsHdrs = {
+        private static readonly string[] statsHdrs = {
             "", "Average Values  ", "Minimum Values  ",
             "Maximum Values  ", "Range of Values "
         };
@@ -59,17 +59,17 @@ namespace Epanet.MSX {
         private static int[] _rptdSpecies;
 
         private class TableHeader {
-            public string Line1;
-            public string Line2;
-            public string Line3;
-            public string Line4;
-            public string Line5;
+            public string line1;
+            public string line2;
+            public string line3;
+            public string line4;
+            public string line5;
         }
 
-        readonly TableHeader tableHdr;
+        readonly TableHeader _tableHdr;
 
-        public Report() { this.tableHdr = new TableHeader(); }
-        private string dname;
+        public Report() { _tableHdr = new TableHeader(); }
+        private string _dname;
 
 
         public ErrorCodeType MSXrpt_write(FileInfo outputFile) {
@@ -78,7 +78,7 @@ namespace Epanet.MSX {
 
 
             // check that results are available
-            if (this.msx.Nperiods < 1)
+            if (_msx.Nperiods < 1)
                 return 0;
 
             try {
@@ -97,39 +97,39 @@ namespace Epanet.MSX {
             _pageNum = 1;
             _lineNum = 1;
 
-            this.NewPage();
-            foreach (string s in Logo)
-                this.WriteLine(s);
+            NewPage();
+            foreach (string s in logo)
+                WriteLine(s);
 
-            this.WriteLine("");
-            this.WriteLine(this.msx.Title);
+            WriteLine("");
+            WriteLine(_msx.Title);
 
             // generate the appropriate type of table
-            if (this.msx.Statflag == TstatType.SERIES)
-                this.CreateSeriesTables(raf);
+            if (_msx.Statflag == TstatType.SERIES)
+                CreateSeriesTables(raf);
             else
-                this.CreateStatsTables(raf);
+                CreateStatsTables(raf);
 
-            this.WriteLine("");
+            WriteLine("");
             return 0;
         }
 
         void CreateSeriesTables(BinaryReader raf) {
 
             // Report on all requested nodes
-            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.NODE]; i++) {
-                if (!this.msx.Node[i].Rpt) continue;
-                this.dname = this.epanet.ENgetnodeid(i);
-                this.CreateTableHdr(ObjectTypes.NODE, SERIES_TABLE);
-                this.WriteNodeTable(raf, i, SERIES_TABLE);
+            for (int i = 1; i <= _msx.Nobjects[(int)ObjectTypes.NODE]; i++) {
+                if (!_msx.Node[i].Rpt) continue;
+                _dname = _epanet.ENgetnodeid(i);
+                CreateTableHdr(ObjectTypes.NODE, SERIES_TABLE);
+                WriteNodeTable(raf, i, SERIES_TABLE);
             }
 
             // Report on all requested links
-            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.LINK]; i++) {
-                if (!this.msx.Link[i].Rpt) continue;
-                this.dname = this.epanet.ENgetlinkid(i);
-                this.CreateTableHdr(ObjectTypes.LINK, SERIES_TABLE);
-                this.WriteLinkTable(raf, i, SERIES_TABLE);
+            for (int i = 1; i <= _msx.Nobjects[(int)ObjectTypes.LINK]; i++) {
+                if (!_msx.Link[i].Rpt) continue;
+                _dname = _epanet.ENgetlinkid(i);
+                CreateTableHdr(ObjectTypes.LINK, SERIES_TABLE);
+                WriteLinkTable(raf, i, SERIES_TABLE);
             }
         }
 
@@ -138,27 +138,27 @@ namespace Epanet.MSX {
         void CreateStatsTables(BinaryReader raf) {
             // check if any nodes to be reported
             var count = 0;
-            for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++)
-                count += this.msx.Node[j].Rpt ? 1 : 0;
+            for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.NODE]; j++)
+                count += _msx.Node[j].Rpt ? 1 : 0;
 
             // report on all requested nodes
             if (count > 0) {
-                this.CreateTableHdr(ObjectTypes.NODE, STATS_TABLE);
-                for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++) {
-                    if (this.msx.Node[j].Rpt) this.WriteNodeTable(raf, j, STATS_TABLE);
+                CreateTableHdr(ObjectTypes.NODE, STATS_TABLE);
+                for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.NODE]; j++) {
+                    if (_msx.Node[j].Rpt) WriteNodeTable(raf, j, STATS_TABLE);
                 }
             }
 
             // Check if any links to be reported
             count = 0;
-            for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++)
-                count += this.msx.Link[j].Rpt ? 1 : 0;
+            for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++)
+                count += _msx.Link[j].Rpt ? 1 : 0;
 
             // Report on all requested links
             if (count > 0) {
-                this.CreateTableHdr(ObjectTypes.LINK, STATS_TABLE);
-                for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++) {
-                    if (this.msx.Link[j].Rpt) this.WriteLinkTable(raf, j, STATS_TABLE);
+                CreateTableHdr(ObjectTypes.LINK, STATS_TABLE);
+                for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++) {
+                    if (_msx.Link[j].Rpt) WriteLinkTable(raf, j, STATS_TABLE);
                 }
             }
         }
@@ -166,98 +166,97 @@ namespace Epanet.MSX {
         void CreateTableHdr(ObjectTypes objType, int tableType) {
             if (tableType == SERIES_TABLE) {
 
-                this.tableHdr.Line1 = objType == ObjectTypes.NODE
-                    ? string.Format("<<< Node {0} >>>", this.dname)
-                    : string.Format("<<< Link {0} >>>", this.dname);
+                _tableHdr.line1 = objType == ObjectTypes.NODE
+                    ? string.Format("<<< Node {0} >>>", _dname)
+                    : string.Format("<<< Link {0} >>>", _dname);
 
-                this.tableHdr.Line2 = "Time   ";
-                this.tableHdr.Line3 = "hr:min ";
-                this.tableHdr.Line4 = "-------";
+                _tableHdr.line2 = "Time   ";
+                _tableHdr.line3 = "hr:min ";
+                _tableHdr.line4 = "-------";
             }
 
             if (tableType == STATS_TABLE) {
-                this.tableHdr.Line1 = "";
-                this.tableHdr.Line2 = string.Format("%-16s", StatsHdrs[tableType]);
-                if (objType == ObjectTypes.NODE) this.tableHdr.Line3 = "for Node        ";
-                else this.tableHdr.Line3 = "for Link        ";
-                this.tableHdr.Line4 = "----------------";
+                _tableHdr.line1 = "";
+                _tableHdr.line2 = string.Format("{0,-16}", statsHdrs[tableType]);
+                _tableHdr.line3 = objType == ObjectTypes.NODE ? "for Node        " : "for Link        ";
+                _tableHdr.line4 = "----------------";
             }
-            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.SPECIES]; i++) {
-                if (this.msx.Species[i].Rpt == 0) continue;
-                if (objType == ObjectTypes.NODE && this.msx.Species[i].Type == SpeciesType.WALL)
+            for (int i = 1; i <= _msx.Nobjects[(int)ObjectTypes.SPECIES]; i++) {
+                if (_msx.Species[i].Rpt == 0) continue;
+                if (objType == ObjectTypes.NODE && _msx.Species[i].Type == SpeciesType.WALL)
                     continue;
-                string s1 = string.Format("  {0,10}", this.msx.Species[i].Id);
-                this.tableHdr.Line2 += s1;
-                this.tableHdr.Line4 += "  ----------";
-                s1 = this.inpReader.MSXinp_getSpeciesUnits(i);
+                string s1 = string.Format("  {0,10}", _msx.Species[i].Id);
+                _tableHdr.line2 += s1;
+                _tableHdr.line4 += "  ----------";
+                s1 = _inpReader.MSXinp_getSpeciesUnits(i);
 
-                this.tableHdr.Line3 += string.Format("  {0,10}", s1);
+                _tableHdr.line3 += string.Format("  {0,10}", s1);
             }
-            if (this.msx.PageSize > 0 && this.msx.PageSize - _lineNum < 8) this.NewPage();
-            else this.WriteTableHdr();
+            if (_msx.PageSize > 0 && _msx.PageSize - _lineNum < 8) NewPage();
+            else WriteTableHdr();
         }
 
 
         void WriteTableHdr() {
-            if (this.msx.PageSize > 0 && this.msx.PageSize - _lineNum < 6) this.NewPage();
-            this.WriteLine("");
-            this.WriteLine(this.tableHdr.Line1);
-            this.WriteLine("");
-            this.WriteLine(this.tableHdr.Line2);
-            this.WriteLine(this.tableHdr.Line3);
-            this.WriteLine(this.tableHdr.Line4);
+            if (_msx.PageSize > 0 && _msx.PageSize - _lineNum < 6) NewPage();
+            WriteLine("");
+            WriteLine(_tableHdr.line1);
+            WriteLine("");
+            WriteLine(_tableHdr.line2);
+            WriteLine(_tableHdr.line3);
+            WriteLine(_tableHdr.line4);
         }
 
         void WriteNodeTable(BinaryReader raf, int j, int tableType) {
             int[] hrs = new int[1], mins = new int[1];
 
-            for (int i = 0; i < this.msx.Nperiods; i++) {
+            for (int i = 0; i < _msx.Nperiods; i++) {
                 if (tableType == SERIES_TABLE) {
-                    this.GetHrsMins(i, hrs, mins);
+                    GetHrsMins(i, hrs, mins);
                     _line = string.Format("{0:4}:{1:00}", hrs[0], mins[0]);
                 }
                 if (tableType == STATS_TABLE) {
-                    this.dname = this.epanet.ENgetnodeid(j);
-                    _line = string.Format("{0,-16}", this.dname);
+                    _dname = _epanet.ENgetnodeid(j);
+                    _line = string.Format("{0,-16}", _dname);
                 }
 
-                for (int m = 1; m <= this.msx.Nobjects[(int)ObjectTypes.SPECIES]; m++) {
-                    if (this.msx.Species[m].Rpt == 0) continue;
-                    if (this.msx.Species[m].Type == SpeciesType.WALL) continue;
-                    float c = this.@out.MSXout_getNodeQual(raf, i, j, m);
+                for (int m = 1; m <= _msx.Nobjects[(int)ObjectTypes.SPECIES]; m++) {
+                    if (_msx.Species[m].Rpt == 0) continue;
+                    if (_msx.Species[m].Type == SpeciesType.WALL) continue;
+                    float c = _out.MSXout_getNodeQual(raf, i, j, m);
                     string fmt = "  {0,10:F"
-                                 + this.msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
+                                 + _msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
                     _line += string.Format(fmt, c);
                 }
-                this.WriteLine(_line);
+                WriteLine(_line);
             }
         }
 
         void WriteLinkTable(BinaryReader raf, int j, int tableType) {
             int[] hrs = new int[1], mins = new int[1];
 
-            for (int k = 0; k < this.msx.Nperiods; k++) {
+            for (int k = 0; k < _msx.Nperiods; k++) {
                 if (tableType == SERIES_TABLE) {
-                    this.GetHrsMins(k, hrs, mins);
+                    GetHrsMins(k, hrs, mins);
                     _line = string.Format("{0,4}:{1:00}", hrs[0], mins[0]);
                 }
                 if (tableType == STATS_TABLE) {
-                    this.dname = this.epanet.ENgetlinkid(j);
-                    _line = string.Format("{0,-16}", this.dname);
+                    _dname = _epanet.ENgetlinkid(j);
+                    _line = string.Format("{0,-16}", _dname);
                 }
-                for (int m = 1; m <= this.msx.Nobjects[(int)ObjectTypes.SPECIES]; m++) {
-                    if (this.msx.Species[m].Rpt == 0) continue;
-                    float c = this.@out.MSXout_getLinkQual(raf, k, j, m);
+                for (int m = 1; m <= _msx.Nobjects[(int)ObjectTypes.SPECIES]; m++) {
+                    if (_msx.Species[m].Rpt == 0) continue;
+                    float c = _out.MSXout_getLinkQual(raf, k, j, m);
                     string fmt = "  {0,10:F"
-                                 + this.msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
+                                 + _msx.Species[m].Precision.ToString(NumberFormatInfo.InvariantInfo) + "}";
                     _line += string.Format(fmt, c);
                 }
-                this.WriteLine(_line);
+                WriteLine(_line);
             }
         }
 
         void GetHrsMins(int k, int[] hrs, int[] mins) {
-            long m = (this.msx.Rstart + k * this.msx.Rstep) / 60;
+            long m = (_msx.Rstart + k * _msx.Rstep) / 60;
             long h = m / 60;
             m = m - 60 * h;
             hrs[0] = (int)h;
@@ -267,18 +266,18 @@ namespace Epanet.MSX {
 
         void NewPage() {
             _lineNum = 1;
-            this.WriteLine(
+            WriteLine(
                     string.Format("\nPage {0,-3}                                             EPANET-MSX 1.0", _pageNum));
                 //(modified, FS-01/07/08)
-            this.WriteLine("");
-            if (_pageNum > 1) this.WriteTableHdr();
+            WriteLine("");
+            if (_pageNum > 1) WriteTableHdr();
             _pageNum++;
         }
 
 
         void WriteLine(string line) {
-            if (_lineNum == this.msx.PageSize)
-                this.NewPage();
+            if (_lineNum == _msx.PageSize)
+                NewPage();
 
             //if ( MSX.RptFile.file ) fprintf(MSX.RptFile.file, "  %s\n", line);   //(modified, FS-01/07/2008)
             //if(MSX.RptFile.getFileIO()!=null){

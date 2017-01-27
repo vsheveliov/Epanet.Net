@@ -48,7 +48,7 @@ namespace Epanet.Hydraulic.Models {
         private const double A4 = Math.PI * 2; // 2*PI
         private const double A8 = 4.61841319859; // 5.74*(PI/4)^.9
         private const double A9 = -8.685889638e-01; // -2/ln(10)
-        private const double AA = -1.5634601348; // -2*.9*2/ln(10)
+        // private const double AA = -1.5634601348; // -2*.9*2/ln(10)
         private const double AB = 3.28895476345e-03; // 5.74/(4000^.9)
         private const double AC = -5.14214965799e-03; // AA*AB
 
@@ -121,12 +121,12 @@ namespace Epanet.Hydraulic.Models {
         #region Chezy-Manning model calculator
 
         ///<summary>Chezy-Manning model calculator, which is implemented through the Hazen-Williams model.</summary>
-        public static void CMModelCalculator(
+        public static void CmModelCalculator(
             EpanetNetwork net,
             SimulationLink sl,
             out double invheadloss,
             out double flowcorrection) {
-            HWModelCalculator(net, sl, out invheadloss, out flowcorrection);
+            HwModelCalculator(net, sl, out invheadloss, out flowcorrection);
         }
 
         #endregion
@@ -134,7 +134,7 @@ namespace Epanet.Hydraulic.Models {
         #region Hazen-Williams model calculator
 
         ///<summary>Hazen-Williams model calculator.</summary>
-        public static void HWModelCalculator(
+        public static void HwModelCalculator(
             EpanetNetwork net,
             SimulationLink sL,
             out double invHeadLoss,

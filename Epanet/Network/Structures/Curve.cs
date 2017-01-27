@@ -37,18 +37,18 @@ namespace Epanet.Network.Structures {
         public void GetCoeff(FieldsMap fMap, double q, out double h0, out double r) {
             q *= fMap.GetUnits(FieldType.FLOW);
 
-            int npts = this.points.Count;
+            int npts = points.Count;
 
             var k2 = 0;
-            while (k2 < npts && this.points[k2].X < q) k2++;
+            while (k2 < npts && points[k2].X < q) k2++;
 
             if (k2 == 0) k2++;
             else if (k2 == npts) k2--;
             
             int k1 = k2 - 1;
 
-            r = (this.points[k2].Y - this.points[k1].Y) / (this.points[k2].X - this.points[k1].X);
-            h0 = this.points[k1].Y - r * this.points[k1].X;
+            r = (points[k2].Y - points[k1].Y) / (points[k2].X - points[k1].X);
+            h0 = points[k1].Y - r * points[k1].X;
 
             h0 = h0 / fMap.GetUnits(FieldType.HEAD);
             r = r * fMap.GetUnits(FieldType.FLOW) / fMap.GetUnits(FieldType.HEAD);
@@ -58,14 +58,14 @@ namespace Epanet.Network.Structures {
         ///<summary>Curve type.</summary>
         public CurveType Type { get; set; } //TODO: parse it correctly
 
-        public List<EnPoint> Points { get { return this.points; } }
+        public List<EnPoint> Points { get { return points; } }
 
         /// <summary>Compute the linear interpolation of a 2d cartesian graph.</summary>
         /// <param name="x">The abscissa value.</param>
         /// <returns>The interpolated value.</returns>
         public double Interpolate(double x) {
-            var p = this.points;
-            int m = this.points.Count - 1;
+            var p = points;
+            int m = points.Count - 1;
 
             if (x <= p[0].X) return p[0].Y;
 
@@ -87,14 +87,14 @@ namespace Epanet.Network.Structures {
 
         #region partial implementation of IList<EnPoint>
 
-        public void Add(double x, double y) { this.points.Add(new EnPoint(x, y)); }
+        public void Add(double x, double y) { points.Add(new EnPoint(x, y)); }
 
-        IEnumerator IEnumerable.GetEnumerator() { return this.points.GetEnumerator(); }
-        public IEnumerator<EnPoint> GetEnumerator() { return this.points.GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() { return points.GetEnumerator(); }
+        public IEnumerator<EnPoint> GetEnumerator() { return points.GetEnumerator(); }
         
-        public int Count { get { return this.points.Count; } }
+        public int Count { get { return points.Count; } }
         public EnPoint this[int index] {
-            get { return this.points[index]; }
+            get { return points[index]; }
         }
 
         #endregion

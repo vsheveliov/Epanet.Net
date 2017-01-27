@@ -22,16 +22,16 @@ namespace Epanet.Network.Structures {
     ///<summary>Report field properties.</summary>
     public class Field {
         ///<summary>Lower/upper report limits.</summary>
-        private readonly double[] rptLim = {0d, 0d, 0d};
+        private readonly double[] _rptLim = {0d, 0d, 0d};
 
         ///<summary>Init field name, precision, report limit and state.</summary>
         /// <param name="name">Field name.</param>
         public Field(string name) {
-            this.Name = name;
-            this.Enabled = false;
-            this.Precision = 2;
-            this.SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
-            this.SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
+            Name = name;
+            Enabled = false;
+            Precision = 2;
+            SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
+            SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
         }
 
         ///<summary>Name of reported variable.</summary>
@@ -46,8 +46,8 @@ namespace Epanet.Network.Structures {
         ///<summary>Enabled if in table.</summary>
         public bool Enabled { get; set; }
 
-        public void SetRptLim(RangeType type, double value) { this.rptLim[(int)type] = value; }
-        public double GetRptLim(RangeType type) { return this.rptLim[(int)type]; }
+        public void SetRptLim(RangeType type, double value) { _rptLim[(int)type] = value; }
+        public double GetRptLim(RangeType type) { return _rptLim[(int)type]; }
     }
 
 }

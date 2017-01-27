@@ -26,19 +26,19 @@ namespace Epanet.Hydraulic.IO {
     ///<summary>Hydraulic binary file reader class.</summary>
     public class HydraulicReader:IEnumerable<AwareStep>, IDisposable {
 
-        private readonly AwareStep.HeaderInfo headerInfo;
+        private readonly AwareStep.HeaderInfo _headerInfo;
 
 
         ///<summary>Current hydraulic step snapshot.</summary>
-        private AwareStep curStep;
+        private AwareStep _curStep;
 
         ///<summary>File input stream.</summary>
-        private BinaryReader inputStream;
+        private BinaryReader _inputStream;
 
 
         public HydraulicReader(BinaryReader reader) {
-            this.inputStream = reader;
-            this.headerInfo = AwareStep.ReadHeader(reader);
+            _inputStream = reader;
+            _headerInfo = AwareStep.ReadHeader(reader);
         }
 
         public HydraulicReader(string hydFile)
@@ -51,63 +51,63 @@ namespace Epanet.Hydraulic.IO {
         /// <param name="time">Step instant.</param>
         /// <returns>Reference to step snapshot.</returns>
         public AwareStep GetStep(long time) {
-            if (this.curStep != null) {
-                if (this.curStep.Time == time) return this.curStep;
+            if (_curStep != null) {
+                if (_curStep.Time == time) return _curStep;
             }
             
-            while (this.curStep == null || this.curStep.Time < time)
-                this.curStep = new AwareStep(this.inputStream, this.headerInfo);
+            while (_curStep == null || _curStep.Time < time)
+                _curStep = new AwareStep(_inputStream, _headerInfo);
 
-            return this.curStep.Time >= time ? this.curStep : null;
+            return _curStep.Time >= time ? _curStep : null;
 
         }
 
         /// <summary>Close the inputStream.</summary>
         public void Close() {
-            if (this.inputStream != null) {
-                ((IDisposable)this.inputStream).Dispose();
-                this.inputStream = null;
+            if (_inputStream != null) {
+                ((IDisposable)_inputStream).Dispose();
+                _inputStream = null;
             }
         }
 
         /// <summary>Get the epanet hydraulic file version.</summary>
         /// <value>Version number.</value>
-        public int Version { get { return this.headerInfo.Version; } }
+        public int Version { get { return _headerInfo.version; } }
 
         /// <summary>Get the number of nodes in the file.</summary>
         /// <value>Number of nodes.</value>
-        public int Nodes { get { return this.headerInfo.Nodes; } }
+        public int Nodes { get { return _headerInfo.nodes; } }
 
         /// <summary>Get the number of links in the file.</summary>
         /// <value>Number of links.</value>
-        public int Links { get { return this.headerInfo.Links; } }
+        public int Links { get { return _headerInfo.links; } }
 
-        public long ReportStart { get { return this.headerInfo.Rstart; } }
+        public long ReportStart { get { return _headerInfo.rstart; } }
 
-        public long ReportStep { get { return this.headerInfo.Rstep; } }
+        public long ReportStep { get { return _headerInfo.rstep; } }
 
-        public long Duration { get { return this.headerInfo.Duration; } }
+        public long Duration { get { return _headerInfo.duration; } }
 
         ///<summary>Get step snapshot iterator.</summary>
         /// <returns>StepSnapshot iterator.</returns>
-        public IEnumerator<AwareStep> GetEnumerator() { return this.Steps.GetEnumerator(); }
+        public IEnumerator<AwareStep> GetEnumerator() { return Steps.GetEnumerator(); }
 
-        IEnumerator IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
 
         ///<summary>Step snapshot iterator class</summary>
         private IEnumerable<AwareStep> Steps {
             get {
-                if (this.inputStream == null)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_inputStream == null)
+                    throw new ObjectDisposedException(GetType().FullName);
 
-                lock (this.inputStream) {
+                lock (_inputStream) {
 
-                    this.inputStream.BaseStream.Position = sizeof(int) * 6;
+                    _inputStream.BaseStream.Position = sizeof(int) * 6;
                     AwareStep stp;
 
                     do {
                         try {
-                            stp = new AwareStep(this.inputStream, this.headerInfo);
+                            stp = new AwareStep(_inputStream, _headerInfo);
                         }
                         catch (IOException e) {
                             throw new SystemException(e.Message);
@@ -122,7 +122,7 @@ namespace Epanet.Hydraulic.IO {
             }
         }
 
-        public void Dispose() { this.Close(); }
+        public void Dispose() { Close(); }
     }
 
 }

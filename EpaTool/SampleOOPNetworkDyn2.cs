@@ -78,7 +78,7 @@ namespace Epanet {
             TraceSource log = new TraceSource(typeof(SampleOOPNetwork2).FullName, SourceLevels.All);
             NullParser nP = (NullParser)InputParser.Create(FileType.NULL_FILE);
             Debug.Assert(nP != null);
-            nP.Parse(net, null);
+            nP.Parse(new EpanetNetwork(), null);
 
             //// Simulate hydraulics and get streaming/dynamic results
             new DynamicSimulation(net, log).Simulate();
@@ -93,7 +93,7 @@ namespace Epanet {
             protected override long NextHyd() {
                 long l1 = base.NextHyd();
                 Console.Write("Time : " + l1.GetClockTime() + ", nodes heads : ");
-                var fmap = base.Net.FieldsMap;
+                var fmap = base.net.FieldsMap;
 
                 foreach (SimulationNode node in base.Nodes) {
                     double H = fmap.RevertUnit(FieldType.HEAD, node.SimHead);

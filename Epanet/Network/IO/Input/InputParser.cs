@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 using Epanet.Enums;
@@ -30,22 +31,19 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>Abstract input file parser.</summary>
     public abstract class InputParser {
-        protected string FileName;
         protected Network net;
 
         ///<summary>Reference to the error logger.</summary>
-        protected readonly TraceSource Log = new TraceSource("epanet", SourceLevels.All);
-        protected readonly List<ENException> Errors = new List<ENException>(Constants.MAXERRS + 1);
+        protected readonly TraceSource log = new TraceSource("epanet", SourceLevels.All);
+        protected readonly List<ENException> errors = new List<ENException>();
 
-        protected ErrorCode LogException(ENException ex) {
-            this.Errors.Add(ex);
+        protected void LogException(ENException ex) {
+            errors.Add(ex);
             
-            this.Log.Error(ex);
+            log.Error(ex);
 
-            if(this.Errors.Count > Constants.MAXERRS)
+            if(errors.Count > Constants.MAXERRS)
                 throw new ENException(ErrorCode.Err200);
-
-            return ex.Code;
         }
 
         public static InputParser Create(FileType type) {
@@ -65,10 +63,7 @@ namespace Epanet.Network.IO.Input {
         }
 
         public abstract Network Parse(Network net, string fileName);
-
-
-
-
+        
         /// <summary>
         ///     Parses string S into N tokens stored in T.
         ///     Words between " " are stored 7as a single token.
@@ -126,11 +121,11 @@ namespace Epanet.Network.IO.Input {
 
         ///<summary>Prepare the hydraulic network for simulation.</summary>
         protected void Convert() {
-            InitTanks(this.net);
-            InitPumps(this.net);
-            InitPatterns(this.net);
-            this.CheckUnlinked();
-            ConvertUnits(this.net);
+            InitTanks(net);
+            InitPumps(net);
+            InitPatterns(net);
+            CheckUnlinked();
+            ConvertUnits(net);
         }
 
         ///<summary>Adjust simulation configurations.</summary>
@@ -230,8 +225,8 @@ namespace Epanet.Network.IO.Input {
                     node.Demands.Add(node.PrimaryDemand);
 
                 foreach (Demand d  in  node.Demands) {
-                    if (d.Pattern == null)
-                        d.Pattern = defpat;
+                    if (d.pattern == null)
+                        d.pattern = defpat;
                 }
             }
 
@@ -306,7 +301,9 @@ namespace Epanet.Network.IO.Input {
 
 
             // FIXME:Tanks and reservoirs here?
-            foreach (Tank tk  in  net.Tanks) {
+            // foreach (var res in net.Reservoirs) res.H0 = res.Elevation + res.H0 / fMap.GetUnits(FieldType.ELEV);
+
+            foreach (Tank tk  in  net.Nodes.OfType<Tank>()) {
                 tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldType.ELEV);
                 tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldType.ELEV);
                 tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldType.ELEV);
@@ -326,23 +323,23 @@ namespace Epanet.Network.IO.Input {
             net.KBulk = net.KBulk / Constants.SECperDAY;
             net.KWall = net.KWall / Constants.SECperDAY;
 
-            foreach (Link lk  in  net.Links) {
-                switch (lk.Type) {
+            foreach (Link link  in  net.Links) {
+                switch (link.Type) {
                 case LinkType.CV:
                 case LinkType.PIPE:
                     if (net.FormFlag == FormType.DW)
-                        lk.Kc = lk.Kc / (1000.0 * fMap.GetUnits(FieldType.ELEV));
-                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
-                    lk.Lenght = lk.Lenght / fMap.GetUnits(FieldType.LENGTH);
+                        link.Kc = link.Kc / (1000.0 * fMap.GetUnits(FieldType.ELEV));
+                    link.Diameter = link.Diameter / fMap.GetUnits(FieldType.DIAM);
+                    link.Lenght = link.Lenght / fMap.GetUnits(FieldType.LENGTH);
 
-                    lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
+                    link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
 
-                    lk.Kb = lk.Kb / Constants.SECperDAY;
-                    lk.Kw = lk.Kw / Constants.SECperDAY;
+                    link.Kb = link.Kb / Constants.SECperDAY;
+                    link.Kw = link.Kw / Constants.SECperDAY;
                     break;
 
                 case LinkType.PUMP:
-                    Pump pump = (Pump)lk;
+                    Pump pump = (Pump)link;
 
                     if (pump.Ptype == PumpType.CONST_HP) {
                         if (net.UnitsFlag == UnitsType.SI)
@@ -363,46 +360,46 @@ namespace Epanet.Network.IO.Input {
                     break;
 
                 default:
-                    lk.Diameter = lk.Diameter / fMap.GetUnits(FieldType.DIAM);
-                    lk.Km = 0.02517 * lk.Km / Math.Pow(lk.Diameter, 2) / Math.Pow(lk.Diameter, 2);
+                    link.Diameter = link.Diameter / fMap.GetUnits(FieldType.DIAM);
+                    link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
                    
-                    if (!lk.Kc.IsMissing())
-                        switch (lk.Type) {
+                    if (!link.Kc.IsMissing())
+                        switch (link.Type) {
                         case LinkType.FCV:
-                            lk.Kc = lk.Kc / fMap.GetUnits(FieldType.FLOW);
+                            link.Kc = link.Kc / fMap.GetUnits(FieldType.FLOW);
                             break;
                         case LinkType.PRV:
                         case LinkType.PSV:
                         case LinkType.PBV:
-                            lk.Kc = lk.Kc / fMap.GetUnits(FieldType.PRESSURE);
+                            link.Kc = link.Kc / fMap.GetUnits(FieldType.PRESSURE);
                             break;
                         }
 
                     break;
                 }
 
-                lk.initResistance(net.FormFlag, net.HExp);
+                link.InitResistance(net.FormFlag, net.HExp);
             }
 
-            foreach (Control c  in  net.Controls) {
+            foreach (Control ctl  in  net.Controls) {
 
 
-                if (c.Link == null) continue;
-                if (c.Node != null) {
-                    c.Grade = c.Node.Type == NodeType.JUNC
-                        ? c.Node.Elevation + c.Grade / fMap.GetUnits(FieldType.PRESSURE)
-                        : c.Node.Elevation + c.Grade / fMap.GetUnits(FieldType.ELEV);
+                if (ctl.Link == null) continue;
+                if (ctl.Node != null) {
+                    ctl.Grade = ctl.Node.Type == NodeType.JUNC
+                        ? ctl.Node.Elevation + ctl.Grade / fMap.GetUnits(FieldType.PRESSURE)
+                        : ctl.Node.Elevation + ctl.Grade / fMap.GetUnits(FieldType.ELEV);
                 }
 
-                if (!c.Setting.IsMissing())
-                    switch (c.Link.Type) {
+                if (!ctl.Setting.IsMissing())
+                    switch (ctl.Link.Type) {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
-                        c.Setting = c.Setting / fMap.GetUnits(FieldType.PRESSURE);
+                        ctl.Setting = ctl.Setting / fMap.GetUnits(FieldType.PRESSURE);
                         break;
                     case LinkType.FCV:
-                        c.Setting = c.Setting / fMap.GetUnits(FieldType.FLOW);
+                        ctl.Setting = ctl.Setting / fMap.GetUnits(FieldType.FLOW);
                         break;
                     }
             }
@@ -414,60 +411,62 @@ namespace Epanet.Network.IO.Input {
             double h0 = 0.0, h1 = 0.0, h2 = 0.0, q1 = 0.0, q2 = 0.0;
 
             foreach (Pump pump  in  net.Pumps) {
-                // Constant Hp pump
-                if (pump.Ptype == PumpType.CONST_HP) {
-                    pump.H0 = 0.0;
-                    pump.FlowCoefficient = -8.814 * pump.Km;
-                    pump.N = -1.0;
-                    pump.Hmax = Constants.BIG;
-                    pump.Qmax = Constants.BIG;
-                    pump.Q0 = 1.0;
-                    continue;
-                }
+                
+                switch (pump.Ptype) {
+                    case PumpType.CONST_HP:
+                        // Constant Hp pump
+                        pump.H0 = 0.0;
+                        pump.FlowCoefficient = -8.814 * pump.Km;
+                        pump.N = -1.0;
+                        pump.Hmax = Constants.BIG;
+                        pump.Qmax = Constants.BIG;
+                        pump.Q0 = 1.0;
+                        continue;
+                    case PumpType.NOCURVE:
+                        // Set parameters for pump curves
+                        Curve curve = pump.HCurve;
+                        if (curve == null) {
+                            throw new ENException(ErrorCode.Err226, pump.Name);
+                        }
 
-                // Set parameters for pump curves
-                else if (pump.Ptype == PumpType.NOCURVE) {
-                    Curve curve = pump.HCurve;
-                    if (curve == null) {
-                        throw new ENException(ErrorCode.Err226, pump.Name);
-                    }
+                        int n = curve.Count;
 
-                    int n = curve.Count;
+                        if (n == 1) {
+                            pump.Ptype = PumpType.POWER_FUNC;
+                            var pt = curve[0];
+                            q1 = pt.X;
+                            h1 = pt.Y;
+                            h0 = 1.33334 * h1;
+                            q2 = 2.0 * q1;
+                            h2 = 0.0;
+                        }
+                        else if (n == 3 && curve[0].X == 0.0) {
+                            pump.Ptype = PumpType.POWER_FUNC;
+                            h0 = curve[0].Y;
+                            q1 = curve[1].X;
+                            h1 = curve[1].Y;
+                            q2 = curve[2].X;
+                            h2 = curve[2].Y;
+                        }
+                        else
+                            pump.Ptype = PumpType.CUSTOM;
 
-                    if (n == 1) {
-                        pump.Ptype = PumpType.POWER_FUNC;
-                        var pt = curve[0];
-                        q1 = pt.X;
-                        h1 = pt.Y;
-                        h0 = 1.33334 * h1;
-                        q2 = 2.0 * q1;
-                        h2 = 0.0;
-                    }
-                    else if (n == 3 && curve[0].X == 0.0) {
-                        pump.Ptype = PumpType.POWER_FUNC;
-                        h0 = curve[0].Y;
-                        q1 = curve[1].X;
-                        h1 = curve[1].Y;
-                        q2 = curve[2].X;
-                        h2 = curve[2].Y;
-                    }
-                    else
-                        pump.Ptype = PumpType.CUSTOM;
-
-                    // Compute shape factors & limits of power function pump curves
-                    if (pump.Ptype == PumpType.POWER_FUNC) {
-                        double a, b, c;
-                        if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                            throw new ENException(ErrorCode.Err227, pump.Name);
+                        // Compute shape factors & limits of power function pump curves
+                        if (pump.Ptype == PumpType.POWER_FUNC) {
+                            double a, b, c;
+                            if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
+                                throw new ENException(ErrorCode.Err227, pump.Name);
 
 
-                        pump.H0 = -a;
-                        pump.FlowCoefficient = -b;
-                        pump.N = c;
-                        pump.Q0 = q1;
-                        pump.Qmax = Math.Pow(-a / b, 1.0 / c);
-                        pump.Hmax = h0;
-                    }
+                            pump.H0 = -a;
+                            pump.FlowCoefficient = -b;
+                            pump.N = c;
+                            pump.Q0 = q1;
+                            pump.Qmax = Math.Pow(-a / b, 1.0 / c);
+                            pump.Hmax = h0;
+                        }
+
+                        break;
                 }
 
                 // Assign limits to custom pump curves
@@ -492,97 +491,25 @@ namespace Epanet.Network.IO.Input {
         ///<summary>Initialize patterns.</summary>
         /// <param name="net">Hydraulic network reference.</param>
         private static void InitPatterns(Network net) {
-            foreach (Pattern par  in  net.Patterns)
-                if (par.Count == 0)
-                    par.Add(1.0);
-        }
-
-        // TODO: performance testing
-
-        ///<summary>Check for unlinked nodes.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
-        private void CheckUnlinked1(Network net) {
-            //int[] marked = new int[net.Nodes.Count + 1];
-            var nodes = net.Nodes;
-            Dictionary<Node, int> marked = new Dictionary<Node, int>(nodes.Count + 1);
-
-            int err = 0;
-
-            foreach (Link link in net.Links) {
-                marked[link.FirstNode] = 1;
-                marked[link.SecondNode] = 1;
-            }
-
-            foreach (Node node in nodes) {
-                if (marked[node] == 0) {
-                    err++;
-                    this.LogException(new ENException(ErrorCode.Err233, node.Name));
-                }
-
-                if (err >= Constants.MAXERRS)
-                    break;
-            }
-
-            //        if (err > 0)
-            //            throw new ENException(200);
+            foreach (Pattern pat  in  net.Patterns)
+                if (pat.Count == 0)
+                    pat.Add(1.0);
         }
 
         ///<summary>Check for unlinked nodes.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
-        private void CheckUnlinked2() {
-            //int[] marked = new int[net.Nodes.Count + 1];
-            var nodes = net.Nodes;
-            Dictionary<string, int> marked = new Dictionary<string, int>(
-                nodes.Count + 1,
-                StringComparer.OrdinalIgnoreCase);
-
-            foreach (Link link in net.Links) {
-                marked[link.FirstNode.Name] = 1;
-                marked[link.SecondNode.Name] = 1;
-            }
-
-            foreach (Node node in nodes) {
-                if (marked[node.Name] == 0) {
-                    this.LogException(new ENException(ErrorCode.Err233, node.Name));
-                }
-
-            }
-
-        }
-
-        ///<summary>Check for unlinked nodes.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
-        private void checkUnlinked() {
-            int[] marked = new int[net.Nodes.Count + 1];
-            var nodes = net.Nodes;
-
-            foreach(Link link in net.Links) {
-                marked[nodes.IndexOf(link.FirstNode)]++;
-                marked[nodes.IndexOf(link.SecondNode)]++;
-            }
-
-            for (int i = 0; i < nodes.Count; i++) {
-                if (marked[i] == 0) {
-                    this.LogException(new ENException(ErrorCode.Err233, nodes[i].Name));
-                }
-            }
-
-        }
-
-        ///<summary>Check for unlinked nodes.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
         private void CheckUnlinked() {
-            int[] marked = new int[this.net.Nodes.Count + 1];
-            var nodes = this.net.Nodes;
+            //int[] marked = new int[net.Nodes.Count + 1];
+            var nodes = net.Nodes;
+            var marked = new Dictionary<Node, bool>(nodes.Count + 1);
 
-            foreach (Link link in this.net.Links) {
-                marked[nodes.IndexOf(link.FirstNode)]++;
-                marked[nodes.IndexOf(link.SecondNode)]++;
+            foreach (Link link in net.Links) {
+                marked[link.FirstNode] = true;
+                marked[link.SecondNode] = true;
             }
 
-            for (int i = 0; i < nodes.Count; i++) {
-                if (marked[i] == 0) {
-                    this.LogException(new ENException(ErrorCode.Err233, nodes[i].Name));
+            foreach (Node node in nodes) {
+                if (!marked[node]) {
+                    LogException(new ENException(ErrorCode.Err233, node.Name));
                 }
             }
 
@@ -598,7 +525,7 @@ namespace Epanet.Network.IO.Input {
         /// <param name="b">pump curve coeffs. (H = a-bQ^c)</param>
         /// <param name="c">pump curve coeffs. (H = a-bQ^c)</param>
         ///  <returns>Returns true if sucessful, false otherwise.</returns>
-        protected static bool GetPowerCurve(double h0, double h1, double h2, double q1, double q2, out double a, out double b, out double c) 
+        private static bool GetPowerCurve(double h0, double h1, double h2, double q1, double q2, out double a, out double b, out double c) 
         {
             a = b = c = 0;
 

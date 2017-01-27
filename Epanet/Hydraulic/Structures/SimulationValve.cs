@@ -38,24 +38,24 @@ namespace Epanet.Hydraulic.Structures {
         /// </summary>
         private void ValveCoeff(EpanetNetwork net) {
             // Valve is closed. Use a very small matrix coeff.
-            if (this.status <= StatType.CLOSED) {
-                this.invHeadLoss = 1.0 / Constants.CBIG;
-                this.flowCorrection = this.flow;
+            if (status <= StatType.CLOSED) {
+                invHeadLoss = 1.0 / Constants.CBIG;
+                flowCorrection = flow;
                 return;
             }
 
             // Account for any minor headloss through the valve
-            if (this.Km > 0.0) {
-                double p = 2.0 * this.Km * Math.Abs(this.flow);
+            if (Km > 0.0) {
+                double p = 2.0 * Km * Math.Abs(flow);
                 if (p < net.RQtol)
                     p = net.RQtol;
 
-                this.invHeadLoss = 1.0 / p;
-                this.flowCorrection = this.flow / 2.0;
+                invHeadLoss = 1.0 / p;
+                flowCorrection = flow / 2.0;
             }
             else {
-                this.invHeadLoss = 1.0 / net.RQtol;
-                this.flowCorrection = this.flow;
+                invHeadLoss = 1.0 / net.RQtol;
+                flowCorrection = flow;
             }
         }
 
@@ -65,155 +65,155 @@ namespace Epanet.Hydraulic.Structures {
         /// </summary>
         private void ValveCoeff(EpanetNetwork net, double km) {
             // Valve is closed. Use a very small matrix coeff.
-            if (this.status <= StatType.CLOSED) {
-                this.invHeadLoss = 1.0 / Constants.CBIG;
-                this.flowCorrection = this.flow;
+            if (status <= StatType.CLOSED) {
+                invHeadLoss = 1.0 / Constants.CBIG;
+                flowCorrection = flow;
                 return;
             }
 
             // Account for any minor headloss through the valve
             if (km > 0.0) {
-                double p = 2.0 * km * Math.Abs(this.flow);
+                double p = 2.0 * km * Math.Abs(flow);
                 if (p < net.RQtol)
                     p = net.RQtol;
 
-                this.invHeadLoss = 1.0 / p;
-                this.flowCorrection = this.flow / 2.0;
+                invHeadLoss = 1.0 / p;
+                flowCorrection = flow / 2.0;
             }
             else {
-                this.invHeadLoss = 1.0 / net.RQtol;
-                this.flowCorrection = this.flow;
+                invHeadLoss = 1.0 / net.RQtol;
+                flowCorrection = flow;
             }
         }
 
         /// <summary>Computes P & Y coeffs. for pressure breaker valve.</summary>
         private void PbvCoeff(EpanetNetwork net) {
-            if (this.setting.IsMissing() || this.setting == 0.0)
-                this.ValveCoeff(net);
-            else if (this.Km * (this.flow * this.flow) > this.setting)
-                this.ValveCoeff(net);
+            if (setting.IsMissing() || setting == 0.0)
+                ValveCoeff(net);
+            else if (Km * (flow * flow) > setting)
+                ValveCoeff(net);
             else {
-                this.invHeadLoss = Constants.CBIG;
-                this.flowCorrection = this.setting * Constants.CBIG;
+                invHeadLoss = Constants.CBIG;
+                flowCorrection = setting * Constants.CBIG;
             }
         }
 
         /// <summary>Computes P & Y coeffs. for throttle control valve.</summary>
         private void TcvCoeff(EpanetNetwork net) {
-            double km = this.Km;
+            double km = Km;
 
-            if (!this.setting.IsMissing())
-                km = 0.02517 * this.setting / Math.Pow(this.Diameter, 4);
+            if (!setting.IsMissing())
+                km = 0.02517 * setting / Math.Pow(Diameter, 4);
 
-            this.ValveCoeff(net, km);
+            ValveCoeff(net, km);
         }
 
         /// <summary>Computes P & Y coeffs. for general purpose valve.</summary>
         private void GpvCoeff(EpanetNetwork net, IList<Curve> curves) {
-            if (this.status == StatType.CLOSED)
-                this.ValveCoeff(net);
+            if (status == StatType.CLOSED)
+                ValveCoeff(net);
             else {
-                double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
+                double q = Math.Max(Math.Abs(flow), Constants.TINY);
                 double h0, r;
-                curves[(int)Math.Round(this.setting)].GetCoeff(net.FieldsMap, q, out h0, out r);
-                this.invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
-                this.flowCorrection = this.invHeadLoss * (h0 + r * q) * Utilities.GetSignal(this.flow);
+                curves[(int)Math.Round(setting)].GetCoeff(net.FieldsMap, q, out h0, out r);
+                invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
+                flowCorrection = invHeadLoss * (h0 + r * q) * Utilities.GetSignal(flow);
             }
         }
 
         /// <summary>Updates status of a flow control valve.</summary>
         public StatType FcvStatus(EpanetNetwork net, StatType s) {
             StatType stat = s;
-            if (this.First.SimHead - this.Second.SimHead < -net.HTol) stat = StatType.XFCV;
-            else if (this.flow < -net.QTol) stat = StatType.XFCV;
-            else if (s == StatType.XFCV && this.flow >= this.setting) stat = StatType.ACTIVE;
+            if (First.SimHead - Second.SimHead < -net.HTol) stat = StatType.XFCV;
+            else if (flow < -net.QTol) stat = StatType.XFCV;
+            else if (s == StatType.XFCV && flow >= setting) stat = StatType.ACTIVE;
             return stat;
         }
 
 
         /// <summary>Computes solution matrix coeffs. for pressure reducing valves.</summary>
-        private void PrvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
-            int k = this.Index;
-            int n1 = smat.GetRow(this.first.Index);
-            int n2 = smat.GetRow(this.second.Index);
+        private void PrvCoeff(EpanetNetwork net, LsVariables ls, SparseMatrix smat) {
+            int k = Index;
+            int n1 = smat.GetRow(first.Index);
+            int n2 = smat.GetRow(second.Index);
 
-            double hset = this.second.Elevation + this.setting;
+            double hset = second.Elevation + setting;
 
-            if (this.status == StatType.ACTIVE) {
+            if (status == StatType.ACTIVE) {
 
-                this.invHeadLoss = 0.0;
-                this.flowCorrection = this.flow + ls.GetNodalInFlow(this.second);
+                invHeadLoss = 0.0;
+                flowCorrection = flow + ls.GetNodalInFlow(second);
                 ls.AddRhsCoeff(n2, +(hset * Constants.CBIG));
                 ls.AddAii(n2, +Constants.CBIG);
-                if (ls.GetNodalInFlow(this.second) < 0.0)
-                    ls.AddRhsCoeff(n1, +ls.GetNodalInFlow(this.second));
+                if (ls.GetNodalInFlow(second) < 0.0)
+                    ls.AddRhsCoeff(n1, +ls.GetNodalInFlow(second));
 
                 return;
             }
 
-            this.ValveCoeff(net);
+            ValveCoeff(net);
 
-            ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
-            ls.AddAii(n1, +this.invHeadLoss);
-            ls.AddAii(n2, +this.invHeadLoss);
-            ls.AddRhsCoeff(n1, +(this.flowCorrection - this.flow));
-            ls.AddRhsCoeff(n2, -(this.flowCorrection - this.flow));
+            ls.AddAij(smat.GetNdx(k), -invHeadLoss);
+            ls.AddAii(n1, +invHeadLoss);
+            ls.AddAii(n2, +invHeadLoss);
+            ls.AddRhsCoeff(n1, +(flowCorrection - flow));
+            ls.AddRhsCoeff(n2, -(flowCorrection - flow));
         }
 
 
         /// <summary>Computes solution matrix coeffs. for pressure sustaining valve.</summary>
-        private void PsvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
-            int k = this.Index;
-            int n1 = smat.GetRow(this.first.Index);
-            int n2 = smat.GetRow(this.second.Index);
-            double hset = this.first.Elevation + this.setting;
+        private void PsvCoeff(EpanetNetwork net, LsVariables ls, SparseMatrix smat) {
+            int k = Index;
+            int n1 = smat.GetRow(first.Index);
+            int n2 = smat.GetRow(second.Index);
+            double hset = first.Elevation + setting;
 
-            if (this.status == StatType.ACTIVE) {
-                this.invHeadLoss = 0.0;
-                this.flowCorrection = this.flow - ls.GetNodalInFlow(this.first);
+            if (status == StatType.ACTIVE) {
+                invHeadLoss = 0.0;
+                flowCorrection = flow - ls.GetNodalInFlow(first);
                 ls.AddRhsCoeff(n1, +(hset * Constants.CBIG));
                 ls.AddAii(n1, +Constants.CBIG);
-                if (ls.GetNodalInFlow(this.first) > 0.0) ls.AddRhsCoeff(n2, +ls.GetNodalInFlow(this.first));
+                if (ls.GetNodalInFlow(first) > 0.0) ls.AddRhsCoeff(n2, +ls.GetNodalInFlow(first));
                 return;
             }
 
-            this.ValveCoeff(net);
-            ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
-            ls.AddAii(n1, +this.invHeadLoss);
-            ls.AddAii(n2, +this.invHeadLoss);
-            ls.AddRhsCoeff(n1, +(this.flowCorrection - this.flow));
-            ls.AddRhsCoeff(n2, -(this.flowCorrection - this.flow));
+            ValveCoeff(net);
+            ls.AddAij(smat.GetNdx(k), -invHeadLoss);
+            ls.AddAii(n1, +invHeadLoss);
+            ls.AddAii(n2, +invHeadLoss);
+            ls.AddRhsCoeff(n1, +(flowCorrection - flow));
+            ls.AddRhsCoeff(n2, -(flowCorrection - flow));
         }
 
         /// <summary>Computes solution matrix coeffs. for flow control valve.</summary>
-        private void FcvCoeff(EpanetNetwork net, LSVariables ls, SparseMatrix smat) {
-            int k = this.Index;
-            double q = this.setting;
-            int n1 = smat.GetRow(this.first.Index);
-            int n2 = smat.GetRow(this.second.Index);
+        private void FcvCoeff(EpanetNetwork net, LsVariables ls, SparseMatrix smat) {
+            int k = Index;
+            double q = setting;
+            int n1 = smat.GetRow(first.Index);
+            int n2 = smat.GetRow(second.Index);
 
             // If valve active, break network at valve and treat
             // flow setting as external demand at upstream node
             // and external supply at downstream node.
-            if (this.status == StatType.ACTIVE) {
-                ls.AddNodalInFlow(this.first.Index, -q);
+            if (status == StatType.ACTIVE) {
+                ls.AddNodalInFlow(first.Index, -q);
                 ls.AddRhsCoeff(n1, -q);
-                ls.AddNodalInFlow(this.second.Index, +q);
+                ls.AddNodalInFlow(second.Index, +q);
                 ls.AddRhsCoeff(n2, +q);
-                this.invHeadLoss = 1.0 / Constants.CBIG;
-                ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
-                ls.AddAii(n1, +this.invHeadLoss);
-                ls.AddAii(n2, +this.invHeadLoss);
-                this.flowCorrection = this.flow - q;
+                invHeadLoss = 1.0 / Constants.CBIG;
+                ls.AddAij(smat.GetNdx(k), -invHeadLoss);
+                ls.AddAii(n1, +invHeadLoss);
+                ls.AddAii(n2, +invHeadLoss);
+                flowCorrection = flow - q;
             }
             else {
                 //  Otherwise treat valve as an open pipe
-                this.ValveCoeff(net);
-                ls.AddAij(smat.GetNdx(k), -this.invHeadLoss);
-                ls.AddAii(n1, +this.invHeadLoss);
-                ls.AddAii(n2, +this.invHeadLoss);
-                ls.AddRhsCoeff(n1, +(this.flowCorrection - this.flow));
-                ls.AddRhsCoeff(n2, -(this.flowCorrection - this.flow));
+                ValveCoeff(net);
+                ls.AddAij(smat.GetNdx(k), -invHeadLoss);
+                ls.AddAii(n1, +invHeadLoss);
+                ls.AddAii(n2, +invHeadLoss);
+                ls.AddRhsCoeff(n1, +(flowCorrection - flow));
+                ls.AddRhsCoeff(n2, -(flowCorrection - flow));
             }
         }
 
@@ -260,19 +260,19 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure reducing valve.</summary>
         private StatType PrvStatus(EpanetNetwork net, double hset) {
-            if (this.setting.IsMissing())
-                return this.status;
+            if (setting.IsMissing())
+                return status;
 
             double htol = net.HTol;
-            double hml = this.Km * (this.flow * this.flow);
-            double h1 = this.first.SimHead;
-            double h2 = this.second.SimHead;
+            double hml = Km * (flow * flow);
+            double h1 = first.SimHead;
+            double h2 = second.SimHead;
 
-            StatType stat = this.status;
+            StatType stat = status;
 
-            switch (this.status) {
+            switch (status) {
             case StatType.ACTIVE:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h1 - hml < hset - htol)
                     stat = StatType.OPEN;
@@ -281,7 +281,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.OPEN:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h2 >= hset + htol)
                     stat = StatType.ACTIVE;
@@ -299,7 +299,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.XPRESSURE:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 break;
             }
@@ -309,18 +309,18 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Updates status of a pressure sustaining valve.</summary>
         private StatType PsvStatus(EpanetNetwork net, double hset) {
-            if (this.setting.IsMissing())
-                return this.status;
+            if (setting.IsMissing())
+                return status;
 
-            double h1 = this.first.SimHead;
-            double h2 = this.second.SimHead;
+            double h1 = first.SimHead;
+            double h2 = second.SimHead;
             double htol = net.HTol;
-            double hml = this.Km * (this.flow * this.flow);
-            StatType stat = this.status;
+            double hml = Km * (flow * flow);
+            StatType stat = status;
 
-            switch (this.status) {
+            switch (status) {
             case StatType.ACTIVE:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h2 + hml > hset + htol)
                     stat = StatType.OPEN;
@@ -329,7 +329,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.OPEN:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 else if (h1 < hset - htol)
                     stat = StatType.ACTIVE;
@@ -347,7 +347,7 @@ namespace Epanet.Hydraulic.Structures {
                 break;
 
             case StatType.XPRESSURE:
-                if (this.flow < -net.QTol)
+                if (flow < -net.QTol)
                     stat = StatType.CLOSED;
                 break;
             }
@@ -357,25 +357,25 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Compute P & Y coefficients for PBV,TCV,GPV valves.</summary>
         public bool ComputeValveCoeff(EpanetNetwork net, IList<Curve> curves) {
-            switch (this.Type) {
+            switch (Type) {
             case LinkType.PBV:
-                this.PbvCoeff(net);
+                PbvCoeff(net);
                 break;
 
             case LinkType.TCV:
-                this.TcvCoeff(net);
+                TcvCoeff(net);
                 break;
 
             case LinkType.GPV:
-                this.GpvCoeff(net, curves);
+                GpvCoeff(net, curves);
                 break;
 
             case LinkType.FCV:
             case LinkType.PRV:
             case LinkType.PSV:
 
-                if (this.SimSetting.IsMissing())
-                    this.ValveCoeff(net);
+                if (SimSetting.IsMissing())
+                    ValveCoeff(net);
                 else
                     return false;
 
@@ -432,7 +432,7 @@ namespace Epanet.Hydraulic.Structures {
         /// </summary>
         public static void ComputeMatrixCoeffs(
             EpanetNetwork net,
-            LSVariables ls,
+            LsVariables ls,
             SparseMatrix smat,
             List<SimulationValve> valves) {
             foreach (SimulationValve valve  in  valves) {

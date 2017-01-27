@@ -26,8 +26,8 @@ namespace Epanet.Quality.Structures {
         public double V;
 
         public QualitySegment(double v, double c) {
-            this.V = v;
-            this.C = c;
+            V = v;
+            C = c;
         }
     }
 

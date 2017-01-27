@@ -25,14 +25,13 @@ using Epanet.Enums;
 using Epanet.Hydraulic.IO;
 using Epanet.Network;
 using Epanet.Network.Structures;
-using Epanet.Util;
 
 using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.MSX {
 
     ///<summary>Bridge between the hydraulic network properties and the multi-species simulation MSX class.</summary>
-    public class ENToolkit2 {
+    public class EnToolkit2 {
 
         public const int EN_INITVOLUME = 14;
         public const int EN_MIXMODEL = 15;
@@ -66,15 +65,15 @@ namespace Epanet.MSX {
         public const int EN_TANK = 2;
 
 
-        private readonly IList<Link> links;
-        private readonly IList<Node> nodes;
-        private readonly EpanetNetwork net;
+        private readonly IList<Link> _links;
+        private readonly IList<Node> _nodes;
+        private readonly EpanetNetwork _net;
 
-        private HydraulicReader dseek;
+        private HydraulicReader _dseek;
 
         public AwareStep GetStep(int htime) {
             try {
-                return this.dseek.GetStep(htime);
+                return _dseek.GetStep(htime);
             }
             catch (IOException e) {
                 Debug.Print(e.ToString());
@@ -82,39 +81,39 @@ namespace Epanet.MSX {
             return null;
         }
 
-        public ENToolkit2(EpanetNetwork net) {
-            this.net = net;
-            this.links = net.Links;
-            this.nodes = net.Nodes;
+        public EnToolkit2(EpanetNetwork net) {
+            _net = net;
+            _links = net.Links;
+            _nodes = net.Nodes;
         }
 
-        public void Open(string hydFile) { this.dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydFile))); }
+        public void Open(string hydFile) { _dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydFile))); }
 
-        public void Close() { this.dseek.Close(); }
+        public void Close() { _dseek.Close(); }
 
-        public string ENgetlinkid(int j) { return this.links[j - 1].Name; }
+        public string ENgetlinkid(int j) { return _links[j - 1].Name; }
 
-        public string ENgetnodeid(int j) { return this.nodes[j - 1].Name; }
+        public string ENgetnodeid(int j) { return _nodes[j - 1].Name; }
 
         public int ENgetnodeindex(string s, out int tmp) {
-            Node n = this.net.GetNode(s);
-            tmp = this.nodes.IndexOf(n) + 1;
+            Node n = _net.GetNode(s);
+            tmp = _nodes.IndexOf(n) + 1;
 
-            return tmp == 0 ? (203) : 0;
+            return tmp == 0 ? 203 : 0;
         }
 
         public int ENgetlinkindex(string s, out int tmp) {
-            Link l = this.net.GetLink(s);
-            tmp = this.links.IndexOf(l) + 1;
+            Link l = _net.GetLink(s);
+            tmp = _links.IndexOf(l) + 1;
             return tmp == 0 ? 204 : 0;
         }
 
         public FlowUnitsType ENgetflowunits() {
-            return (FlowUnitsType)this.net.FlowFlag;
+            return (FlowUnitsType)_net.FlowFlag;
         }
 
         public int ENgetnodetype(int i) {
-            var n = this.nodes[i - 1];
+            var n = _nodes[i - 1];
 
             switch (n.Type) {
             case NodeType.TANK:
@@ -128,14 +127,14 @@ namespace Epanet.MSX {
         }
 
         public float ENgetlinkvalue(int index, int code) {
-            FieldsMap fMap = this.net.FieldsMap;
+            FieldsMap fMap = _net.FieldsMap;
 
             double v;
 
-            if (index <= 0 || index > this.links.Count)
+            if (index <= 0 || index > _links.Count)
                 throw new ENException(ErrorCode.Err204);
 
-            var link = this.links[index - 1];
+            var link = _links[index - 1];
 
             switch (code) {
             case EN_DIAMETER:
@@ -150,7 +149,7 @@ namespace Epanet.MSX {
 
             case EN_ROUGHNESS:
                 if (link.Type <= LinkType.PIPE) {
-                    v = this.net.FormFlag == FormType.DW
+                    v = _net.FormFlag == FormType.DW
                         ? fMap.RevertUnit(FieldType.ELEV, link.Kc * 1000.00)
                         : link.Kc;
                 }
@@ -160,23 +159,23 @@ namespace Epanet.MSX {
             default:
                 throw new ENException(ErrorCode.Err251);
             }
-            return ((float)v);
+            return (float)v;
         }
 
         public int ENgetcount(int code) {
             switch (code) {
             case EN_NODECOUNT:
-                return this.nodes.Count;
+                return _nodes.Count;
             case EN_TANKCOUNT:
-                return this.net.Tanks.Count() + this.net.Reservoirs.Count();
+                return _net.Tanks.Count() + _net.Reservoirs.Count();
             case EN_LINKCOUNT:
-                return this.links.Count;
+                return _links.Count;
             case EN_PATCOUNT:
-                return this.net.Patterns.Count;
+                return _net.Patterns.Count;
             case EN_CURVECOUNT:
-                return this.net.Curves.Count;
+                return _net.Curves.Count;
             case EN_CONTROLCOUNT:
-                return this.net.Controls.Count;
+                return _net.Controls.Count;
             default:
                 return 0;
             }
@@ -185,32 +184,32 @@ namespace Epanet.MSX {
         public long ENgettimeparam(int code) {
             long value = 0;
             if (code < EN_DURATION || code > EN_STATISTIC) //EN_PERIODS)
-                return (251);
+                return 251;
             try {
                 switch (code) {
                 case EN_DURATION:
-                    value = this.net.Duration;
+                    value = _net.Duration;
                     break;
                 case EN_HYDSTEP:
-                    value = this.net.HStep;
+                    value = _net.HStep;
                     break;
                 case EN_QUALSTEP:
-                    value = this.net.QStep;
+                    value = _net.QStep;
                     break;
                 case EN_PATTERNSTEP:
-                    value = this.net.PStep;
+                    value = _net.PStep;
                     break;
                 case EN_PATTERNSTART:
-                    value = this.net.PStart;
+                    value = _net.PStart;
                     break;
                 case EN_REPORTSTEP:
-                    value = this.net.RStep;
+                    value = _net.RStep;
                     break;
                 case EN_REPORTSTART:
-                    value = this.net.RStart;
+                    value = _net.RStart;
                     break;
                 case EN_STATISTIC:
-                    value = (long)this.net.TStatFlag;
+                    value = (long)_net.TstatFlag;
                     break;
                 case EN_PERIODS:
                     throw new NotSupportedException();
@@ -218,29 +217,29 @@ namespace Epanet.MSX {
                 }
             }
             catch (ENException) {}
-            return (value);
+            return value;
         }
 
         public float ENgetnodevalue(int index, int code) {
             double v;
 
-            FieldsMap fMap = this.net.FieldsMap;
+            FieldsMap fMap = _net.FieldsMap;
 
-            if (index <= 0 || index > this.nodes.Count)
-                return (203);
+            if (index <= 0 || index > _nodes.Count)
+                return 203;
 
             Tank tank;
             switch (code) {
             case EN_INITVOLUME:
                 v = 0.0;
-                tank = this.nodes[index - 1] as Tank;
+                tank = _nodes[index - 1] as Tank;
                 if (tank != null)
                     v = fMap.RevertUnit(FieldType.VOLUME, tank.V0);
                 break;
 
             case EN_MIXMODEL:
                 v = (double)Enums.MixType.MIX1;
-                tank = this.nodes[index - 1] as Tank;
+                tank = _nodes[index - 1] as Tank;
                 if (tank != null)
                     v = (double)tank.MixModel;
                 break;
@@ -248,7 +247,7 @@ namespace Epanet.MSX {
 
             case EN_MIXZONEVOL:
                 v = 0.0;
-                tank = this.nodes[index - 1] as Tank;
+                tank = _nodes[index - 1] as Tank;
                 if (tank != null)
                     v = fMap.RevertUnit(FieldType.VOLUME, tank.V1Max);
                 break;
@@ -260,13 +259,13 @@ namespace Epanet.MSX {
         }
 
         public void ENgetlinknodes(int index, out int n1, out int n2) {
-            if (index < 1 || index > this.links.Count)
+            if (index < 1 || index > _links.Count)
                 throw new ENException(ErrorCode.Err204);
 
-            Link l = this.links[index - 1];
+            Link l = _links[index - 1];
 
-            n1 = this.nodes.IndexOf(l.FirstNode) + 1;
-            n2 = this.nodes.IndexOf(l.SecondNode) + 1;
+            n1 = _nodes.IndexOf(l.FirstNode) + 1;
+            n2 = _nodes.IndexOf(l.SecondNode) + 1;
         }
     }
 

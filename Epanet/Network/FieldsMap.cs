@@ -29,27 +29,27 @@ namespace Epanet.Network {
     ///<summary>Units report properties & conversion support class</summary>
     public class FieldsMap {
         ///<summary>Report fields properties.</summary>
-        private readonly Dictionary<FieldType, Field> fields;
+        private readonly Dictionary<FieldType, Field> _fields;
 
         ///<summary>Fields units values.</summary>
-        private readonly Dictionary<FieldType, double> units;
+        private readonly Dictionary<FieldType, double> _units;
 
         ///<summary>Init fields default configuration</summary>
         public FieldsMap() {
             try {
-                this.fields = new Dictionary<FieldType, Field>();
-                this.units = new Dictionary<FieldType, double>();
+                _fields = new Dictionary<FieldType, Field>();
+                _units = new Dictionary<FieldType, double>();
 
                 foreach (FieldType type in Enum.GetValues(typeof(FieldType)))
-                    this.fields[type] = new Field(type.ParseStr());
+                    _fields[type] = new Field(type.ParseStr());
 
-                this.GetField(FieldType.FRICTION).Precision = 3;
+                GetField(FieldType.FRICTION).Precision = 3;
 
                 for (var i = FieldType.DEMAND; i <= FieldType.QUALITY; i++)
-                    this.GetField(i).Enabled = true;
+                    GetField(i).Enabled = true;
 
                 for (var i = FieldType.FLOW; i <= FieldType.HEADLOSS; i++)
-                    this.GetField(i).Enabled = true;
+                    GetField(i).Enabled = true;
             }
             catch (ENException e) {
                 Debug.Print(e.ToString());
@@ -66,7 +66,7 @@ namespace Epanet.Network {
         public Field GetField(FieldType fieldType) {
             Field value;
 
-            if (!this.fields.TryGetValue(fieldType, out value))
+            if (!_fields.TryGetValue(fieldType, out value))
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
 
             return value;
@@ -80,7 +80,7 @@ namespace Epanet.Network {
         /// </remarks>
         public double GetUnits(FieldType fieldType) {
             double value;
-            if (!this.units.TryGetValue(fieldType, out value))
+            if (!_units.TryGetValue(fieldType, out value))
                 throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
 
             return value;
@@ -105,21 +105,21 @@ namespace Epanet.Network {
 
             if (targetUnits == UnitsType.SI) {
 
-                this.GetField(FieldType.DEMAND).Units = flowFlag.ToString();
-                this.GetField(FieldType.ELEV).Units = Keywords.u_METERS;
-                this.GetField(FieldType.HEAD).Units = Keywords.u_METERS;
+                GetField(FieldType.DEMAND).Units = flowFlag.ToString();
+                GetField(FieldType.ELEV).Units = Keywords.u_METERS;
+                GetField(FieldType.HEAD).Units = Keywords.u_METERS;
 
-                this.GetField(FieldType.PRESSURE).Units = pressFlag == PressUnitsType.METERS
+                GetField(FieldType.PRESSURE).Units = pressFlag == PressUnitsType.METERS
                     ? Keywords.u_METERS
                     : Keywords.u_KPA;
 
-                this.GetField(FieldType.LENGTH).Units = Keywords.u_METERS;
-                this.GetField(FieldType.DIAM).Units = Keywords.u_MMETERS;
-                this.GetField(FieldType.FLOW).Units = flowFlag.ToString();
-                this.GetField(FieldType.VELOCITY).Units = Keywords.u_MperSEC;
-                this.GetField(FieldType.HEADLOSS).Units = "m" + Keywords.u_per1000M;
-                this.GetField(FieldType.FRICTION).Units = "";
-                this.GetField(FieldType.POWER).Units = Keywords.u_KW;
+                GetField(FieldType.LENGTH).Units = Keywords.u_METERS;
+                GetField(FieldType.DIAM).Units = Keywords.u_MMETERS;
+                GetField(FieldType.FLOW).Units = flowFlag.ToString();
+                GetField(FieldType.VELOCITY).Units = Keywords.u_MperSEC;
+                GetField(FieldType.HEADLOSS).Units = "m" + Keywords.u_per1000M;
+                GetField(FieldType.FRICTION).Units = "";
+                GetField(FieldType.POWER).Units = Keywords.u_KW;
 
                 dcf = 1000.0 * Constants.MperFT;
                 qcf = Constants.LPSperCFS;
@@ -133,18 +133,18 @@ namespace Epanet.Network {
                 wcf = Constants.KWperHP;
             }
             else {
-                this.GetField(FieldType.DEMAND).Units = flowFlag.ToString();
-                this.GetField(FieldType.ELEV).Units = Keywords.u_FEET;
-                this.GetField(FieldType.HEAD).Units = Keywords.u_FEET;
+                GetField(FieldType.DEMAND).Units = flowFlag.ToString();
+                GetField(FieldType.ELEV).Units = Keywords.u_FEET;
+                GetField(FieldType.HEAD).Units = Keywords.u_FEET;
 
-                this.GetField(FieldType.PRESSURE).Units = Keywords.u_PSI;
-                this.GetField(FieldType.LENGTH).Units = Keywords.u_FEET;
-                this.GetField(FieldType.DIAM).Units = Keywords.u_INCHES;
-                this.GetField(FieldType.FLOW).Units = flowFlag.ToString();
-                this.GetField(FieldType.VELOCITY).Units = Keywords.u_FTperSEC;
-                this.GetField(FieldType.HEADLOSS).Units = "ft" + Keywords.u_per1000FT;
-                this.GetField(FieldType.FRICTION).Units = "";
-                this.GetField(FieldType.POWER).Units = Keywords.u_HP;
+                GetField(FieldType.PRESSURE).Units = Keywords.u_PSI;
+                GetField(FieldType.LENGTH).Units = Keywords.u_FEET;
+                GetField(FieldType.DIAM).Units = Keywords.u_INCHES;
+                GetField(FieldType.FLOW).Units = flowFlag.ToString();
+                GetField(FieldType.VELOCITY).Units = Keywords.u_FTperSEC;
+                GetField(FieldType.HEADLOSS).Units = "ft" + Keywords.u_per1000FT;
+                GetField(FieldType.FRICTION).Units = "";
+                GetField(FieldType.POWER).Units = Keywords.u_HP;
 
 
                 dcf = 12.0;
@@ -158,46 +158,46 @@ namespace Epanet.Network {
                 wcf = 1.0;
             }
 
-            this.GetField(FieldType.QUALITY).Units = "";
+            GetField(FieldType.QUALITY).Units = "";
             ccf = 1.0;
 
             switch (qualFlag) {
             case QualType.CHEM:
                 ccf = 1.0 / Constants.LperFT3;
-                this.GetField(FieldType.QUALITY).Units = chemUnits;
-                this.GetField(FieldType.REACTRATE).Units = chemUnits + Keywords.t_PERDAY;
+                GetField(FieldType.QUALITY).Units = chemUnits;
+                GetField(FieldType.REACTRATE).Units = chemUnits + Keywords.t_PERDAY;
                 break;
             case QualType.AGE:
-                this.GetField(FieldType.QUALITY).Units = Keywords.u_HOURS;
+                GetField(FieldType.QUALITY).Units = Keywords.u_HOURS;
                 break;
             case QualType.TRACE:
-                this.GetField(FieldType.QUALITY).Units = Keywords.u_PERCENT;
+                GetField(FieldType.QUALITY).Units = Keywords.u_PERCENT;
                 break;
             }
 
-            this.SetUnits(FieldType.DEMAND, qcf);
-            this.SetUnits(FieldType.ELEV, hcf);
-            this.SetUnits(FieldType.HEAD, hcf);
-            this.SetUnits(FieldType.PRESSURE, pcf);
-            this.SetUnits(FieldType.QUALITY, ccf);
-            this.SetUnits(FieldType.LENGTH, hcf);
-            this.SetUnits(FieldType.DIAM, dcf);
-            this.SetUnits(FieldType.FLOW, qcf);
-            this.SetUnits(FieldType.VELOCITY, hcf);
-            this.SetUnits(FieldType.HEADLOSS, hcf);
-            this.SetUnits(FieldType.LINKQUAL, ccf);
-            this.SetUnits(FieldType.REACTRATE, ccf);
-            this.SetUnits(FieldType.FRICTION, 1.0);
-            this.SetUnits(FieldType.POWER, wcf);
-            this.SetUnits(FieldType.VOLUME, hcf * hcf * hcf);
+            SetUnits(FieldType.DEMAND, qcf);
+            SetUnits(FieldType.ELEV, hcf);
+            SetUnits(FieldType.HEAD, hcf);
+            SetUnits(FieldType.PRESSURE, pcf);
+            SetUnits(FieldType.QUALITY, ccf);
+            SetUnits(FieldType.LENGTH, hcf);
+            SetUnits(FieldType.DIAM, dcf);
+            SetUnits(FieldType.FLOW, qcf);
+            SetUnits(FieldType.VELOCITY, hcf);
+            SetUnits(FieldType.HEADLOSS, hcf);
+            SetUnits(FieldType.LINKQUAL, ccf);
+            SetUnits(FieldType.REACTRATE, ccf);
+            SetUnits(FieldType.FRICTION, 1.0);
+            SetUnits(FieldType.POWER, wcf);
+            SetUnits(FieldType.VOLUME, hcf * hcf * hcf);
 
             if (hstep < 1800) {
-                this.SetUnits(FieldType.TIME, 1.0 / 60.0);
-                this.GetField(FieldType.TIME).Units = Keywords.u_MINUTES;
+                SetUnits(FieldType.TIME, 1.0 / 60.0);
+                GetField(FieldType.TIME).Units = Keywords.u_MINUTES;
             }
             else {
-                this.SetUnits(FieldType.TIME, 1.0 / 3600.0);
-                this.GetField(FieldType.TIME).Units = Keywords.u_HOURS;
+                SetUnits(FieldType.TIME, 1.0 / 3600.0);
+                GetField(FieldType.TIME).Units = Keywords.u_HOURS;
             }
         }
 
@@ -208,18 +208,18 @@ namespace Epanet.Network {
         public double RevertUnit(FieldType fieldType, double value) {
             return fieldType == (FieldType)(-1)
                 ? value 
-                : value * this.GetUnits(fieldType);
+                : value * GetUnits(fieldType);
         }
 
         public double ConvertUnitToSystem(FieldType fieldType, double value) {
-            return value / this.GetUnits(fieldType);
+            return value / GetUnits(fieldType);
         }
 
         ///<summary>Set conversion value from field type.</summary>
         /// <param name="fieldType">Field type.</param>
         /// <param name="value">Field value.</param>
         private void SetUnits(FieldType fieldType, double value) {
-            this.units[fieldType] = value;
+            _units[fieldType] = value;
         }
 
     }

@@ -41,45 +41,45 @@ namespace Epanet.UI {
     public sealed partial class ReportOptions : Form {
 
         /// <summary>Epanet toolkit for the MSX.</summary>
-        private readonly ENToolkit2 epanetTk;
+        private readonly EnToolkit2 _epanetTk;
 
         /// <summary>Epanet network config file.</summary>
-        private readonly string fileInp;
+        private readonly string _fileInp;
 
         /// <summary>MSX config file.</summary>
-        private readonly string fileMsx;
+        private readonly string _fileMsx;
 
-        private static readonly TraceSource Log = new TraceSource("epanet", SourceLevels.All);
+        private static readonly TraceSource log = new TraceSource("epanet", SourceLevels.All);
 
         /// <summary>Loaded INP network.</summary>
-        private readonly EpanetNetwork netInp;
+        private readonly EpanetNetwork _net;
 
         /// <summary>Hydraulic simulator.</summary>
-        private HydraulicSim hydSim;
+        private HydraulicSim _hydSim;
 
         /// <summary>Loaded MSX simulation.</summary>
-        private EpanetMSX netMsx;
+        private EpanetMSX _netMsx;
 
         private ReportOptions() {
-            this.InitializeComponent();
+            InitializeComponent();
 
-            this.unitsBox.Items.AddRange(new object[] {"SI", "US"});
+            unitsBox.Items.AddRange(new object[] {"SI", "US"});
 
             var periods = Array.ConvertAll(TimeStep.Values, x => (object)x);
-            this.reportPeriodBox.Items.AddRange(periods);
-            this.hydComboBox.Items.AddRange(periods);
-            this.qualComboBox.Items.AddRange(periods);
+            reportPeriodBox.Items.AddRange(periods);
+            hydComboBox.Items.AddRange(periods);
+            qualComboBox.Items.AddRange(periods);
 
-            this.hydVariables.Items.AddRange(Array.ConvertAll(ReportGenerator.HydVariable.Values, x => (object)x));
+            hydVariables.Items.AddRange(Array.ConvertAll(ReportGenerator.HydVariable.Values, x => (object)x));
 
-            for (int i = 0; i < this.hydVariables.Items.Count; i++) {
-                this.hydVariables.SetItemChecked(i, true);
+            for (int i = 0; i < hydVariables.Items.Count; i++) {
+                hydVariables.SetItemChecked(i, true);
             }
 
-            this.qualityVariables.Items.AddRange(Array.ConvertAll(ReportGenerator.QualVariable.Values, x => (object)x));
+            qualityVariables.Items.AddRange(Array.ConvertAll(ReportGenerator.QualVariable.Values, x => (object)x));
 
-            for (int i = 0; i < this.qualityVariables.Items.Count; i++) {
-                this.qualityVariables.SetItemChecked(i, true);
+            for (int i = 0; i < qualityVariables.Items.Count; i++) {
+                qualityVariables.SetItemChecked(i, true);
             }
         }
 
@@ -89,8 +89,8 @@ namespace Epanet.UI {
 
             if (inpFile == null) return;
 
-            this.fileInp = inpFile;
-            this.netInp = new EpanetNetwork();
+            _fileInp = inpFile;
+            _net = new EpanetNetwork();
 
             try {
                 InputParser inpParser;
@@ -119,7 +119,7 @@ namespace Epanet.UI {
                     break;
                 }
 
-                inpParser.Parse(this.netInp, inpFile);
+                _net = inpParser.Parse(new EpanetNetwork(), inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -133,17 +133,17 @@ namespace Epanet.UI {
 
             if (msxFile == null) return;
 
-            this.fileMsx = msxFile;
-            this.epanetTk = new ENToolkit2(this.netInp);
-            this.netMsx = new EpanetMSX(this.epanetTk);
+            _fileMsx = msxFile;
+            _epanetTk = new EnToolkit2(_net);
+            _netMsx = new EpanetMSX(_epanetTk);
 
             try {
-                ErrorCodeType ret = this.netMsx.Load(this.fileMsx);
+                ErrorCodeType ret = _netMsx.Load(_fileMsx);
                 if (ret != 0) {
                     MessageBox.Show("MSX parsing error " + ret, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    this.fileMsx = null;
-                    this.netMsx = null;
-                    this.epanetTk = null;
+                    _fileMsx = null;
+                    _netMsx = null;
+                    _epanetTk = null;
                 }
             }
             catch (IOException) {
@@ -152,25 +152,25 @@ namespace Epanet.UI {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this.fileMsx = null;
-                this.netMsx = null;
-                this.epanetTk = null;
+                _fileMsx = null;
+                _netMsx = null;
+                _epanetTk = null;
             }
         }
 
         private void ReportOptions_Closing(object sender, FormClosingEventArgs e) {
-            if (this.hydSim != null) {
+            if (_hydSim != null) {
                 try {
-                    this.hydSim.StopRunning();
+                    _hydSim.StopRunning();
                 }
                 catch (ThreadInterruptedException ex) {
                     Debug.Print(ex.ToString());
                 }
             }
 
-            if (this.netMsx != null) {
+            if (_netMsx != null) {
                 try {
-                    this.netMsx.StopRunning();
+                    _netMsx.StopRunning();
                 }
                 catch (ThreadInterruptedException e1) {
                     Debug.Print(e1.ToString());
@@ -182,106 +182,106 @@ namespace Epanet.UI {
         private void ReportOptions_Load(object sender, EventArgs e) {
             // Adjust widgets before showing the window.
 
-            if (this.netInp != null) {
+            if (_net != null) {
                 try {
-                    this.unitsBox.SelectedIndex = this.netInp.UnitsFlag == UnitsType.SI ? 0 : 1;
-                    this.reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.RStep);
-                    this.hydComboBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.HStep);
-                    this.qualComboBox.SelectedIndex = TimeStep.GetNearestStep(this.netInp.QStep);
-                    this.textSimulationDuration.Text = this.netInp.Duration.GetClockTime();
-                    this.textReportStart.Text = this.netInp.RStart.GetClockTime();
-                    this.qualityCheckBox.Enabled = this.netInp.QualFlag != QualType.NONE;
+                    unitsBox.SelectedIndex = _net.UnitsFlag == UnitsType.SI ? 0 : 1;
+                    reportPeriodBox.SelectedIndex = TimeStep.GetNearestStep(_net.RStep);
+                    hydComboBox.SelectedIndex = TimeStep.GetNearestStep(_net.HStep);
+                    qualComboBox.SelectedIndex = TimeStep.GetNearestStep(_net.QStep);
+                    textSimulationDuration.Text = _net.Duration.GetClockTime();
+                    textReportStart.Text = _net.RStart.GetClockTime();
+                    qualityCheckBox.Enabled = _net.QualFlag != QualType.NONE;
                 }
                 catch (ENException ex) {
                     Debug.Print(ex.ToString());
                 }
             }
 
-            if (this.netMsx != null && this.netMsx.GetSpeciesNames().Length > 0) {
-                var speciesNames = Array.ConvertAll(this.netMsx.GetSpeciesNames(), x => (object)x);
-                this.speciesCheckList.Items.AddRange(speciesNames);
+            if (_netMsx != null && _netMsx.GetSpeciesNames().Length > 0) {
+                var speciesNames = Array.ConvertAll(_netMsx.GetSpeciesNames(), x => (object)x);
+                speciesCheckList.Items.AddRange(speciesNames);
                 //this.speciesCheckList.SelectionMode = SelectionMode.MultiExtended; // TODO: in designer
             }
             else {
-                this.qualityMSXCheckBox.Enabled = false;
+                qualityMSXCheckBox.Enabled = false;
             }
 
-            this.Visible = true;
-            this.progressPanel.Visible = false;
-            this.actions.Visible = true;
-            this.UnlockInterface();
+            Visible = true;
+            progressPanel.Visible = false;
+            actions.Visible = true;
+            UnlockInterface();
         }
 
         private void hydraulicsCheckBox_CheckedChanged(object sender, EventArgs e) {
-            this.hydVariables.Enabled = this.hydraulicsCheckBox.Checked;
+            hydVariables.Enabled = hydraulicsCheckBox.Checked;
         }
 
         private void qualityCheckBox_CheckedChanged(object sender, EventArgs e) {
-            this.qualityVariables.Enabled = this.qualityCheckBox.Checked;
+            qualityVariables.Enabled = qualityCheckBox.Checked;
         }
 
         private void qualityMSXCheckBox_CheckedChanged(object sender, EventArgs e) {
-            this.speciesCheckList.Enabled = this.qualityMSXCheckBox.Checked;
+            speciesCheckList.Enabled = qualityMSXCheckBox.Checked;
         }
 
         private void cancelButton_Click(object sender, EventArgs e) {
             //this.Close();
-            this.Visible = false;
+            Visible = false;
         }
 
         private void hydComboBox_SelectedIndexChanged(object sender, EventArgs eventArgs) {
-            if (this.reportPeriodBox.SelectedIndex < this.hydComboBox.SelectedIndex) this.reportPeriodBox.SelectedIndex = this.hydComboBox.SelectedIndex;
+            if (reportPeriodBox.SelectedIndex < hydComboBox.SelectedIndex) reportPeriodBox.SelectedIndex = hydComboBox.SelectedIndex;
         }
 
         private void reportPeriodBox_SelectedIndexChanged(object sender, EventArgs e) {
-            if (this.reportPeriodBox.SelectedIndex < this.hydComboBox.SelectedIndex) this.reportPeriodBox.SelectedIndex = this.hydComboBox.SelectedIndex;
+            if (reportPeriodBox.SelectedIndex < hydComboBox.SelectedIndex) reportPeriodBox.SelectedIndex = hydComboBox.SelectedIndex;
         }
 
         private void textReportStart_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.GetHour(this.textReportStart.Text);
+            double val = Utilities.GetHour(textReportStart.Text);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
         private void textSimulationDuration_Validating(object sender, CancelEventArgs e) {
-            double val = Utilities.GetHour(this.textSimulationDuration.Text);
+            double val = Utilities.GetHour(textSimulationDuration.Text);
             if (double.IsNaN(val)) e.Cancel = true;
         }
 
         /// <summary>Lock the interface during the simulation.</summary>
         private void LockInterface() {
-            this.hydraulicsCheckBox.Enabled = false;
-            this.qualityCheckBox.Enabled = false;
-            this.qualityMSXCheckBox.Enabled = false;
-            this.hydVariables.Enabled = false;
-            this.qualityVariables.Enabled = false;
-            this.speciesCheckList.Enabled = false;
-            this.showSummaryCheckBox.Enabled = false;
-            this.showHydraulicSolverEventsCheckBox.Enabled = false;
-            this.reportPeriodBox.Enabled = false;
-            this.unitsBox.Enabled = false;
-            this.hydComboBox.Enabled = false;
-            this.textSimulationDuration.Enabled = false;
-            this.qualComboBox.Enabled = false;
-            this.textReportStart.Enabled = false;
-            this.transposeResultsCheckBox.Enabled = false;
+            hydraulicsCheckBox.Enabled = false;
+            qualityCheckBox.Enabled = false;
+            qualityMSXCheckBox.Enabled = false;
+            hydVariables.Enabled = false;
+            qualityVariables.Enabled = false;
+            speciesCheckList.Enabled = false;
+            showSummaryCheckBox.Enabled = false;
+            showHydraulicSolverEventsCheckBox.Enabled = false;
+            reportPeriodBox.Enabled = false;
+            unitsBox.Enabled = false;
+            hydComboBox.Enabled = false;
+            textSimulationDuration.Enabled = false;
+            qualComboBox.Enabled = false;
+            textReportStart.Enabled = false;
+            transposeResultsCheckBox.Enabled = false;
         }
 
         /// <summary>Unlock the interface during the simulation.</summary>
         private void UnlockInterface() {
-            this.hydraulicsCheckBox.Enabled = true;
-            this.transposeResultsCheckBox.Enabled = true;
+            hydraulicsCheckBox.Enabled = true;
+            transposeResultsCheckBox.Enabled = true;
 
-            if (this.netMsx != null && this.netMsx.GetSpeciesNames().Length > 0) {
-                this.qualityMSXCheckBox.Enabled = true;
-                if (this.qualityMSXCheckBox.Checked) this.speciesCheckList.Enabled = true;
+            if (_netMsx != null && _netMsx.GetSpeciesNames().Length > 0) {
+                qualityMSXCheckBox.Enabled = true;
+                if (qualityMSXCheckBox.Checked) speciesCheckList.Enabled = true;
             }
 
-            this.hydVariables.Enabled = true;
+            hydVariables.Enabled = true;
             try {
-                if (this.netInp.QualFlag != QualType.NONE) {
-                    if (this.qualityCheckBox.Checked) {
-                        this.qualityVariables.Enabled = true;
-                        this.qualityCheckBox.Enabled = true;
+                if (_net.QualFlag != QualType.NONE) {
+                    if (qualityCheckBox.Checked) {
+                        qualityVariables.Enabled = true;
+                        qualityCheckBox.Enabled = true;
                     }
                 }
             }
@@ -289,25 +289,25 @@ namespace Epanet.UI {
                 Debug.Print(e.ToString());
             }
 
-            this.showSummaryCheckBox.Enabled = true;
-            this.showHydraulicSolverEventsCheckBox.Enabled = true;
-            this.reportPeriodBox.Enabled = true;
-            this.unitsBox.Enabled = true;
-            this.hydComboBox.Enabled = true;
-            this.textSimulationDuration.Enabled = true;
-            this.qualComboBox.Enabled = true;
-            this.textReportStart.Enabled = true;
+            showSummaryCheckBox.Enabled = true;
+            showHydraulicSolverEventsCheckBox.Enabled = true;
+            reportPeriodBox.Enabled = true;
+            unitsBox.Enabled = true;
+            hydComboBox.Enabled = true;
+            textSimulationDuration.Enabled = true;
+            qualComboBox.Enabled = true;
+            textReportStart.Enabled = true;
         }
 
 
         private void runButton_Click(object sender, EventArgs e) {
 
-            if (this.Simulated) {
+            if (Simulated) {
                 MessageBox.Show("Simulation in progress! Can not start another one.");
                 return;
             }
 
-            if (Utilities.GetHour(this.textSimulationDuration.Text) < 0) {
+            if (Utilities.GetHour(textSimulationDuration.Text) < 0) {
                 MessageBox.Show(
                     "Invalid time expression for simulation duration",
                     "Error",
@@ -316,7 +316,7 @@ namespace Epanet.UI {
                 return;
             }
 
-            if (Utilities.GetHour(this.textReportStart.Text) < 0) {
+            if (Utilities.GetHour(textReportStart.Text) < 0) {
                 MessageBox.Show(
                     this,
                     "Invalid time expression for report start time",
@@ -329,93 +329,96 @@ namespace Epanet.UI {
             var fdialog = new SaveFileDialog {
                 Title = "Save xlsx file",
                 Filter = "Excel 2007 file (xlsx)|*.xlsx",
-                FileName = "report_" + Path.GetFileNameWithoutExtension(this.fileInp)
+                FileName = "report_" + Path.GetFileNameWithoutExtension(_fileInp)
             };
 
             if (fdialog.ShowDialog() != DialogResult.OK) return;
 
-            this.RunSimulation(fdialog.FileName);
+            try {
+                RunSimulation(fdialog.FileName);
+            }
+            catch (Exception ex) {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
-            this.Visible = false;
+            Visible = false;
         }
 
-        private bool simulated;
+        private bool _simulated;
 
         private bool Simulated {
-            get { return this.simulated; }
+            get { return _simulated; }
             set {
-                this.simulated = value;
+                _simulated = value;
 
                 if (value) {
-                    this.LockInterface();
-                    this.progressPanel.Visible = true;
-                    this.runButton.Enabled = false;
+                    LockInterface();
+                    progressPanel.Visible = true;
+                    runButton.Enabled = false;
                 }
                 else {
-                    this.UnlockInterface();
-                    this.progressPanel.Visible = false;
-                    this.runButton.Enabled = true;
+                    UnlockInterface();
+                    progressPanel.Visible = false;
+                    runButton.Enabled = true;
                 }
             }
         }
 
-        private bool canselSimulation;
+        private bool _canselSimulation;
 
 
         #region threading
 
-        private ReportGenerator gen;
+        private ReportGenerator _gen;
 
         private void RunSimulation(string fileName) {
             TraceListener simHandler = null;
 
-            this.Simulated = true;
-            this.canselSimulation = false;
+            Simulated = true;
+            _canselSimulation = false;
 
-            this.progressBar.Value = 0;
-            this.progressBar.Maximum = 100;
-            this.progressBar.Minimum = 0;
+            progressBar.Value = 0;
+            progressBar.Maximum = 100;
+            progressBar.Minimum = 0;
 
             try {
-
-                if (this.showHydraulicSolverEventsCheckBox.Checked) {
-
+                if (showHydraulicSolverEventsCheckBox.Checked) {
                     string logFile = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, "hydEvents.log");
 
                     try {
                         simHandler = new EpanetTraceListener(logFile, false);
                         simHandler.TraceOutputOptions &= ~TraceOptions.DateTime;
-                        Log.Listeners.Add(simHandler);
+                        log.Listeners.Add(simHandler);
                     }
                     catch (IOException ex) {
-                        Log.Error(ex);
+                        log.Error(ex);
                     }
                 }
 
-                int reportPeriod = ((TimeStep)this.reportPeriodBox.SelectedItem).Time;
-                int reportStartTime = (int)(Utilities.GetHour(this.textReportStart.Text) * 3600);
-                int hydTStep = ((TimeStep)this.hydComboBox.SelectedItem).Time;
-                int qualTStep = ((TimeStep)this.qualComboBox.SelectedItem).Time;
-                int durationTime = (int)(Utilities.GetHour(this.textSimulationDuration.Text) * 3600);
+                int reportPeriod = ((TimeStep)reportPeriodBox.SelectedItem).Time;
+                int reportStartTime = (int)(Utilities.GetHour(textReportStart.Text) * 3600);
+                int hydTStep = ((TimeStep)hydComboBox.SelectedItem).Time;
+                int qualTStep = ((TimeStep)qualComboBox.SelectedItem).Time;
+                int durationTime = (int)(Utilities.GetHour(textSimulationDuration.Text) * 3600);
 
-                this.netInp.RStart = reportStartTime;
-                this.netInp.RStep = reportPeriod;
-                this.netInp.HStep = hydTStep;
-                this.netInp.Duration = durationTime;
-                this.netInp.QStep = qualTStep;
+                _net.RStart = reportStartTime;
+                _net.RStep = reportPeriod;
+                _net.HStep = hydTStep;
+                _net.Duration = durationTime;
+                _net.QStep = qualTStep;
 
-                this.statusLabel.Text = "Simulating hydraulics";
+                statusLabel.Text = "Simulating hydraulics";
 
                 try {
+                    _hydSim = new HydraulicSim(_net, log);
 
-                    this.hydSim = new HydraulicSim(this.netInp, Log);
-
-                    this.RunThread(
-                        () => this.hydSim.Simulate("hydFile.bin"),
+                    RunThread(
+                        () => _hydSim.Simulate("hydFile.bin"),
                         10,
                         30,
-                        () => this.hydSim.Htime,
-                        () => this.hydSim.Htime / (double)this.netInp.Duration);
+                        () => _hydSim.Htime,
+                        () => _hydSim.Htime / (double)_net.Duration);
                 }
                 catch (ENException ex) {
                     if (ex.Code == ErrorCode.Err1000)
@@ -430,57 +433,54 @@ namespace Epanet.UI {
                     return;
                 }
 
-                if (this.canselSimulation) return;
+                if (_canselSimulation) return;
 
-
-                if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
-
-                    this.statusLabel.Text = "Simulating MSX";
+                if (_fileMsx != null && qualityMSXCheckBox.Checked) {
+                    statusLabel.Text = "Simulating MSX";
 
                     try {
                         // reload MSX
-                        this.netMsx = new EpanetMSX(this.epanetTk);
-                        this.netMsx.Load(this.fileMsx);
+                        _netMsx = new EpanetMSX(_epanetTk);
+                        _netMsx.Load(_fileMsx);
 
-                        this.netMsx.Network.Rstep = reportPeriod;
-                        this.netMsx.Network.Qstep = qualTStep;
-                        this.netMsx.Network.Rstart = reportStartTime;
-                        this.netMsx.Network.Dur = durationTime;
+                        _netMsx.Network.Rstep = reportPeriod;
+                        _netMsx.Network.Qstep = qualTStep;
+                        _netMsx.Network.Rstart = reportStartTime;
+                        _netMsx.Network.Dur = durationTime;
 
-                        this.epanetTk.Open("hydFile.bin");
+                        _epanetTk.Open("hydFile.bin");
 
-                        this.RunThread(
-                            () => this.netMsx.Run("msxFile.bin"),
+                        RunThread(
+                            () => _netMsx.Run("msxFile.bin"),
                             30,
                             50,
-                            () => this.netMsx.QTime,
-                            () => this.netMsx.QTime / (double)this.netInp.Duration);
+                            () => _netMsx.QTime,
+                            () => _netMsx.QTime / (double)_net.Duration);
                     }
                     catch (IOException) {}
                     catch (ENException) {
                         throw new ThreadInterruptedException();
                     }
                     finally {
-                        this.epanetTk.Close();
+                        _epanetTk.Close();
                     }
 
                     // netMSX.getReport().MSXrpt_write(new "msxFile.bin");
                 }
 
-                if (this.canselSimulation) return;
+                if (_canselSimulation) return;
 
-                if (this.qualityCheckBox.Checked) {
+                if (qualityCheckBox.Checked) {
                     try {
-                        QualitySim qSim = new QualitySim(this.netInp, Log);
-                        this.statusLabel.Text = "Simulating Quality";
+                        QualitySim qSim = new QualitySim(_net, log);
+                        statusLabel.Text = "Simulating Quality";
 
-                        this.RunThread(
+                        RunThread(
                             () => qSim.Simulate("hydFile.bin", "qualFile.bin"),
                             30,
                             50,
                             () => qSim.Qtime,
-                            () => qSim.Qtime / (double)this.netInp.Duration);
-
+                            () => qSim.Qtime / (double)_net.Duration);
                     }
                     catch (ENException ex) {
                         MessageBox.Show(
@@ -494,117 +494,107 @@ namespace Epanet.UI {
                     }
                 }
 
-                if (this.canselSimulation) return;
+                if (_canselSimulation) return;
 
-                this.progressBar.Value = 50;
-                this.statusLabel.Text = "Writting report";
+                progressBar.Value = 50;
+                statusLabel.Text = "Writting report";
 
-                this.gen = new ReportGenerator(fileName);
+                _gen = new ReportGenerator(fileName);
 
                 //log
-                try {
-                    Log.Information("Starting report write");
-                    if (this.showSummaryCheckBox.Checked) this.gen.WriteSummary(this.fileInp, this.netInp, this.fileMsx, this.netMsx);
 
-                    if (this.canselSimulation) return;
+                log.Information("Starting report write");
+                if (showSummaryCheckBox.Checked) _gen.WriteSummary(_fileInp, _net, _fileMsx, _netMsx);
 
-                    if (this.transposeResultsCheckBox.Checked) this.gen.TransposedMode = true;
+                if (_canselSimulation) return;
 
-                    if (this.hydraulicsCheckBox.Checked) {
-                        // Write hydraulic spreadsheets
-                        bool[] values = new bool[ReportGenerator.HydVariable.Values.Length];
-                        for (int i = 0; i < ReportGenerator.HydVariable.Values.Length; i++) {
-                            values[i] = this.hydVariables.GetItemChecked(i);
-                        }
+                if (transposeResultsCheckBox.Checked) _gen.TransposedMode = true;
 
-
-
-                        this.statusLabel.Text = "Writing hydraulic report";
-
-                        this.RunThread(
-                            () => this.gen.CreateHydReport("hydFile.bin", this.netInp, values),
-                            50,
-                            60,
-                            () => this.gen.Rtime,
-                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
+                if (hydraulicsCheckBox.Checked) {
+                    // Write hydraulic spreadsheets
+                    bool[] values = new bool[ReportGenerator.HydVariable.Values.Length];
+                    for (int i = 0; i < ReportGenerator.HydVariable.Values.Length; i++) {
+                        values[i] = hydVariables.GetItemChecked(i);
                     }
 
-                    if (this.canselSimulation) return;
+                    statusLabel.Text = "Writing hydraulic report";
 
-                    if (this.qualityCheckBox.Checked) {
-                        this.statusLabel.Text = "Writing quality report";
+                    RunThread(
+                        () => _gen.CreateHydReport("hydFile.bin", _net, values),
+                        50,
+                        60,
+                        () => _gen.Rtime,
+                        () => (_gen.Rtime - _net.RStart) / (double)_net.Duration);
+                }
 
-                        bool nodes = this.qualityVariables.GetItemChecked(0);
-                        bool links = this.qualityVariables.GetItemChecked(1);
+                if (_canselSimulation) return;
 
-                        this.RunThread(
-                            () => this.gen.CreateQualReport("qualFile.bin", this.netInp, nodes, links),
-                            60,
-                            70,
-                            () => this.gen.Rtime,
-                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
+                if (qualityCheckBox.Checked) {
+                    statusLabel.Text = "Writing quality report";
+
+                    bool nodes = qualityVariables.GetItemChecked(0);
+                    bool links = qualityVariables.GetItemChecked(1);
+
+                    RunThread(
+                        () => _gen.CreateQualReport("qualFile.bin", _net, nodes, links),
+                        60,
+                        70,
+                        () => _gen.Rtime,
+                        () => (_gen.Rtime - _net.RStart) / (double)_net.Duration);
+                }
+
+                if (_canselSimulation) return;
+
+                // Write MSX quality spreadsheets
+                if (_fileMsx != null && qualityMSXCheckBox.Checked) {
+                    bool[] valuesMsx = new bool[speciesCheckList.Items.Count];
+                    for (int i = 0; i < speciesCheckList.Items.Count; i++) {
+                        valuesMsx[i] = speciesCheckList.GetItemChecked(i);
                     }
 
-                    if (this.canselSimulation) return;
+                    _gen.CreateMsxReport(
+                        "msxFile.bin",
+                        _net,
+                        _netMsx,
+                        _epanetTk,
+                        valuesMsx);
 
-                    // Write MSX quality spreadsheets
-                    if (this.fileMsx != null && this.qualityMSXCheckBox.Checked) {
-                        bool[] valuesMSX = new bool[this.speciesCheckList.Items.Count];
-                        for (int i = 0; i < this.speciesCheckList.Items.Count; i++) {
-                            valuesMSX[i] = this.speciesCheckList.GetItemChecked(i);
-                        }
-
-                        this.gen.createMSXReport(
-                            "msxFile.bin",
-                            this.netInp,
-                            this.netMsx,
-                            this.epanetTk,
-                            valuesMSX);
-
-                        this.RunThread(
-                            () =>
-                                this.gen.createMSXReport(
-                                    "msxFile.bin",
-                                    this.netInp,
-                                    this.netMsx,
-                                    this.epanetTk,
-                                    valuesMSX),
-                            70,
-                            80,
-                            () => this.netMsx.QTime,
-                            () => (this.gen.Rtime - this.netInp.RStart) / (double)this.netInp.Duration);
-
-                    }
-
-                    if (this.canselSimulation) return;
-
-                    this.statusLabel.Text = "Writing workbook";
-                    this.gen.writeWorksheet();
-                    Log.Information("Ending report write");
+                    RunThread(
+                        () =>
+                            _gen.CreateMsxReport(
+                                "msxFile.bin",
+                                _net,
+                                _netMsx,
+                                _epanetTk,
+                                valuesMsx),
+                        70,
+                        80,
+                        () => _netMsx.QTime,
+                        () => (_gen.Rtime - _net.RStart) / (double)_net.Duration);
                 }
-                catch (IOException ex) {
-                    Debug.Print(ex.ToString());
-                }
-                catch (ENException ex) {
-                    Debug.Print(ex.ToString());
-                }
+
+                if (_canselSimulation) return;
+
+                statusLabel.Text = "Writing workbook";
+                _gen.WriteWorksheet();
+                log.Information("Ending report write");
             }
             catch (ThreadInterruptedException) {
-                Log.Warning(0, "Simulation aborted!");
+                log.Warning(0, "Simulation aborted!");
             }
             finally {
                 if (simHandler != null) {
-                    Log.Listeners.Remove(simHandler);
+                    log.Listeners.Remove(simHandler);
                     simHandler.Close();
                 }
 
-                this.Simulated = false;
+                Simulated = false;
             }
 
         }
 
         private void RunThread(ThreadStart pts, int start, int end, Func<long> getTime, Func<double> getProgress) {
-            string initName = this.statusLabel.Text;
+            string initName = statusLabel.Text;
 
             var thr = new Thread(pts);
 
@@ -614,7 +604,7 @@ namespace Epanet.UI {
                 Debug.Print("Thresd state = {0}", thr.ThreadState);
                 Thread.Sleep(200);
 
-                if (this.canselSimulation) {
+                if (_canselSimulation) {
                     thr.Abort();
                     break;
                 }
@@ -622,14 +612,14 @@ namespace Epanet.UI {
                 long time = getTime();
                 var value = getProgress();
 
-                if (time != 0) this.statusLabel.Text = string.Format("{0} ({1})", initName, time.GetClockTime());
+                if (time != 0) statusLabel.Text = string.Format("{0} ({1})", initName, time.GetClockTime());
 
-                this.progressBar.Value = (int)(start * (1.0f - value) + end * value);
+                progressBar.Value = (int)(start * (1.0f - value) + end * value);
                 Application.DoEvents();
 
                 if (getProgress() > 0.9) break;
 
-                if (this.canselSimulation) break;
+                if (_canselSimulation) break;
 
             }
 
@@ -663,17 +653,17 @@ namespace Epanet.UI {
             };
 
             private TimeStep(int time, string name) {
-                this.time = time;
-                this.name = name;
+                _time = time;
+                _name = name;
             }
 
             /// <summary>Entry timestep duration.</summary>
-            public int Time { get { return this.time; } }
+            public int Time { get { return _time; } }
 
             /// <summary>Entry name</summary>
-            private readonly string name;
+            private readonly string _name;
 
-            private readonly int time;
+            private readonly int _time;
 
             /// <summary>Get the nearest timestep period.</summary>
             /// <returns>Nearest timestep, if the time is bigger than any timestep returns STEP_12_HOURS.</returns>
@@ -685,7 +675,7 @@ namespace Epanet.UI {
                 return Values.Length - 1;
             }
 
-            public override string ToString() { return this.name; }
+            public override string ToString() { return _name; }
 
         }
 

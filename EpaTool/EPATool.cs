@@ -201,8 +201,8 @@ namespace Epanet {
             }
 
             try {
-                InputParser parserINP = InputParser.Create(FileType.INP_FILE);
-                parserINP.Parse(net, inFile);
+                InputParser parserInp = InputParser.Create(FileType.INP_FILE);
+                net = parserInp.Parse(new EpanetNetwork(), inFile);
                 
 
                 if (targetTimes.Count > 0) {

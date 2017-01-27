@@ -21,21 +21,21 @@ namespace Epanet.Network.Structures {
 
 #if NUCONVERT
     public static class NUConvert {
-        public static double convertArea(UnitsType type, double value) {
+        public static double ConvertArea(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value / (Constants.MperFT * Constants.MperFT);
 
             return value;
         }
 
-        public static double convertDistance(UnitsType type, double value) {
+        public static double ConvertDistance(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * (1 / Constants.MperFT);
 
             return value;
         }
 
-        public static double convertFlow(FlowUnitsType flow, double value) {
+        public static double ConvertFlow(FlowUnitsType flow, double value) {
             switch (flow) {
             case FlowUnitsType.CFS:
                 return value * (1 / Constants.LPSperCFS);
@@ -61,53 +61,53 @@ namespace Epanet.Network.Structures {
             return value;
         }
 
-        public static double convertPower(UnitsType type, double value) {
+        public static double ConvertPower(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * (1 / Constants.KWperHP);
 
             return value;
         }
 
-        public static double convertPressure(PressUnitsType type, double SpGrav, double value) {
+        public static double ConvertPressure(PressUnitsType type, double spGrav, double value) {
             switch (type) {
             case PressUnitsType.PSI:
                 return value;
             case PressUnitsType.KPA:
-                return value / (Constants.KPAperPSI * Constants.PSIperFT * SpGrav);
+                return value / (Constants.KPAperPSI * Constants.PSIperFT * spGrav);
             case PressUnitsType.METERS:
-                return value / (Constants.MperFT * SpGrav);
+                return value / (Constants.MperFT * spGrav);
             }
             return value;
         }
 
-        public static double convertVolume(UnitsType type, double value) {
+        public static double ConvertVolume(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value / (Constants.M3perFT3);
 
             return value;
         }
 
-        public static double revertArea(UnitsType type, double value) {
+        public static double RevertArea(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * (Constants.MperFT * Constants.MperFT);
 
             return value;
         }
 
-        public static double revertDistance(UnitsType type, double value) {
+        public static double RevertDistance(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * Constants.MperFT;
 
             return value;
         }
 
-        public static double revertDiameter(UnitsType type, double value) {
+        public static double RevertDiameter(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * Constants.MMperFT;
             return value * Constants.INperFT;
         }
 
-        public static double revertFlow(FlowUnitsType flow, double value) {
+        public static double RevertFlow(FlowUnitsType flow, double value) {
             switch (flow) {
             case FlowUnitsType.CFS:
                 return value * Constants.LPSperCFS;
@@ -133,26 +133,26 @@ namespace Epanet.Network.Structures {
             return value;
         }
 
-        public static double revertPower(UnitsType type, double value) {
+        public static double RevertPower(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * Constants.KWperHP;
 
             return value;
         }
 
-        public static double revertPressure(PressUnitsType type, double SpGrav, double value) {
+        public static double RevertPressure(PressUnitsType type, double spGrav, double value) {
             switch (type) {
             case PressUnitsType.PSI:
                 return value;
             case PressUnitsType.KPA:
-                return value * (Constants.KPAperPSI * Constants.PSIperFT * SpGrav);
+                return value * (Constants.KPAperPSI * Constants.PSIperFT * spGrav);
             case PressUnitsType.METERS:
-                return value * (Constants.MperFT * SpGrav);
+                return value * (Constants.MperFT * spGrav);
             }
             return value;
         }
 
-        public static double revertVolume(UnitsType type, double value) {
+        public static double RevertVolume(UnitsType type, double value) {
             if (type == UnitsType.SI)
                 return value * (Constants.M3perFT3);
 

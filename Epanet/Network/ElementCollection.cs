@@ -11,7 +11,7 @@ namespace Epanet.Network {
         // public new void Add(TItem item) { base.Add(item); }
 
         public void AddOrReplace(TItem item) {
-            string key = this.GetKeyForItem(item);
+            string key = GetKeyForItem(item);
             base.Remove(key);
             base.Add(item);
         }
@@ -69,15 +69,15 @@ namespace Epanet.Network {
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            if (this.Dictionary != null) {
+            if (Dictionary != null) {
                 TItem value;
-                return this.Dictionary.TryGetValue(key, out value) ? value : default(TItem);
+                return Dictionary.TryGetValue(key, out value) ? value : default(TItem);
             }
 
-            var comparer = this.Comparer ?? StringComparer.OrdinalIgnoreCase;
+            var comparer = Comparer ?? StringComparer.OrdinalIgnoreCase;
 
-            foreach (var item in this.Items) {
-                string itemKey = this.GetKeyForItem(item);
+            foreach (var item in Items) {
+                string itemKey = GetKeyForItem(item);
 
                 if (comparer.Equals(itemKey, key))
                     return item;

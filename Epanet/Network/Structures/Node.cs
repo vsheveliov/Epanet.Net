@@ -25,15 +25,15 @@ namespace Epanet.Network.Structures {
 
     public class Node: Element {
         private readonly List<Demand> _demands = new List<Demand>(1);
-        private readonly Demand primaryDemand = new Demand(0, null);
+        private readonly Demand _primaryDemand = new Demand(0, null);
 
         public Node(string name):base(name) {
-            this.Position = EnPoint.Invalid;
+            Position = EnPoint.Invalid;
         }
 
         public override ElementType ElementType { get { return ElementType.Node; } }
 
-        public Demand PrimaryDemand { get { return this.primaryDemand; } }
+        public Demand PrimaryDemand { get { return _primaryDemand; } }
 
         public virtual NodeType Type { get { return NodeType.JUNC; } }
 
@@ -44,7 +44,7 @@ namespace Epanet.Network.Structures {
         public double Elevation { get; set; }
 
         ///<summary>Node demand list.</summary>
-        public List<Demand> Demands { get { return this._demands; } }
+        public List<Demand> Demands { get { return _demands; } }
 
         ///<summary>Water quality source.</summary>
         public QualSource QualSource { get; set; }
@@ -64,11 +64,11 @@ namespace Epanet.Network.Structures {
 #if NUCONVERT
 
         public double GetNuElevation(UnitsType units) {
-            return NUConvert.revertDistance(units, this.Elevation);
+            return NUConvert.RevertDistance(units, Elevation);
         }
 
         public void SetNuElevation(UnitsType units, double elev) {
-            this.Elevation = NUConvert.convertDistance(units, elev);
+            Elevation = NUConvert.ConvertDistance(units, elev);
         }
 
 #endif

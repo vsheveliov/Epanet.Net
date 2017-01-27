@@ -19,7 +19,10 @@ namespace Epanet.Network.IO.Input {
 
     ///<summary>Network conversion units only class.</summary>
     public class NullParser:InputParser {
-        public override Network Parse(Network net, string f) {
+
+        public override Network Parse(Network nw, string f) {
+            net = nw ?? new Network();
+
             AdjustData(net);
             net.FieldsMap.Prepare(
                    net.UnitsFlag,
@@ -30,7 +33,7 @@ namespace Epanet.Network.IO.Input {
                    net.SpGrav,
                    net.HStep);
 
-            this.Convert();
+            Convert();
 
             return net;
         }

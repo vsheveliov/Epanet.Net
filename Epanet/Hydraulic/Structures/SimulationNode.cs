@@ -28,7 +28,7 @@ namespace Epanet.Hydraulic.Structures {
 
 
     public class SimulationNode {
-        private readonly int index;
+        private readonly int _index;
         protected readonly Node node;
 
         ///<summary>Epanet 'H[n]' variable, node head.</summary>
@@ -38,42 +38,38 @@ namespace Epanet.Hydraulic.Structures {
         protected double demand; 
 
         ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
-        private double emitter; 
+        private double _emitter; 
 
         public SimulationNode(Node @ref, int idx) {
-            this.node = @ref;
-            this.index = idx;
+            node = @ref;
+            _index = idx;
         }
 
-        public int Index { get { return this.index; } }
+        public int Index { get { return _index; } }
 
-        public Node Node { get { return this.node; } }
+        public Node Node { get { return node; } }
 
-        public string Id { get { return this.node.Name; } }
+        public string Id { get { return node.Name; } }
 
-        public NodeType Type { get { return this.node.Type; } }
+        public NodeType Type { get { return node.Type; } }
 
-        public double Elevation { get { return this.node.Elevation; } }
+        public double Elevation { get { return node.Elevation; } }
 
-        public List<Demand> Demand { get { return this.node.Demands; } }
+        public List<Demand> Demand { get { return node.Demands; } }
 
-        public QualSource QualSource { get { return this.node.QualSource; } }
-
-        public double C0 { get { return this.node.C0; } }
-
-        public double Ke { get { return this.node.Ke; } }
+        public double Ke { get { return node.Ke; } }
 
         ///<summary>Epanet 'H[n]' variable, node head.</summary>
-        public double SimHead { get { return this.head; } set { this.head = value; } }
+        public double SimHead { get { return head; } set { head = value; } }
 
         ///<summary>Epanet 'D[n]' variable, node demand.</summary>
-        public double SimDemand { get { return this.demand; } set { this.demand = value; } }
+        public double SimDemand { get { return demand; } set { demand = value; } }
 
         ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
-        public double SimEmitter { get { return this.emitter; } set { this.emitter = value; } }
+        public double SimEmitter { get { return _emitter; } set { _emitter = value; } }
 
         /// <summary>Completes calculation of nodal flow imbalance (X) flow correction (F) arrays.</summary>
-        public static void ComputeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LSVariables ls) {
+        public static void ComputeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LsVariables ls) {
             foreach (SimulationNode node  in  junctions) {
                 ls.AddNodalInFlow(node, -node.demand);
                 ls.AddRhsCoeff(smat.GetRow(node.Index), +ls.GetNodalInFlow(node));
@@ -91,14 +87,14 @@ namespace Epanet.Hydraulic.Structures {
             EpanetNetwork net,
             List<SimulationNode> junctions,
             SparseMatrix smat,
-            LSVariables ls) {
+            LsVariables ls) {
 
             foreach (SimulationNode node  in  junctions) {
                 if (node.Node.Ke == 0.0)
                     continue;
 
                 double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
-                double q = node.emitter;
+                double q = node._emitter;
                 double z = ke * Math.Pow(Math.Abs(q), net.QExp);
                 double p = net.QExp * z / Math.Abs(q);
 
@@ -113,10 +109,10 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes flow change at an emitter node.</summary>
         public double EmitFlowChange(EpanetNetwork net) {
-            double ke = Math.Max(Constants.CSMALL, this.Ke);
-            double p = net.QExp * ke * Math.Pow(Math.Abs(this.emitter), (net.QExp - 1.0));
+            double ke = Math.Max(Constants.CSMALL, Ke);
+            double p = net.QExp * ke * Math.Pow(Math.Abs(_emitter), (net.QExp - 1.0));
             p = p < net.RQtol ? 1.0d / net.RQtol : 1.0d / p;
-            return (this.emitter / net.QExp - p * (this.head - this.Elevation));
+            return (_emitter / net.QExp - p * (head - Elevation));
         }
 
     }

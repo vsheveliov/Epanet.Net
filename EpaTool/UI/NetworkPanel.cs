@@ -20,7 +20,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 using Epanet.Enums;
@@ -56,45 +55,45 @@ namespace Epanet.UI {
         private const float ZOOM_SIZE_MAX = 100000;
         private const float ZOOM_SIZE_MIN = 10;
 
-        private float dxo;
-        private float dyo;
+        private float _dxo;
+        private float _dyo;
 
         /// <summary>Loaded hydraulic network.</summary>
-        private EpanetNetwork net;
+        private EpanetNetwork _net;
 
-        private PointF panPoint;
-        private float zoom = 0.9f;
+        private PointF _panPoint;
+        private float _zoom = 0.9f;
 
         public float Zoom {
-            get { return this.zoom; }
+            get { return _zoom; }
             private set {
-                if (this.networkBounds.IsEmpty) {
-                    this.zoom = 1f;
+                if (_networkBounds.IsEmpty) {
+                    _zoom = 1f;
                     return;
                 }
 
-                float sizeMax = Math.Max(this.networkBounds.Height, this.networkBounds.Width);
+                float sizeMax = Math.Max(_networkBounds.Height, _networkBounds.Width);
                 float sizeNew = sizeMax * value;
 
                 if (sizeNew > ZOOM_SIZE_MAX) {
-                    this.zoom = ZOOM_SIZE_MAX / sizeMax;
+                    _zoom = ZOOM_SIZE_MAX / sizeMax;
                 }
                 else if (sizeNew < ZOOM_SIZE_MIN) {
-                    this.zoom = ZOOM_SIZE_MIN / sizeMax;
+                    _zoom = ZOOM_SIZE_MIN / sizeMax;
                 }
                 else {
-                    this.zoom = value;
+                    _zoom = value;
                 }
             }
         }
 
-        private RectangleF networkBounds = RectangleF.Empty;
+        private RectangleF _networkBounds = RectangleF.Empty;
 
         /// <summary>Reference to the selected node in network map.</summary>
-        private Node selNode;
+        private Node _selNode;
 
         public NetworkPanel() {
-            this.SetStyle(
+            SetStyle(
                 ControlStyles.AllPaintingInWmPaint |
                 ControlStyles.UserPaint |
                 // ControlStyles.DoubleBuffer |
@@ -102,23 +101,23 @@ namespace Epanet.UI {
                 ControlStyles.Selectable,
                 true);
 
-            this.TabStop = true;
+            TabStop = true;
 
             base.DoubleBuffered = true;
             base.ResizeRedraw = true;
-            this.DrawNodes = this.DrawPipes = this.DrawTanks = true;
+            DrawNodes = DrawPipes = DrawTanks = true;
         }
 
         public PointF MousePoint { get; private set; }
 
         [DefaultValue(null)]
         public EpanetNetwork Net {
-            get { return this.net; }
+            get { return _net; }
             set {
-                if (value == this.net) return;
+                if (value == _net) return;
 
-                this.net = value;
-                this.ZoomAll();
+                _net = value;
+                ZoomAll();
             }
         }
 
@@ -132,19 +131,19 @@ namespace Epanet.UI {
         public bool DrawTanks { get; set; }
 
         private Node PeekNearest(PointF pt) {
-            if (this.net == null)
+            if (_net == null)
                 return null;
 
             Node nearest = null;
             double distance = double.MaxValue;
             
-            foreach (Node n in this.net.Nodes) {
+            foreach (Node n in _net.Nodes) {
                 var pos = n.Position;
                 if (pos.IsInvalid) continue;
                 
                 double distMin = (n.Type > NodeType.JUNC)
-                    ? TANK_DIAM / this.Zoom
-                    : NODE_DIAM / this.Zoom;
+                    ? TANK_DIAM / Zoom
+                    : NODE_DIAM / Zoom;
 
                 distMin *= distMin;
 
@@ -161,11 +160,11 @@ namespace Epanet.UI {
         }
 
         private void ZoomToPoint(float zoomScale, Point zoomPoint) {
-            PointF pt = this.GetLogPoint(zoomPoint);
-            this.Zoom = zoomScale;
-            this.dxo = -pt.X + zoomPoint.X / this.Zoom;
-            this.dyo = pt.Y + zoomPoint.Y / this.Zoom;
-            this.Refresh();
+            PointF pt = GetLogPoint(zoomPoint);
+            Zoom = zoomScale;
+            _dxo = -pt.X + zoomPoint.X / Zoom;
+            _dyo = pt.Y + zoomPoint.Y / Zoom;
+            Refresh();
         }
 
         private static PointF ToPointF(EnPoint that) {
@@ -177,12 +176,12 @@ namespace Epanet.UI {
         private RectangleF GetNetworkBounds() {
             var result = RectangleF.Empty;
 
-            if (this.net == null)
+            if (_net == null)
                 return RectangleF.Empty;
 
             bool firstPass = true;
 
-            foreach (Node node in this.net.Nodes) {
+            foreach (Node node in _net.Nodes) {
                 if (!node.Position.IsInvalid) {
                     var rect = new RectangleF(ToPointF(node.Position), SizeF.Empty);
                     if (firstPass) {
@@ -195,7 +194,7 @@ namespace Epanet.UI {
                 }
             }
 
-            foreach (Link link in this.net.Links) {
+            foreach (Link link in _net.Links) {
                 foreach (var position in link.Vertices) {
                     if (!position.IsInvalid) {
                         var rect = new RectangleF(ToPointF(position), SizeF.Empty);
@@ -214,63 +213,63 @@ namespace Epanet.UI {
         }
 
         private float GetExtentsZoom() {
-            var rect = this.GetNetworkBounds();
+            var rect = GetNetworkBounds();
 
-            float w = this.Width;
-            float h = this.Height;
+            float w = Width;
+            float h = Height;
 
             float result = (rect.Width / rect.Height) < (w / h)
-                ? h / this.networkBounds.Height
-                : w / this.networkBounds.Width;
+                ? h / _networkBounds.Height
+                : w / _networkBounds.Width;
 
             return result * 0.95f;
 
         }
 
         public void ZoomAll() {
-            if (this.net == null) return;
+            if (_net == null) return;
 
-            float w = this.Width;
-            float h = this.Height;
-            this.networkBounds = this.GetNetworkBounds();
-            if (this.networkBounds.IsEmpty) return;
+            float w = Width;
+            float h = Height;
+            _networkBounds = GetNetworkBounds();
+            if (_networkBounds.IsEmpty) return;
 
-            this.Zoom = (this.networkBounds.Width / this.networkBounds.Height) < (w / h)
-                ? h / this.networkBounds.Height
-                : w / this.networkBounds.Width;
+            Zoom = (_networkBounds.Width / _networkBounds.Height) < (w / h)
+                ? h / _networkBounds.Height
+                : w / _networkBounds.Width;
 
-            this.dxo = -this.networkBounds.X;
-            this.dyo = this.networkBounds.Bottom;
+            _dxo = -_networkBounds.X;
+            _dyo = _networkBounds.Bottom;
 
-            this.Zoom *= 0.95f;
+            Zoom *= 0.95f;
 
-            this.dxo += w * 0.5f / this.Zoom - this.networkBounds.Width * 0.5f;
-            this.dyo += h * 0.5f / this.Zoom - this.networkBounds.Height * 0.5f;
+            _dxo += w * 0.5f / Zoom - _networkBounds.Width * 0.5f;
+            _dyo += h * 0.5f / Zoom - _networkBounds.Height * 0.5f;
 
-            this.Invalidate();
+            Invalidate();
         }
 
         public void ZoomStep(int steps) {
             if (steps == 0) return;
-            float scale = steps > 0 ? this.Zoom * 1.5f * steps : this.Zoom / (1.5f * -steps);
-            var pt = new Point(this.Width >> 1, this.Height >> 1);
-            this.ZoomToPoint(scale, pt);
-            this.Invalidate();
+            float scale = steps > 0 ? Zoom * 1.5f * steps : Zoom / (1.5f * -steps);
+            var pt = new Point(Width >> 1, Height >> 1);
+            ZoomToPoint(scale, pt);
+            Invalidate();
         }
 
         private PointF GetLogPoint(PointF pt) {
-            return new PointF(-this.dxo + pt.X / this.Zoom, this.dyo - pt.Y / this.Zoom);
+            return new PointF(-_dxo + pt.X / Zoom, _dyo - pt.Y / Zoom);
         }
 
         #region DrawNetwork methods
 
         private void _DrawTanks(Graphics g) {
-            float tankDiam = TANK_DIAM / this.Zoom;
+            float tankDiam = TANK_DIAM / Zoom;
 
             using (Pen pen = new Pen(tankPenColor, -1f))
             using (Pen reservoirPen = new Pen(reservoirsColor, -1f))
             using(Pen tankPen = new Pen(tankPenColor, -1f)) {
-                foreach (var tank in this.net.Tanks) {
+                foreach (var tank in _net.Tanks) {
                     var pos = tank.Position;
                     if (pos.IsInvalid)
                         continue;
@@ -288,7 +287,7 @@ namespace Epanet.UI {
                     g.DrawRectangle(pen, fillRect.X, fillRect.Y, fillRect.Width, fillRect.Height);
                 }
 
-                foreach(Tank tank in this.net.Reservoirs) {
+                foreach(Tank tank in _net.Reservoirs) {
                     var pos = tank.Position;
                     if (pos.IsInvalid)
                         continue;
@@ -311,7 +310,7 @@ namespace Epanet.UI {
 
         private void _DrawPipes(Graphics g) {
             using (Pen pen = new Pen(pipePenColor, -1f)) {
-                foreach (Link link in this.net.Links) {
+                foreach (Link link in _net.Links) {
                     PointF[] points = new PointF[link.Vertices.Count + 2];
                     int i = 0;
                     points[i++] = ToPointF(link.FirstNode.Position);
@@ -328,10 +327,10 @@ namespace Epanet.UI {
         }
 
         private void _DrawNodes(Graphics g) {
-            float diam = NODE_DIAM / this.Zoom;
+            float diam = NODE_DIAM / Zoom;
 
             using(Pen pen = new Pen(nodePenColor, -1f)) {
-                foreach (Node node in this.net.Junctions) {
+                foreach (Node node in _net.Junctions) {
                     var pos = node.Position;
                     if (pos.IsInvalid) continue;
                     
@@ -354,7 +353,7 @@ namespace Epanet.UI {
             using(Brush b = new SolidBrush(labelColor)) 
             using (Pen pen = new Pen(SystemColors.Info, -1f))
             {
-                foreach (var l in this.net.Labels) {
+                foreach (var l in _net.Labels) {
 
                     var pt = l.Position;
                     
@@ -375,7 +374,7 @@ namespace Epanet.UI {
 
                     PointF ptf = new PointF((float)pt.X,(float)(-pt.Y));
                     
-                    SizeF sz = g.MeasureString(l.Text, this.Font, ptf, sf);
+                    SizeF sz = g.MeasureString(l.Text, Font, ptf, sf);
                     RectangleF rect = new RectangleF(ptf, sz);
                     
                     if (rect.IsEmpty) continue;
@@ -383,7 +382,7 @@ namespace Epanet.UI {
                     //var pos = l.getPosition();
                     //g.DrawEllipse(Pens.Red, (float)pos.getX(), (float)(-pos.getY()), 10f,10f);
 
-                    g.DrawString(l.Text, this.Font, b, rect);
+                    g.DrawString(l.Text, Font, b, rect);
                    // rect.Inflate(0.5f / this.Zoom, 0.5f / this.Zoom);
                     //rect.Inflate(0.5f, 0.5f);
                     //g.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
@@ -396,10 +395,10 @@ namespace Epanet.UI {
         }
 
         private void _DrawSelection(Graphics g) {
-            if (this.selNode == null) return;
+            if (_selNode == null) return;
 
-            PointF point = ToPointF(this.selNode.Position);
-            float size = (20f / this.Zoom);
+            PointF point = ToPointF(_selNode.Position);
+            float size = (20f / Zoom);
             point.X -= size * 0.5f;
             point.Y -= size * 0.5f;
 
@@ -416,11 +415,11 @@ namespace Epanet.UI {
 
                 string s = string.Format(
                     "{0}: x={1:f};y={2:f}",
-                    this.selNode.Name,
-                    this.selNode.Position.X,
-                    this.selNode.Position.Y);
+                    _selNode.Name,
+                    _selNode.Position.X,
+                    _selNode.Position.Y);
 
-                path.AddString(s, this.Font.FontFamily, 0, this.Font.Size * 2 / this.Zoom, pt, sf);
+                path.AddString(s, Font.FontFamily, 0, Font.Size * 2 / Zoom, pt, sf);
                 matrix.Scale(1f, -1f);
                 path.Transform(matrix);
                 g.FillPath(Brushes.Red, path);
@@ -428,7 +427,7 @@ namespace Epanet.UI {
         }
 
         private void DrawNetwork(Graphics g) {
-            if (this.Net == null || this.networkBounds.IsEmpty)
+            if (Net == null || _networkBounds.IsEmpty)
                 return;
 
             try {
@@ -436,36 +435,36 @@ namespace Epanet.UI {
                 g.InterpolationMode = InterpolationMode.High;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.PageScale = this.Zoom;
-                g.TranslateTransform(this.dxo, this.dyo);
+                g.PageScale = Zoom;
+                g.TranslateTransform(_dxo, _dyo);
                 g.ScaleTransform(1, -1);
             }
             catch {
                 return;
             }
 
-            float rectSize = Math.Max(this.networkBounds.Height, this.networkBounds.Width) * this.Zoom;
+            float rectSize = Math.Max(_networkBounds.Height, _networkBounds.Width) * Zoom;
   
             Debug.Print("rectSize1={0}", rectSize);
             if (rectSize > 4) {
                 //links
-                if (this.DrawPipes) this._DrawPipes(g);
+                if (DrawPipes) _DrawPipes(g);
                 //tanks
-                if (this.DrawTanks) this._DrawTanks(g);
+                if (DrawTanks) _DrawTanks(g);
                 //nodes
-                if (this.DrawNodes) this._DrawNodes(g);
-                this._DrawLabels(g);
+                if (DrawNodes) _DrawNodes(g);
+                _DrawLabels(g);
             }
             else {
-                rectSize = 4f / this.Zoom;
+                rectSize = 4f / Zoom;
                 Debug.Print("rectSize2={0}", rectSize);
                 g.FillRectangle(
                     Brushes.LightSlateGray,
-                    new RectangleF(this.networkBounds.Location, new SizeF(rectSize, rectSize)));
+                    new RectangleF(_networkBounds.Location, new SizeF(rectSize, rectSize)));
 
             }
 
-            this._DrawSelection(g);
+            _DrawSelection(g);
         }
 
         #endregion
@@ -480,11 +479,11 @@ namespace Epanet.UI {
             e.Graphics.DrawLine(Pens.Red, -100, 0, 100, 0);
             e.Graphics.DrawLine(Pens.Red, 0, -100, 0, 100);
 
-            if (this.net == null)
+            if (_net == null)
                 return;
 
             try {
-                this.DrawNetwork(e.Graphics);
+                DrawNetwork(e.Graphics);
             }
             catch (Exception ex) {
                 Debug.Print(ex.Message);
@@ -494,31 +493,31 @@ namespace Epanet.UI {
         protected override void OnMouseWheel(MouseEventArgs e) {
             base.OnMouseWheel(e);
 
-            float scale = e.Delta > 0 ? this.Zoom * 1.5f : this.Zoom / 1.5f;
-            this.ZoomToPoint(scale, e.Location);
-            this.OnMouseMove(e);
+            float scale = e.Delta > 0 ? Zoom * 1.5f : Zoom / 1.5f;
+            ZoomToPoint(scale, e.Location);
+            OnMouseMove(e);
         }
 
         protected override void OnDoubleClick(EventArgs e) {
             base.OnDoubleClick(e);
-            this.ZoomAll();
+            ZoomAll();
         }
 
         protected override void OnMouseDown(MouseEventArgs e) {
-            this.Focus();
+            Focus();
             base.OnMouseDown(e);
 
             switch (e.Button) {
             case MouseButtons.Left:
-                Node nd = this.PeekNearest(this.GetLogPoint(e.Location));
-                if (!Equals(nd, this.selNode)) {
-                    this.selNode = nd;
-                    this.Invalidate();
+                Node nd = PeekNearest(GetLogPoint(e.Location));
+                if (!Equals(nd, _selNode)) {
+                    _selNode = nd;
+                    Invalidate();
                 }
 
                 break;
             case MouseButtons.Middle:
-                this.panPoint = e.Location;
+                _panPoint = e.Location;
                 break;
             case MouseButtons.Right:
                 break;
@@ -527,17 +526,17 @@ namespace Epanet.UI {
 
         protected override void OnMouseMove(MouseEventArgs e) {
             base.OnMouseMove(e);
-            this.MousePoint = this.GetLogPoint(e.Location);
+            MousePoint = GetLogPoint(e.Location);
 
             switch (e.Button) {
                 // case MouseButtons.None: break;
                 // case MouseButtons.Left: break;
             case MouseButtons.Middle: {
-                var pt = new PointF(e.X - this.panPoint.X, e.Y - this.panPoint.Y);
-                this.dxo += pt.X / this.Zoom;
-                this.dyo += pt.Y / this.Zoom;
-                this.panPoint = e.Location;
-                this.Invalidate();
+                var pt = new PointF(e.X - _panPoint.X, e.Y - _panPoint.Y);
+                _dxo += pt.X / Zoom;
+                _dyo += pt.Y / Zoom;
+                _panPoint = e.Location;
+                Invalidate();
             }
                 break;
                 //case MouseButtons.Right: break;

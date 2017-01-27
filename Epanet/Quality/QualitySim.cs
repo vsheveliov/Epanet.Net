@@ -24,7 +24,6 @@ using System.Linq;
 using Epanet.Enums;
 using Epanet.Hydraulic.IO;
 using Epanet.Hydraulic.Structures;
-using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Quality.Structures;
 using Epanet.Util;
@@ -36,55 +35,55 @@ namespace Epanet.Quality {
     ///<summary>Single species water quality simulation class.</summary>
     public class QualitySim {
         ///<summary>Bulk reaction units conversion factor.</summary>
-        private readonly double bucf;
+        private readonly double _bucf;
         ///<summary>Current hydraulic time counter [seconds].</summary>
-        private long htime;
+        private long _htime;
 
-        private readonly QualityNode[] juncs;
-        private readonly QualityLink[] links;
-        private readonly EpanetNetwork net;
-        private readonly QualityNode[] nodes;
+        private readonly QualityNode[] _juncs;
+        private readonly QualityLink[] _links;
+        private readonly EpanetNetwork _net;
+        private readonly QualityNode[] _nodes;
         ///<summary>Number of reported periods.</summary>
-        private int nperiods;
+        private int _nperiods;
 
         ///<summary>Current quality time (sec)</summary>
-        private long qtime;
+        private long _qtime;
 
         ///<summary>Reaction indicator.</summary>
-        private readonly bool reactflag;
+        private readonly bool _reactflag;
         ///<summary>Current report time counter [seconds].</summary>
-        private long rtime;
+        private long _rtime;
         ///<summary>Schmidt Number.</summary>
-        private readonly double sc;
-        private readonly QualityTank[] tanks;
-        private readonly QualityNode traceNode;
+        private readonly double _sc;
+        private readonly QualityTank[] _tanks;
+        private readonly QualityNode _traceNode;
         ///<summary>Tank reaction units conversion factor.</summary>
-        private readonly double tucf;
+        private readonly double _tucf;
         ///<summary>Avg. bulk reaction rate.</summary>
-        private double wbulk;
+        private double _wbulk;
         ///<summary>Avg. mass inflow.</summary>
-        private double wsource;
+        private double _wsource;
         ///<summary>Avg. tank reaction rate.</summary>
-        private double wtank;
+        private double _wtank;
         ///<summary>Avg. wall reaction rate.</summary>
-        private double wwall;
+        private double _wwall;
 
         [NonSerialized]
-        private readonly double elevUnits;
+        private readonly double _elevUnits;
         [NonSerialized]
-        private readonly QualType qualflag;
+        private readonly QualType _qualflag;
 
 
         ///<summary>Initializes WQ solver system</summary>
 
         public QualitySim(EpanetNetwork net, TraceSource ignored) {
 //        this.log = log;
-            this.net = net;
+            _net = net;
             
-            this.nodes = net.Nodes.Select(QualityNode.Create).ToArray();
-            this.tanks = this.nodes.OfType<QualityTank>().ToArray();
-            this.juncs = this.nodes.Where(x => !(x is QualityTank)).ToArray();
-            this.links = net.Links.Select(n => new QualityLink(net.Nodes, this.nodes, n)).ToArray();
+            _nodes = net.Nodes.Select(QualityNode.Create).ToArray();
+            _tanks = _nodes.OfType<QualityTank>().ToArray();
+            _juncs = _nodes.Where(x => !(x is QualityTank)).ToArray();
+            _links = net.Links.Select(n => new QualityLink(net.Nodes, _nodes, n)).ToArray();
             
 
             /*
@@ -111,57 +110,57 @@ namespace Epanet.Quality {
 
             */
 
-            this.bucf = 1.0;
-            this.tucf = 1.0;
-            this.reactflag = false;
+            _bucf = 1.0;
+            _tucf = 1.0;
+            _reactflag = false;
 
-            this.qualflag = this.net.QualFlag;
+            _qualflag = _net.QualFlag;
 
-            if (this.qualflag != QualType.NONE) {
-                if (this.qualflag == QualType.TRACE) {
-                    foreach (QualityNode qN  in  this.nodes)
-                        if (qN.Node.Name.Equals(this.net.TraceNode, StringComparison.OrdinalIgnoreCase)) {
-                            this.traceNode = qN;
-                            this.traceNode.Quality = 100.0;
+            if (_qualflag != QualType.NONE) {
+                if (_qualflag == QualType.TRACE) {
+                    foreach (QualityNode qN  in  _nodes)
+                        if (qN.Node.Name.Equals(_net.TraceNode, StringComparison.OrdinalIgnoreCase)) {
+                            _traceNode = qN;
+                            _traceNode.Quality = 100.0;
                             break;
                         }
                 }
 
-                if (this.net.Diffus > 0.0)
-                    this.sc = this.net.Viscos / this.net.Diffus;
+                if (_net.Diffus > 0.0)
+                    _sc = _net.Viscos / _net.Diffus;
                 else
-                    this.sc = 0.0;
+                    _sc = 0.0;
 
-                this.bucf = GetUcf(this.net.BulkOrder);
-                this.tucf = GetUcf(this.net.TankOrder);
+                _bucf = GetUcf(_net.BulkOrder);
+                _tucf = GetUcf(_net.TankOrder);
 
-                this.reactflag = this.GetReactflag();
+                _reactflag = GetReactflag();
             }
 
 
-            this.wbulk = 0.0;
-            this.wwall = 0.0;
-            this.wtank = 0.0;
-            this.wsource = 0.0;
+            _wbulk = 0.0;
+            _wwall = 0.0;
+            _wtank = 0.0;
+            _wsource = 0.0;
 
-            this.htime = 0;
-            this.rtime = this.net.RStart;
-            this.qtime = 0;
-            this.nperiods = 0;
-            this.elevUnits = this.net.FieldsMap.GetUnits(FieldType.ELEV);
+            _htime = 0;
+            _rtime = _net.RStart;
+            _qtime = 0;
+            _nperiods = 0;
+            _elevUnits = _net.FieldsMap.GetUnits(FieldType.ELEV);
         }
 
         ///<summary>Accumulates mass flow at nodes and updates nodal quality.</summary>
         /// <param name="dt">Step duration in seconds.</param>
         private void Accumulate(long dt) {
             //  Re-set memory used to accumulate mass & volume
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 qN.VolumeIn = 0;
                 qN.MassIn = 0;
                 qN.SourceContribution = 0;
             }
 
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 QualityNode j = qL.DownStreamNode; //  Downstream node
                 if (qL.Segments.Count > 0) //  Accumulate concentrations
                 {
@@ -176,17 +175,17 @@ namespace Epanet.Quality {
                 }
             }
 
-            foreach (QualityNode qN  in  this.nodes)
+            foreach (QualityNode qN  in  _nodes)
                 if (qN.VolumeIn > 0.0)
                     qN.SourceContribution = qN.MassIn / qN.VolumeIn;
 
             //  Move mass from first segment of each pipe into downstream node
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 qN.VolumeIn = 0;
                 qN.MassIn = 0;
             }
 
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 QualityNode j = qL.DownStreamNode;
                 double v = Math.Abs(qL.Flow) * dt;
 
@@ -230,18 +229,18 @@ namespace Epanet.Quality {
             double vsum = 0.0,
                    msum = 0.0;
 
-            if (this.qualflag == QualType.NONE)
-                return (0.0);
+            if (_qualflag == QualType.NONE)
+                return 0.0;
 
             foreach (QualitySegment seg  in  ql.Segments) {
                 vsum += seg.V;
-                msum += (seg.C) * (seg.V);
+                msum += seg.C * seg.V;
             }
 
             if (vsum > 0.0)
-                return (msum / vsum);
+                return msum / vsum;
             else
-                return ((ql.FirstNode.Quality + ql.SecondNode.Quality) / 2.0);
+                return (ql.FirstNode.Quality + ql.SecondNode.Quality) / 2.0;
         }
 
         ///<summary>Computes bulk reaction rate (mass/volume/time).</summary>
@@ -251,15 +250,15 @@ namespace Epanet.Quality {
             if (order == 0.0)
                 c = 1.0;
             else if (order < 0.0) {
-                c1 = this.net.CLimit + Utilities.GetSignal(kb) * c;
+                c1 = _net.CLimit + Utilities.GetSignal(kb) * c;
                 if (Math.Abs(c1) < Constants.TINY) c1 = Utilities.GetSignal(c1) * Constants.TINY;
                 c = c / c1;
             }
             else {
-                if (this.net.CLimit == 0.0)
+                if (_net.CLimit == 0.0)
                     c1 = c;
                 else
-                    c1 = Math.Max(0.0, Utilities.GetSignal(kb) * (this.net.CLimit - c));
+                    c1 = Math.Max(0.0, Utilities.GetSignal(kb) * (_net.CLimit - c));
 
                 if (order == 1.0)
                     c = c1;
@@ -271,66 +270,70 @@ namespace Epanet.Quality {
 
 
             if (c < 0) c = 0;
-            return (kb * c);
+            return kb * c;
         }
 
 
         ///<summary>Retrieves hydraulic solution and hydraulic time step for next hydraulic event.</summary>
         private void GetHyd(BinaryWriter outStream, HydraulicReader hydSeek) {
-            AwareStep step = hydSeek.GetStep((int)this.htime);
-            this.LoadHydValues(step);
+            AwareStep step = hydSeek.GetStep(_htime);
+            LoadHydValues(step);
 
-            this.htime += step.Step;
+            _htime += step.Step;
 
-            if (this.htime >= this.rtime) {
-                this.SaveOutput(outStream);
-                this.nperiods++;
-                this.rtime += this.net.RStep;
+            if (_htime >= _rtime) {
+                SaveOutput(outStream);
+                _nperiods++;
+                _rtime += _net.RStep;
             }
 
 
-            if (this.qualflag != QualType.NONE && this.qtime < this.net.Duration) {
-                if (this.reactflag && this.qualflag != QualType.AGE)
-                    this.Ratecoeffs();
+            if (_qualflag != QualType.NONE && _qtime < _net.Duration) {
+                if (_reactflag && _qualflag != QualType.AGE)
+                    Ratecoeffs();
 
-                if (this.qtime == 0)
-                    this.Initsegs();
+                if (_qtime == 0)
+                    Initsegs();
                 else
-                    this.Reorientsegs();
+                    Reorientsegs();
             }
         }
 
-        public long Qtime { get { return this.qtime; } }
+        public long Qtime { get { return _qtime; } }
 
         ///<summary>Checks if reactive chemical being simulated.</summary>
         private bool GetReactflag() {
-            if (this.qualflag == QualType.TRACE)
-                return (false);
-            else if (this.qualflag == QualType.AGE)
-                return (true);
-            else {
-                foreach (QualityLink qL  in  this.links) {
-                    if (qL.Link.Type <= LinkType.PIPE) {
-                        if (qL.Link.Kb != 0.0 || qL.Link.Kw != 0.0)
-                            return (true);
+            switch (_qualflag) {
+                case QualType.TRACE:
+                    return false;
+                case QualType.AGE:
+                    return true;
+                default:
+                    foreach (QualityLink qL  in  _links) {
+                        if (qL.Link.Type <= LinkType.PIPE) {
+                            if (qL.Link.Kb != 0.0 || qL.Link.Kw != 0.0)
+                                return true;
+                        }
                     }
-                }
-                foreach (QualityTank qT  in  this.tanks)
-                    if (((Tank)qT.Node).Kb != 0.0)
-                        return (true);
+                    foreach (QualityTank qT  in  _tanks)
+                        if (((Tank)qT.Node).Kb != 0.0)
+                            return true;
+
+                    break;
             }
-            return (false);
+
+            return false;
         }
 
         ///<summary>Local method to compute unit conversion factor for bulk reaction rates.</summary>
         private static double GetUcf(double order) {
             if (order < 0.0) order = 0.0;
-            return order == 1.0 ? 1.0 : 1.0 / Math.Pow(Constants.LperFT3, (order - 1.0));
+            return order == 1.0 ? 1.0 : 1.0 / Math.Pow(Constants.LperFT3, order - 1.0);
         }
 
         ///<summary>Initializes water quality segments.</summary>
         private void Initsegs() {
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 qL.FlowDir = true;
 
                 if (qL.Flow < 0.0)
@@ -351,7 +354,7 @@ namespace Epanet.Quality {
             }
 
             // Initialize segments in tanks that use them
-            foreach (QualityTank qT  in  this.tanks) {
+            foreach (QualityTank qT  in  _tanks) {
                 Tank tank = (Tank)qT.Node;
 
                 // Skip reservoirs & complete mix tanks
@@ -380,42 +383,42 @@ namespace Epanet.Quality {
         ///<summary>Load hydraulic simulation data to the water quality structures.</summary>
         private void LoadHydValues(AwareStep step) {
             int count = 0;
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 qN.Demand = step.GetNodeDemand(count++, qN.Node, null);
             }
 
             count = 0;
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 qL.Flow = step.GetLinkFlow(count++, qL.Link, null);
             }
         }
 
         ///<summary>Updates WQ conditions until next hydraulic solution occurs (after tstep secs.)</summary>
         private long Nextqual(BinaryWriter outStream) {
-            long hydstep = this.htime - this.qtime;
+            long hydstep = _htime - _qtime;
 
-            if (this.qualflag != QualType.NONE && hydstep > 0)
-                this.Transport(hydstep);
+            if (_qualflag != QualType.NONE && hydstep > 0)
+                Transport(hydstep);
 
             long tstep = hydstep;
-            this.qtime += hydstep;
+            _qtime += hydstep;
 
             if (tstep == 0)
-                this.SaveFinaloutput(outStream);
+                SaveFinaloutput(outStream);
 
-            return (tstep);
+            return tstep;
         }
 
         private long Nextqual() {
-            long hydstep = this.htime - this.qtime;
+            long hydstep = _htime - _qtime;
 
-            if (this.qualflag != QualType.NONE && hydstep > 0)
-                this.Transport(hydstep);
+            if (_qualflag != QualType.NONE && hydstep > 0)
+                Transport(hydstep);
 
             long tstep = hydstep;
-            this.qtime += hydstep;
+            _qtime += hydstep;
 
-            return (tstep);
+            return tstep;
         }
 
         ///<summary>Finds wall reaction rate coeffs.</summary>
@@ -424,37 +427,37 @@ namespace Epanet.Quality {
 
             d = ql.Link.Diameter;
 
-            if (this.sc == 0.0) {
-                if (this.net.WallOrder == 0.0)
-                    return (Constants.BIG);
+            if (_sc == 0.0) {
+                if (_net.WallOrder == 0.0)
+                    return Constants.BIG;
                 else
-                    return (ql.Link.Kw * (4.0 / d) / this.elevUnits);
+                    return ql.Link.Kw * (4.0 / d) / _elevUnits;
             }
 
             a = Math.PI * d * d / 4.0;
             u = Math.Abs(ql.Flow) / a;
-            re = u * d / this.net.Viscos;
+            re = u * d / _net.Viscos;
 
             if (re < 1.0)
                 sh = 2.0;
 
             else if (re >= 2300.0)
-                sh = 0.0149 * Math.Pow(re, 0.88) * Math.Pow(this.sc, 0.333);
+                sh = 0.0149 * Math.Pow(re, 0.88) * Math.Pow(_sc, 0.333);
             else {
-                y = d / ql.Link.Lenght * re * this.sc;
+                y = d / ql.Link.Lenght * re * _sc;
                 sh = 3.65 + 0.0668 * y / (1.0 + 0.04 * Math.Pow(y, 0.667));
             }
 
 
-            kf = sh * this.net.Diffus / d;
+            kf = sh * _net.Diffus / d;
 
 
-            if (this.net.WallOrder == 0.0) return (kf);
+            if (_net.WallOrder == 0.0) return kf;
 
 
-            kw = ql.Link.Kw / this.elevUnits;
-            kw = (4.0 / d) * kw * kf / (kf + Math.Abs(kw));
-            return (kw);
+            kw = ql.Link.Kw / _elevUnits;
+            kw = 4.0 / d * kw * kf / (kf + Math.Abs(kw));
+            return kw;
         }
 
         ///<summary>Computes new quality in a pipe segment after reaction occurs.</summary>
@@ -462,35 +465,35 @@ namespace Epanet.Quality {
             double cnew, dc, dcbulk, dcwall, rbulk, rwall;
 
 
-            if (this.qualflag == QualType.AGE) return (c + dt / 3600.0);
+            if (_qualflag == QualType.AGE) return c + dt / 3600.0;
 
 
-            rbulk = this.Bulkrate(c, ql.Link.Kb, this.net.BulkOrder) * this.bucf;
-            rwall = this.Wallrate(c, ql.Link.Diameter, ql.Link.Kw, ql.FlowResistance);
+            rbulk = Bulkrate(c, ql.Link.Kb, _net.BulkOrder) * _bucf;
+            rwall = Wallrate(c, ql.Link.Diameter, ql.Link.Kw, ql.FlowResistance);
 
 
             dcbulk = rbulk * dt;
             dcwall = rwall * dt;
 
 
-            if (this.htime >= this.net.RStart) {
-                this.wbulk += Math.Abs(dcbulk) * v;
-                this.wwall += Math.Abs(dcwall) * v;
+            if (_htime >= _net.RStart) {
+                _wbulk += Math.Abs(dcbulk) * v;
+                _wwall += Math.Abs(dcwall) * v;
             }
 
 
             dc = dcbulk + dcwall;
             cnew = c + dc;
             cnew = Math.Max(0.0, cnew);
-            return (cnew);
+            return cnew;
         }
 
         ///<summary>Determines wall reaction coeff. for each pipe.</summary>
         private void Ratecoeffs() {
-            foreach (QualityLink ql  in  this.links) {
+            foreach (QualityLink ql  in  _links) {
                 double kw = ql.Link.Kw;
                 if (kw != 0.0)
-                    kw = this.Piperate(ql);
+                    kw = Piperate(ql);
 
                 ql.FlowResistance = kw;
                 //ql.setReactionRate(0.0);
@@ -500,7 +503,7 @@ namespace Epanet.Quality {
         ///<summary>Creates new segments in outflow links from nodes.</summary>
         /// <param name="dt">Step duration in seconds.</param>
         private void Release(long dt) {
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 if (qL.Flow == 0.0)
                     continue;
 
@@ -519,7 +522,7 @@ namespace Epanet.Quality {
                     QualitySegment seg = qL.Segments.Last.Value;
 
                     // Quality of seg close to that of node
-                    if (Math.Abs(seg.C - c) < this.net.Ctol) {
+                    if (Math.Abs(seg.C - c) < _net.Ctol) {
                         seg.C = (seg.C * seg.V + c * v) / (seg.V + v);
                         seg.V += v;
                     }
@@ -533,7 +536,7 @@ namespace Epanet.Quality {
 
         ///<summary>Re-orients segments (if flow reverses).</summary>
         private void Reorientsegs() {
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 bool newdir = true;
 
                 if (qL.Flow == 0.0)
@@ -549,17 +552,17 @@ namespace Epanet.Quality {
         }
 
         ///<summary>Write the number of report periods written in the binary output file.</summary>
-        private void SaveFinaloutput(BinaryWriter outStream) {
-            outStream.Write((int)this.nperiods);
+        private void SaveFinaloutput(BinaryWriter bw) {
+            bw.Write((int)_nperiods);
         }
 
         ///<summary>Save links and nodes species concentrations for the current step.</summary>
-        private void SaveOutput(BinaryWriter outStream) {
-            foreach (QualityNode qN  in  this.nodes)
-                outStream.Write((float)qN.Quality);
+        private void SaveOutput(BinaryWriter bw) {
+            foreach (QualityNode qN  in  _nodes)
+                bw.Write((float)qN.Quality);
 
-            foreach (QualityLink qL  in  this.links)
-                outStream.Write((float)this.Avgqual(qL));
+            foreach (QualityLink qL  in  _links)
+                bw.Write((float)Avgqual(qL));
         }
 
         /// <summary>Run the water quality simulation.</summary>
@@ -568,7 +571,7 @@ namespace Epanet.Quality {
         public void Simulate(string hydFile, string qualFile) {
 
             using (var bos = File.OpenWrite(qualFile))
-                this.Simulate(hydFile, bos);
+                Simulate(hydFile, bos);
 
         }
 
@@ -577,18 +580,18 @@ namespace Epanet.Quality {
         /// <param name="out">The output stream were the water quality simulation results will be written.</param>
         ///  
         void Simulate(string hydFile, Stream @out) {
-            BinaryWriter outStream = new BinaryWriter(@out);
-            outStream.Write((int)this.net.Nodes.Count);
-            outStream.Write((int)this.net.Links.Count);
+            BinaryWriter bw = new BinaryWriter(@out);
+            bw.Write((int)_net.Nodes.Count);
+            bw.Write((int)_net.Links.Count);
             long tstep;
 
             using (var hydraulicReader = new HydraulicReader(new BinaryReader(File.OpenRead(hydFile))))
                 do {
-                    if (this.qtime == this.htime)
-                        this.GetHyd(outStream, hydraulicReader);
+                    if (_qtime == _htime)
+                        GetHyd(bw, hydraulicReader);
 
 
-                    tstep = this.Nextqual(outStream);
+                    tstep = Nextqual(bw);
                 } while (tstep > 0);
 
         }
@@ -596,34 +599,31 @@ namespace Epanet.Quality {
         /// <summary>Simulate water quality during one hydraulic step.</summary>
         public bool SimulateSingleStep(List<SimulationNode> hydNodes, List<SimulationLink> hydLinks, long hydStep) {
             int count = 0;
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 qN.Demand = hydNodes[count++].SimDemand;
             }
 
             count = 0;
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 SimulationLink hL = hydLinks[count++];
                 qL.Flow = hL.SimStatus <= StatType.CLOSED ? 0d : hL.SimFlow;
             }
 
-            this.htime += hydStep;
+            _htime += hydStep;
 
-            if (this.qualflag != QualType.NONE && this.qtime < this.net.Duration) {
-                if (this.reactflag && this.qualflag != QualType.AGE)
-                    this.Ratecoeffs();
+            if (_qualflag != QualType.NONE && _qtime < _net.Duration) {
+                if (_reactflag && _qualflag != QualType.AGE)
+                    Ratecoeffs();
 
-                if (this.qtime == 0)
-                    this.Initsegs();
+                if (_qtime == 0)
+                    Initsegs();
                 else
-                    this.Reorientsegs();
+                    Reorientsegs();
             }
 
-            long tstep = this.Nextqual();
+            long tstep = Nextqual();
 
-            if (tstep == 0)
-                return false;
-
-            return true;
+            return tstep != 0;
         }
 
         ///<summary>Computes contribution (if any) of mass additions from WQ sources at each node.</summary>
@@ -631,14 +631,14 @@ namespace Epanet.Quality {
         private void Sourceinput(long dt) {
             double qcutoff = 10.0 * Constants.TINY;
 
-            foreach (QualityNode qN  in  this.nodes)
+            foreach (QualityNode qN  in  _nodes)
                 qN.SourceContribution = 0;
 
 
-            if (this.qualflag != QualType.CHEM)
+            if (_qualflag != QualType.CHEM)
                 return;
 
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 QualSource source = qN.Node.QualSource;
 
                 // Skip node if no WQ source
@@ -658,7 +658,7 @@ namespace Epanet.Quality {
                 // Evaluate source input only if node outflow > cutoff flow
                 if (qout > qcutoff) {
                     // Mass added depends on type of source
-                    double s = this.Sourcequal(source);
+                    double s = Sourcequal(source);
 
                     switch (source.Type) {
                     case SourceType.CONCEN:
@@ -696,18 +696,18 @@ namespace Epanet.Quality {
 
                     // Update total mass added for time period & simulation
                     qN.MassRate = qN.MassRate + massadded;
-                    if (this.htime >= this.net.RStart)
-                        this.wsource += massadded;
+                    if (_htime >= _net.RStart)
+                        _wsource += massadded;
                 }
             }
 
             // Add mass inflows from reservoirs to Wsource
-            if (this.htime >= this.net.RStart) {
-                foreach (QualityTank qT  in  this.tanks) {
+            if (_htime >= _net.RStart) {
+                foreach (QualityTank qT  in  _tanks) {
                     if (((Tank)qT.Node).Type == NodeType.RESERV) {
                         double volout = qT.VolumeIn - qT.Demand * dt;
                         if (volout > 0.0)
-                            this.wsource += volout * qT.Concentration;
+                            _wsource += volout * qT.Concentration;
                     }
                 }
             }
@@ -720,13 +720,14 @@ namespace Epanet.Quality {
             if (source.Type == SourceType.MASS)
                 c /= 60.0;
             else
-                c /= this.net.FieldsMap.GetUnits(FieldType.QUALITY);
+                c /= _net.FieldsMap.GetUnits(FieldType.QUALITY);
 
 
             Pattern pat = source.Pattern;
             if (pat == null)
-                return (c);
-            long k = ((this.qtime + this.net.PStart) / this.net.PStep) % pat.Count;
+                return c;
+
+            long k = (_qtime + _net.PStart) / _net.PStep % pat.Count;
             return c * pat[(int)k];
         }
 
@@ -735,7 +736,7 @@ namespace Epanet.Quality {
         /// <param name="dt">Step duration in seconds.</param>
         private void Tankmix1(QualityTank tank, long dt) {
             // React contents of tank
-            double c = this.Tankreact(tank.Concentration, tank.Volume, ((Tank)tank.Node).Kb, dt);
+            double c = Tankreact(tank.Concentration, tank.Volume, ((Tank)tank.Node).Kb, dt);
 
             // Determine tank & volumes
             double vold = tank.Volume;
@@ -772,8 +773,8 @@ namespace Epanet.Quality {
             QualitySegment seg1 = tank.Segments.Last.Value;
             QualitySegment seg2 = tank.Segments.First.Value;
 
-            seg1.C = this.Tankreact(seg1.C, seg1.V, ((Tank)tank.Node).Kb, dt);
-            seg2.C = this.Tankreact(seg2.C, seg2.V, ((Tank)tank.Node).Kb, dt);
+            seg1.C = Tankreact(seg1.C, seg1.V, ((Tank)tank.Node).Kb, dt);
+            seg2.C = Tankreact(seg2.C, seg2.V, ((Tank)tank.Node).Kb, dt);
 
             // Find inflows & outflows
             double vnet = tank.Demand * dt;
@@ -784,22 +785,22 @@ namespace Epanet.Quality {
             // Tank is filling
             double vt = 0.0;
             if (vnet > 0.0) {
-                vt = Math.Max(0.0, (seg1.V + vnet - v1Max));
+                vt = Math.Max(0.0, seg1.V + vnet - v1Max);
                 if (vin > 0.0) {
-                    seg1.C = ((seg1.C) * (seg1.V) + cin * vin) / (seg1.V + vin);
+                    seg1.C = (seg1.C * seg1.V + cin * vin) / (seg1.V + vin);
                 }
                 if (vt > 0.0) {
-                    seg2.C = ((seg2.C) * (seg2.V) + (seg1.C) * vt) / (seg2.V + vt);
+                    seg2.C = (seg2.C * seg2.V + seg1.C * vt) / (seg2.V + vt);
                 }
             }
 
             // Tank is emptying
             if (vnet < 0.0) {
                 if (seg2.V > 0.0) {
-                    vt = Math.Min(seg2.V, (-vnet));
+                    vt = Math.Min(seg2.V, -vnet);
                 }
                 if (vin + vt > 0.0) {
-                    seg1.C = ((seg1.C) * (seg1.V) + cin * vin + (seg2.C) * vt) / (seg1.V + vin + vt);
+                    seg1.C = (seg1.C * seg1.V + cin * vin + seg2.C * vt) / (seg1.V + vin + vt);
                 }
             }
 
@@ -836,9 +837,9 @@ namespace Epanet.Quality {
                 return;
 
             // React contents of each compartment
-            if (this.reactflag) {
+            if (_reactflag) {
                 foreach (QualitySegment seg  in  tank.Segments) {
-                    seg.C = this.Tankreact(seg.C, seg.V, ((Tank)tank.Node).Kb, dt);
+                    seg.C = Tankreact(seg.C, seg.V, ((Tank)tank.Node).Kb, dt);
                 }
             }
 
@@ -868,7 +869,7 @@ namespace Epanet.Quality {
                 vseg = Math.Min(vseg, vout);
                 if (tank.Segments.Count == 1) vseg = vout;
                 vsum += vseg;
-                csum += (seg.C) * vseg;
+                csum += seg.C * vseg;
                 vout -= vseg; // Remaining flow volume
                 if (vout >= 0.0 && vseg >= seg.V) {
                     tank.Segments.RemoveFirst();
@@ -894,7 +895,7 @@ namespace Epanet.Quality {
                     QualitySegment seg = tank.Segments.Last.Value;
 
                     // Quality is the same, so just add flow volume to last seg
-                    if (Math.Abs(seg.C - cin) < this.net.Ctol)
+                    if (Math.Abs(seg.C - cin) < _net.Ctol)
                         seg.V += vin;
                     else // Otherwise add a new seg to tank
                         tank.Segments.AddLast(new QualitySegment(vin, cin));
@@ -912,10 +913,10 @@ namespace Epanet.Quality {
                 return;
 
             // React contents of each compartment
-            if (this.reactflag) {
+            if (_reactflag) {
                 for (LinkedListNode<QualitySegment> el = tank.Segments.Last; el != null; el = el.Previous) {
                     QualitySegment seg = el.Value;
-                    seg.C = this.Tankreact(seg.C, seg.V, ((Tank)tank.Node).Kb, dt);
+                    seg.C = Tankreact(seg.C, seg.V, ((Tank)tank.Node).Kb, dt);
                 }
             }
 
@@ -937,7 +938,7 @@ namespace Epanet.Quality {
                 if (tank.Segments.Count > 0) {
                     QualitySegment seg = tank.Segments.Last.Value;
                     // Quality is the same, so just add flow volume to last seg
-                    if (Math.Abs(seg.C - cin) < this.net.Ctol)
+                    if (Math.Abs(seg.C - cin) < _net.Ctol)
                         seg.V += vnet;
                     // Otherwise add a new last seg to tank
                     // Which points to old last seg
@@ -970,7 +971,7 @@ namespace Epanet.Quality {
                         vseg = vnet;
 
                     vsum += vseg;
-                    csum += (seg.C) * vseg;
+                    csum += seg.C * vseg;
                     vnet -= vseg;
 
                     if (vnet >= 0.0 && vseg >= seg.V) {
@@ -989,37 +990,36 @@ namespace Epanet.Quality {
 
         ///<summary>Computes new quality in a tank after reaction occurs.</summary>
         private double Tankreact(double c, double v, double kb, long dt) {
-            double cnew, dc, rbulk;
+            if (!_reactflag)
+                return c;
 
-            if (!this.reactflag)
-                return (c);
+            if (_qualflag == QualType.AGE)
+                return c + dt / 3600.0;
 
-            if (this.qualflag == QualType.AGE)
-                return (c + dt / 3600.0);
+            double rbulk = Bulkrate(c, kb, _net.TankOrder) * _tucf;
 
-            rbulk = this.Bulkrate(c, kb, this.net.TankOrder) * this.tucf;
-
-            dc = rbulk * dt;
-            if (this.htime >= this.net.RStart)
-                this.wtank += Math.Abs(dc) * v;
-            cnew = c + dc;
+            double dc = rbulk * dt;
+            if (_htime >= _net.RStart)
+                _wtank += Math.Abs(dc) * v;
+            double cnew = c + dc;
             cnew = Math.Max(0.0, cnew);
-            return (cnew);
+
+            return cnew;
         }
 
         ///<summary>Transports constituent mass through pipe network under a period of constant hydraulic conditions.</summary>
         private void Transport(long tstep) {
             long qt = 0;
             while (qt < tstep) {
-                long dt = Math.Min(this.net.QStep, tstep - qt);
+                long dt = Math.Min(_net.QStep, tstep - qt);
                 qt += dt;
-                if (this.reactflag) this.Updatesegs(dt);
-                this.Accumulate(dt);
-                this.Updatenodes(dt);
-                this.Sourceinput(dt);
-                this.Release(dt);
+                if (_reactflag) Updatesegs(dt);
+                Accumulate(dt);
+                Updatenodes(dt);
+                Sourceinput(dt);
+                Release(dt);
             }
-            this.Updatesourcenodes(tstep);
+            Updatesourcenodes(tstep);
         }
 
         ///<summary>
@@ -1027,7 +1027,7 @@ namespace Epanet.Quality {
         /// </summary>
         /// <param name="dt">Step duration in seconds.</param>
         private void Updatenodes(long dt) {
-            foreach (QualityNode qN  in  this.juncs) {
+            foreach (QualityNode qN  in  _juncs) {
                 if (qN.Demand < 0.0)
                     qN.VolumeIn = qN.VolumeIn - qN.Demand * dt;
                 if (qN.VolumeIn > 0.0)
@@ -1037,17 +1037,17 @@ namespace Epanet.Quality {
             }
 
             //  Update tank quality
-            this.UpdateTanks(dt);
+            UpdateTanks(dt);
 
             // For flow tracing, set source node concen. to 100.
-            if (this.qualflag == QualType.TRACE)
-                this.traceNode.Quality = 100.0;
+            if (_qualflag == QualType.TRACE)
+                _traceNode.Quality = 100.0;
         }
 
         ///<summary>Reacts material in pipe segments up to time t.</summary>
         /// <param name="dt">Step duration in seconds.</param>
         private void Updatesegs(long dt) {
-            foreach (QualityLink qL  in  this.links) {
+            foreach (QualityLink qL  in  _links) {
                 double rsum = 0.0;
                 double vsum = 0.0;
                 if (qL.Link.Lenght == 0.0)
@@ -1055,10 +1055,10 @@ namespace Epanet.Quality {
 
                 foreach (QualitySegment seg  in  qL.Segments) {
                     double cseg = seg.C;
-                    seg.C = this.Pipereact(qL, seg.C, seg.V, dt);
+                    seg.C = Pipereact(qL, seg.C, seg.V, dt);
 
-                    if (this.qualflag == QualType.CHEM) {
-                        rsum += Math.Abs((seg.C - cseg)) * seg.V;
+                    if (_qualflag == QualType.CHEM) {
+                        rsum += Math.Abs(seg.C - cseg) * seg.V;
                         vsum += seg.V;
                     }
                 }
@@ -1075,10 +1075,10 @@ namespace Epanet.Quality {
         private void Updatesourcenodes(long dt) {
             QualSource source;
 
-            if (this.qualflag != QualType.CHEM) return;
+            if (_qualflag != QualType.CHEM) return;
 
 
-            foreach (QualityNode qN  in  this.nodes) {
+            foreach (QualityNode qN  in  _nodes) {
                 source = qN.Node.QualSource;
                 if (source == null)
                     continue;
@@ -1098,7 +1098,7 @@ namespace Epanet.Quality {
         ///<param name="dt">step duration in seconds.</param>
         private void UpdateTanks(long dt) {
             // Examine each reservoir & tank
-            foreach (QualityTank tank  in  this.tanks) {
+            foreach (QualityTank tank  in  _tanks) {
 
                 // Use initial quality for reservoirs
                 if (tank.Node.Type == NodeType.RESERV) {
@@ -1109,16 +1109,16 @@ namespace Epanet.Quality {
                 else
                     switch (((Tank)tank.Node).MixModel) {
                     case MixType.MIX2:
-                        this.Tankmix2(tank, dt);
+                        Tankmix2(tank, dt);
                         break;
                     case MixType.FIFO:
-                        this.Tankmix3(tank, dt);
+                        Tankmix3(tank, dt);
                         break;
                     case MixType.LIFO:
-                        this.Tankmix4(tank, dt);
+                        Tankmix4(tank, dt);
                         break;
                     default:
-                        this.Tankmix1(tank, dt);
+                        Tankmix1(tank, dt);
                         break;
                     }
             }
@@ -1127,21 +1127,22 @@ namespace Epanet.Quality {
         ///<summary>Computes wall reaction rate.</summary>
         private double Wallrate(double c, double d, double kw, double kf) {
             if (kw == 0.0 || d == 0.0)
-                return (0.0);
-            if (this.net.WallOrder == 0.0) {
+                return 0.0;
+
+            if (_net.WallOrder == 0.0) {
                 kf = Utilities.GetSignal(kw) * c * kf;
-                kw = kw * Math.Pow(this.elevUnits, 2);
+                kw = kw * Math.Pow(_elevUnits, 2);
                 if (Math.Abs(kf) < Math.Abs(kw))
                     kw = kf;
-                return (kw * 4.0 / d);
+                return kw * 4.0 / d;
             }
-            else
-                return (c * kf);
+
+            return c * kf;
         }
 
-        public QualityNode[] NNodes { get { return this.nodes; } }
+        public QualityNode[] NNodes { get { return _nodes; } }
 
-        public QualityLink[] NLinks { get { return this.links; } }
+        public QualityLink[] NLinks { get { return _links; } }
     }
 
 }

@@ -23,7 +23,6 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-using Epanet.Enums;
 using Epanet.Log;
 using Epanet.Network.IO.Input;
 using Epanet.Network.IO.Output;
@@ -33,7 +32,7 @@ using EpanetNetwork = Epanet.Network.Network;
 
 namespace Epanet.UI {
 
-    public sealed partial class EpanetUI : Form {
+    public sealed partial class EpanetUi : Form {
         private const string WEBLINK = "https://github.com/vsheveliov/Epanet.Net";
 
         /// <summary>Application title string.</summary>
@@ -54,33 +53,33 @@ namespace Epanet.UI {
             "All supported files (*.inp, *.net, *.xml)|*.inp *.net *.xml";
 
         /// <summary>Abstract representation of the network file(INP/NET/XML).</summary>
-        private string inpFile;
+        private string _inpFile;
 
-        private EpanetNetwork net;
+        private EpanetNetwork _net;
 
         private static readonly TraceSource Log;
 
         /// <summary>Reference to the report options window.</summary>
-        private ReportOptions reportOptions;
+        private ReportOptions _reportOptions;
 
-        static EpanetUI() {
+        static EpanetUi() {
            // InitLogger
             Log = new TraceSource("epanet", SourceLevels.All);
             Log.Listeners.Remove("Default");
             Log.Listeners.Add(new EpanetTraceListener(LOG_FILENAME, true));
         }
 
-        public EpanetUI() {
-            this.InitializeComponent();
-            Log.Information(0, this.GetType().FullName + " started.");
-            this.Text = APP_TITTLE;
-            this.MinimumSize = new Size(848, 500);
-            this.ClearInterface();
+        public EpanetUi() {
+            InitializeComponent();
+            Log.Information(0, GetType().FullName + " started.");
+            Text = APP_TITTLE;
+            MinimumSize = new Size(848, 500);
+            ClearInterface();
 
             string[] args = Environment.GetCommandLineArgs();
 
             if (args.Length > 1) {
-                this.DoOpen(args[1]);
+                DoOpen(args[1]);
             }
 
         }
@@ -106,84 +105,84 @@ namespace Epanet.UI {
 
         /// <summary>Reset the interface layout</summary>
         private void ClearInterface() {
-            this.networkPanel.Net = null;
-            this.inpFile = null;
-            this.Text = APP_TITTLE;
-            this.textReservoirs.Text = "0";
-            this.textTanks.Text = "0";
-            this.textPipes.Text = "0";
-            this.textNodes.Text = "0";
-            this.textDuration.Text = "00:00:00";
-            this.textHydraulic.Text = "00:00:00";
-            this.textPattern.Text = "00:00:00";
-            this.textUnits.Text = "NONE";
-            this.textHeadloss.Text = "NONE";
-            this.textQuality.Text = "NONE";
-            this.textDemand.Text = "0.0";
+            networkPanel.Net = null;
+            _inpFile = null;
+            Text = APP_TITTLE;
+            textReservoirs.Text = "0";
+            textTanks.Text = "0";
+            textPipes.Text = "0";
+            textNodes.Text = "0";
+            textDuration.Text = "00:00:00";
+            textHydraulic.Text = "00:00:00";
+            textPattern.Text = "00:00:00";
+            textUnits.Text = "NONE";
+            textHeadloss.Text = "NONE";
+            textQuality.Text = "NONE";
+            textDemand.Text = "0.0";
 
-            if (this.reportOptions != null) {
-                this.reportOptions.Close();
-                this.reportOptions = null;
+            if (_reportOptions != null) {
+                _reportOptions.Close();
+                _reportOptions = null;
             }
             
-            this.saveButton.Enabled = false;
-            this.menuSave.Enabled = false;
-            this.menuRun.Enabled = false;
-            this.menuClose.Enabled = false;
-            this.runSimulationButton.Enabled = false;
+            saveButton.Enabled = false;
+            menuSave.Enabled = false;
+            menuRun.Enabled = false;
+            menuClose.Enabled = false;
+            runSimulationButton.Enabled = false;
         }
 
         private void UnlockInterface() {
 
-            this.textReservoirs.Text = this.net.Reservoirs.Count().ToString(CultureInfo.CurrentCulture);
-            this.textTanks.Text = this.net.Tanks.Count().ToString(CultureInfo.CurrentCulture);
-            this.textPipes.Text = this.net.Links.Count.ToString(CultureInfo.CurrentCulture);
-            this.textNodes.Text = this.net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
+            textReservoirs.Text = _net.Reservoirs.Count().ToString(CultureInfo.CurrentCulture);
+            textTanks.Text = _net.Tanks.Count().ToString(CultureInfo.CurrentCulture);
+            textPipes.Text = _net.Links.Count.ToString(CultureInfo.CurrentCulture);
+            textNodes.Text = _net.Nodes.Count.ToString(CultureInfo.CurrentCulture);
 
             try {
                 
-                this.textDuration.Text = this.net.Duration.GetClockTime();
-                this.textUnits.Text = this.net.UnitsFlag.ToString();
-                this.textHeadloss.Text = this.net.FormFlag.ToString();
-                this.textQuality.Text = this.net.QualFlag.ToString();
-                this.textDemand.Text = this.net.DMult.ToString(CultureInfo.CurrentCulture);
-                this.textHydraulic.Text = this.net.HStep.GetClockTime();
-                this.textPattern.Text = this.net.PStep.GetClockTime();
+                textDuration.Text = _net.Duration.GetClockTime();
+                textUnits.Text = _net.UnitsFlag.ToString();
+                textHeadloss.Text = _net.FormFlag.ToString();
+                textQuality.Text = _net.QualFlag.ToString();
+                textDemand.Text = _net.DMult.ToString(CultureInfo.CurrentCulture);
+                textHydraulic.Text = _net.HStep.GetClockTime();
+                textPattern.Text = _net.PStep.GetClockTime();
             }
             catch (ENException) { }
 
-            this.Text = APP_TITTLE + " - " + this.inpFile;
-            this.inpName.Text = this.inpFile;
-            this.networkPanel.Net = this.Net;
+            Text = APP_TITTLE + " - " + _inpFile;
+            inpName.Text = _inpFile;
+            networkPanel.Net = Net;
 
             
-            if (this.reportOptions != null) {
-                this.reportOptions.Close();
-                this.reportOptions = null;
+            if (_reportOptions != null) {
+                _reportOptions.Close();
+                _reportOptions = null;
             }
             
-            this.menuSave.Enabled = true;
-            this.menuRun.Enabled = true;
-            this.menuClose.Enabled = true;
-            this.runSimulationButton.Enabled = true;            
-            this.saveButton.Enabled = true;
+            menuSave.Enabled = true;
+            menuRun.Enabled = true;
+            menuClose.Enabled = true;
+            runSimulationButton.Enabled = true;            
+            saveButton.Enabled = true;
 
             
         }
 
         private EpanetNetwork Net {
-            get { return this.net; }
+            get { return _net; }
             set {
-                if (this.net == value) return;
+                if (_net == value) return;
 
-                this.net = this.networkPanel.Net = value;
+                _net = networkPanel.Net = value;
 
-                if (this.net == null) {
-                    this.ClearInterface();
+                if (_net == null) {
+                    ClearInterface();
                     return;
                 }
 
-                this.UnlockInterface();
+                UnlockInterface();
             }
         }
 
@@ -191,22 +190,22 @@ namespace Epanet.UI {
 
         /// <summary>Show report options window to configure and run the simulation.</summary>
         private void RunSimulation(object sender, EventArgs e) {
-            if (this.reportOptions == null)
-                this.reportOptions = new ReportOptions(this.inpFile, null);
+            if (_reportOptions == null)
+                _reportOptions = new ReportOptions(_inpFile, null);
 
-            this.reportOptions.ShowDialog(this);
+            _reportOptions.ShowDialog(this);
         }
 
         /// <summary>Show the save dialog to save the network file.</summary>
         private void SaveEvent(object sender, EventArgs e) {
-            if (this.Net == null) return;
+            if (Net == null) return;
 
             // string initialDirectory = Path.GetDirectoryName(Path.GetFullPath(this.inpFile)) ?? string.Empty;
 
             var dlg = new SaveFileDialog {
                 // InitialDirectory = initialDirectory,
                 OverwritePrompt = true,
-                FileName = Path.GetFileNameWithoutExtension(this.inpFile),
+                FileName = Path.GetFileNameWithoutExtension(_inpFile),
                 Filter = SaveFileDialogFilter
             };
 
@@ -223,11 +222,11 @@ namespace Epanet.UI {
                     break;
 
                 case ".xml":
-                    composer = new XMLComposer(false);
+                    composer = new XmlComposer(false);
                     break;
 
                 case ".gz":
-                    composer = new XMLComposer(true);
+                    composer = new XmlComposer(true);
                     break;
 
                 default:
@@ -239,7 +238,7 @@ namespace Epanet.UI {
             fileName = Path.ChangeExtension(fileName, extension);
 
             try {
-                composer.Composer(this.networkPanel.Net, fileName);
+                composer.Composer(networkPanel.Net, fileName);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -276,10 +275,10 @@ namespace Epanet.UI {
 
             string netFile = fileChooser.FileName;
 
-            this.DoOpen(netFile);
+            DoOpen(netFile);
 
-            this.menuSave.Enabled = true;
-            this.menuRun.Enabled = true;
+            menuSave.Enabled = true;
+            menuRun.Enabled = true;
         }
 
         private void DoOpen(string netFile) {
@@ -290,7 +289,7 @@ namespace Epanet.UI {
                 fileExtension != ".xml" &&
                 fileExtension != ".gz") return;
 
-            this.inpFile = netFile;
+            _inpFile = netFile;
 
             InputParser inpParser;
 
@@ -320,10 +319,10 @@ namespace Epanet.UI {
                 return;
             }
 
-            var epanetNetwork = new EpanetNetwork();
+            EpanetNetwork net;
 
             try {
-                inpParser.Parse(epanetNetwork, this.inpFile);
+                net = inpParser.Parse(new EpanetNetwork(), _inpFile);
             }
             catch (ENException ex) {
                 MessageBox.Show(
@@ -332,8 +331,8 @@ namespace Epanet.UI {
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                this.ClearInterface();
-                this.inpFile = null;
+                ClearInterface();
+                _inpFile = null;
                 return;
             }
             catch (Exception ex) {
@@ -346,37 +345,37 @@ namespace Epanet.UI {
                 
                 Log.Error("Unable to parse network configuration file: {0}", ex);
 
-                this.ClearInterface();
-                this.inpFile = null;
+                ClearInterface();
+                _inpFile = null;
 
                 return;
             }
 
-            this.Net = epanetNetwork;
+            Net = net;
 
         }
 
         private void checks_CheckedChanged(object sender, EventArgs e) {
-            this.networkPanel.DrawNodes = this.checkNodes.Checked;
-            this.networkPanel.DrawPipes = this.checkPipes.Checked;
-            this.networkPanel.DrawTanks = this.checkTanks.Checked;
+            networkPanel.DrawNodes = checkNodes.Checked;
+            networkPanel.DrawPipes = checkPipes.Checked;
+            networkPanel.DrawTanks = checkTanks.Checked;
             // this.networkPanel.Refresh();
-            this.networkPanel.Invalidate();
+            networkPanel.Invalidate();
         }
 
         
 
         private void networkPanel_MouseMove(object sender, MouseEventArgs e) {
-            this.lblCoordinates.Text = string.Format("{0}/{1:P}", this.networkPanel.MousePoint, this.networkPanel.Zoom);
+            lblCoordinates.Text = string.Format("{0}/{1:P}", networkPanel.MousePoint, networkPanel.Zoom);
 
         }
 
-        private void mnuZoomAll_Click(object sender, EventArgs e) { this.networkPanel.ZoomAll(); }
-        private void mnuZoomIn_Click(object sender, EventArgs e) { this.networkPanel.ZoomStep(1); }
-        private void mnuZoomOut_Click(object sender, EventArgs e) { this.networkPanel.ZoomStep(-1); }
+        private void mnuZoomAll_Click(object sender, EventArgs e) { networkPanel.ZoomAll(); }
+        private void mnuZoomIn_Click(object sender, EventArgs e) { networkPanel.ZoomStep(1); }
+        private void mnuZoomOut_Click(object sender, EventArgs e) { networkPanel.ZoomStep(-1); }
 
         private void menuClose_Click(object sender, EventArgs e) {
-            this.Net = null;
+            Net = null;
             
         }
     }

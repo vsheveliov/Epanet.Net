@@ -27,83 +27,83 @@ namespace Epanet.Network {
 
     ///<summary>Hydraulic network structure.</summary>
     public class Network {
-        private readonly List<Control> controls = new List<Control>();
-        private readonly ElementCollection<Curve> curves = new ElementCollection<Curve>();
+        private readonly List<Control> _controls = new List<Control>();
+        private readonly ElementCollection<Curve> _curves = new ElementCollection<Curve>();
         
         [NonSerialized]
-        private readonly FieldsMap fields = new FieldsMap();
+        private readonly FieldsMap _fields = new FieldsMap();
         
-        private readonly List<Label> labels = new List<Label>();
-        private readonly ElementCollection<Link> links = new ElementCollection<Link>();
-        private readonly ElementCollection<Node> nodes = new ElementCollection<Node>();
+        private readonly List<Label> _labels = new List<Label>();
+        private readonly ElementCollection<Link> _links = new ElementCollection<Link>();
+        private readonly ElementCollection<Node> _nodes = new ElementCollection<Node>();
         
-        private readonly ElementCollection<Pattern> patterns = new ElementCollection<Pattern>() {
+        private readonly ElementCollection<Pattern> _patterns = new ElementCollection<Pattern> {
             new Pattern(string.Empty)
         };
 
-        private readonly ElementCollection<Rule> rules = new ElementCollection<Rule>();
+        private readonly ElementCollection<Rule> _rules = new ElementCollection<Rule>();
         private readonly List<string> _title = new List<string>();
 
         public Network() {
-            this.LoadDefaults();
+            LoadDefaults();
         }
         
-        public IList<Control> Controls { get { return this.controls; } }
+        public IList<Control> Controls { get { return _controls; } }
 
-        public Curve GetCurve(string name) { return this.curves.GetValueOrDefault(name); }
+        public Curve GetCurve(string name) { return _curves.GetValueOrDefault(name); }
 
-        public IList<Curve> Curves { get { return this.curves; } }
+        public IList<Curve> Curves { get { return _curves; } }
 
         ///<summary>Fields map with report variables properties and conversion units.</summary>
-        public FieldsMap FieldsMap { get { return this.fields; } }
+        public FieldsMap FieldsMap { get { return _fields; } }
 
         ///<summary>Transient colleciton of junctions.</summary>
         public IEnumerable<Node> Junctions {
-            get { return this.nodes.Where(x => x.Type == NodeType.JUNC); }
+            get { return _nodes.Where(x => x.Type == NodeType.JUNC); }
         }
 
-        public IList<Label> Labels { get { return this.labels; } }
+        public IList<Label> Labels { get { return _labels; } }
 
-        public Link GetLink(string name) { return this.links.GetValueOrDefault(name); }
+        public Link GetLink(string name) { return _links.GetValueOrDefault(name); }
 
-        public IList<Link> Links { get { return this.links; } }
+        public IList<Link> Links { get { return _links; } }
 
-        public Node GetNode(string name) { return this.nodes.GetValueOrDefault(name); }
+        public Node GetNode(string name) { return _nodes.GetValueOrDefault(name); }
 
-        public IList<Node> Nodes { get { return this.nodes; } }
+        public IList<Node> Nodes { get { return _nodes; } }
 
-        public Pattern GetPattern(string name) { return this.patterns.GetValueOrDefault(name); }
+        public Pattern GetPattern(string name) { return _patterns.GetValueOrDefault(name); }
 
-        public IList<Pattern> Patterns { get { return this.patterns; } }
+        public IList<Pattern> Patterns { get { return _patterns; } }
 
         ///<summary>Transient colleciton of pumps.</summary>
         public IEnumerable<Pump> Pumps {
-            get { return this.links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>(); }
+            get { return _links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>(); }
         }
 
-        public Rule GetRule(string ruleName) { return this.rules.GetValueOrDefault(ruleName); }
+        public Rule GetRule(string ruleName) { return _rules.GetValueOrDefault(ruleName); }
 
-        public IList<Rule> Rules { get { return this.rules; } }
+        public IList<Rule> Rules { get { return _rules; } }
 
         public IEnumerable<Tank> Tanks {
-            get { return this.nodes.Where(x => x.Type == NodeType.TANK).Cast<Tank>(); }
+            get { return _nodes.Where(x => x.Type == NodeType.TANK).Cast<Tank>(); }
         }
 
         public IEnumerable<Tank> Reservoirs {
-            get { return this.nodes.Where(x => x.Type == NodeType.RESERV).Cast<Tank>(); }
+            get { return _nodes.Where(x => x.Type == NodeType.RESERV).Cast<Tank>(); }
         }
 
-        public List<string> Title { get { return this._title; } }
+        public List<string> Title { get { return _title; } }
 
         ///<summary>Transient colleciton of valves.</summary>
         public IEnumerable<Valve> Valves {
-            get { return this.links.OfType<Valve>(); }
+            get { return _links.OfType<Valve>(); }
         }
 
         #region properties map
 
 
-        private Dictionary<string, string> extraOptions;
+        private Dictionary<string, string> _extraOptions;
 
         
         #region properties accessors/mutators
@@ -267,10 +267,10 @@ namespace Epanet.Network {
         public string TraceNode { get; set; }
 
         /// <summary>Starting time of day (sec).</summary>
-        public long TStart { get; set; }
+        public long Tstart { get; set; }
 
         /// <summary>Time statistics flag.</summary>
-        public TStatType TStatFlag { get; set; }
+        public TStatType TstatFlag { get; set; }
 
         /// <summary>Unit system flag.</summary>
         public UnitsType UnitsFlag { get; set; }
@@ -285,90 +285,90 @@ namespace Epanet.Network {
 
         public Dictionary<string, string> ExtraOptions {
             get {
-                return this.extraOptions ?? (this.extraOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+                return _extraOptions ?? (_extraOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
             }
         }
 
         /// <summary>Init properties with default value.</summary>
         private void LoadDefaults() {
-            this.BulkOrder = 1.0d; // 1st-order bulk reaction rate
-            this.TankOrder = 1.0d; // 1st-order tank reaction rate
-            this.WallOrder = 1.0d; // 1st-order wall reaction rate
-            this.RFactor = 1.0d; // No roughness-reaction factor
-            this.CLimit = 0.0d; // No limiting potential quality
-            this.KBulk = 0.0d; // No global bulk reaction
-            this.KWall = 0.0d; // No global wall reaction
-            this.DCost = 0.0d; // Zero energy demand charge
-            this.ECost = 0.0d; // Zero unit energy cost
-            this.EPatId = string.Empty; // No energy price pattern
-            this.EPump = Constants.EPUMP; // Default pump efficiency
-            this.PageSize = Constants.PAGESIZE;
-            this.StatFlag = StatFlag.NO;
-            this.SummaryFlag = true;
-            this.MessageFlag = true;
-            this.EnergyFlag = false;
-            this.NodeFlag = ReportFlag.FALSE;
-            this.LinkFlag = ReportFlag.FALSE;
-            this.TStatFlag = TStatType.SERIES; // Generate time series output
-            this.HStep = 3600L; // 1 hr hydraulic time step
-            this.Duration = 0L; // 0 sec duration (steady state)
-            this.QStep = 0L; // No pre-set quality time step
-            this.RuleStep = 0L; // No pre-set rule time step
-            this.PStep = 3600L; // 1 hr time pattern period
-            this.PStart = 0L; // Starting pattern period
-            this.RStep = 3600L; // 1 hr reporting period
-            this.RStart = 0L; // Start reporting at time 0
-            this.TStart = 0L; // Starting time of day
-            this.FlowFlag = FlowUnitsType.GPM; // Flow units are gpm
-            this.PressFlag = PressUnitsType.PSI; // Pressure units are psi
-            this.FormFlag = FormType.HW; // Use Hazen-Williams formula
-            this.HydFlag = HydType.SCRATCH; // No external hydraulics file
-            this.QualFlag = QualType.NONE; // No quality simulation
-            this.UnitsFlag = UnitsType.US; // US unit system
-            this.HydFname = "";
-            this.ChemName = Keywords.t_CHEMICAL;
-            this.ChemUnits = Keywords.u_MGperL; // mg/L
-            this.DefPatId = Constants.DEFPATID; // Default demand pattern index
-            this.MapFname = "";
-            this.AltReport = "";
-            this.TraceNode = ""; // No source tracing
-            this.ExtraIter = -1; // Stop if network unbalanced
-            this.Ctol = double.NaN; // No pre-set quality tolerance
-            this.Diffus = double.NaN; // Temporary diffusivity
-            this.DampLimit = Constants.DAMPLIMIT;
-            this.Viscos = double.NaN; // Temporary viscosity
-            this.SpGrav = Constants.SPGRAV; // Default specific gravity
-            this.MaxIter = Constants.MAXITER; // Default max. hydraulic trials
-            this.HAcc = Constants.HACC; // Default hydraulic accuracy
-            this.HTol = Constants.HTOL; // Default head tolerance
-            this.QTol = Constants.QTOL; // Default flow tolerance
-            this.RQtol = Constants.RQTOL; // Default hydraulics parameters
-            this.HExp = 0.0d;
-            this.QExp = 2.0d; // Flow exponent for emitters
-            this.CheckFreq = Constants.CHECKFREQ;
-            this.MaxCheck = Constants.MAXCHECK;
-            this.DMult = 1.0d; // Demand multiplier
-            this.EMax = 0.0d; // Zero peak energy usage
+            BulkOrder = 1.0d; // 1st-order bulk reaction rate
+            TankOrder = 1.0d; // 1st-order tank reaction rate
+            WallOrder = 1.0d; // 1st-order wall reaction rate
+            RFactor = 1.0d; // No roughness-reaction factor
+            CLimit = 0.0d; // No limiting potential quality
+            KBulk = 0.0d; // No global bulk reaction
+            KWall = 0.0d; // No global wall reaction
+            DCost = 0.0d; // Zero energy demand charge
+            ECost = 0.0d; // Zero unit energy cost
+            EPatId = string.Empty; // No energy price pattern
+            EPump = Constants.EPUMP; // Default pump efficiency
+            PageSize = Constants.PAGESIZE;
+            StatFlag = StatFlag.NO;
+            SummaryFlag = true;
+            MessageFlag = true;
+            EnergyFlag = false;
+            NodeFlag = ReportFlag.FALSE;
+            LinkFlag = ReportFlag.FALSE;
+            TstatFlag = TStatType.SERIES; // Generate time series output
+            HStep = 3600L; // 1 hr hydraulic time step
+            Duration = 0L; // 0 sec duration (steady state)
+            QStep = 0L; // No pre-set quality time step
+            RuleStep = 0L; // No pre-set rule time step
+            PStep = 3600L; // 1 hr time pattern period
+            PStart = 0L; // Starting pattern period
+            RStep = 3600L; // 1 hr reporting period
+            RStart = 0L; // Start reporting at time 0
+            Tstart = 0L; // Starting time of day
+            FlowFlag = FlowUnitsType.GPM; // Flow units are gpm
+            PressFlag = PressUnitsType.PSI; // Pressure units are psi
+            FormFlag = FormType.HW; // Use Hazen-Williams formula
+            HydFlag = HydType.SCRATCH; // No external hydraulics file
+            QualFlag = QualType.NONE; // No quality simulation
+            UnitsFlag = UnitsType.US; // US unit system
+            HydFname = "";
+            ChemName = Keywords.t_CHEMICAL;
+            ChemUnits = Keywords.u_MGperL; // mg/L
+            DefPatId = Constants.DEFPATID; // Default demand pattern index
+            MapFname = "";
+            AltReport = "";
+            TraceNode = ""; // No source tracing
+            ExtraIter = -1; // Stop if network unbalanced
+            Ctol = Constants.MISSING; // No pre-set quality tolerance
+            Diffus = Constants.MISSING; // Temporary diffusivity
+            DampLimit = Constants.DAMPLIMIT;
+            Viscos = Constants.MISSING; // Temporary viscosity
+            SpGrav = Constants.SPGRAV; // Default specific gravity
+            MaxIter = Constants.MAXITER; // Default max. hydraulic trials
+            HAcc = Constants.HACC; // Default hydraulic accuracy
+            HTol = Constants.HTOL; // Default head tolerance
+            QTol = Constants.QTOL; // Default flow tolerance
+            RQtol = Constants.RQTOL; // Default hydraulics parameters
+            HExp = 0.0d;
+            QExp = 2.0d; // Flow exponent for emitters
+            CheckFreq = Constants.CHECKFREQ;
+            MaxCheck = Constants.MAXCHECK;
+            DMult = 1.0d; // Demand multiplier
+            EMax = 0.0d; // Zero peak energy usage
         }
 
 
-#endregion
+        #endregion
 
         public override string ToString() {
             
             return new System.Text.StringBuilder(0x200)
                 .AppendLine(" Network")
-                .Append("  Nodes      : ").Append(this.nodes.Count).AppendLine()
-                .Append("  Links      : ").Append(this.links.Count).AppendLine()
-                .Append("  Pattern    : ").Append(this.patterns.Count).AppendLine()
-                .Append("  Curves     : ").Append(this.curves.Count).AppendLine()
-                .Append("  Controls   : ").Append(this.controls.Count).AppendLine()
-                .Append("  Labels     : ").Append(this.labels.Count).AppendLine()
-                .Append("  Rules      : ").Append(this.rules.Count).AppendLine()
-                .Append("  Tanks      : ").Append(this.Tanks.Count()).AppendLine()
-                .Append("  Reservoirs : ").Append(this.Reservoirs.Count()).AppendLine()
-                .Append("  Pumps      : ").Append(this.Pumps.Count()).AppendLine()
-                .Append("  Valves     : ").Append(this.Valves.Count()).AppendLine()
+                .Append("  Nodes      : ").Append(_nodes.Count).AppendLine()
+                .Append("  Links      : ").Append(_links.Count).AppendLine()
+                .Append("  Pattern    : ").Append(_patterns.Count).AppendLine()
+                .Append("  Curves     : ").Append(_curves.Count).AppendLine()
+                .Append("  Controls   : ").Append(_controls.Count).AppendLine()
+                .Append("  Labels     : ").Append(_labels.Count).AppendLine()
+                .Append("  Rules      : ").Append(_rules.Count).AppendLine()
+                .Append("  Tanks      : ").Append(Tanks.Count()).AppendLine()
+                .Append("  Reservoirs : ").Append(Reservoirs.Count()).AppendLine()
+                .Append("  Pumps      : ").Append(Pumps.Count()).AppendLine()
+                .Append("  Valves     : ").Append(Valves.Count()).AppendLine()
                 .ToString();
             
         }

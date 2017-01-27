@@ -5,10 +5,10 @@ using System.Diagnostics;
 namespace Epanet.Network.Structures {
 
     ///<summary>Temporal pattern.</summary>
-    [DebuggerDisplay("{Name}:{factors}")]
+    [DebuggerDisplay("{Name}:{_factors}")]
     public class Pattern:Element, IEnumerable<double> {
         ///<summary>Pattern factors list.</summary>
-        private readonly List<double> factors = new List<double>();
+        private readonly List<double> _factors = new List<double>();
 
         public Pattern(string name):base(name) { }
 
@@ -22,16 +22,16 @@ namespace Epanet.Network.Structures {
 
         #region partial implementation of IList<double>
 
-        public void Add(double factor) { this.factors.Add(factor); }
+        public void Add(double factor) { _factors.Add(factor); }
 
         public int Count {
-            get { return this.factors.Count; }
+            get { return _factors.Count; }
         }
 
-        public double this[int index] { get { return this.factors[index]; } }
+        public double this[int index] { get { return _factors[index]; } }
 
-        public IEnumerator<double> GetEnumerator() { return this.factors.GetEnumerator(); }
-        IEnumerator IEnumerable.GetEnumerator() { return this.factors.GetEnumerator(); }
+        public IEnumerator<double> GetEnumerator() { return _factors.GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() { return _factors.GetEnumerator(); }
 
         #endregion
     }

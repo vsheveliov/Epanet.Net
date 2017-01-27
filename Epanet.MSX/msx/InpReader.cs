@@ -28,19 +28,19 @@ namespace Epanet.MSX {
         private TraceSource log;
         private const int MAXERRS = 100; // Max. input errors reported
 
-        private Network msx;
-        private ENToolkit2 epanet;
-        private Project project;
+        private Network _msx;
+        private EnToolkit2 _epanet;
+        private Project _project;
 
         public void LoadDependencies(EpanetMSX epa) {
-            this.msx = epa.Network;
-            this.epanet = epa.EnToolkit;
-            this.project = epa.Project;
+            _msx = epa.Network;
+            _epanet = epa.EnToolkit;
+            _project = epa.Project;
         }
 
 
         /// <summary>Respective error messages.</summary>
-        private static readonly string[] InpErrorTxt = {
+        private static readonly string[] inpErrorTxt = {
             "",
             "Error 401 (too many characters)",
             "Error 402 (too few input items)",
@@ -97,13 +97,13 @@ namespace Epanet.MSX {
                 }
 
                 if (sect == SectionType.s_SPECIES)
-                    errcode = this.AddSpecies(tok);
+                    errcode = AddSpecies(tok);
                 if (sect == SectionType.s_COEFF)
-                    errcode = this.AddCoeff(tok);
+                    errcode = AddCoeff(tok);
                 if (sect == SectionType.s_TERM)
-                    errcode = this.AddTerm(tok);
+                    errcode = AddTerm(tok);
                 if (sect == SectionType.s_PATTERN)
-                    errcode = this.AddPattern(tok);
+                    errcode = AddPattern(tok);
 
 
                 if (errcode != 0) {
@@ -121,32 +121,32 @@ namespace Epanet.MSX {
 
         /// <summary>Queries EPANET database to determine number of network objects.</summary>
         public ErrorCodeType CountNetObjects() {
-            this.msx.Nobjects[(int)ObjectTypes.NODE] = this.epanet.ENgetcount(ENToolkit2.EN_NODECOUNT);
-            this.msx.Nobjects[(int)ObjectTypes.TANK] = this.epanet.ENgetcount(ENToolkit2.EN_TANKCOUNT);
-            this.msx.Nobjects[(int)ObjectTypes.LINK] = this.epanet.ENgetcount(ENToolkit2.EN_LINKCOUNT);
+            _msx.Nobjects[(int)ObjectTypes.NODE] = _epanet.ENgetcount(EnToolkit2.EN_NODECOUNT);
+            _msx.Nobjects[(int)ObjectTypes.TANK] = _epanet.ENgetcount(EnToolkit2.EN_TANKCOUNT);
+            _msx.Nobjects[(int)ObjectTypes.LINK] = _epanet.ENgetcount(EnToolkit2.EN_LINKCOUNT);
             return 0;
         }
 
         /// <summary>Retrieves required input data from the EPANET project data.</summary>
         public ErrorCodeType ReadNetData() {
             // Get flow units & time parameters
-            this.msx.Flowflag = this.epanet.ENgetflowunits();
+            _msx.Flowflag = _epanet.ENgetflowunits();
 
-            this.msx.Unitsflag = this.msx.Flowflag >= FlowUnitsType.LPS
+            _msx.Unitsflag = _msx.Flowflag >= FlowUnitsType.LPS
                 ? UnitSystemType.SI
                 : UnitSystemType.US;
 
-            this.msx.Dur = this.epanet.ENgettimeparam(ENToolkit2.EN_DURATION);
-            this.msx.Qstep = this.epanet.ENgettimeparam(ENToolkit2.EN_QUALSTEP);
-            this.msx.Rstep = this.epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTEP);
-            this.msx.Rstart = this.epanet.ENgettimeparam(ENToolkit2.EN_REPORTSTART);
-            this.msx.Pstep = this.epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTEP);
-            this.msx.Pstart = this.epanet.ENgettimeparam(ENToolkit2.EN_PATTERNSTART);
-            this.msx.Statflag = (TstatType)this.epanet.ENgettimeparam(ENToolkit2.EN_STATISTIC);
+            _msx.Dur = _epanet.ENgettimeparam(EnToolkit2.EN_DURATION);
+            _msx.Qstep = _epanet.ENgettimeparam(EnToolkit2.EN_QUALSTEP);
+            _msx.Rstep = _epanet.ENgettimeparam(EnToolkit2.EN_REPORTSTEP);
+            _msx.Rstart = _epanet.ENgettimeparam(EnToolkit2.EN_REPORTSTART);
+            _msx.Pstep = _epanet.ENgettimeparam(EnToolkit2.EN_PATTERNSTEP);
+            _msx.Pstart = _epanet.ENgettimeparam(EnToolkit2.EN_PATTERNSTART);
+            _msx.Statflag = (TstatType)_epanet.ENgettimeparam(EnToolkit2.EN_STATISTIC);
 
             // Read tank/reservoir data
-            int n = this.msx.Nobjects[(int)ObjectTypes.NODE] - this.msx.Nobjects[(int)ObjectTypes.TANK];
-            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.NODE]; i++) {
+            int n = _msx.Nobjects[(int)ObjectTypes.NODE] - _msx.Nobjects[(int)ObjectTypes.TANK];
+            for (int i = 1; i <= _msx.Nobjects[(int)ObjectTypes.NODE]; i++) {
                 int k = i - n;
                 if (k <= 0) continue;
 
@@ -156,29 +156,29 @@ namespace Epanet.MSX {
                 float vmix;
 
                 try {
-                    t = this.epanet.ENgetnodetype(i);
-                    v0 = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_INITVOLUME);
-                    xmix = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXMODEL);
-                    vmix = this.epanet.ENgetnodevalue(i, ENToolkit2.EN_MIXZONEVOL);
+                    t = _epanet.ENgetnodetype(i);
+                    v0 = _epanet.ENgetnodevalue(i, EnToolkit2.EN_INITVOLUME);
+                    xmix = _epanet.ENgetnodevalue(i, EnToolkit2.EN_MIXMODEL);
+                    vmix = _epanet.ENgetnodevalue(i, EnToolkit2.EN_MIXZONEVOL);
                 }
                 catch (Exception e) {
                     return (ErrorCodeType)int.Parse(e.Message);
                 }
 
-                this.msx.Node[i].Tank = k;
-                this.msx.Tank[k].Node = i;
-                this.msx.Tank[k].A = t == ENToolkit2.EN_RESERVOIR ? 0.0 : 1.0;
-                this.msx.Tank[k].V0 = v0;
-                this.msx.Tank[k].MixModel = (MixType)(int)xmix;
-                this.msx.Tank[k].VMix = vmix;
+                _msx.Node[i].Tank = k;
+                _msx.Tank[k].Node = i;
+                _msx.Tank[k].A = t == EnToolkit2.EN_RESERVOIR ? 0.0 : 1.0;
+                _msx.Tank[k].V0 = v0;
+                _msx.Tank[k].MixModel = (MixType)(int)xmix;
+                _msx.Tank[k].VMix = vmix;
             }
 
             // Read link data
-            for (int i = 1; i <= this.msx.Nobjects[(int)ObjectTypes.LINK]; i++) {
+            for (int i = 1; i <= _msx.Nobjects[(int)ObjectTypes.LINK]; i++) {
                 int n1, n2;
 
                 try {
-                    this.epanet.ENgetlinknodes(i, out n1, out n2);
+                    _epanet.ENgetlinknodes(i, out n1, out n2);
                 }
                 catch (Exception e) {
                     return (ErrorCodeType)int.Parse(e.Message);
@@ -189,19 +189,19 @@ namespace Epanet.MSX {
                 float diam;
                 float len;
                 try {
-                    diam = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_DIAMETER);
-                    len = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_LENGTH);
-                    roughness = this.epanet.ENgetlinkvalue(i, ENToolkit2.EN_ROUGHNESS);
+                    diam = _epanet.ENgetlinkvalue(i, EnToolkit2.EN_DIAMETER);
+                    len = _epanet.ENgetlinkvalue(i, EnToolkit2.EN_LENGTH);
+                    roughness = _epanet.ENgetlinkvalue(i, EnToolkit2.EN_ROUGHNESS);
                 }
                 catch (Exception e) {
                     return (ErrorCodeType)int.Parse(e.Message);
                 }
 
-                this.msx.Link[i].N1 = n1;
-                this.msx.Link[i].N2 = n2;
-                this.msx.Link[i].Diam = diam;
-                this.msx.Link[i].Len = len;
-                this.msx.Link[i].Roughness = roughness;
+                _msx.Link[i].N1 = n1;
+                _msx.Link[i].N2 = n2;
+                _msx.Link[i].Diam = diam;
+                _msx.Link[i].Len = len;
+                _msx.Link[i].Roughness = roughness;
             }
             return 0;
         }
@@ -257,7 +257,7 @@ namespace Epanet.MSX {
                     continue;
                 }
 
-                inperr = this.ParseLine(sect, line, tok);
+                inperr = ParseLine(sect, line, tok);
 
                 if (inperr > 0) {
                     errsum++;
@@ -276,12 +276,12 @@ namespace Epanet.MSX {
 
         /// <summary>Reads multi-species data from the EPANET-MSX input file.</summary>
         public string MSXinp_getSpeciesUnits(int m) {
-            string units = this.msx.Species[m].Units;
+            string units = _msx.Species[m].Units;
             units += "/";
-            if (this.msx.Species[m].Type == SpeciesType.BULK)
+            if (_msx.Species[m].Type == SpeciesType.BULK)
                 units += "L";
             else
-                units += Constants.AreaUnitsWords[(int)this.msx.AreaUnits];
+                units += Constants.AreaUnitsWords[(int)_msx.AreaUnits];
 
             return units;
         }
@@ -315,14 +315,14 @@ namespace Epanet.MSX {
         /// <summary>Adds a species ID name to the project.</summary>
         private InpErrorCodes AddSpecies(string[] tok) {
             if (tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
-            InpErrorCodes errcode = this.CheckId(tok[1]);
+            InpErrorCodes errcode = CheckId(tok[1]);
             if (errcode != 0) return errcode;
-            if (this.project.MSXproj_addObject(
+            if (_project.MSXproj_addObject(
                         ObjectTypes.SPECIES,
                         tok[1],
-                        this.msx.Nobjects[(int)ObjectTypes.SPECIES] + 1) < 0)
+                        _msx.Nobjects[(int)ObjectTypes.SPECIES] + 1) < 0)
                 errcode = (InpErrorCodes)101;
-            else this.msx.Nobjects[(int)ObjectTypes.SPECIES]++;
+            else _msx.Nobjects[(int)ObjectTypes.SPECIES]++;
             return errcode;
         }
 
@@ -339,25 +339,25 @@ namespace Epanet.MSX {
 
             // check for valid id name
 
-            InpErrorCodes errcode = this.CheckId(tok[1]);
+            InpErrorCodes errcode = CheckId(tok[1]);
             if (errcode != 0) return errcode;
-            if (this.project.MSXproj_addObject(k, tok[1], this.msx.Nobjects[(int)k] + 1) < 0)
+            if (_project.MSXproj_addObject(k, tok[1], _msx.Nobjects[(int)k] + 1) < 0)
                 errcode = (InpErrorCodes)101;
-            else this.msx.Nobjects[(int)k]++;
+            else _msx.Nobjects[(int)k]++;
             return errcode;
         }
 
 
         /// <summary>Adds an intermediate expression term ID name to the project.</summary>
         private InpErrorCodes AddTerm(string[] id) {
-            InpErrorCodes errcode = this.CheckId(id[0]);
+            InpErrorCodes errcode = CheckId(id[0]);
             if (errcode == 0) {
-                if (this.project.MSXproj_addObject(
+                if (_project.MSXproj_addObject(
                             ObjectTypes.TERM,
                             id[0],
-                            this.msx.Nobjects[(int)ObjectTypes.TERM] + 1) < 0)
+                            _msx.Nobjects[(int)ObjectTypes.TERM] + 1) < 0)
                     errcode = (InpErrorCodes)101;
-                else this.msx.Nobjects[(int)ObjectTypes.TERM]++;
+                else _msx.Nobjects[(int)ObjectTypes.TERM]++;
             }
             return errcode;
         }
@@ -369,13 +369,13 @@ namespace Epanet.MSX {
 
             // A time pattern can span several lines
 
-            if (this.project.MSXproj_findObject(ObjectTypes.PATTERN, tok[0]) <= 0) {
-                if (this.project.MSXproj_addObject(
+            if (_project.MSXproj_findObject(ObjectTypes.PATTERN, tok[0]) <= 0) {
+                if (_project.MSXproj_addObject(
                             ObjectTypes.PATTERN,
                             tok[0],
-                            this.msx.Nobjects[(int)ObjectTypes.PATTERN] + 1) < 0)
+                            _msx.Nobjects[(int)ObjectTypes.PATTERN] + 1) < 0)
                     errcode = (InpErrorCodes)101;
-                else this.msx.Nobjects[(int)ObjectTypes.PATTERN]++;
+                else _msx.Nobjects[(int)ObjectTypes.PATTERN]++;
             }
             return errcode;
         }
@@ -391,10 +391,10 @@ namespace Epanet.MSX {
 
             // Check that id name not used before
 
-            if (this.project.MSXproj_findObject(ObjectTypes.SPECIES, id) > 0
-                || this.project.MSXproj_findObject(ObjectTypes.TERM, id) > 0
-                || this.project.MSXproj_findObject(ObjectTypes.PARAMETER, id) > 0
-                || this.project.MSXproj_findObject(ObjectTypes.CONSTANT, id) > 0
+            if (_project.MSXproj_findObject(ObjectTypes.SPECIES, id) > 0
+                || _project.MSXproj_findObject(ObjectTypes.TERM, id) > 0
+                || _project.MSXproj_findObject(ObjectTypes.PARAMETER, id) > 0
+                || _project.MSXproj_findObject(ObjectTypes.CONSTANT, id) > 0
             ) return InpErrorCodes.ERR_DUP_NAME;
             return 0;
         }
@@ -404,41 +404,41 @@ namespace Epanet.MSX {
         private InpErrorCodes ParseLine(SectionType sect, string line, string[] tok) {
             switch (sect) {
             case SectionType.s_TITLE:
-                this.msx.Title = line;
+                _msx.Title = line;
                 break;
 
             case SectionType.s_OPTION:
-                return this.ParseOption(tok);
+                return ParseOption(tok);
 
             case SectionType.s_SPECIES:
-                return this.ParseSpecies(tok);
+                return ParseSpecies(tok);
 
             case SectionType.s_COEFF:
-                return this.ParseCoeff(tok);
+                return ParseCoeff(tok);
 
             case SectionType.s_TERM:
-                return this.ParseTerm(tok);
+                return ParseTerm(tok);
 
             case SectionType.s_PIPE:
-                return this.ParseExpression(ObjectTypes.LINK, tok);
+                return ParseExpression(ObjectTypes.LINK, tok);
 
             case SectionType.s_TANK:
-                return this.ParseExpression(ObjectTypes.TANK, tok);
+                return ParseExpression(ObjectTypes.TANK, tok);
 
             case SectionType.s_SOURCE:
-                return this.ParseSource(tok);
+                return ParseSource(tok);
 
             case SectionType.s_QUALITY:
-                return this.ParseQuality(tok);
+                return ParseQuality(tok);
 
             case SectionType.s_PARAMETER:
-                return this.ParseParameter(tok);
+                return ParseParameter(tok);
 
             case SectionType.s_PATTERN:
-                return this.ParsePattern(tok);
+                return ParsePattern(tok);
 
             case SectionType.s_REPORT:
-                return this.ParseReport(tok);
+                return ParseReport(tok);
             }
             return 0;
         }
@@ -456,43 +456,43 @@ namespace Epanet.MSX {
             case OptionType.AREA_UNITS_OPTION:
                 k = Utilities.MSXutils_findmatch(tok[1], Constants.AreaUnitsWords);
                 if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                this.msx.AreaUnits = (AreaUnitsType)k;
+                _msx.AreaUnits = (AreaUnitsType)k;
                 break;
 
             case OptionType.RATE_UNITS_OPTION:
                 k = Utilities.MSXutils_findmatch(tok[1], Constants.TimeUnitsWords);
                 if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                this.msx.RateUnits = (RateUnitsType)k;
+                _msx.RateUnits = (RateUnitsType)k;
                 break;
 
             case OptionType.SOLVER_OPTION:
                 k = Utilities.MSXutils_findmatch(tok[1], Constants.SolverTypeWords);
                 if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                this.msx.Solver = (SolverType)k;
+                _msx.Solver = (SolverType)k;
                 break;
 
             case OptionType.COUPLING_OPTION:
                 k = Utilities.MSXutils_findmatch(tok[1], Constants.CouplingWords);
                 if (k < 0) return InpErrorCodes.ERR_KEYWORD;
-                this.msx.Coupling = (CouplingType)k;
+                _msx.Coupling = (CouplingType)k;
                 break;
 
             case OptionType.TIMESTEP_OPTION:
                 k = int.Parse(tok[1]);
                 if (k <= 0) return InpErrorCodes.ERR_NUMBER;
-                this.msx.Qstep = k;
+                _msx.Qstep = k;
                 break;
 
             case OptionType.RTOL_OPTION: {
                 double tmp;
                 if (!tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
-                this.msx.DefRtol = tmp;
+                _msx.DefRtol = tmp;
                 break;
             }
             case OptionType.ATOL_OPTION: {
                 double tmp;
                 if (!tok[1].ToDouble(out tmp)) return InpErrorCodes.ERR_NUMBER;
-                this.msx.DefAtol = tmp;
+                _msx.DefAtol = tmp;
             }
                 break;
             }
@@ -503,35 +503,35 @@ namespace Epanet.MSX {
         private InpErrorCodes ParseSpecies(string[] tok) {
             // Get secies index
             if (tok.Length < 3) return InpErrorCodes.ERR_ITEMS;
-            int i = this.project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
+            int i = _project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
             if (i <= 0) return InpErrorCodes.ERR_NAME;
 
             // Get pointer to Species name
-            this.msx.Species[i].Id = this.project.MSXproj_findID(ObjectTypes.SPECIES, tok[1]);
+            _msx.Species[i].Id = _project.MSXproj_findID(ObjectTypes.SPECIES, tok[1]);
 
             // Get species type
-            if (Utilities.MSXutils_match(tok[0], "BULK")) this.msx.Species[i].Type = SpeciesType.BULK;
-            else if (Utilities.MSXutils_match(tok[0], "WALL")) this.msx.Species[i].Type = SpeciesType.WALL;
+            if (Utilities.MSXutils_match(tok[0], "BULK")) _msx.Species[i].Type = SpeciesType.BULK;
+            else if (Utilities.MSXutils_match(tok[0], "WALL")) _msx.Species[i].Type = SpeciesType.WALL;
             else return InpErrorCodes.ERR_KEYWORD;
 
             // Get Species units
-            this.msx.Species[i].Units = tok[2];
+            _msx.Species[i].Units = tok[2];
 
             // Get Species error tolerance
-            this.msx.Species[i].ATol = 0.0;
-            this.msx.Species[i].RTol = 0.0;
+            _msx.Species[i].ATol = 0.0;
+            _msx.Species[i].RTol = 0.0;
             if (tok.Length >= 4) {
                 double tmp;
                 // BUG: Baseform bug
                 if (!tok[3].ToDouble(out tmp))
-                    this.msx.Species[i].ATol = tmp;
+                    _msx.Species[i].ATol = tmp;
                 return InpErrorCodes.ERR_NUMBER;
             }
             if (tok.Length >= 5) {
                 double tmp;
                 // BUG: Baseform bug
                 if (!tok[4].ToDouble(out tmp)) //&MSX.Species[i].rTol) )
-                    this.msx.Species[i].RTol = tmp;
+                    _msx.Species[i].RTol = tmp;
                 return InpErrorCodes.ERR_NUMBER;
             }
             return 0;
@@ -545,21 +545,21 @@ namespace Epanet.MSX {
        
             if (Utilities.MSXutils_match(tok[0], "PARAM")) {
                 // Get Parameter's index
-                int i = this.project.MSXproj_findObject(ObjectTypes.PARAMETER, tok[1]);
+                int i = _project.MSXproj_findObject(ObjectTypes.PARAMETER, tok[1]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
 
                 // Get Parameter's value
-                this.msx.Param[i].Id = this.project.MSXproj_findID(ObjectTypes.PARAMETER, tok[1]);
+                _msx.Param[i].Id = _project.MSXproj_findID(ObjectTypes.PARAMETER, tok[1]);
                 if (tok.Length >= 3) {
                     // BUG: Baseform bug
                     double x;
                     if (tok[2].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
-                    this.msx.Param[i].Value = x;
+                    _msx.Param[i].Value = x;
                     
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++)
-                        this.msx.Link[j].Param[i] = x;
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.TANK]; j++)
-                        this.msx.Tank[j].Param[i] = x;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++)
+                        _msx.Link[j].Param[i] = x;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.TANK]; j++)
+                        _msx.Tank[j].Param[i] = x;
                 }
                 return 0;
             }
@@ -567,17 +567,17 @@ namespace Epanet.MSX {
             // Check if variable is a Constant
             else if (Utilities.MSXutils_match(tok[0], "CONST")) {
                 // Get Constant's index
-                int i = this.project.MSXproj_findObject(ObjectTypes.CONSTANT, tok[1]);
+                int i = _project.MSXproj_findObject(ObjectTypes.CONSTANT, tok[1]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
 
                 // Get constant's value
-                this.msx.Const[i].Id = this.project.MSXproj_findID(ObjectTypes.CONSTANT, tok[1]);
-                this.msx.Const[i].Value = 0.0;
+                _msx.Const[i].Id = _project.MSXproj_findID(ObjectTypes.CONSTANT, tok[1]);
+                _msx.Const[i].Value = 0.0;
                 if (tok.Length >= 3) {
                     double tmp;
                     if (!tok[2].ToDouble(out tmp)) //&MSX.Const[i].value) )
                         return InpErrorCodes.ERR_NUMBER;
-                    this.msx.Const[i].Value = tmp;
+                    _msx.Const[i].Value = tmp;
                 }
                 return 0;
             }
@@ -592,7 +592,7 @@ namespace Epanet.MSX {
            // --- get term's name
 
             if (tok.Length < 2) return 0;
-            int i = this.project.MSXproj_findObject(ObjectTypes.TERM, tok[0]);
+            int i = _project.MSXproj_findObject(ObjectTypes.TERM, tok[0]);
 
             // --- reconstruct the expression string from its tokens
 
@@ -601,12 +601,12 @@ namespace Epanet.MSX {
             // --- convert expression into a postfix stack of op codes
 
             //expr = mathexpr_create(s, getVariableCode);
-            MathExpr expr = MathExpr.Create(s, this.GetVariableCode);
+            MathExpr expr = MathExpr.Create(s, GetVariableCode);
             if (expr == null) return InpErrorCodes.ERR_MATH_EXPR;
 
             // --- assign the expression to a Term object
 
-            this.msx.Term[i].Expr = expr;
+            _msx.Term[i].Expr = expr;
             return 0;
         }
 
@@ -622,18 +622,18 @@ namespace Epanet.MSX {
 
             // --- determine species associated with expression
 
-            int i = this.project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
+            int i = _project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
             if (i < 1) return InpErrorCodes.ERR_NAME;
 
             // --- check that species does not already have an expression
 
             if (classType == ObjectTypes.LINK) {
-                if (this.msx.Species[i].PipeExprType != ExpressionType.NO_EXPR)
+                if (_msx.Species[i].PipeExprType != ExpressionType.NO_EXPR)
                     return InpErrorCodes.ERR_DUP_EXPR;
             }
 
             if (classType == ObjectTypes.TANK) {
-                if (this.msx.Species[i].TankExprType != ExpressionType.NO_EXPR)
+                if (_msx.Species[i].TankExprType != ExpressionType.NO_EXPR)
                     return InpErrorCodes.ERR_DUP_EXPR;
             }
 
@@ -644,7 +644,7 @@ namespace Epanet.MSX {
             // --- convert expression into a postfix stack of op codes
 
             //expr = mathexpr_create(s, getVariableCode);
-            MathExpr expr = MathExpr.Create(s, this.GetVariableCode);
+            MathExpr expr = MathExpr.Create(s, GetVariableCode);
 
             if (expr == null) return InpErrorCodes.ERR_MATH_EXPR;
 
@@ -652,12 +652,12 @@ namespace Epanet.MSX {
 
             switch (classType) {
             case ObjectTypes.LINK:
-                this.msx.Species[i].PipeExpr = expr;
-                this.msx.Species[i].PipeExprType = (ExpressionType)k;
+                _msx.Species[i].PipeExpr = expr;
+                _msx.Species[i].PipeExprType = (ExpressionType)k;
                 break;
             case ObjectTypes.TANK:
-                this.msx.Species[i].TankExpr = expr;
-                this.msx.Species[i].TankExprType = (ExpressionType)k;
+                _msx.Species[i].TankExpr = expr;
+                _msx.Species[i].TankExprType = (ExpressionType)k;
                 break;
             }
             return 0;
@@ -680,7 +680,7 @@ namespace Epanet.MSX {
 
             k = 1;
             if (i >= 2) k = 2;
-            m = this.project.MSXproj_findObject(ObjectTypes.SPECIES, tok[k]);
+            m = _project.MSXproj_findObject(ObjectTypes.SPECIES, tok[k]);
             if (m <= 0) return InpErrorCodes.ERR_NAME;
 
             // --- get quality value
@@ -694,35 +694,35 @@ namespace Epanet.MSX {
             //     all nodes or links depending on type of species
 
             if (i == 1) {
-                this.msx.C0[m] = x;
-                if (this.msx.Species[m].Type == SpeciesType.BULK) {
-                    for (j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++)
-                        this.msx.Node[j].C0[m] = x;
+                _msx.C0[m] = x;
+                if (_msx.Species[m].Type == SpeciesType.BULK) {
+                    for (j = 1; j <= _msx.Nobjects[(int)ObjectTypes.NODE]; j++)
+                        _msx.Node[j].C0[m] = x;
                 }
-                for (j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++)
-                    this.msx.Link[j].C0[m] = x;
+                for (j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++)
+                    _msx.Link[j].C0[m] = x;
             }
 
             // --- for a specific node, get its index & set its initial quality
 
             else if (i == 2) {
                 int tmp;
-                err = this.epanet.ENgetnodeindex(tok[1], out tmp);
+                err = _epanet.ENgetnodeindex(tok[1], out tmp);
                 j = tmp;
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                if (this.msx.Species[m].Type == SpeciesType.BULK) this.msx.Node[j].C0[m] = x;
+                if (_msx.Species[m].Type == SpeciesType.BULK) _msx.Node[j].C0[m] = x;
             }
 
             // --- for a specific link, get its index & set its initial quality
 
             else if (i == 3) {
                 int tmp;
-                err = this.epanet.ENgetlinkindex(tok[1], out tmp);
+                err = _epanet.ENgetlinkindex(tok[1], out tmp);
                 j = tmp;
                 if (err != 0)
                     return InpErrorCodes.ERR_NAME;
 
-                this.msx.Link[j].C0[m] = x;
+                _msx.Link[j].C0[m] = x;
             }
             return 0;
         }
@@ -734,7 +734,7 @@ namespace Epanet.MSX {
             // --- get parameter name
 
             if (tok.Length < 4) return 0;
-            int i = this.project.MSXproj_findObject(ObjectTypes.PARAMETER, tok[2]);
+            int i = _project.MSXproj_findObject(ObjectTypes.PARAMETER, tok[2]);
 
             // --- get parameter value
 
@@ -744,19 +744,19 @@ namespace Epanet.MSX {
             // --- for pipe parameter, get pipe index and update parameter's value
 
             if (Utilities.MSXutils_match(tok[0], "PIPE")) {
-                err = this.epanet.ENgetlinkindex(tok[1], out j);
+                err = _epanet.ENgetlinkindex(tok[1], out j);
               
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                this.msx.Link[j].Param[i] = x;
+                _msx.Link[j].Param[i] = x;
             }
 
             // --- for tank parameter, get tank index and update parameter's value
 
             else if (Utilities.MSXutils_match(tok[0], "TANK")) {
-                err = this.epanet.ENgetnodeindex(tok[1], out j);
+                err = _epanet.ENgetnodeindex(tok[1], out j);
                 if (err != 0) return InpErrorCodes.ERR_NAME;
-                j = this.msx.Node[j].Tank;
-                if (j > 0) this.msx.Tank[j].Param[i] = x;
+                j = _msx.Node[j].Tank;
+                if (j > 0) _msx.Tank[j].Param[i] = x;
             }
             else return InpErrorCodes.ERR_KEYWORD;
             return 0;
@@ -774,15 +774,15 @@ namespace Epanet.MSX {
 
             // --- get node index
             int j;
-            int err = this.epanet.ENgetnodeindex(tok[1], out j);
+            int err = _epanet.ENgetnodeindex(tok[1], out j);
             if (err != 0) return InpErrorCodes.ERR_NAME;
 
             //  --- get species index
-            int m = this.project.MSXproj_findObject(ObjectTypes.SPECIES, tok[2]);
+            int m = _project.MSXproj_findObject(ObjectTypes.SPECIES, tok[2]);
             if (m <= 0) return InpErrorCodes.ERR_NAME;
 
             // --- check that species is a BULK species
-            if (this.msx.Species[m].Type != SpeciesType.BULK) return 0;
+            if (_msx.Species[m].Type != SpeciesType.BULK) return 0;
 
             // --- get base strength
             double x;
@@ -791,12 +791,12 @@ namespace Epanet.MSX {
             // --- get time pattern if present
             var i = 0;
             if (tok.Length >= 5) {
-                i = this.project.MSXproj_findObject(ObjectTypes.PATTERN, tok[4]);
+                i = _project.MSXproj_findObject(ObjectTypes.PATTERN, tok[4]);
                 if (i <= 0) return InpErrorCodes.ERR_NAME;
             }
 
             // --- check if a source for this species already exists
-            foreach (Source src  in  this.msx.Node[j].Sources) {
+            foreach (Source src  in  _msx.Node[j].Sources) {
                 if (src.Species == m) {
                     source = src;
                     break;
@@ -810,7 +810,7 @@ namespace Epanet.MSX {
                 //if ( source == NULL ) return 101;
                 //source->next = MSX.Node[j].sources;
                 //MSX.Node[j].sources = source;
-                this.msx.Node[j].Sources.Insert(0, source);
+                _msx.Node[j].Sources.Insert(0, source);
             }
 
             // --- save source's properties
@@ -827,9 +827,9 @@ namespace Epanet.MSX {
 
             // --- get time pattern index
             if (tok.Length < 2) return InpErrorCodes.ERR_ITEMS;
-            int i = this.project.MSXproj_findObject(ObjectTypes.PATTERN, tok[0]);
+            int i = _project.MSXproj_findObject(ObjectTypes.PATTERN, tok[0]);
             if (i <= 0) return InpErrorCodes.ERR_NAME;
-            this.msx.Pattern[i].Id = this.project.MSXproj_findID(ObjectTypes.PATTERN, tok[0]);
+            _msx.Pattern[i].Id = _project.MSXproj_findID(ObjectTypes.PATTERN, tok[0]);
 
             // --- begin reading pattern multipliers
 
@@ -839,7 +839,7 @@ namespace Epanet.MSX {
                 double x;
                 if (!tok[k].ToDouble(out x)) return InpErrorCodes.ERR_NUMBER;
 
-                this.msx.Pattern[i].Multipliers.Add(x);
+                _msx.Pattern[i].Multipliers.Add(x);
 
 
                 // k++;
@@ -863,52 +863,52 @@ namespace Epanet.MSX {
             // Keyword is NODE; parse ID names of reported nodes
             case 0:
                 if (string.Equals(tok[1], Constants.ALL, StringComparison.OrdinalIgnoreCase)) {
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++)
-                        this.msx.Node[j].Rpt = true;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.NODE]; j++)
+                        _msx.Node[j].Rpt = true;
                 }
                 else if (string.Equals(tok[1], Constants.NONE, StringComparison.OrdinalIgnoreCase)) {
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.NODE]; j++)
-                        this.msx.Node[j].Rpt = false;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.NODE]; j++)
+                        _msx.Node[j].Rpt = false;
                 }
                 else
                     for (int i = 1; i < tok.Length; i++) {
                         int j;
-                        err = this.epanet.ENgetnodeindex(tok[i], out j);
+                        err = _epanet.ENgetnodeindex(tok[i], out j);
 
                         if (err != 0)
                             return InpErrorCodes.ERR_NAME;
 
-                        this.msx.Node[j].Rpt = true;
+                        _msx.Node[j].Rpt = true;
                     }
                 break;
 
             // Keyword is LINK: parse ID names of reported links
             case 1:
                 if (string.Equals(tok[1], Constants.ALL, StringComparison.OrdinalIgnoreCase)) {
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++)
-                        this.msx.Link[j].Rpt = true;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++)
+                        _msx.Link[j].Rpt = true;
                 }
                 else if (string.Equals(tok[1], Constants.NONE, StringComparison.OrdinalIgnoreCase)) {
-                    for (int j = 1; j <= this.msx.Nobjects[(int)ObjectTypes.LINK]; j++)
-                        this.msx.Link[j].Rpt = false;
+                    for (int j = 1; j <= _msx.Nobjects[(int)ObjectTypes.LINK]; j++)
+                        _msx.Link[j].Rpt = false;
                 }
                 else
                     for (int i = 1; i < tok.Length; i++) {
                         int j;
-                        err = this.epanet.ENgetlinkindex(tok[i], out j);
+                        err = _epanet.ENgetlinkindex(tok[i], out j);
                         if (err != 0) return InpErrorCodes.ERR_NAME;
-                        this.msx.Link[j].Rpt = true;
+                        _msx.Link[j].Rpt = true;
                     }
                 break;
 
             // Keyword is SPECIES; get YES/NO & precision
             case 2: {
-                int j = this.project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
+                int j = _project.MSXproj_findObject(ObjectTypes.SPECIES, tok[1]);
                 if (j <= 0) return InpErrorCodes.ERR_NAME;
 
                 if (tok.Length >= 3) {
-                    if (string.Equals(tok[2], Constants.YES, StringComparison.OrdinalIgnoreCase)) this.msx.Species[j].Rpt = 1;
-                    else if (string.Equals(tok[2], Constants.NO, StringComparison.OrdinalIgnoreCase)) this.msx.Species[j].Rpt = 0;
+                    if (string.Equals(tok[2], Constants.YES, StringComparison.OrdinalIgnoreCase)) _msx.Species[j].Rpt = 1;
+                    else if (string.Equals(tok[2], Constants.NO, StringComparison.OrdinalIgnoreCase)) _msx.Species[j].Rpt = 0;
                     else return InpErrorCodes.ERR_KEYWORD;
                 }
 
@@ -916,7 +916,7 @@ namespace Epanet.MSX {
                     int i;
                     // BUG: Baseform bug
                     if (!int.TryParse(tok[3], out i)) ;
-                    this.msx.Species[j].Precision = i;
+                    _msx.Species[j].Precision = i;
                     return InpErrorCodes.ERR_NUMBER;
                 }
             }
@@ -924,7 +924,7 @@ namespace Epanet.MSX {
 
             // Keyword is FILE: get name of report file
             case 3:
-                this.msx.RptFilename = tok[1];
+                _msx.RptFilename = tok[1];
                 break;
 
             // Keyword is PAGESIZE;
@@ -932,7 +932,7 @@ namespace Epanet.MSX {
                 int i;
                 if (!int.TryParse(tok[1], out i))
                     return InpErrorCodes.ERR_NUMBER;
-                this.msx.PageSize = i;
+                _msx.PageSize = i;
             }
                 break;
             }
@@ -943,35 +943,35 @@ namespace Epanet.MSX {
         ///  Finds the index assigned to a species, intermediate term, parameter, or constant that appears in a math expression.
         /// </summary>
         private int GetVariableCode(string id) {
-            int j = this.project.MSXproj_findObject(ObjectTypes.SPECIES, id);
+            int j = _project.MSXproj_findObject(ObjectTypes.SPECIES, id);
 
             if (j >= 1) return j;
 
-            j = this.project.MSXproj_findObject(ObjectTypes.TERM, id);
+            j = _project.MSXproj_findObject(ObjectTypes.TERM, id);
 
-            if (j >= 1) return this.msx.Nobjects[(int)ObjectTypes.SPECIES] + j;
+            if (j >= 1) return _msx.Nobjects[(int)ObjectTypes.SPECIES] + j;
 
-            j = this.project.MSXproj_findObject(ObjectTypes.PARAMETER, id);
+            j = _project.MSXproj_findObject(ObjectTypes.PARAMETER, id);
 
             if (j >= 1)
-                return this.msx.Nobjects[(int)ObjectTypes.SPECIES]
-                       + this.msx.Nobjects[(int)ObjectTypes.TERM] +
+                return _msx.Nobjects[(int)ObjectTypes.SPECIES]
+                       + _msx.Nobjects[(int)ObjectTypes.TERM] +
                        j;
 
-            j = this.project.MSXproj_findObject(ObjectTypes.CONSTANT, id);
+            j = _project.MSXproj_findObject(ObjectTypes.CONSTANT, id);
 
             if (j >= 1)
-                return this.msx.Nobjects[(int)ObjectTypes.SPECIES]
-                       + this.msx.Nobjects[(int)ObjectTypes.TERM]
-                       + this.msx.Nobjects[(int)ObjectTypes.PARAMETER] + j;
+                return _msx.Nobjects[(int)ObjectTypes.SPECIES]
+                       + _msx.Nobjects[(int)ObjectTypes.TERM]
+                       + _msx.Nobjects[(int)ObjectTypes.PARAMETER] + j;
 
             j = Utilities.MSXutils_findmatch(id, Constants.HydVarWords);
 
             if (j >= 1)
-                return this.msx.Nobjects[(int)ObjectTypes.SPECIES]
-                       + this.msx.Nobjects[(int)ObjectTypes.TERM]
-                       + this.msx.Nobjects[(int)ObjectTypes.PARAMETER]
-                       + this.msx.Nobjects[(int)ObjectTypes.CONSTANT] + j;
+                return _msx.Nobjects[(int)ObjectTypes.SPECIES]
+                       + _msx.Nobjects[(int)ObjectTypes.TERM]
+                       + _msx.Nobjects[(int)ObjectTypes.PARAMETER]
+                       + _msx.Nobjects[(int)ObjectTypes.CONSTANT] + j;
             return -1;
         }
 
@@ -983,7 +983,7 @@ namespace Epanet.MSX {
             else {
                 Console.Error.WriteLine(
                            "{0} at line {1} of {2}] section:",
-                           InpErrorTxt[errcode - InpErrorCodes.INP_ERR_FIRST],
+                           inpErrorTxt[errcode - InpErrorCodes.INP_ERR_FIRST],
                            lineCount,
                            sect);
             }

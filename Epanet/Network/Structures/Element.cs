@@ -9,7 +9,7 @@ namespace Epanet.Network.Structures {
         private readonly string _name;
 
         protected Element(string name) {
-            this._name = name.Length > Constants.MAXID 
+            _name = name.Length > Constants.MAXID 
                 ? name.Substring(0, Constants.MAXID) 
                 : name;
 
@@ -17,7 +17,7 @@ namespace Epanet.Network.Structures {
             // this.Tag = string.Empty;
         }
 
-        public string Name { get { return this._name; } }
+        public string Name { get { return _name; } }
 
         public string Tag { get; set; }
 
@@ -26,26 +26,28 @@ namespace Epanet.Network.Structures {
 
         public abstract ElementType ElementType { get; }
 
-#region Implementation of IComparable<Element>, IEquatable<Element>
+        #region Overrides of Object
+
+        public override string ToString() {
+            return GetType().FullName + ":Name=" + (_name ?? string.Empty);
+        }
+
+        #endregion
+
+        #region Implementation of IComparable<Element>, IEquatable<Element>
 
         public int CompareTo(Element other) {
-            if(other == null)
-                return 1;
-
-            return string.Compare(this.Name, other.Name, StringComparison.OrdinalIgnoreCase);            
+            return other == null ? 1 : string.Compare(Name, other.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         public bool Equals(Element other) {
-            if(other == null)
-                return false;
-
-            return string.Equals(this._name, other._name, StringComparison.OrdinalIgnoreCase);            
+            return other != null && string.Equals(_name, other._name, StringComparison.OrdinalIgnoreCase);
         }
 
         public override int GetHashCode() {
-            return string.IsNullOrEmpty(this._name)
+            return string.IsNullOrEmpty(_name)
                 ? 0
-                : this._name.GetHashCode();
+                : _name.GetHashCode();
         }
         
 #endregion

@@ -1,7 +1,7 @@
 ﻿
 namespace Epanet.UI {
 
-    sealed partial class EpanetUI {
+    sealed partial class EpanetUi {
         /// <summary>
         /// Required designer variable.
         /// </summary>
@@ -38,7 +38,7 @@ namespace Epanet.UI {
             System.Windows.Forms.Label label13;
             System.Windows.Forms.Label label14;
             System.Windows.Forms.Label logoB;
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EpanetUI));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EpanetUi));
             System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
             System.Windows.Forms.ToolStripMenuItem menuOpen;
             this.menuSave = new System.Windows.Forms.ToolStripMenuItem();
@@ -654,7 +654,7 @@ namespace Epanet.UI {
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
-            this.Name = "EpanetUI";
+            this.Name = "EpanetUi";
             this.Text = "EpanetUI2";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.EpanetUI_FormClosing);
             this.bottom.ResumeLayout(false);

@@ -60,15 +60,15 @@ namespace Epanet.Report {
                 new HydVariable("Link friction factor", false) // HydVariable.HYDR_VARIABLE_FRICTION
             };
 
-            public readonly bool IsNode;
-            public readonly string Name;
+            public readonly bool isNode;
+            public readonly string name;
 
             private HydVariable(string text, bool node) {
-                this.Name = text;
-                this.IsNode = node;
+                name = text;
+                isNode = node;
             }
 
-            public override string ToString() { return this.Name; }
+            public override string ToString() { return name; }
         }
 
         /// <summary>Quality report fields.</summary>
@@ -85,29 +85,29 @@ namespace Epanet.Report {
                 // new QualVariable(Type.Rate, "Link reaction rate", false) // QualVariable.QUAL_VARIABLE_RATE
             };
 
-            public readonly string Name;
-            public readonly bool IsNode;
+            public readonly string name;
+            public readonly bool isNode;
 
             private QualVariable(string text, bool node) {
-                this.Name = text;
-                this.IsNode = node;
+                name = text;
+                isNode = node;
             }
 
-            public override string ToString() { return this.Name; }
+            public override string ToString() { return name; }
         }
 
-        private readonly XLSXWriter sheet;
-        private readonly string xlsxFile;
+        private readonly XlsxWriter _sheet;
+        private readonly string _xlsxFile;
 
         public ReportGenerator(string xlsxFile) {
-            this.xlsxFile = xlsxFile;
-            this.sheet = new XLSXWriter();
+            _xlsxFile = xlsxFile;
+            _sheet = new XlsxWriter();
         }
 
         ///<summary>Excel cells transposition mode.</summary>
         public bool TransposedMode {
-            set { this.sheet.TransposedMode = value; }
-            get { return this.sheet.TransposedMode; }
+            set { _sheet.TransposedMode = value; }
+            get { return _sheet.TransposedMode; }
         }
 
         ///<summary>Current report time progress.</summary>
@@ -118,29 +118,29 @@ namespace Epanet.Report {
         /// <param name="net">Hydraulic network.</param>
         /// <param name="values">Variables report flag.</param>
         public void CreateHydReport(string hydBinFile, EpanetNetwork net, bool[] values) {
-            this.Rtime = 0;
+            Rtime = 0;
             HydraulicReader dseek = new HydraulicReader(new BinaryReader(File.OpenRead(hydBinFile)));
             int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
             var nodes = net.Nodes;
             var links = net.Links;
 
             object[] nodesHead = new object[dseek.Nodes + 1];
-            nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
+            nodesHead[0] = _sheet.TransposedMode ? "Node/Time" : "Time/Node";
             for (int i = 0; i < nodes.Count; i++)
                 nodesHead[i + 1] = nodes[i].Name;
 
             var linksHead = new object[dseek.Links + 1];
-            linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
+            linksHead[0] = _sheet.TransposedMode ? "Link/Time" : "Time/Link";
             for (int i = 0; i < links.Count; i++)
                 linksHead[i + 1] = links[i].Name;
 
-            XLSXWriter.Spreadsheet[] resultSheets = new XLSXWriter.Spreadsheet[HydVariable.Values.Length];
+            XlsxWriter.Spreadsheet[] resultSheets = new XlsxWriter.Spreadsheet[HydVariable.Values.Length];
             // Array.Clear(resultSheets, 0, resultSheets.Length);
 
             for (int i = 0; i < resultSheets.Length; i++) {
                 if (values != null && !values[i]) continue;
-                resultSheets[i] = this.sheet.NewSpreadsheet(HydVariable.Values[i].Name);
-                resultSheets[i].AddHeader(HydVariable.Values[i].IsNode ? nodesHead : linksHead);
+                resultSheets[i] = _sheet.NewSpreadsheet(HydVariable.Values[i].name);
+                resultSheets[i].AddHeader(HydVariable.Values[i].isNode ? nodesHead : linksHead);
             }
 
             var nodeRow = new object[dseek.Nodes + 1];
@@ -151,7 +151,7 @@ namespace Epanet.Report {
                 var step = dseek.GetStep(time);
 
                 if (step == null) {
-                    this.Rtime = time;
+                    Rtime = time;
                     continue;
                 }
 
@@ -220,7 +220,7 @@ namespace Epanet.Report {
                     resultSheets[(int)HydVariable.Type.Friction].AddData(linkRow);
                 }
 
-                this.Rtime = time;
+                Rtime = time;
             }
 
             dseek.Close();
@@ -232,7 +232,7 @@ namespace Epanet.Report {
         /// <param name="nodes">Show nodes quality flag.</param>
         /// <param name="links">Show links quality flag.</param>
         public void CreateQualReport(string qualFile, EpanetNetwork net, bool nodes, bool links) {
-            this.Rtime = 0;
+            Rtime = 0;
 
             int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
 
@@ -241,24 +241,24 @@ namespace Epanet.Report {
                 var netLinks = net.Links;    
           
                 var nodesHead = new object[dseek.Nodes + 1];
-                nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
+                nodesHead[0] = _sheet.TransposedMode ? "Node/Time" : "Time/Node";
                 for(int i = 0; i < netNodes.Count; i++)
                     nodesHead[i + 1] = netNodes[i].Name;
 
                 var linksHead = new object[dseek.Links + 1];
-                linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
+                linksHead[0] = _sheet.TransposedMode ? "Link/Time" : "Time/Link";
                 for(int i = 0; i < netLinks.Count; i++)
                     linksHead[i + 1] = netLinks[i].Name;
 
-                var resultSheets = new XLSXWriter.Spreadsheet[HydVariable.Values.Length];
+                var resultSheets = new XlsxWriter.Spreadsheet[HydVariable.Values.Length];
                
                 for (int i = 0; i < QualVariable.Values.Length; i++) {
                     var qvar = QualVariable.Values[i];
-                    if ((!qvar.IsNode || !nodes) && (qvar.IsNode || !links))
+                    if ((!qvar.isNode || !nodes) && (qvar.isNode || !links))
                         continue;
 
-                    resultSheets[i] = this.sheet.NewSpreadsheet(qvar.Name);
-                    resultSheets[i].AddHeader(qvar.IsNode ? nodesHead : linksHead);
+                    resultSheets[i] = _sheet.NewSpreadsheet(qvar.name);
+                    resultSheets[i].AddHeader(qvar.isNode ? nodesHead : linksHead);
                 }
 
                 var nodeRow = new object[dseek.Nodes + 1];
@@ -289,7 +289,7 @@ namespace Epanet.Report {
                         resultSheets[(int)QualVariable.Type.Links].AddData(linkRow);
                     }
 
-                    this.Rtime = time;
+                    Rtime = time;
                 }
             }
         }
@@ -297,31 +297,31 @@ namespace Epanet.Report {
         /// <summary>Generate multi-species quality report.</summary>
         ///  <param name="msxBin">Name of the MSX simulation output file.</param>
         /// <param name="net">Hydraulic network.</param>
-        /// <param name="netMSX">MSX network.</param>
+        /// <param name="netMsx">MSX network.</param>
         /// <param name="tk2">Hydraulic network - MSX bridge.</param>
         /// <param name="values">Species report flag.</param>
-        public void createMSXReport(string msxBin, EpanetNetwork net, EpanetMSX netMSX, ENToolkit2 tk2, bool[] values) {
-            this.Rtime = 0;
-            var nodes = netMSX.Network.Node;
-            var links = netMSX.Network.Link;
-            string[] nSpecies = netMSX.GetSpeciesNames();
+        public void CreateMsxReport(string msxBin, EpanetNetwork net, EpanetMSX netMsx, EnToolkit2 tk2, bool[] values) {
+            Rtime = 0;
+            var nodes = netMsx.Network.Node;
+            var links = netMsx.Network.Link;
+            string[] nSpecies = netMsx.GetSpeciesNames();
             int reportCount = (int)((net.Duration - net.RStart) / net.RStep) + 1;
 
             var reader = new MsxReader(
                 nodes.Length - 1,
                 links.Length - 1,
                 nSpecies.Length,
-                netMSX.ResultsOffset);
+                netMsx.ResultsOffset);
 
             int totalSpecies = values == null ? nSpecies.Length : values.Count(b => b);
 
             reader.Open(msxBin);
 
             var nodesHead = new object[nSpecies.Length + 1];
-            nodesHead[0] = this.sheet.TransposedMode ? "Node/Time" : "Time/Node";
+            nodesHead[0] = _sheet.TransposedMode ? "Node/Time" : "Time/Node";
 
             var linksHead = new object[nSpecies.Length + 1];
-            linksHead[0] = this.sheet.TransposedMode ? "Link/Time" : "Time/Link";
+            linksHead[0] = _sheet.TransposedMode ? "Link/Time" : "Time/Link";
 
             int count = 1;
             for (int i = 0; i < nSpecies.Length; i++)
@@ -335,7 +335,7 @@ namespace Epanet.Report {
             for (int i = 1; i < nodes.Length; i++) {
                 if (!nodes[i].Rpt) continue;
 
-                var spr = this.sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
+                var spr = _sheet.NewSpreadsheet("Node&lt;&lt;" + tk2.ENgetnodeid(i) + "&gt;&gt;");
                 spr.AddHeader(nodesHead);
 
                 for (long time = net.RStart, period = 0;
@@ -357,7 +357,7 @@ namespace Epanet.Report {
             for (int i = 1; i < links.Length; i++) {
                 if (!links[i].Rpt) continue;
 
-                var spr = this.sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
+                var spr = _sheet.NewSpreadsheet("Link&lt;&lt;" + tk2.ENgetlinkid(i) + "&gt;&gt;");
                 spr.AddHeader(linksHead);
 
                 for (long time = net.RStart, period = 0;
@@ -379,8 +379,8 @@ namespace Epanet.Report {
         }
 
         /// <summary>Write the final worksheet.</summary>
-        public void writeWorksheet() {
-            this.sheet.Save(this.xlsxFile);
+        public void WriteWorksheet() {
+            _sheet.Save(_xlsxFile);
         }
 
         /// <summary>Write simulation summary to one worksheet.</summary>
@@ -389,7 +389,7 @@ namespace Epanet.Report {
         /// <param name="msxFile">MSX file.</param>
         /// <param name="msx">MSX solver.</param>
         public void WriteSummary(string inpFile, EpanetNetwork net, string msxFile, EpanetMSX msx) {
-            var sh = this.sheet.NewSpreadsheet("Summary");
+            var sh = _sheet.NewSpreadsheet("Summary");
 
             try {
                 FieldsMap fMap = net.FieldsMap;
@@ -453,8 +453,8 @@ namespace Epanet.Report {
                 }
 
                 sh.AddData(Text.FMT36, net.SpGrav);
-                sh.AddData(Text.FMT37a, net.Viscos / Epanet.Constants.VISCOS);
-                sh.AddData(Text.FMT37b, net.Diffus / Epanet.Constants.DIFFUS);
+                sh.AddData(Text.FMT37a, net.Viscos / Constants.VISCOS);
+                sh.AddData(Text.FMT37b, net.Diffus / Constants.DIFFUS);
                 sh.AddData(Text.FMT38, net.DMult);
                 sh.AddData(
                     Text.FMT39,

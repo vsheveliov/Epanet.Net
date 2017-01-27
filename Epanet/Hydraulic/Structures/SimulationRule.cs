@@ -31,17 +31,15 @@ using EpanetNetwork = Epanet.Network.Network;
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationRule {
-        private static TraceSource Log = new TraceSource("epanet", SourceLevels.All);
-
         /// <summary>Temporary action item</summary>
         private struct ActItem {
             public ActItem(SimulationRule rule, Action action) {
-                this.Rule = rule;
-                this.Action = action;
+                this.rule = rule;
+                this.action = action;
             }
 
-            public readonly SimulationRule Rule;
-            public readonly Action Action;
+            public readonly SimulationRule rule;
+            public readonly Action action;
         }
 
         /// <summary>Rule premise.</summary>
@@ -93,10 +91,9 @@ namespace Epanet.Hydraulic.Structures {
 
                     if (loType == Objects.NODE) {
                         //Node nodeRef = net.getNode(Tok[2]);
-                        SimulationNode nodeRef = nodes
-                            .FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationNode node = nodes.FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
-                        if (nodeRef == null)
+                        if (node == null)
                             throw new ENException(ErrorCode.Err203);
 
                         switch (lVar) {
@@ -108,21 +105,21 @@ namespace Epanet.Hydraulic.Structures {
                             break;
                         case Varwords.FILLTIME:
                         case Varwords.DRAINTIME:
-                            if (nodeRef is SimulationTank)
+                            if (node is SimulationTank)
                                 throw new ENException(ErrorCode.Err201);
                             break;
 
                         default:
                             throw new ENException(ErrorCode.Err201);
                         }
-                        lObj = nodeRef;
+                        lObj = node;
                     }
                     else {
                         //Link linkRef = net.getLink(Tok[2]);
-                        SimulationLink linkRef = links
+                        SimulationLink link = links
                             .FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
-                        if (linkRef == null)
+                        if (link == null)
                             throw new ENException(ErrorCode.Err204);
 
                         switch (lVar) {
@@ -133,7 +130,7 @@ namespace Epanet.Hydraulic.Structures {
                         default:
                             throw new ENException(ErrorCode.Err201);
                         }
-                        lObj = linkRef;
+                        lObj = link;
                     }
                 }
 
@@ -192,25 +189,25 @@ namespace Epanet.Hydraulic.Structures {
 
                 }
 
-                this.status = lStat;
-                this.value = lVal;
-                this.logop = lOp;
-                this.relop = lROp;
-                this.variable = lVar;
-                this.@object = lObj;
+                _status = lStat;
+                _value = lVal;
+                logop = lOp;
+                _relop = lROp;
+                _variable = lVar;
+                _object = lObj;
             }
 
             /// <summary>Logical operator</summary>
             public readonly Rulewords logop;
-            private readonly object @object;
+            private readonly object _object;
             /// <summary>Pressure, flow, etc</summary>
-            private readonly Varwords variable;
+            private readonly Varwords _variable;
             /// <summary>Relational operator</summary>
-            private readonly Operators relop;
+            private readonly Operators _relop;
             /// <summary>Variable's status</summary>
-            private readonly Values status;
+            private readonly Values _status;
             /// <summary>Variable's value</summary>
-            private readonly double value;
+            private readonly double _value;
 
             /// <summary>Checks if a particular premise is true.</summary>
             public bool CheckPremise(
@@ -219,31 +216,33 @@ namespace Epanet.Hydraulic.Structures {
                 long htime,
                 double dsystem) 
             {
-                if (this.variable == Varwords.TIME || this.variable == Varwords.CLOCKTIME)
-                    return this.CheckTime(net, time1, htime);
-                else if (this.status > Values.IS_NUMBER)
-                    return this.CheckStatus();
+                if (_variable == Varwords.TIME || _variable == Varwords.CLOCKTIME)
+                    return CheckTime(net, time1, htime);
+                else if (_status > Values.IS_NUMBER)
+                    return CheckStatus();
                 else
-                    return this.CheckValue(net.FieldsMap, dsystem);
+                    return CheckValue(net.FieldsMap, dsystem);
             }
 
             /// <summary>Checks if condition on system time holds.</summary>
             private bool CheckTime(EpanetNetwork net, long time1, long htime) {
                 long t1, t2;
 
-                if (this.variable == Varwords.TIME) {
-                    t1 = time1;
-                    t2 = htime;
+                switch (_variable) {
+                    case Varwords.TIME:
+                        t1 = time1;
+                        t2 = htime;
+                        break;
+                    case Varwords.CLOCKTIME:
+                        t1 = (time1 + net.Tstart) % Constants.SECperDAY;
+                        t2 = (htime + net.Tstart) % Constants.SECperDAY;
+                        break;
+                    default:
+                        return false;
                 }
-                else if (this.variable == Varwords.CLOCKTIME) {
-                    t1 = (time1 + net.TStart) % Constants.SECperDAY;
-                    t2 = (htime + net.TStart) % Constants.SECperDAY;
-                }
-                else
-                    return false;
 
-                var x = (long)this.value;
-                switch (this.relop) {
+                var x = (long)_value;
+                switch (_relop) {
                 case Operators.LT:
                     if (t2 >= x) return false;
                     break;
@@ -266,8 +265,8 @@ namespace Epanet.Hydraulic.Structures {
                     else {
                         if (x >= t1 && x <= t2) flag = true;
                     }
-                    if (this.relop == Operators.EQ && !flag) return true;
-                    if (this.relop == Operators.NE && flag) return true;
+                    if (_relop == Operators.EQ && !flag) return true;
+                    if (_relop == Operators.NE && flag) return true;
                     break;
                 }
 
@@ -276,12 +275,12 @@ namespace Epanet.Hydraulic.Structures {
 
             /// <summary>Checks if condition on link status holds.</summary>
             private bool CheckStatus() {
-                switch (this.status) {
+                switch (_status) {
                 case Values.IS_OPEN:
                 case Values.IS_CLOSED:
                 case Values.IS_ACTIVE:
                     Values j;
-                    var simlink = this.@object as SimulationLink;
+                    var simlink = _object as SimulationLink;
                     StatType i = simlink == null ? (StatType)(-1) : simlink.SimStatus;
 
                     if(i >= StatType.XHEAD && i <= StatType.CLOSED)
@@ -291,9 +290,9 @@ namespace Epanet.Hydraulic.Structures {
                     else
                         j = Values.IS_OPEN;
 
-                    if (j == this.status && this.relop == Operators.EQ)
+                    if (j == _status && _relop == Operators.EQ)
                         return true;
-                    if (j != this.status && this.relop == Operators.NE)
+                    if (j != _status && _relop == Operators.NE)
                         return true;
                     break;
                 }
@@ -302,19 +301,20 @@ namespace Epanet.Hydraulic.Structures {
 
             /// <summary>Checks if numerical condition on a variable is true.</summary>
             private bool CheckValue(FieldsMap fMap, double dsystem) {
-                const double tol = 0.001D;
+                const double TOL = 0.001D;
                 double x;
 
-                SimulationLink link = this.@object as SimulationLink;
-                SimulationNode node = this.@object as SimulationNode;
+                SimulationLink link = _object as SimulationLink;
+                SimulationNode node = _object as SimulationNode;
 
 
-                switch (this.variable) {
+                switch (_variable) {
                 case Varwords.DEMAND:
-                    if ((Objects)this.@object == Objects.SYSTEM)
+                    if ((Objects)_object == Objects.SYSTEM)
                         x = dsystem * fMap.GetUnits(FieldType.DEMAND);
                     else
                         x = node.SimDemand * fMap.GetUnits(FieldType.DEMAND);
+
                     break;
 
                 case Varwords.HEAD:
@@ -352,10 +352,10 @@ namespace Epanet.Hydraulic.Structures {
                     }
                     break;
                 case Varwords.FILLTIME: {
-                    if (!(this.@object is SimulationTank))
+                    if (!(_object is SimulationTank))
                         return false;
 
-                    SimulationTank tank = (SimulationTank)this.@object;
+                    SimulationTank tank = (SimulationTank)_object;
 
                     if (tank.IsReservoir)
                         return false;
@@ -368,10 +368,10 @@ namespace Epanet.Hydraulic.Structures {
                     break;
                 }
                 case Varwords.DRAINTIME: {
-                    if (!(this.@object is SimulationTank))
+                    if (!(_object is SimulationTank))
                         return false;
 
-                    SimulationTank tank = (SimulationTank)this.@object;
+                    SimulationTank tank = (SimulationTank)_object;
 
                     if (tank.IsReservoir)
                         return false;
@@ -386,29 +386,29 @@ namespace Epanet.Hydraulic.Structures {
                     return false;
                 }
 
-                switch (this.relop) {
+                switch (_relop) {
                 case Operators.EQ:
-                    if (Math.Abs(x - this.value) > tol)
+                    if (Math.Abs(x - _value) > TOL)
                         return false;
                     break;
                 case Operators.NE:
-                    if (Math.Abs(x - this.value) < tol)
+                    if (Math.Abs(x - _value) < TOL)
                         return false;
                     break;
                 case Operators.LT:
-                    if (x > this.value + tol)
+                    if (x > _value + TOL)
                         return false;
                     break;
                 case Operators.LE:
-                    if (x > this.value - tol)
+                    if (x > _value - TOL)
                         return false;
                     break;
                 case Operators.GT:
-                    if (x < this.value - tol)
+                    if (x < _value - TOL)
                         return false;
                     break;
                 case Operators.GE:
-                    if (x < this.value + tol)
+                    if (x < _value + TOL)
                         return false;
                     break;
                 }
@@ -418,10 +418,10 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         private class Action {
-            private readonly string label;
+            private readonly string _label;
 
             public Action(string[] tok, IEnumerable<SimulationLink> links, string label) {
-                this.label = label;
+                _label = label;
 
                 int ntokens = tok.Length;
 
@@ -458,36 +458,36 @@ namespace Epanet.Hydraulic.Structures {
                     x = Constants.MISSING;
                 }
 
-                this.link = linkRef;
-                this.status = s;
-                this.setting = x;
+                link = linkRef;
+                _status = s;
+                _setting = x;
             }
 
             public readonly SimulationLink link;
-            private readonly Values status;
-            private readonly double setting;
+            private readonly Values _status;
+            private readonly double _setting;
 
             /// <summary>Execute action, returns true if the link was alterated.</summary>
             public bool Execute(EpanetNetwork net, TraceSource log, double tol, long htime) {
                 bool flag = false;
 
-                StatType s = this.link.SimStatus;
-                double v = this.link.SimSetting;
-                double x = this.setting;
+                StatType s = link.SimStatus;
+                double v = link.SimSetting;
+                double x = _setting;
 
-                if (this.status == Values.IS_OPEN && s <= StatType.CLOSED) {
+                if (_status == Values.IS_OPEN && s <= StatType.CLOSED) {
                     // Switch link from closed to open
-                    this.link.SetLinkStatus(true);
+                    link.SetLinkStatus(true);
                     flag = true;
                 }
-                else if (this.status == Values.IS_CLOSED && s > StatType.CLOSED) {
+                else if (_status == Values.IS_CLOSED && s > StatType.CLOSED) {
                     // Switch link from not closed to closed
-                    this.link.SetLinkStatus(false);
+                    link.SetLinkStatus(false);
                     flag = true;
                 }
                 else if (!x.IsMissing()) {
                     // Change link's setting
-                    switch (this.link.Type) {
+                    switch (link.Type) {
                     case LinkType.PRV:
                     case LinkType.PSV:
                     case LinkType.PBV:
@@ -498,14 +498,14 @@ namespace Epanet.Hydraulic.Structures {
                         break;
                     }
                     if (Math.Abs(x - v) > tol) {
-                        this.link.SetLinkSetting(x);
+                        link.SetLinkSetting(x);
                         flag = true;
                     }
                 }
 
                 if (flag) {
                     if (net.StatFlag > 0) // Report rule action
-                        this.LogRuleExecution(log, htime);
+                        LogRuleExecution(log, htime);
                     return true;
                 }
 
@@ -516,18 +516,18 @@ namespace Epanet.Hydraulic.Structures {
                 log.Warning(
                     Properties.Text.FMT63,
                     htime.GetClockTime(),
-                    this.link.Type.ParseStr(),
-                    this.link.Link.Name,
-                    this.label);
+                    link.Type.ParseStr(),
+                    link.Link.Name,
+                    _label);
             }
         }
 
 
-        private readonly string label;
-        private readonly double priority;
-        private readonly List<Premise> pchain = new List<Premise>();
-        private readonly List<Action> tchain = new List<Action>();
-        private readonly List<Action> fchain = new List<Action>();
+        private readonly string _label;
+        private readonly double _priority;
+        private readonly List<Premise> _pchain = new List<Premise>();
+        private readonly List<Action> _tchain = new List<Action>();
+        private readonly List<Action> _fchain = new List<Action>();
 
 
         // Simulation Methods
@@ -541,7 +541,7 @@ namespace Epanet.Hydraulic.Structures {
             double dsystem) {
             bool result = true;
 
-            foreach (var p  in  this.pchain) {
+            foreach (var p  in  _pchain) {
                 if (p.logop == Rulewords.OR) {
                     if (!result)
                         result = p.CheckPremise(net, time1, htime, dsystem);
@@ -560,13 +560,13 @@ namespace Epanet.Hydraulic.Structures {
         private static void UpdateActionList(SimulationRule rule, List<ActItem> actionList, bool branch) {
             if (branch) {
                 // go through the true action branch
-                foreach (Action a  in  rule.tchain) {
+                foreach (Action a  in  rule._tchain) {
                     if (!CheckAction(rule, a, actionList)) // add a new action from the "true" chain
                         actionList.Add(new ActItem(rule, a));
                 }
             }
             else {
-                foreach (Action a  in  rule.fchain) {
+                foreach (Action a  in  rule._fchain) {
                     if (!CheckAction(rule, a, actionList)) // add a new action from the "false" chain
                         actionList.Add(new ActItem(rule, a));
                 }
@@ -579,11 +579,11 @@ namespace Epanet.Hydraulic.Structures {
             
             for (int i = 0; i < actionList.Count; i++) {
 
-                if(actionList[i].Action.link != action.link)
+                if(actionList[i].action.link != action.link)
                     continue;
 
                 // Action with same link
-                if(rule.priority > actionList[i].Rule.priority) {
+                if(rule._priority > actionList[i].rule._priority) {
                     // Replace Actitem action with higher priority rule
                     actionList[i] = new ActItem(rule, action);
                 }
@@ -600,7 +600,7 @@ namespace Epanet.Hydraulic.Structures {
             int n = 0;
 
             foreach (ActItem item  in  actionList) {
-                if (item.Action.Execute(net, log, tol, htime))
+                if (item.action.Execute(net, log, tol, htime))
                     n++;
             }
 
@@ -697,7 +697,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         public SimulationRule(Rule rule, IList<SimulationLink> links, IList<SimulationNode> nodes) {
-            this.label = rule.Name;
+            _label = rule.Name;
 
             double tempPriority = 0.0;
 
@@ -715,17 +715,17 @@ namespace Epanet.Hydraulic.Structures {
                     if (ruleState != Rulewords.RULE)
                         throw new ENException(ErrorCode.Err221);
                     ruleState = Rulewords.IF;
-                    this.ParsePremise(tok, Rulewords.AND, nodes, links);
+                    ParsePremise(tok, Rulewords.AND, nodes, links);
                     break;
 
                 case Rulewords.AND:
                     switch (ruleState) {
                     case Rulewords.IF:
-                        this.ParsePremise(tok, Rulewords.AND, nodes, links);
+                        ParsePremise(tok, Rulewords.AND, nodes, links);
                         break;
                     case Rulewords.THEN:
                     case Rulewords.ELSE:
-                        this.ParseAction(ruleState, tok, links);
+                        ParseAction(ruleState, tok, links);
                         break;
                     default:
                         throw new ENException(ErrorCode.Err221);
@@ -734,7 +734,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 case Rulewords.OR:
                     if (ruleState == Rulewords.IF)
-                        this.ParsePremise(tok, Rulewords.OR, nodes, links);
+                        ParsePremise(tok, Rulewords.OR, nodes, links);
                     else
                         throw new ENException(ErrorCode.Err221);
                     break;
@@ -743,14 +743,14 @@ namespace Epanet.Hydraulic.Structures {
                     if (ruleState != Rulewords.IF)
                         throw new ENException(ErrorCode.Err221);
                     ruleState = Rulewords.THEN;
-                    this.ParseAction(ruleState, tok, links);
+                    ParseAction(ruleState, tok, links);
                     break;
 
                 case Rulewords.ELSE:
                     if (ruleState != Rulewords.THEN)
                         throw new ENException(ErrorCode.Err221);
                     ruleState = Rulewords.ELSE;
-                    this.ParseAction(ruleState, tok, links);
+                    ParseAction(ruleState, tok, links);
                     break;
 
                 case Rulewords.PRIORITY: {
@@ -770,7 +770,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
             }
 
-            this.priority = tempPriority;
+            _priority = tempPriority;
         }
 
         private void ParsePremise(
@@ -779,17 +779,17 @@ namespace Epanet.Hydraulic.Structures {
             IEnumerable<SimulationNode> nodes,
             IEnumerable<SimulationLink> links) {
             
-            this.pchain.Add(new Premise(tok, logop, nodes, links));
+            _pchain.Add(new Premise(tok, logop, nodes, links));
 
         }
 
         private void ParseAction(Rulewords state, string[] tok, IEnumerable<SimulationLink> links) {
-            Action a = new Action(tok, links, this.label);
+            Action a = new Action(tok, links, _label);
 
             if (state == Rulewords.THEN)
-                this.tchain.Insert(0, a);
+                _tchain.Insert(0, a);
             else
-                this.fchain.Insert(0, a);
+                _fchain.Insert(0, a);
         }
 
     }

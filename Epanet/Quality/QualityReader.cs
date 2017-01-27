@@ -27,21 +27,21 @@ namespace Epanet.Quality {
 
     ///<summary>Binary quality file reader class.</summary>
     public class QualityReader:IEnumerable<QualityReader.Step>, IDisposable {
-        public IEnumerator<Step> GetEnumerator() { return this.Steps().GetEnumerator(); }
-        IEnumerator IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
+        public IEnumerator<Step> GetEnumerator() { return Steps().GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
 
         private IEnumerable<Step> Steps() {
-            if (this.inputStream == null)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_inputStream == null)
+                throw new ObjectDisposedException(GetType().FullName);
 
-            lock (this.inputStream) {
+            lock (_inputStream) {
 
-                this.inputStream.BaseStream.Position = sizeof(int) * 2;
-                this.qStep = new Step(this.fMap, this.inputStream, this.Links, this.Nodes);
+                _inputStream.BaseStream.Position = sizeof(int) * 2;
+                _qStep = new Step(_fMap, _inputStream, Links, Nodes);
 
-                for (int i = 0; i < this.Periods; i++) {
-                    this.qStep.Read();
-                    yield return this.qStep;
+                for (int i = 0; i < Periods; i++) {
+                    _qStep.Read();
+                    yield return _qStep;
 
                 }
             }
@@ -49,93 +49,93 @@ namespace Epanet.Quality {
 
         public Step this[int index] {
             get {
-                if (index >= this.nPeriods || index < 0)
+                if (index >= _nPeriods || index < 0)
                     throw new ArgumentOutOfRangeException();
 
-                long recordSize = sizeof(float) * (this.nodeCount + this.linkCount);
+                long recordSize = sizeof(float) * (_nodeCount + _linkCount);
                 long position = (sizeof(int) * 2) + recordSize * (index - 1);
 
-                if (position + recordSize > this.inputStream.BaseStream.Length) {
+                if (position + recordSize > _inputStream.BaseStream.Length) {
                     throw new ArgumentOutOfRangeException();
                 }
 
-                this.inputStream.BaseStream.Position = position;
+                _inputStream.BaseStream.Position = position;
 
-                this.qStep.Read();
+                _qStep.Read();
 
-                return this.qStep;
+                return _qStep;
             }
         }
 
         ///<summary>Units conversion map.</summary>
-        private readonly FieldsMap fMap;
+        private readonly FieldsMap _fMap;
 
         ///<summary>input stream</summary>
-        private BinaryReader inputStream;
+        private BinaryReader _inputStream;
 
         ///<summary>Number of links.</summary>
-        private int linkCount;
+        private int _linkCount;
 
         ///<summary>Number of nodes.</summary>
-        private int nodeCount;
+        private int _nodeCount;
 
         ///<summary>Number of report periods stored in this file.</summary>
-        private int nPeriods;
+        private int _nPeriods;
 
         ///<summary>Current quality step snapshot.</summary>
-        private Step qStep;
+        private Step _qStep;
 
         ///<summary>Class constructor.</summary>
         public QualityReader(string qualFile, FieldsMap fMap) {
-            this.fMap = fMap;
-            this.Open(qualFile);
+            _fMap = fMap;
+            Open(qualFile);
         }
 
         /// <summary>Close the inputStream.</summary>
-        public void Close() { this.inputStream.Close(); }
+        public void Close() { _inputStream.Close(); }
 
         /// <summary>Get the number of links in the file.</summary>
         /// <value>Number of links.</value>
-        public int Links { get { return this.linkCount; } }
+        public int Links { get { return _linkCount; } }
 
         /// <summary>Get the number of nodes in the file.</summary>
         /// <value>Number of nodes.</value>
-        public int Nodes { get { return this.nodeCount; } }
+        public int Nodes { get { return _nodeCount; } }
 
         /// <summary>Get the number of reported quality step snapshots in the file.</summary>
         /// <value>Number of periods.</value>
-        public int Periods { get { return this.nPeriods; } }
+        public int Periods { get { return _nPeriods; } }
 
         /// <param name="qualFile">Path to the quality file.</param>
         private void Open(string qualFile) {
 
             // Read the last 4 bytes which contain the number of periods
-            this.inputStream = new BinaryReader(File.OpenRead(qualFile));
-            this.inputStream.BaseStream.Seek(-sizeof(int), SeekOrigin.End);
-            this.nPeriods = this.inputStream.ReadInt32();
-            this.inputStream.BaseStream.Position = 0;
+            _inputStream = new BinaryReader(File.OpenRead(qualFile));
+            _inputStream.BaseStream.Seek(-sizeof(int), SeekOrigin.End);
+            _nPeriods = _inputStream.ReadInt32();
+            _inputStream.BaseStream.Position = 0;
 
-            this.nodeCount = this.inputStream.ReadInt32();
-            this.linkCount = this.inputStream.ReadInt32();
-            this.qStep = new Step(this.fMap, this.inputStream, this.linkCount, this.nodeCount);
+            _nodeCount = _inputStream.ReadInt32();
+            _linkCount = _inputStream.ReadInt32();
+            _qStep = new Step(_fMap, _inputStream, _linkCount, _nodeCount);
         }
 
         #region IDisposable pattern
 
         //Implement IDisposable.
         public void Dispose() {
-            this.Dispose(true);
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
         private void Dispose(bool disposing) {
-            if (this.inputStream == null)
+            if (_inputStream == null)
                 return;
 
             if (disposing) {
                 // Free other state (managed objects).
-                var rdr = this.inputStream;
-                this.inputStream = null;
+                var rdr = _inputStream;
+                _inputStream = null;
 
                 if (rdr != null)
                     rdr.Close();
@@ -144,12 +144,12 @@ namespace Epanet.Quality {
             // Free your own state (unmanaged objects).
             // Set large fields to null.
 
-            this.qStep = null;
+            _qStep = null;
 
         }
 
         // Use C# destructor syntax for finalization code.
-        ~QualityReader() { this.Dispose(false); }
+        ~QualityReader() { Dispose(false); }
 
         #endregion
 
@@ -174,28 +174,28 @@ namespace Epanet.Quality {
             internal Step(FieldsMap fld, BinaryReader reader, int linkCount, int nodeCount) {
                 this.fld = fld;
                 this.reader = reader;
-                this.linkQ = new float[linkCount];
-                this.nodeQ = new float[nodeCount];
+                linkQ = new float[linkCount];
+                nodeQ = new float[nodeCount];
             }
 
             /// <summary>Get link quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Species concentration, trace or age value in user units.</returns>
-            public float GetLinkQuality(int id) { return (float)this.fld.RevertUnit(FieldType.QUALITY, this.linkQ[id]); }
+            public float GetLinkQuality(int id) { return (float)fld.RevertUnit(FieldType.QUALITY, linkQ[id]); }
 
             /// <summary>Get node quality values in user units.</summary>
             /// <param name="id">Link sequential identification number.</param>
             /// <returns>Specie concentration, trace or age value in user units.</returns>
-            public float GetNodeQuality(int id) { return (float)this.fld.RevertUnit(FieldType.QUALITY, this.nodeQ[id]); }
+            public float GetNodeQuality(int id) { return (float)fld.RevertUnit(FieldType.QUALITY, nodeQ[id]); }
 
             /// <summary> Read quality data from file stream.</summary>
             internal void Read() {
-                for (int i = 0; i < this.nodeQ.Length; i++) {
-                    this.nodeQ[i] = this.reader.ReadSingle();
+                for (int i = 0; i < nodeQ.Length; i++) {
+                    nodeQ[i] = reader.ReadSingle();
                 }
 
-                for (int i = 0; i < this.linkQ.Length; i++) {
-                    this.linkQ[i] = this.reader.ReadSingle();
+                for (int i = 0; i < linkQ.Length; i++) {
+                    linkQ[i] = reader.ReadSingle();
                 }
             }
 

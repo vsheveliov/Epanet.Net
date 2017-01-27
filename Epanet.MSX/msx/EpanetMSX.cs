@@ -31,7 +31,7 @@ namespace Epanet.MSX {
 
         private readonly Chemical chemical;
         private readonly Quality quality;
-        private readonly ENToolkit2 toolkit;
+        private readonly EnToolkit2 toolkit;
         private readonly Output output;
 
         [NonSerialized]
@@ -40,16 +40,16 @@ namespace Epanet.MSX {
         [NonSerialized]
         private Thread runningThread;
 
-        public Network Network { get { return this.network; } }
+        public Network Network { get { return network; } }
 
-        public int NPeriods { get { return this.network.Nperiods; } }
+        public int NPeriods { get { return network.Nperiods; } }
 
-        public long ResultsOffset { get { return this.output.ResultsOffset; } }
+        public long ResultsOffset { get { return output.ResultsOffset; } }
 
-        public long QTime { get { return this.network.Qtime; } }
+        public long QTime { get { return network.Qtime; } }
 
         public string[] GetSpeciesNames() {
-            Species[] spe = this.network.Species;
+            Species[] spe = network.Species;
             string[] ret = new string[spe.Length - 1];
             for (int i = 1; i < spe.Length; i++) {
                 ret[i - 1] = spe[i].Id;
@@ -57,63 +57,63 @@ namespace Epanet.MSX {
             return ret;
         }
 
-        public EpanetMSX(ENToolkit2 toolkit) {
-            this.reader = new InpReader();
-            this.project = new Project();
-            this.network = new Network();
-            this.report = new Report();
-            this.tankMix = new TankMix();
+        public EpanetMSX(EnToolkit2 toolkit) {
+            reader = new InpReader();
+            project = new Project();
+            network = new Network();
+            report = new Report();
+            tankMix = new TankMix();
 
-            this.chemical = new Chemical();
-            this.quality = new Quality();
+            chemical = new Chemical();
+            quality = new Quality();
             this.toolkit = toolkit;
-            this.output = new Output();
+            output = new Output();
 
-            this.reader.LoadDependencies(this);
-            this.project.LoadDependencies(this);
-            this.report.LoadDependencies(this);
-            this.tankMix.LoadDependencies(this);
+            reader.LoadDependencies(this);
+            project.LoadDependencies(this);
+            report.LoadDependencies(this);
+            tankMix.LoadDependencies(this);
 
-            this.chemical.LoadDependencies(this);
-            this.quality.LoadDependencies(this);
-            this.output.LoadDependencies(this);
+            chemical.LoadDependencies(this);
+            quality.LoadDependencies(this);
+            output.LoadDependencies(this);
         }
 
-        public InpReader Reader { get { return this.reader; } }
+        public InpReader Reader { get { return reader; } }
 
-        public Project Project { get { return this.project; } }
+        public Project Project { get { return project; } }
 
-        public Report Report { get { return this.report; } }
+        public Report Report { get { return report; } }
 
-        public TankMix TankMix { get { return this.tankMix; } }
+        public TankMix TankMix { get { return tankMix; } }
 
-        public Chemical Chemical { get { return this.chemical; } }
+        public Chemical Chemical { get { return chemical; } }
 
-        public Quality Quality { get { return this.quality; } }
+        public Quality Quality { get { return quality; } }
 
-        public ENToolkit2 EnToolkit { get { return this.toolkit; } }
+        public EnToolkit2 EnToolkit { get { return toolkit; } }
 
-        public Output Output { get { return this.output; } }
+        public Output Output { get { return output; } }
 
         public ErrorCodeType Load(string msxFile) {
             ErrorCodeType err = 0;
-            err = Utilities.Call(err, this.project.MSXproj_open(msxFile));
-            err = Utilities.Call(err, this.quality.MSXqual_open());
+            err = Utilities.Call(err, project.MSXproj_open(msxFile));
+            err = Utilities.Call(err, quality.MSXqual_open());
             return err;
         }
 
 
         public ErrorCodeType Run(string outFile) {
-            ErrorCodeType err = 0;
+            ErrorCodeType err;
             bool halted = false;
-            if (this.running) throw new InvalidOperationException("Already running");
+            if (running) throw new InvalidOperationException("Already running");
 
-            this.runningThread = Thread.CurrentThread;
-            this.running = true;
+            runningThread = Thread.CurrentThread;
+            running = true;
             try {
-                this.quality.MSXqual_init();
+                quality.MSXqual_init();
 
-                this.output.MSXout_open(outFile);
+                output.MSXout_open(outFile);
 
                 long oldHour = -1, newHour = 0;
 
@@ -121,21 +121,21 @@ namespace Epanet.MSX {
                 long[] tLeft = new long[1];
                 do {
                     if (oldHour != newHour) {
-                        //writeCon(string.format("\r  o Computing water quality at hour %-4d", newHour));
+                        // Console.WriteLine("\r  o Computing water quality at hour {0,-1}", newHour);
                         oldHour = newHour;
                     }
-                    err = this.quality.MSXqual_step(tTemp, tLeft);
+                    err = quality.MSXqual_step(tTemp, tLeft);
                     newHour = tTemp[0] / 3600;
-                    if (!this.running && tLeft[0] > 0)
+                    if (!running && tLeft[0] > 0)
                         halted = true;
                 }
-                while (this.running && err == 0 && tLeft[0] > 0);
+                while (running && err == 0 && tLeft[0] > 0);
 
 
             }
             finally {
-                this.running = false;
-                this.runningThread = null;
+                running = false;
+                runningThread = null;
             }
 
             if (halted)
@@ -144,13 +144,10 @@ namespace Epanet.MSX {
             return err;
         }
 
-
-        private void WriteCon(string str) { Console.Out.Write(str); }
-
         public void StopRunning() {
-            this.running = false;
-            if (this.runningThread != null && this.runningThread.IsAlive)
-                this.runningThread.Join(1000);
+            running = false;
+            if (runningThread != null && runningThread.IsAlive)
+                runningThread.Join(1000);
         }
     }
 

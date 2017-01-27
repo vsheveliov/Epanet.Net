@@ -23,33 +23,31 @@ namespace Epanet.Network.Structures {
 
     public struct EnPoint : IComparable<EnPoint>, IEquatable<EnPoint> {
         public static readonly EnPoint Invalid = new EnPoint(double.NaN, double.NaN);
-        private readonly double x;
-        private readonly double y;
+        private readonly double _x;
+        private readonly double _y;
 
         public EnPoint(double x, double y) {
 
-            this.x = x;
-            this.y = y;
+            _x = x;
+            _y = y;
         }
 
-        public bool IsInvalid { get { return double.IsNaN(this.x) || double.IsNaN(this.y); } }
+        public bool IsInvalid { get { return double.IsNaN(_x) || double.IsNaN(_y); } }
 
         ///<summary>Absciss coordinate.</summary>
-        public double X { get { return this.x; } }
+        public double X { get { return _x; } }
 
         ///<summary>Ordinate coordinate.</summary>
-        public double Y { get { return this.y; } }
+        public double Y { get { return _y; } }
 
         public int CompareTo(EnPoint other) {
-            var cmp = this.x.CompareTo(other.x);
-            if (cmp != 0) return cmp;
-
-            return this.y.CompareTo(other.y);
+            var cmp = _x.CompareTo(other._x);
+            return cmp == 0 ? _y.CompareTo(other._y) : cmp;
         }
 
         public bool Equals(EnPoint other) {
-            bool ex = (this.x == other.x) || (double.IsNaN(this.x) && double.IsNaN(other.x));
-            bool ey = (this.y == other.y) || (double.IsNaN(this.y) && double.IsNaN(other.y)); 
+            bool ex = (_x == other._x) || (double.IsNaN(_x) && double.IsNaN(other._x));
+            bool ey = (_y == other._y) || (double.IsNaN(_y) && double.IsNaN(other._y)); 
             
             return ex && ey;
         }
@@ -57,14 +55,14 @@ namespace Epanet.Network.Structures {
         public override bool Equals(object obj) {
             if (!(obj is EnPoint)) return false;
 
-            return this.Equals((EnPoint)obj);
+            return Equals((EnPoint)obj);
         }
         
         public override int GetHashCode() {
-            return this.x.GetHashCode() ^ this.y.GetHashCode();
+            return _x.GetHashCode() ^ _y.GetHashCode();
         }
         
-        public override string ToString() { return "EnPoint{" + "x=" + this.x + ", y=" + this.y + '}'; }
+        public override string ToString() { return "EnPoint{" + "x=" + _x + ", y=" + _y + '}'; }
     }
 
 }

@@ -31,16 +31,16 @@ using EpanetNetwork = Epanet.Network.Network;
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationControl {
-        private readonly Control control;
-        private readonly SimulationLink link;
-        private readonly SimulationNode node;
+        private readonly Control _control;
+        private readonly SimulationLink _link;
+        private readonly SimulationNode _node;
 
         public SimulationControl(IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links, Control @ref) {
             if (@ref.Node != null) {
                 string nid = @ref.Node.Name;
                 foreach (SimulationNode simulationNode  in  nodes) {
                     if (simulationNode.Id.Equals(nid, StringComparison.OrdinalIgnoreCase)) {
-                        this.node = simulationNode;
+                        _node = simulationNode;
                         break;
                     }
                 }
@@ -50,28 +50,28 @@ namespace Epanet.Hydraulic.Structures {
                 string linkId = @ref.Link.Name;
                 foreach (SimulationLink simulationLink  in  links) {
                     if (simulationLink.Link.Name.Equals(linkId, StringComparison.OrdinalIgnoreCase)) {
-                        this.link = simulationLink;
+                        _link = simulationLink;
                         break;
                     }
                 }
             }
 
-            this.control = @ref;
+            _control = @ref;
         }
 
-        public SimulationLink Link { get { return this.link; } }
+        public SimulationLink Link { get { return _link; } }
 
-        public SimulationNode Node { get { return this.node; } }
+        public SimulationNode Node { get { return _node; } }
 
-        public long Time { get { return this.control.Time; } }
+        public long Time { get { return _control.Time; } }
 
-        public double Grade { get { return this.control.Grade; } }
+        public double Grade { get { return _control.Grade; } }
 
-        public double Setting { get { return this.control.Setting; } }
+        public double Setting { get { return _control.Setting; } }
 
-        public StatType Status { get { return this.control.Status; } }
+        public StatType Status { get { return _control.Status; } }
 
-        public ControlType Type { get { return this.control.Type; } }
+        public ControlType Type { get { return _control.Type; } }
 
         ///<summary>Get the shortest time step to activate the control.</summary>
         private long GetRequiredTimeStep(EpanetNetwork net, long htime, long tstep) {
@@ -79,49 +79,49 @@ namespace Epanet.Hydraulic.Structures {
             long t = 0;
 
             // Node control
-            if (this.Node != null) {
+            if (Node != null) {
 
-                if (!(this.Node is SimulationTank)) // Check if node is a tank
+                if (!(Node is SimulationTank)) // Check if node is a tank
                     return tstep;
 
-                double h = this.node.SimHead; // Current tank grade
-                double q = this.node.SimDemand; // Flow into tank
+                double h = _node.SimHead; // Current tank grade
+                double q = _node.SimDemand; // Flow into tank
 
                 if (Math.Abs(q) <= Constants.QZERO)
                     return tstep;
 
-                if ((h < this.Grade && this.Type == ControlType.HILEVEL && q > 0.0) // Tank below hi level & filling
-                    || (h > this.Grade && this.Type == ControlType.LOWLEVEL && q < 0.0))
+                if ((h < Grade && Type == ControlType.HILEVEL && q > 0.0) // Tank below hi level & filling
+                    || (h > Grade && Type == ControlType.LOWLEVEL && q < 0.0))
                     // Tank above low level & emptying
                 {
-                    SimulationTank tank = ((SimulationTank)this.Node);
-                    double v = tank.FindVolume(net.FieldsMap, this.Grade) - tank.SimVolume;
+                    SimulationTank tank = (SimulationTank)Node;
+                    double v = tank.FindVolume(net.FieldsMap, Grade) - tank.SimVolume;
                     t = (long)Math.Round(v / q); // Time to reach level
                 }
             }
 
             // Time control
-            if (this.Type == ControlType.TIMER) {
-                if (this.Time > htime)
-                    t = this.Time - htime;
+            if (Type == ControlType.TIMER) {
+                if (Time > htime)
+                    t = Time - htime;
             }
 
             // Time-of-day control
-            if (this.Type == ControlType.TIMEOFDAY) {
-                long t1 = (htime + net.TStart) % Constants.SECperDAY;
-                long t2 = this.Time;
+            if (Type == ControlType.TIMEOFDAY) {
+                long t1 = (htime + net.Tstart) % Constants.SECperDAY;
+                long t2 = Time;
                 if (t2 >= t1) t = t2 - t1;
                 else t = Constants.SECperDAY - t1 + t2;
             }
 
             // Revise time step
             if (t > 0 && t < tstep) {
-                SimulationLink link = this.Link;
+                SimulationLink link = Link;
 
                 // Check if rule actually changes link status or setting
                 if (link != null
-                    && (link.Type > LinkType.PIPE && link.SimSetting != this.Setting)
-                    || (link.SimStatus != this.Status))
+                    && (link.Type > LinkType.PIPE && link.SimSetting != Setting)
+                    || (link.SimStatus != Status))
                     tstep = t;
             }
 
@@ -159,12 +159,13 @@ namespace Epanet.Hydraulic.Structures {
                     continue;
 
                 // Link is controlled by tank level
-                if (control.Node != null && control.Node is SimulationTank) {
+                var node = control.Node as SimulationTank;
+                if (node != null) {
 
-                    double h = control.Node.SimHead;
-                    double vplus = Math.Abs(control.Node.SimDemand);
+                    double h = node.SimHead;
+                    double vplus = Math.Abs(node.SimDemand);
 
-                    SimulationTank tank = (SimulationTank)control.Node;
+                    SimulationTank tank = node;
 
                     double v1 = tank.FindVolume(net.FieldsMap, h);
                     double v2 = tank.FindVolume(net.FieldsMap, control.Grade);
@@ -183,7 +184,7 @@ namespace Epanet.Hydraulic.Structures {
 
                 //  Link is time-of-day controlled
                 if (control.Type == ControlType.TIMEOFDAY) {
-                    if ((htime + net.TStart) % Constants.SECperDAY == control.Time)
+                    if ((htime + net.Tstart) % Constants.SECperDAY == control.Time)
                         reset = true;
                 }
 
@@ -215,7 +216,7 @@ namespace Epanet.Hydraulic.Structures {
                 }
             }
 
-            return (setsum);
+            return setsum;
         }
 
 
@@ -279,7 +280,7 @@ namespace Epanet.Hydraulic.Structures {
                     }
                 }
             }
-            return (anychange);
+            return anychange;
         }
 
         private static void LogControlAction(TraceSource log, SimulationControl control, long htime) {
@@ -291,10 +292,11 @@ namespace Epanet.Hydraulic.Structures {
             case ControlType.LOWLEVEL:
             case ControlType.HILEVEL: {
                 string type = Keywords.w_JUNC; //  NodeType type= NodeType.JUNC;
-                if (n is SimulationTank) {
-                    type = ((SimulationTank)n).IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
-                }
-                msg = string.Format(
+                    var tank = n as SimulationTank;
+                    if (tank != null)
+                        type = tank.IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
+
+                    msg = string.Format(
                     Text.FMT54,
                     htime.GetClockTime(),
                     l.Type.ParseStr(),

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using Epanet.Enums;
 
@@ -10,12 +7,12 @@ namespace Epanet.Network.IO {
      
         private readonly SectType _section;
         private readonly string _arg;
-        public SectType Section { get { return this._section; } }
-        public string Arg { get { return this._arg; } }
+        public SectType Section { get { return _section; } }
+        public string Arg { get { return _arg; } }
 
         public InputException(ErrorCode code, SectType section, string arg) : base(code) {
-            this._section = section;
-            this._arg = arg;
+            _section = section;
+            _arg = arg;
         }
         
         public override string Message {
@@ -23,15 +20,15 @@ namespace Epanet.Network.IO {
                 string fmt;
 
                 try {
-                    fmt = Properties.Error.ResourceManager.GetString("ERR" + (int)this._code);
+                    fmt = Properties.Error.ResourceManager.GetString("ERR" + (int)code);
                 }
                 catch(Exception) {
                     fmt = null;
                 }
 
                 return fmt == null 
-                    ? string.Format("Unknown error #({0})", (int)this._code)
-                    : string.Format(fmt, this._section.ReportStr(), this.Arg);
+                    ? string.Format("Unknown error #({0})", (int)code)
+                    : string.Format(fmt, _section.ReportStr(), Arg);
             }
         }
         

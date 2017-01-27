@@ -26,20 +26,20 @@ namespace Epanet {
         private readonly object[] _arguments;
 
         ///<summary>Epanet error code.</summary>
-        protected readonly ErrorCode _code;
+        protected readonly ErrorCode code;
 
         /// <summary>Get error code.</summary>
         /// <value>Code id.</value>
         public ErrorCode Code {
-            get { return this._code; }
+            get { return code; }
         }
 
         ///<summary>Contructor from error code id.</summary>
         ///<param name="code">Error code id.</param>
 
         public ENException(ErrorCode code) {
-            this._arguments = null;
-            this._code = code;
+            _arguments = null;
+            this.code = code;
         }
 
         /// <summary>Contructor from error code id and multiple arguments.</summary>
@@ -47,8 +47,8 @@ namespace Epanet {
         /// <param name="arg">Extra arguments.</param>
         ///  
         public ENException(ErrorCode code, params object[] arg) {
-            this._code = code;
-            this._arguments = arg;
+            this.code = code;
+            _arguments = arg;
         }
 
         /// <summary>Contructor from error code id and inner exception.</summary>
@@ -58,34 +58,30 @@ namespace Epanet {
         public ENException(ErrorCode code, Exception innerException)
             : base(null, innerException)
         {
-            this._code = code;
+            this.code = code;
         }
 
         ///<summary>Get arguments array.</summary>
-        public object[] Arguments { get { return this._arguments; } }
+        public object[] Arguments { get { return _arguments; } }
 
         ///<summary>Handles the exception string conversion.</summary>
         /// <returns>Final error string.</returns>
         public override string Message {
             get {
-                string str;
-                string name = "ERR" + (int)this._code;
-
+                string format;
+                
                 try {
-                    str = Properties.Error.ResourceManager.GetString(name);
+                    format = Properties.Error.ResourceManager.GetString("ERR" + (int)code);
                 }
                 catch (Exception) {
-                    str = null;
+                    format = null;
                 }
 
 
-                if (str == null)
-                    return string.Format("Unknown error message ({0})", this._code);
+                if (format == null)
+                    return string.Format("Unknown error message ({0})", code);
 
-                if (this._arguments != null)
-                    return string.Format(str, this._arguments);
-
-                return str;
+                return _arguments != null ? string.Format(format, _arguments) : format;
             }
         }
     }

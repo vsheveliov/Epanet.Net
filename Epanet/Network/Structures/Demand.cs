@@ -22,20 +22,20 @@ namespace Epanet.Network.Structures {
     ///<summary>Node demand category.</summary>
     public class Demand {
         public Demand(double @base, Pattern pattern) {
-            this.Base = @base;
-            this.Pattern = pattern;
+            Base = @base;
+            this.pattern = pattern;
         }
 
         ///<summary>Baseline demand (Feet^3/t)</summary>
         public double Base;
 
         ///<summary>Pattern reference.</summary>
-        public Pattern Pattern;
+        public Pattern pattern;
 
 #if NUCONVERT
-        public double GetBaseNu(FlowUnitsType units) { return NUConvert.revertFlow(units, this.Base); }
+        public double GetBaseNu(FlowUnitsType units) { return NUConvert.RevertFlow(units, Base); }
 
-        public void SetBaseNu(FlowUnitsType units, double value) { this.Base = NUConvert.convertFlow(units, value); }
+        public void SetBaseNu(FlowUnitsType units, double value) { Base = NUConvert.ConvertFlow(units, value); }
 #endif
 
     }

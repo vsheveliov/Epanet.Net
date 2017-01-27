@@ -35,14 +35,14 @@ namespace Epanet.Quality.Structures {
         }
 
         ///<summary>Hydraulic network node reference.</summary>
-        private readonly Node node;
+        private readonly Node _node;
 
         ///<summary>Init quality node properties.</summary>
         protected QualityNode(Node node) {
-            this.node = node;
-            this.Quality = node.C0;
-            if (this.node.QualSource != null)
-                this.MassRate = 0.0;
+            _node = node;
+            Quality = node.C0;
+            if (_node.QualSource != null)
+                MassRate = 0.0;
         }
 
         ///<summary>Node demand [Feet^3/Second]</summary>
@@ -54,7 +54,7 @@ namespace Epanet.Quality.Structures {
         public double MassRate { get; set; }
 
         ///<summary>Get the original hydraulic network node.</summary>
-        public Node Node { get { return this.node; } }
+        public Node Node { get { return _node; } }
 
         ///<summary>Species concentration [user units].</summary>
         public double Quality { get; set; }

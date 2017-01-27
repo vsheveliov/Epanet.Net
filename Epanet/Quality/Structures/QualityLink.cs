@@ -19,7 +19,6 @@ using System.Collections.Generic;
 
 using Epanet.Enums;
 using Epanet.Network.Structures;
-using Epanet.Util;
 
 using EpanetNetwork = Epanet.Network.Network;
 
@@ -29,30 +28,30 @@ namespace Epanet.Quality.Structures {
     public class QualityLink {
 
         ///<summary>Reference to the first water quality node.</summary>
-        private readonly QualityNode first;
+        private readonly QualityNode _first;
 
         ///<summary>Reference to the original link.</summary>
-        private readonly Link link;
+        private readonly Link _link;
 
         ///<summary>Reference to the second water quality node.</summary>
-        private readonly QualityNode second;
+        private readonly QualityNode _second;
 
         ///<summary>Linked list of discrete water parcels.</summary>
-        private readonly LinkedList<QualitySegment> segments;
+        private readonly LinkedList<QualitySegment> _segments;
 
         /// <summary>Initialize a new water quality Link wrapper from the original Link.</summary>
         public QualityLink(IList<Node> oNodes, IList<QualityNode> qNodes, Link link) {
             int n1 = oNodes.IndexOf(link.FirstNode);
             int n2 = oNodes.IndexOf(link.SecondNode);
-            this.first = qNodes[n1];
-            this.second = qNodes[n2];
-            this.segments = new LinkedList<QualitySegment>();
-            this.link = link;
+            _first = qNodes[n1];
+            _second = qNodes[n2];
+            _segments = new LinkedList<QualitySegment>();
+            _link = link;
         }
 
         /// <summary>Get first node reference.</summary>
         /// <value>Reference to the water quality simulation node.</value>
-        public QualityNode FirstNode { get { return this.first; } }
+        public QualityNode FirstNode { get { return _first; } }
 
         /// <summary>Get/set the water flow.</summary>
         ///<remarks>Current water flow[Feet^3/Second].</remarks>
@@ -67,24 +66,24 @@ namespace Epanet.Quality.Structures {
 
         ///<summary>Get the original link.</summary>
         ///<return>Reference to the hydraulic network link.</return>
-        public Link Link { get { return this.link; } }
+        public Link Link { get { return _link; } }
 
         ///<summary>Get the second node reference</summary>
         ///<return>Reference to the water quality simulation node.</return>
-        public QualityNode SecondNode { get { return this.second; } }
+        public QualityNode SecondNode { get { return _second; } }
 
         /// <summary>Get the water quality segments in this link.</summary>
-        public LinkedList<QualitySegment> Segments { get { return this.segments; } }
+        public LinkedList<QualitySegment> Segments { get { return _segments; } }
 
         ///<summary>Get the upstream node.</summary>
-        public QualityNode UpStreamNode { get { return this.FlowDir ? this.first : this.second; } }
+        public QualityNode UpStreamNode { get { return FlowDir ? _first : _second; } }
 
         ///<summary>Get the downstream node.</summary>
-        public QualityNode DownStreamNode { get { return this.FlowDir ? this.second : this.first; } }
+        public QualityNode DownStreamNode { get { return FlowDir ? _second : _first; } }
 
         ///<summary>Get link volume.</summary>
         public double LinkVolume {
-            get { return 0.785398 * this.link.Lenght * (this.link.Diameter * this.link.Diameter); }
+            get { return 0.785398 * _link.Lenght * (_link.Diameter * _link.Diameter); }
         }
 
         ///<summary>Get link average quality.</summary>
@@ -100,14 +99,14 @@ namespace Epanet.Quality.Structures {
                 return 0.0;
             }
 
-            foreach (QualitySegment seg  in  this.Segments) {
+            foreach (QualitySegment seg  in  Segments) {
                 vsum += seg.V;
                 msum += seg.C * seg.V;
             }
 
             return vsum > 0.0 
                 ? msum / vsum
-                : (this.FirstNode.Quality + this.SecondNode.Quality) / 2.0;
+                : (FirstNode.Quality + SecondNode.Quality) / 2.0;
         }
     }
 

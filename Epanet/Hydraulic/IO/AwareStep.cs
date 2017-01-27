@@ -24,7 +24,6 @@ using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Quality;
 using Epanet.Quality.Structures;
-using Epanet.Util;
 
 namespace Epanet.Hydraulic.IO {
 
@@ -32,24 +31,24 @@ namespace Epanet.Hydraulic.IO {
 
     ///<summary>Aware compatible hydraulic step snapshot</summary>
     public class AwareStep {
-        private readonly double[] qn;
-        private readonly double[] ql;
-        private readonly double[] d;
-        private readonly double[] h;
-        private readonly double[] q;
-        private readonly double[] dh;
-        private readonly long hydTime;
-        private readonly long hydStep;
+        private readonly double[] _qn;
+        private readonly double[] _ql;
+        private readonly double[] _d;
+        private readonly double[] _h;
+        private readonly double[] _q;
+        private readonly double[] _dh;
+        private readonly long _hydTime;
+        private readonly long _hydStep;
 
         private const int FORMAT_VERSION = 1;
 
         public class HeaderInfo {
-            public int Version;
-            public int Nodes;
-            public int Links;
-            public long Rstart;
-            public long Rstep;
-            public long Duration;
+            public int version;
+            public int nodes;
+            public int links;
+            public long rstart;
+            public long rstep;
+            public long duration;
         }
 
         // ReSharper disable RedundantCast
@@ -72,12 +71,12 @@ namespace Epanet.Hydraulic.IO {
 
         public static HeaderInfo ReadHeader(BinaryReader @in) {
             var headerInfo = new HeaderInfo {
-                Version = @in.ReadInt32(),
-                Nodes = @in.ReadInt32(),
-                Links = @in.ReadInt32(),
-                Rstart = @in.ReadInt64(),
-                Rstep = @in.ReadInt64(),
-                Duration = @in.ReadInt64()
+                version = @in.ReadInt32(),
+                nodes = @in.ReadInt32(),
+                links = @in.ReadInt32(),
+                rstart = @in.ReadInt64(),
+                rstep = @in.ReadInt64(),
+                duration = @in.ReadInt64()
             };
 
             return headerInfo;
@@ -176,17 +175,17 @@ namespace Epanet.Hydraulic.IO {
 
         // ReSharper restore RedundantCast
 
-        public AwareStep(BinaryReader inStream, HeaderInfo headerInfo) {
-            int nNodes = headerInfo.Nodes;
-            int nLinks = headerInfo.Links;
+        public AwareStep(BinaryReader br, HeaderInfo headerInfo) {
+            int nNodes = headerInfo.nodes;
+            int nLinks = headerInfo.links;
 
-            this.d = new double[nNodes];
-            this.h = new double[nNodes];
-            this.q = new double[nLinks];
-            this.dh = new double[nLinks];
+            _d = new double[nNodes];
+            _h = new double[nNodes];
+            _q = new double[nLinks];
+            _dh = new double[nLinks];
 
-            this.qn = new double[nNodes];
-            this.ql = new double[nLinks];
+            _qn = new double[nNodes];
+            _ql = new double[nLinks];
 
             //int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
             //byte[] ba = new byte[baSize];
@@ -194,25 +193,25 @@ namespace Epanet.Hydraulic.IO {
             //ByteBuffer buf = ByteBuffer.wrap(ba);
 
             for (int i = 0; i < nNodes; i++) {
-                this.d[i] = inStream.ReadDouble();
-                this.h[i] = inStream.ReadDouble();
-                this.qn[i] = inStream.ReadDouble();
+                _d[i] = br.ReadDouble();
+                _h[i] = br.ReadDouble();
+                _qn[i] = br.ReadDouble();
             }
 
             for (int i = 0; i < nLinks; i++) {
-                this.q[i] = inStream.ReadDouble();
-                this.dh[i] = inStream.ReadDouble();
-                this.ql[i] = inStream.ReadDouble();
+                _q[i] = br.ReadDouble();
+                _dh[i] = br.ReadDouble();
+                _ql[i] = br.ReadDouble();
             }
 
-            this.hydStep = inStream.ReadInt64();
-            this.hydTime = inStream.ReadInt64();
+            _hydStep = br.ReadInt64();
+            _hydTime = br.ReadInt64();
         }
 
 
         public double GetNodeDemand(int id, Node node, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.DEMAND, this.d[id]) : this.d[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.DEMAND, _d[id]) : _d[id];
             }
             catch (ENException) {
                 return 0;
@@ -221,7 +220,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetNodeHead(int id, Node node, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.HEAD, this.h[id]) : this.h[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.HEAD, _h[id]) : _h[id];
             }
             catch (ENException) {
                 return 0;
@@ -230,7 +229,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetNodePressure(int id, Node node, FieldsMap fMap) {
             try {
-                double p = (this.GetNodeHead(id, node, null) - node.Elevation);
+                double p = (GetNodeHead(id, node, null) - node.Elevation);
 
                 return fMap != null ? fMap.RevertUnit(FieldType.PRESSURE, p) : p;
             }
@@ -241,7 +240,7 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetLinkFlow(int id, Link link, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.FLOW, this.q[id]) : this.q[id];
+                return fMap != null ? fMap.RevertUnit(FieldType.FLOW, _q[id]) : _q[id];
             }
             catch (ENException) {
                 return 0;
@@ -252,7 +251,7 @@ namespace Epanet.Hydraulic.IO {
         public double GetLinkVelocity(int id, Link link, FieldsMap fMap) {
             try {
                 double v;
-                double flow = this.GetLinkFlow(id, link, null);
+                double flow = GetLinkFlow(id, link, null);
                 if (link is Pump)
                     v = 0;
                 else
@@ -267,11 +266,11 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetLinkHeadLoss(int id, Link link, FieldsMap fMap) {
             try {
-                if (this.GetLinkFlow(id, link, null) == 0) {
+                if (GetLinkFlow(id, link, null) == 0) {
                     return 0.0;
                 }
                 else {
-                    double hh = this.dh[id];
+                    double hh = _dh[id];
                     if (!(link is Pump))
                         hh = Math.Abs(hh);
 
@@ -291,11 +290,11 @@ namespace Epanet.Hydraulic.IO {
             try {
                 double f;
 
-                double flow = this.GetLinkFlow(id, link, null);
+                double flow = GetLinkFlow(id, link, null);
                 if (link.Type <= LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
 
 
-                    double hh = Math.Abs(this.dh[id]);
+                    double hh = Math.Abs(_dh[id]);
                     f = 39.725 * hh * Math.Pow(link.Diameter, 5) / link.Lenght /
                         (flow * flow);
                 }
@@ -309,13 +308,13 @@ namespace Epanet.Hydraulic.IO {
             }
         }
 
-        public double GetLinkAvrQuality(int id) { return this.ql[id]; }
+        public double GetLinkAvrQuality(int id) { return _ql[id]; }
 
-        public double GetNodeQuality(int id) { return this.qn[id]; }
+        public double GetNodeQuality(int id) { return _qn[id]; }
 
-        public long Step { get { return this.hydStep; } }
+        public long Step { get { return _hydStep; } }
 
-        public long Time { get { return this.hydTime; } }
+        public long Time { get { return _hydTime; } }
     }
 
 }

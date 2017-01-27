@@ -26,65 +26,65 @@ namespace Epanet.Hydraulic {
 
         ///<summary>Adjacent item</summary>
         private class AdjItem {
-            private readonly int node;
-            private readonly int link;
+            private readonly int _node;
+            private readonly int _link;
 
             public AdjItem(int node, int link) {
-                this.node = node;
-                this.link = link;
+                _node = node;
+                _link = link;
             }
 
-            public int Node { get { return this.node; } }
+            public int Node { get { return _node; } }
 
-            public int Link { get { return this.link; } }
+            public int Link { get { return _link; } }
         }
 
         ///<summary>Number of coefficients(number of links)</summary>
-        private int coeffsCount;
+        private int _coeffsCount;
 
         ///<summary>Node-to-row of A.</summary>
-        private readonly int[] order;
+        private readonly int[] _order;
         ///<summary>Row-to-node of A</summary>
-        private readonly int[] row;
+        private readonly int[] _row;
         ///<summary>Index of link's coeff. in Aij</summary>
-        private readonly int[] ndx;
+        private readonly int[] _ndx;
         ///<summary>Number of links adjacent to each node</summary>
-        private readonly int[] degree;
+        private readonly int[] _degree;
 
 
-        public int GetOrder(int id) { return this.order[id + 1] - 1; }
-        public int GetRow(int id) { return this.row[id + 1] - 1; }
-        public int GetNdx(int id) { return this.ndx[id + 1] - 1; }
-        public int CoeffsCount { get { return this.coeffsCount; } }
+        public int GetOrder(int id) { return _order[id + 1] - 1; }
+        public int GetRow(int id) { return _row[id + 1] - 1; }
+        public int GetNdx(int id) { return _ndx[id + 1] - 1; }
+        public int CoeffsCount { get { return _coeffsCount; } }
 
         ///<summary>Creates sparse representation of coeff. matrix.</summary>
         public SparseMatrix(ICollection<SimulationNode> nodes, ICollection<SimulationLink> links, int juncs) {
 
-            this.order = new int[nodes.Count + 1];
-            this.row = new int[nodes.Count + 1];
-            this.ndx = new int[links.Count + 1];
-            this.degree = new int[nodes.Count + 1];
+            _order = new int[nodes.Count + 1];
+            _row = new int[nodes.Count + 1];
+            _ndx = new int[links.Count + 1];
+            _degree = new int[nodes.Count + 1];
 
             // For each node, builds an adjacency list that identifies all links connected to the node (see buildlists())
             List<AdjItem>[] adjList = new List<AdjItem>[nodes.Count + 1];
             for (int i = 0; i <= nodes.Count; i++) // <= is necessary due to the array start index being 1
                 adjList[i] = new List<AdjItem>();
 
-            this.BuildLists(adjList, nodes, links, true);
+            BuildLists(adjList, nodes, links, true);
                 // Build node-link adjacency lists with parallel links removed.
             XparaLinks(adjList); // Remove parallel links //,nodes.size()
-            this.CountDegree(adjList, juncs); // Find degree of each junction
+            CountDegree(adjList, juncs); // Find degree of each junction
 
-            this.coeffsCount = links.Count;
+            _coeffsCount = links.Count;
 
             // Re-order nodes to minimize number of non-zero coeffs
             // in factorized solution matrix. At same time, adjacency
             // list is updated with links representing non-zero coeffs.
-            this.ReorderNodes(adjList, juncs);
+            ReorderNodes(adjList, juncs);
 
-            this.StoreSparse(adjList, juncs); // Sort row indexes in NZSUB to optimize linsolve()
-            this.OrderSparse(juncs);
-            this.BuildLists(adjList, nodes, links, false);
+            StoreSparse(adjList, juncs); // Sort row indexes in NZSUB to optimize linsolve()
+            OrderSparse(juncs);
+            BuildLists(adjList, nodes, links, false);
                 // Re-build adjacency lists without removing parallel links for use in future connectivity checking.
         }
 
@@ -108,7 +108,7 @@ namespace Epanet.Hydraulic {
                 int j = link.Second.Index + 1;
 
                 if (paraflag)
-                    pmark = this.ParaLink(adjlist, i, j, k);
+                    pmark = ParaLink(adjlist, i, j, k);
 
                 // Include link in start node i's list
                 AdjItem alink = new AdjItem(!pmark ? j : 0, k);
@@ -131,11 +131,11 @@ namespace Epanet.Hydraulic {
         private bool ParaLink(List<AdjItem>[] adjlist, int i, int j, int k) {
             foreach (AdjItem alink  in  adjlist[i]) {
                 if (alink.Node == j) {
-                    this.ndx[k] = alink.Link;
+                    _ndx[k] = alink.Link;
                     return true;
                 }
             }
-            this.ndx[k] = k;
+            _ndx[k] = k;
             return false;
         }
 
@@ -149,13 +149,13 @@ namespace Epanet.Hydraulic {
 
         /// <summary>Counts number of nodes directly connected to each node.</summary>
         /// <param name="adjlist">Nodes adjacency list.</param>
-        /// <param name="Njuncs">Number of junctions.</param>
-        private void CountDegree(List<AdjItem>[] adjlist, int Njuncs) {
-            Array.Clear(this.degree, 0, this.degree.Length);
+        /// <param name="njuncs">Number of junctions.</param>
+        private void CountDegree(List<AdjItem>[] adjlist, int njuncs) {
+            Array.Clear(_degree, 0, _degree.Length);
 
-            for (int i = 1; i <= Njuncs; i++) {
+            for (int i = 1; i <= njuncs; i++) {
                 foreach (AdjItem li  in  adjlist[i])
-                    if (li.Node > 0) this.degree[i]++;
+                    if (li.Node > 0) _degree[i]++;
             }
         }
 
@@ -164,24 +164,24 @@ namespace Epanet.Hydraulic {
         /// factorized solution matrix.
         /// </summary>
         /// <param name="adjlist">Nodes adjacency list.</param>
-        /// <param name="Njuncs">Number of junctions.</param>
-        private void ReorderNodes(List<AdjItem>[] adjlist, int Njuncs) {
+        /// <param name="njuncs">Number of junctions.</param>
+        private void ReorderNodes(List<AdjItem>[] adjlist, int njuncs) {
             for (int i = 1; i < adjlist.Length; i++) {
-                this.row[i] = i;
-                this.order[i] = i;
+                _row[i] = i;
+                _order[i] = i;
             }
 
-            for (int i = 1; i <= Njuncs; i++) {
-                int m = this.MinDegree(i, Njuncs);
-                int knode = this.order[m];
-                this.GrowList(adjlist, knode);
-                this.order[m] = this.order[i];
-                this.order[i] = knode;
-                this.degree[knode] = 0;
+            for (int i = 1; i <= njuncs; i++) {
+                int m = MinDegree(i, njuncs);
+                int knode = _order[m];
+                GrowList(adjlist, knode);
+                _order[m] = _order[i];
+                _order[i] = knode;
+                _degree[knode] = 0;
             }
 
-            for (int i = 1; i <= Njuncs; i++)
-                this.row[this.order[i]] = i;
+            for (int i = 1; i <= njuncs; i++)
+                _row[_order[i]] = i;
         }
 
         /// <summary>Finds active node with fewest direct connections.</summary>
@@ -193,13 +193,13 @@ namespace Epanet.Hydraulic {
                 imin = n;
 
             for (int i = k; i <= n; i++) {
-                int m = this.degree[this.order[i]];
+                int m = _degree[_order[i]];
                 if (m < min) {
                     min = m;
                     imin = i;
                 }
             }
-            return (imin);
+            return imin;
         }
 
         ///<summary>Creates new entries in knode's adjacency list for all unlinked pairs of active nodes that are adjacent to knode.</summary>
@@ -209,9 +209,9 @@ namespace Epanet.Hydraulic {
             for (int i = 0; i < adjlist[knode].Count; i++) {
                 AdjItem alink = adjlist[knode][i];
                 int node = alink.Node;
-                if (this.degree[node] > 0) {
-                    this.degree[node]--;
-                    this.NewLink(adjlist, adjlist[knode], i);
+                if (_degree[node] > 0) {
+                    _degree[node]--;
+                    NewLink(adjlist, adjlist[knode], i);
                 }
             }
         }
@@ -229,13 +229,13 @@ namespace Epanet.Hydraulic {
                 AdjItem blink = list[i];
                 int jnode = blink.Node;
 
-                if (this.degree[jnode] > 0) {
+                if (_degree[jnode] > 0) {
                     if (!Linked(adjList, inode, jnode)) {
-                        this.coeffsCount++;
-                        AddLink(adjList, inode, jnode, this.coeffsCount);
-                        AddLink(adjList, jnode, inode, this.coeffsCount);
-                        this.degree[inode]++;
-                        this.degree[jnode]++;
+                        _coeffsCount++;
+                        AddLink(adjList, inode, jnode, _coeffsCount);
+                        AddLink(adjList, jnode, inode, _coeffsCount);
+                        _degree[inode]++;
+                        _degree[jnode]++;
                     }
                 }
             }
@@ -260,37 +260,37 @@ namespace Epanet.Hydraulic {
         }
 
         ///<summary>Start position of each column in NZSUB.</summary>
-        private int[] XLNZ;
+        private int[] _xlnz;
         ///<summary>Row index of each coeff. in each column</summary>
-        private int[] NZSUB;
+        private int[] _nzsub;
         ///<summary>Position of each coeff. in Aij array</summary>
-        private int[] LNZ;
+        private int[] _lnz;
 
         ///<summary>Stores row indexes of non-zeros of each column of lower triangular portion of factorized matrix.</summary>
         /// <param name="adjlist">Nodes adjacency list.</param>
         /// <param name="n">Junctions count.</param>
         private void StoreSparse(List<AdjItem>[] adjlist, int n) {
-            this.XLNZ = new int[n + 2];
-            this.NZSUB = new int[this.coeffsCount + 2];
-            this.LNZ = new int[this.coeffsCount + 2];
+            _xlnz = new int[n + 2];
+            _nzsub = new int[_coeffsCount + 2];
+            _lnz = new int[_coeffsCount + 2];
 
             int k = 0;
-            this.XLNZ[1] = 1;
+            _xlnz[1] = 1;
             for (int i = 1; i <= n; i++) {
                 int m = 0;
-                int ii = this.order[i];
+                int ii = _order[i];
 
                 foreach (AdjItem alink  in  adjlist[ii]) {
-                    int j = this.row[alink.Node];
+                    int j = _row[alink.Node];
                     int l = alink.Link;
                     if (j > i && j <= n) {
                         m++;
                         k++;
-                        this.NZSUB[k] = j;
-                        this.LNZ[k] = l;
+                        _nzsub[k] = j;
+                        _lnz[k] = l;
                     }
                 }
-                this.XLNZ[i + 1] = this.XLNZ[i] + m;
+                _xlnz[i + 1] = _xlnz[i] + m;
             }
         }
 
@@ -298,13 +298,13 @@ namespace Epanet.Hydraulic {
         ///<param name="n">Number of junctions.</param>
         private void OrderSparse(int n) {
             int[] xlnzt = new int[n + 2];
-            int[] nzsubt = new int[this.coeffsCount + 2];
-            int[] lnzt = new int[this.coeffsCount + 2];
+            int[] nzsubt = new int[_coeffsCount + 2];
+            int[] lnzt = new int[_coeffsCount + 2];
             int[] nzt = new int[n + 2];
 
             for (int i = 1; i <= n; i++) {
-                for (int j = this.XLNZ[i]; j < this.XLNZ[i + 1]; j++)
-                    nzt[this.NZSUB[j]]++;
+                for (int j = _xlnz[i]; j < _xlnz[i + 1]; j++)
+                    nzt[_nzsub[j]]++;
             }
 
             xlnzt[1] = 1;
@@ -312,8 +312,8 @@ namespace Epanet.Hydraulic {
             for (int i = 1; i <= n; i++)
                 xlnzt[i + 1] = xlnzt[i] + nzt[i];
 
-            Transpose(n, this.XLNZ, this.NZSUB, this.LNZ, xlnzt, nzsubt, lnzt, nzt);
-            Transpose(n, xlnzt, nzsubt, lnzt, this.XLNZ, this.NZSUB, this.LNZ, nzt);
+            Transpose(n, _xlnz, _nzsub, _lnz, xlnzt, nzsubt, lnzt, nzt);
+            Transpose(n, xlnzt, nzsubt, lnzt, _xlnz, _nzsub, _lnz, nzt);
 
         }
 
@@ -358,8 +358,7 @@ namespace Epanet.Hydraulic {
         /// <returns>0 if solution found, or index of equation causing system to be ill-conditioned.</returns>
         public int LinSolve(int n, double[] aii, double[] aij, double[] b) {
             int istop, istrt, isub;
-            int kfirst, newk;
-            double bj, diagj, ljk;
+            double bj;
 
             double[] temp = new double[n + 1];
             int[] link = new int[n + 1];
@@ -369,32 +368,32 @@ namespace Epanet.Hydraulic {
             // Compute column L(*,j) for j = 1,...n
             for (int j = 1; j <= n; j++) {
                 // For each column L(*,k) that affects L(*,j):
-                diagj = 0.0;
-                newk = link[j];
+                var diagj = 0.0;
+                int newk = link[j];
                 int k = newk;
                 while (k != 0) {
 
                     // Outer product modification of L(*,j) by
                     // L(*,k) starting at first[k] of L(*,k).
                     newk = link[k];
-                    kfirst = first[k];
-                    ljk = aij[this.LNZ[kfirst] - 1];
+                    int kfirst = first[k];
+                    double ljk = aij[_lnz[kfirst] - 1];
                     diagj += ljk * ljk;
                     istrt = kfirst + 1;
-                    istop = this.XLNZ[k + 1] - 1;
+                    istop = _xlnz[k + 1] - 1;
                     if (istop >= istrt) {
 
                         // Before modification, update vectors 'first'
                         // and 'link' for future modification steps.
                         first[k] = istrt;
-                        isub = this.NZSUB[istrt];
+                        isub = _nzsub[istrt];
                         link[k] = link[isub];
                         link[isub] = k;
 
                         // The actual mod is saved in vector 'temp'.
                         for (int i = istrt; i <= istop; i++) {
-                            isub = this.NZSUB[i];
-                            temp[isub] += aij[this.LNZ[i] - 1] * ljk;
+                            isub = _nzsub[i];
+                            temp[isub] += aij[_lnz[i] - 1] * ljk;
                         }
                     }
                     k = newk;
@@ -409,17 +408,17 @@ namespace Epanet.Hydraulic {
                 }
                 diagj = Math.Sqrt(diagj);
                 aii[j - 1] = diagj;
-                istrt = this.XLNZ[j];
-                istop = this.XLNZ[j + 1] - 1;
+                istrt = _xlnz[j];
+                istop = _xlnz[j + 1] - 1;
                 if (istop >= istrt) {
                     first[j] = istrt;
-                    isub = this.NZSUB[istrt];
+                    isub = _nzsub[istrt];
                     link[j] = link[isub];
                     link[isub] = j;
                     for (int i = istrt; i <= istop; i++) {
-                        isub = this.NZSUB[i];
-                        bj = (aij[this.LNZ[i] - 1] - temp[isub]) / diagj;
-                        aij[this.LNZ[i] - 1] = bj;
+                        isub = _nzsub[i];
+                        bj = (aij[_lnz[i] - 1] - temp[isub]) / diagj;
+                        aij[_lnz[i] - 1] = bj;
                         temp[isub] = 0.0;
                     }
                 }
@@ -429,12 +428,12 @@ namespace Epanet.Hydraulic {
             for (int j = 1; j <= n; j++) {
                 bj = b[j - 1] / aii[j - 1];
                 b[j - 1] = bj;
-                istrt = this.XLNZ[j];
-                istop = this.XLNZ[j + 1] - 1;
+                istrt = _xlnz[j];
+                istop = _xlnz[j + 1] - 1;
                 if (istop >= istrt) {
                     for (int i = istrt; i <= istop; i++) {
-                        isub = this.NZSUB[i];
-                        b[isub - 1] -= aij[this.LNZ[i] - 1] * bj;
+                        isub = _nzsub[i];
+                        b[isub - 1] -= aij[_lnz[i] - 1] * bj;
                     }
                 }
             }
@@ -442,12 +441,12 @@ namespace Epanet.Hydraulic {
             // Backward substitution
             for (int j = n; j >= 1; j--) {
                 bj = b[j - 1];
-                istrt = this.XLNZ[j];
-                istop = this.XLNZ[j + 1] - 1;
+                istrt = _xlnz[j];
+                istop = _xlnz[j + 1] - 1;
                 if (istop >= istrt) {
                     for (int i = istrt; i <= istop; i++) {
-                        isub = this.NZSUB[i];
-                        bj -= aij[this.LNZ[i] - 1] * b[isub - 1];
+                        isub = _nzsub[i];
+                        bj -= aij[_lnz[i] - 1] * b[isub - 1];
                     }
                 }
                 b[j - 1] = bj / aii[j - 1];

@@ -69,7 +69,7 @@ namespace Epanet.Util {
 
             int n;
             for(n = 0; n < COUNT && n < s.Length; n++) {
-                if (!double.TryParse(s[n], out y[n])) return -1;
+                if (!s[n].ToDouble(out y[n])) return -1;
             }
 
             // If decimal time with units attached then convert to hours. 
@@ -104,11 +104,66 @@ namespace Epanet.Util {
             return -1.0;
         }
 
+        /// <summary>Converts time from units to hours.</summary>
+        /// <param name="time">string containing a time value</param>
+        /// <param name="units">string containing time units (PM or AM)</param>
+        /// <returns>numerical value of time in hours (1.0 is 3600 seconds), or -1 if an error occurs </returns>
+        public static TimeSpan? ToTimeSpan(string time, string units = null)
+        {
+            const int COUNT = 3;
+            double[] y = new double[COUNT];
+
+            // Separate clock time into hrs, min, sec. 
+            string[] s = (time ?? string.Empty).Split(':');
+
+            int n;
+            for(n = 0; n < COUNT && n < s.Length; n++) {
+                if(!s[n].ToDouble(out y[n]))
+                    return null;
+            }
+
+            // If decimal time with units attached then convert to hours. 
+            if(n == 1) {
+                if(string.IsNullOrEmpty(units)) return TimeSpan.FromHours(y[0]);
+                if(Match(units, Keywords.w_SECONDS)) return TimeSpan.FromSeconds(y[0]);
+                if(Match(units, Keywords.w_MINUTES)) return TimeSpan.FromMinutes(y[0]);
+                if(Match(units, Keywords.w_HOURS))   return TimeSpan.FromHours(y[0]);
+                if(Match(units, Keywords.w_DAYS))    return TimeSpan.FromDays(y[0]);
+            }
+
+            // Convert hh:mm:ss format to decimal hours 
+            if(n > 1)
+                y[0] = y[0] + y[1] / 60.0 + y[2] / 3600.0;
+
+            // If am/pm attached then adjust hour accordingly 
+            // (12 am is midnight, 12 pm is noon) 
+            if(string.IsNullOrEmpty(units))
+                return TimeSpan.FromHours(y[0]);
+
+            if(units.Equals(Keywords.w_AM, StringComparison.OrdinalIgnoreCase)) {
+                if(y[0] >= 13.0) return null;
+                if(y[0] >= 12.0) return TimeSpan.FromHours(y[0] - 12.0);
+                return TimeSpan.FromHours(y[0]);
+            }
+
+            if(units.Equals(Keywords.w_PM, StringComparison.OrdinalIgnoreCase)) {
+                if(y[0] >= 13.0) return null;
+                if(y[0] >= 12.0) return TimeSpan.FromHours(y[0]);
+                return TimeSpan.FromHours(y[0] + 12.0);
+            }
+
+            return null;
+        }
+
         /// <summary>Convert time to a string.</summary>
         /// <param name="seconds">Time to convert, in seconds.</param>
         /// <returns>Time string in epanet format.</returns>
         public static string GetClockTime(this long seconds) {
             TimeSpan ts = TimeSpan.FromSeconds(seconds);
+            return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
+        }
+
+        public static string GetClockTime(this TimeSpan ts) {
             return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
         }
 

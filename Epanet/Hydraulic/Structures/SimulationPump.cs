@@ -29,35 +29,35 @@ namespace Epanet.Hydraulic.Structures {
         public SimulationPump(Dictionary<string, SimulationNode> indexedNodes, Link @ref, int idx):base(indexedNodes, @ref, idx) {
 
             for (int i = 0; i < 6; i++)
-                this.energy[i] = ((Pump)@ref).Energy[0]; // BUG: Baseform bug ?
+                _energy[i] = ((Pump)@ref).Energy[0]; // BUG: Baseform bug ?
 
-            this.H0 = ((Pump)@ref).H0;
-            this.FlowCoefficient = ((Pump)@ref).FlowCoefficient;
-            this.N = ((Pump)@ref).N;
+            H0 = ((Pump)@ref).H0;
+            FlowCoefficient = ((Pump)@ref).FlowCoefficient;
+            N = ((Pump)@ref).N;
         }
 
-        private readonly double[] energy = {0, 0, 0, 0, 0, 0};
+        private readonly double[] _energy = {0, 0, 0, 0, 0, 0};
 
-        public PumpType Ptype { get { return ((Pump)this.link).Ptype; } }
+        public PumpType Ptype { get { return ((Pump)link).Ptype; } }
 
-        public double Q0 { get { return ((Pump)this.link).Q0; } }
+        public double Q0 { get { return ((Pump)link).Q0; } }
 
-        public double Qmax { get { return ((Pump)this.link).Qmax; } }
+        public double Qmax { get { return ((Pump)link).Qmax; } }
 
-        public double Hmax { get { return ((Pump)this.link).Hmax; } }
+        public double Hmax { get { return ((Pump)link).Hmax; } }
 
-        public Curve Hcurve { get { return ((Pump)this.link).HCurve; } }
+        public Curve Hcurve { get { return ((Pump)link).HCurve; } }
 
-        public Curve Ecurve { get { return ((Pump)this.link).ECurve; } }
+        public Curve Ecurve { get { return ((Pump)link).ECurve; } }
 
-        public Pattern Upat { get { return ((Pump)this.link).UPat; } }
+        public Pattern Upat { get { return ((Pump)link).UPat; } }
 
-        public Pattern Epat { get { return ((Pump)this.link).EPat; } }
+        public Pattern Epat { get { return ((Pump)link).EPat; } }
 
-        public double Ecost { get { return ((Pump)this.link).ECost; } }
+        public double Ecost { get { return ((Pump)link).ECost; } }
 
         // Simulation getters and setters
-        public double[] Energy { get { return this.energy; } }
+        public double[] Energy { get { return _energy; } }
 
         ///<summary>Simulated shutoff head</summary>
         public double H0 { set; get; }
@@ -70,23 +70,22 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Computes flow energy associated with this link pump.</summary>
         /// <param name="net"></param>
-        /// <param name="fMap"></param>
         /// <param name="power">Pump used power (KW)</param>
         /// <param name="efficiency">Pump effiency</param>
         private void GetFlowEnergy(EpanetNetwork net, out double power, out double efficiency) {
             power = efficiency = 0.0;
 
-            if (this.status <= StatType.CLOSED) {
+            if (status <= StatType.CLOSED) {
                 return;
             }
 
-            double q = Math.Abs(this.flow);
-            double dh = Math.Abs(this.first.SimHead - this.second.SimHead);
+            double q = Math.Abs(flow);
+            double dh = Math.Abs(first.SimHead - second.SimHead);
 
             double e = net.EPump;
 
-            if (this.Ecurve != null) {
-                Curve curve = this.Ecurve;
+            if (Ecurve != null) {
+                Curve curve = Ecurve;
                 e = curve.Interpolate(q * net.FieldsMap.GetUnits(FieldType.FLOW));
             }
 
@@ -107,61 +106,61 @@ namespace Epanet.Hydraulic.Structures {
             double f0,
             double dt) {
             //Skip closed pumps
-            if (this.status <= StatType.CLOSED) return 0.0;
-            double q = Math.Max(Constants.QZERO, Math.Abs(this.flow));
+            if (status <= StatType.CLOSED) return 0.0;
+            double q = Math.Max(Constants.QZERO, Math.Abs(flow));
 
             // Find pump-specific energy cost
-            double c = this.Ecost > 0.0 ? this.Ecost : c0;
+            double c = Ecost > 0.0 ? Ecost : c0;
 
-            if (this.Epat != null) {
-                int m = (int)(n % this.Epat.Count);
-                c *= this.Epat[m];
+            if (Epat != null) {
+                int m = (int)(n % Epat.Count);
+                c *= Epat[m];
             }
             else
                 c *= f0;
 
             // Find pump energy & efficiency
             double power, efficiency;
-            this.GetFlowEnergy(net, out power, out efficiency);
+            GetFlowEnergy(net, out power, out efficiency);
 
             // Update pump's cumulative statistics
-            this.energy[0] = this.energy[0] + dt; // Time on-line
-            this.energy[1] = this.energy[1] + efficiency * dt; // Effic.-hrs
-            this.energy[2] = this.energy[2] + power / q * dt; // kw/cfs-hrs
-            this.energy[3] = this.energy[3] + power * dt; // kw-hrs
-            this.energy[4] = Math.Max(this.energy[4], power);
-            this.energy[5] = this.energy[5] + c * power * dt; // cost-hrs.
+            _energy[0] = _energy[0] + dt; // Time on-line
+            _energy[1] = _energy[1] + efficiency * dt; // Effic.-hrs
+            _energy[2] = _energy[2] + power / q * dt; // kw/cfs-hrs
+            _energy[3] = _energy[3] + power * dt; // kw-hrs
+            _energy[4] = Math.Max(_energy[4], power);
+            _energy[5] = _energy[5] + c * power * dt; // cost-hrs.
 
             return power;
         }
 
         /// <summary>Computes P and Y coeffs. for pump in the link.</summary>
         public void ComputePumpCoeff(EpanetNetwork net) {
-            if (this.status <= StatType.CLOSED || this.setting == 0.0) {
-                this.invHeadLoss = 1.0 / Constants.CBIG;
-                this.flowCorrection = this.flow;
+            if (status <= StatType.CLOSED || setting == 0.0) {
+                invHeadLoss = 1.0 / Constants.CBIG;
+                flowCorrection = flow;
                 return;
             }
 
             
-            double q = Math.Max(Math.Abs(this.flow), Constants.TINY);
+            double q = Math.Max(Math.Abs(flow), Constants.TINY);
 
-            if (this.Ptype == PumpType.CUSTOM) {
+            if (Ptype == PumpType.CUSTOM) {
                 double hh0, rr;
-                this.Hcurve.GetCoeff(net.FieldsMap, q / this.setting, out hh0, out rr);
+                Hcurve.GetCoeff(net.FieldsMap, q / setting, out hh0, out rr);
 
-                this.H0 = -hh0;
-                this.FlowCoefficient = -rr;
-                this.N = 1.0;
+                H0 = -hh0;
+                FlowCoefficient = -rr;
+                N = 1.0;
             }
 
-            double h0 = this.setting * this.setting * this.H0;
-            double n = this.N;
-            double r = this.FlowCoefficient * Math.Pow(this.setting, 2.0 - n);
+            double h0 = setting * setting * H0;
+            double n = N;
+            double r = FlowCoefficient * Math.Pow(setting, 2.0 - n);
             if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
 
-            this.invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
-            this.flowCorrection = this.flow / n + this.invHeadLoss * h0;
+            invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
+            flowCorrection = flow / n + invHeadLoss * h0;
         }
 
         /// <summary>Get new pump status.</summary>
@@ -169,17 +168,13 @@ namespace Epanet.Hydraulic.Structures {
         /// <param name="dh">head gain</param>
         /// <returns></returns>
         public StatType PumpStatus(EpanetNetwork net, double dh) {
-            double hmax;
+            double hmax = Ptype == PumpType.CONST_HP 
+                ? Constants.BIG
+                : setting * setting * Hmax;
 
-            if (this.Ptype == PumpType.CONST_HP)
-                hmax = Constants.BIG;
-            else
-                hmax = this.setting * this.setting * this.Hmax;
-
-            if (dh > hmax + net.HTol)
-                return StatType.XHEAD;
-
-            return StatType.OPEN;
+            return dh > hmax + net.HTol
+                ? StatType.XHEAD 
+                : StatType.OPEN;
         }
 
         /// <summary>Update pumps energy.</summary>
@@ -195,7 +190,7 @@ namespace Epanet.Hydraulic.Structures {
             if (net.Duration == 0)
                 dt = 1.0;
             else if (htime < net.Duration)
-                dt = (double)hstep / 3600.0;
+                dt = hstep / 3600.0;
             else
                 dt = 0.0;
 

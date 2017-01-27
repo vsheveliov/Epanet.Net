@@ -31,7 +31,7 @@ namespace Epanet
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new EpanetUI());
+            Application.Run(new EpanetUi());
         }
     }
 }

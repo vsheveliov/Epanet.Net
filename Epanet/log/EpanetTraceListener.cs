@@ -29,12 +29,12 @@ namespace Epanet.Log {
 
             public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode)
                 : base(path, BaseFileMode(mode), FileAccess.Write) {
-                this.Init(path, maxFileLength, maxFileCount, mode);
+                Init(path, maxFileLength, maxFileCount, mode);
             }
 
             public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode, FileShare share)
                 : base(path, BaseFileMode(mode), FileAccess.Write, share) {
-                this.Init(path, maxFileLength, maxFileCount, mode);
+                Init(path, maxFileLength, maxFileCount, mode);
             }
 
             public RollingFileStream(
@@ -45,7 +45,7 @@ namespace Epanet.Log {
                 FileShare share,
                 int bufferSize)
                 : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize) {
-                this.Init(path, maxFileLength, maxFileCount, mode);
+                Init(path, maxFileLength, maxFileCount, mode);
             }
 
             public RollingFileStream(
@@ -57,7 +57,7 @@ namespace Epanet.Log {
                 int bufferSize,
                 bool isAsync)
                 : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize, isAsync) {
-                this.Init(path, maxFileLength, maxFileCount, mode);
+                Init(path, maxFileLength, maxFileCount, mode);
             }
 
             public override bool CanRead { get { return false; } }
@@ -66,23 +66,23 @@ namespace Epanet.Log {
                 while(true) {
                     int actualCount = Math.Min(count, array.GetLength(0));
 
-                    if(this.Position + actualCount <= this.MaxFileLength) {
+                    if(Position + actualCount <= MaxFileLength) {
                         base.Write(array, offset, count);
                         break;
                     }
 
-                    if(this.CanSplitData) {
-                        int partialCount = (int)(Math.Max(this.MaxFileLength, this.Position) - this.Position);
+                    if(CanSplitData) {
+                        int partialCount = (int)(Math.Max(MaxFileLength, Position) - Position);
                         base.Write(array, offset, partialCount);
                         offset += partialCount;
                         count = actualCount - partialCount;
                     }
                     else {
-                        if(count > this.MaxFileLength) {
+                        if(count > MaxFileLength) {
                             throw new ArgumentOutOfRangeException("count", "Buffer size exceeds maximum file length");
                         }
                     }
-                    this.BackupAndResetStream();
+                    BackupAndResetStream();
                 }
             }
 
@@ -96,20 +96,20 @@ namespace Epanet.Log {
                 if(maxFileCount <= 0)
                     throw new ArgumentOutOfRangeException("maxFileCount", "Invalid maximum file count");
 
-                this.MaxFileLength = maxFileLength;
-                this.MaxFileCount = maxFileCount;
+                MaxFileLength = maxFileLength;
+                MaxFileCount = maxFileCount;
                 // this.CanSplitData = true;
 
                 string fullPath = Path.GetFullPath(path);
-                this.fileDir = Path.GetDirectoryName(fullPath);
-                this.fileBase = Path.GetFileNameWithoutExtension(fullPath);
-                this.fileExt = Path.GetExtension(fullPath);
+                _fileDir = Path.GetDirectoryName(fullPath);
+                _fileBase = Path.GetFileNameWithoutExtension(fullPath);
+                _fileExt = Path.GetExtension(fullPath);
 
-                this.fileDecimals = 1;
+                _fileDecimals = 1;
                 int decimalBase = 10;
 
-                while(decimalBase < this.MaxFileCount) {
-                    this.fileDecimals++;
+                while(decimalBase < MaxFileCount) {
+                    _fileDecimals++;
                     decimalBase *= 10;
                 }
 
@@ -118,8 +118,8 @@ namespace Epanet.Log {
                 case FileMode.CreateNew:
                 case FileMode.Truncate:
                 // Delete old files
-                for(int iFile = 0; iFile < this.MaxFileCount; ++iFile) {
-                    string file = this.GetBackupFileName(iFile);
+                for(int iFile = 0; iFile < MaxFileCount; ++iFile) {
+                    string file = GetBackupFileName(iFile);
                     if(File.Exists(file))
                         File.Delete(file);
                 }
@@ -128,48 +128,48 @@ namespace Epanet.Log {
 
                 default:
                 // Position file pointer to the last backup file
-                for(int iFile = 0; iFile < this.MaxFileCount; ++iFile) {
-                    if(File.Exists(this.GetBackupFileName(iFile)))
-                        this.nextFileIndex = iFile + 1;
+                for(int iFile = 0; iFile < MaxFileCount; ++iFile) {
+                    if(File.Exists(GetBackupFileName(iFile)))
+                        _nextFileIndex = iFile + 1;
                 }
 
-                if(this.nextFileIndex == this.MaxFileCount)
-                    this.nextFileIndex = 0;
-                this.Seek(0, SeekOrigin.End);
+                if(_nextFileIndex == MaxFileCount)
+                    _nextFileIndex = 0;
+                Seek(0, SeekOrigin.End);
                 break;
                 }
             }
 
             private void BackupAndResetStream() {
-                this.Flush();
-                File.Copy(this.Name, this.GetBackupFileName(this.nextFileIndex), true);
-                this.SetLength(0);
+                Flush();
+                File.Copy(Name, GetBackupFileName(_nextFileIndex), true);
+                SetLength(0);
 
-                this.nextFileIndex++;
+                _nextFileIndex++;
 
-                if(this.nextFileIndex >= this.MaxFileCount)
-                    this.nextFileIndex = 0;
+                if(_nextFileIndex >= MaxFileCount)
+                    _nextFileIndex = 0;
             }
 
             private string GetBackupFileName(int index) {
-                string sIndex = index.ToString("D{0}" + this.fileDecimals);
+                string sIndex = index.ToString("D{0}" + _fileDecimals);
 
-                string path2 = string.IsNullOrEmpty(this.fileExt)
-                    ? string.Format("{0}{1}", this.fileBase, sIndex)
-                    : string.Format("{0}{1}{2}", this.fileBase, sIndex, this.fileExt);
+                string path2 = string.IsNullOrEmpty(_fileExt)
+                    ? string.Format("{0}{1}", _fileBase, sIndex)
+                    : string.Format("{0}{1}{2}", _fileBase, sIndex, _fileExt);
 
-                return Path.Combine(this.fileDir, path2);
+                return Path.Combine(_fileDir, path2);
             }
 
             private static FileMode BaseFileMode(FileMode mode) {
                 return mode == FileMode.Append ? FileMode.OpenOrCreate : mode;
             }
 
-            private string fileDir;
-            private string fileBase;
-            private string fileExt;
-            private int fileDecimals;
-            private int nextFileIndex;
+            private string _fileDir;
+            private string _fileBase;
+            private string _fileExt;
+            private int _fileDecimals;
+            private int _nextFileIndex;
 
         }
         
@@ -178,16 +178,10 @@ namespace Epanet.Log {
 
             public InvariantStreamWriter(string path, bool append, Encoding encoding) : base(path, append, encoding) { }
 
-            /// <summary>
-            /// Returns new StreamWriter with FormatProvider = CultureInfo.Invariantculture and output encoding UTF8 (no BOM).
-            /// </summary>
-            /// <param name="stream"></param>
-            public InvariantStreamWriter(Stream stream) : base(stream) { }
-
             public override IFormatProvider FormatProvider { get { return CultureInfo.InvariantCulture; } }
         }
 
-        private bool printDate = true;
+        private bool _printDate = true;
         public EpanetTraceListener() { }
 
         public EpanetTraceListener(Stream stream) : base(stream) { }
@@ -213,7 +207,7 @@ namespace Epanet.Log {
         }
 
         public EpanetTraceListener(TextWriter writer, string name) : base(writer, name) { }
-        public bool PrintDate { get { return this.printDate; } set { this.printDate = value; } }
+        public bool PrintDate { get { return _printDate; } set { _printDate = value; } }
 
         public override void WriteLine(string message) {
             base.Write(DateTime.Now.ToString(base.Writer.FormatProvider));
@@ -222,52 +216,52 @@ namespace Epanet.Log {
         }
 
         private void WriteHeader(string source, TraceEventType eventType, int id) {
-            if(this.PrintDate)
-                this.Write(DateTime.Now.ToString("G", CultureInfo.InvariantCulture) + ": ");
+            if(PrintDate)
+                Write(DateTime.Now.ToString("G", CultureInfo.InvariantCulture) + ": ");
 
             // Write(String.Format(CultureInfo.InvariantCulture, "{0} {1}: {2} : ", source, eventType, id.ToString(CultureInfo.InvariantCulture)));
         }
 
         public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string message) {
 
-            if(this.Filter != null && !this.Filter.ShouldTrace(eventCache, source, eventType, id, message, null, null, null))
+            if(Filter != null && !Filter.ShouldTrace(eventCache, source, eventType, id, message, null, null, null))
                 return;
 
-            this.WriteHeader(source, eventType, id);
-            this.WriteLine(message);
+            WriteHeader(source, eventType, id);
+            WriteLine(message);
             // WriteFooter(eventCache);
         }
 
         public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string format, params object[] args) {
-            if(this.Filter != null && !this.Filter.ShouldTrace(eventCache, source, eventType, id, format, args, null, null))
+            if(Filter != null && !Filter.ShouldTrace(eventCache, source, eventType, id, format, args, null, null))
                 return;
 
-            this.WriteHeader(source, eventType, id);
+            WriteHeader(source, eventType, id);
             if(args != null && args.Length > 0)
-                this.WriteLine(string.Format(CultureInfo.InvariantCulture, format, args));
+                WriteLine(string.Format(CultureInfo.InvariantCulture, format, args));
             else
-                this.WriteLine(format);
+                WriteLine(format);
 
             // WriteFooter(eventCache);
         }
 
         public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, object data) {
-            if(this.Filter != null && !this.Filter.ShouldTrace(eventCache, source, eventType, id, null, null, data, null))
+            if(Filter != null && !Filter.ShouldTrace(eventCache, source, eventType, id, null, null, data, null))
                 return;
 
-            this.WriteHeader(source, eventType, id);
+            WriteHeader(source, eventType, id);
             string datastring = data == null ? string.Empty : data.ToString();
 
-            this.WriteLine(datastring);
+            WriteLine(datastring);
             // WriteFooter(eventCache);
         }
 
         public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, params object[] data) {
 
-            if(this.Filter != null && !this.Filter.ShouldTrace(eventCache, source, eventType, id, null, null, null, data))
+            if(Filter != null && !Filter.ShouldTrace(eventCache, source, eventType, id, null, null, null, data))
                 return;
 
-            this.WriteHeader(source, eventType, id);
+            WriteHeader(source, eventType, id);
 
             StringBuilder sb = new StringBuilder();
 
@@ -280,7 +274,7 @@ namespace Epanet.Log {
                 }
             }
 
-            this.WriteLine(sb.ToString());
+            WriteLine(sb.ToString());
 
             // WriteFooter(eventCache);
         }

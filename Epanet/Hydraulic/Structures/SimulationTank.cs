@@ -26,52 +26,52 @@ namespace Epanet.Hydraulic.Structures {
 
     public class SimulationTank:SimulationNode {
         public SimulationTank(Node @ref, int idx):base(@ref, idx) {
-            this.volume = ((Tank)this.node).V0;
+            _volume = ((Tank)node).V0;
 
             // Init
-            this.head = ((Tank)this.node).H0;
-            this.demand = 0.0;
-            this.OldStat = StatType.TEMPCLOSED;
+            head = ((Tank)node).H0;
+            demand = 0.0;
+            OldStat = StatType.TEMPCLOSED;
         }
 
         // public Tank Node { get { return (Tank)this.node; } }
 
-        private double volume;
+        private double _volume;
 
-        public double Area { get { return ((Tank)this.node).Area; } }
+        public double Area { get { return ((Tank)node).Area; } }
 
-        public double Hmin { get { return ((Tank)this.node).Hmin; } }
+        public double Hmin { get { return ((Tank)node).Hmin; } }
 
-        public double Hmax { get { return ((Tank)this.node).Hmax; } }
+        public double Hmax { get { return ((Tank)node).Hmax; } }
 
-        public double Vmin { get { return ((Tank)this.node).Vmin; } }
+        public double Vmin { get { return ((Tank)node).Vmin; } }
 
-        public double Vmax { get { return ((Tank)this.node).Vmax; } }
+        public double Vmax { get { return ((Tank)node).Vmax; } }
 
-        public double V0 { get { return ((Tank)this.node).V0; } }
+        public double V0 { get { return ((Tank)node).V0; } }
 
-        public Pattern Pattern { get { return ((Tank)this.node).Pattern; } }
+        public Pattern Pattern { get { return ((Tank)node).Pattern; } }
 
-        public Curve Vcurve { get { return ((Tank)this.node).Vcurve; } }
+        public Curve Vcurve { get { return ((Tank)node).Vcurve; } }
 
 #if COMMENTED
 
-        public double H0 { get { return ((Tank)this.node).H0; } }
+        public double H0 { get { return ((Tank)node).H0; } }
 
-        public double Kb { get { return ((Tank)this.node).Kb; } }
+        public double Kb { get { return ((Tank)node).Kb; } }
 
-        public double Concentration { get { return ((Tank)this.node).C; } }
+        public double Concentration { get { return ((Tank)node).C; } }
 
-        public MixType MixModel { get { return ((Tank)this.node).MixModel; } }
+        public MixType MixModel { get { return ((Tank)node).MixModel; } }
 
-        public double V1Max { get { return ((Tank)this.node).V1Max; } }
+        public double V1Max { get { return ((Tank)node).V1Max; } }
 
 #endif
 
         /// Simulation getters & setters.
-        public double SimVolume { get { return this.volume; } }
+        public double SimVolume { get { return _volume; } }
 
-        public bool IsReservoir { get { return ((Tank)this.node).Area == 0; } }
+        public bool IsReservoir { get { return ((Tank)node).Area == 0; } }
 
         public StatType OldStat { get; set; }
 
@@ -80,12 +80,12 @@ namespace Epanet.Hydraulic.Structures {
         ///<summary>Finds water volume in tank corresponding to elevation 'h'</summary>
         public double FindVolume(FieldsMap fMap, double h) {
 
-            Curve curve = this.Vcurve;
+            Curve curve = Vcurve;
             if (curve == null)
-                return this.Vmin + (h - this.Hmin) * this.Area;
+                return Vmin + (h - Hmin) * Area;
             else {
                 return
-                    curve.Interpolate((h - this.Elevation) * fMap.GetUnits(FieldType.HEAD)
+                    curve.Interpolate((h - Elevation) * fMap.GetUnits(FieldType.HEAD)
                                       / fMap.GetUnits(FieldType.VOLUME));
             }
 
@@ -94,48 +94,48 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Computes new water levels in tank after current time step, with Euler integrator.</summary>
         private void UpdateLevel(FieldsMap fMap, long tstep) {
 
-            if (this.Area == 0.0) // Reservoir
+            if (Area == 0.0) // Reservoir
                 return;
 
             // Euler
-            double dv = this.demand * tstep;
-            this.volume += dv;
+            double dv = demand * tstep;
+            _volume += dv;
 
-            if (this.volume + this.demand >= this.Vmax)
-                this.volume = this.Vmax;
+            if (_volume + demand >= Vmax)
+                _volume = Vmax;
 
-            if (this.volume - this.demand <= this.Vmin)
-                this.volume = this.Vmin;
+            if (_volume - demand <= Vmin)
+                _volume = Vmin;
 
-            this.head = this.FindGrade(fMap);
+            head = FindGrade(fMap);
         }
 
         /// <summary>Finds water level in tank corresponding to current volume.</summary>
         private double FindGrade(FieldsMap fMap) {
-            Curve curve = this.Vcurve;
+            Curve curve = Vcurve;
             if (curve == null)
-                return this.Hmin + (this.volume - this.Vmin) / this.Area;
+                return Hmin + (_volume - Vmin) / Area;
             else
-                return this.Elevation
-                       + curve.Interpolate(this.volume * fMap.GetUnits(FieldType.VOLUME))
+                return Elevation
+                       + curve.Interpolate(_volume * fMap.GetUnits(FieldType.VOLUME))
                        / fMap.GetUnits(FieldType.HEAD);
         }
 
         /// <summary>Get the required time step based to fill or drain a tank.</summary>
         private long GetRequiredTimeStep(long tstep) {
-            if (this.IsReservoir) return tstep; //  Skip reservoirs
+            if (IsReservoir) return tstep; //  Skip reservoirs
 
-            double h = this.head; // Current tank grade
-            double q = this.demand; // Flow into tank
+            double h = head; // Current tank grade
+            double q = demand; // Flow into tank
             double v;
 
             if (Math.Abs(q) <= Constants.QZERO)
                 return tstep;
 
-            if (q > 0.0 && h < this.Hmax)
-                v = this.Vmax - this.SimVolume; // Volume to fill
-            else if (q < 0.0 && h > this.Hmin)
-                v = this.Vmin - this.SimVolume; // Volume to drain
+            if (q > 0.0 && h < Hmax)
+                v = Vmax - SimVolume; // Volume to fill
+            else if (q < 0.0 && h > Hmin)
+                v = Vmin - SimVolume; // Volume to drain
             else
                 return tstep;
 

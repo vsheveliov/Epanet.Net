@@ -9,8 +9,8 @@ namespace Epanet.Network.Structures {
         }
 
         public Label(string text) {
-            this.Text = text;
-            this.Position = EnPoint.Invalid;
+            Text = text;
+            Position = EnPoint.Invalid;
         }
 
         ///<summary>Label position.</summary>

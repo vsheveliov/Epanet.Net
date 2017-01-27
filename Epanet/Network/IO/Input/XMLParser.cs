@@ -27,28 +27,26 @@ using Epanet.Util;
 namespace Epanet.Network.IO.Input {
 
     public class XmlParser:InputParser {
-        private SectType sectionType;
-        private XmlReader reader;
-        private Network net;
-        private readonly bool gzipped;
+        private SectType _sectionType;
+        private XmlReader _reader;
+        private readonly bool _gzipped;
         
-        public XmlParser(bool gzipped) { this.gzipped = gzipped; }
+        public XmlParser(bool gzipped) { _gzipped = gzipped; }
 
         private void LogException(ErrorCode err, string line) {
             if(err == ErrorCode.Ok)
                 return;
 
-            var ex = new InputException(err, this.sectionType, line);
+            var ex = new InputException(err, _sectionType, line);
 
-            base.Errors.Add(ex);
+            base.errors.Add(ex);
 
             base.LogException(ex);
 
         }
 
-        public override Network Parse(Network net_, string f) {
-            this.net = net_;
-            this.FileName = Path.GetFullPath(f);
+        public override Network Parse(Network nw, string f) {
+            net = nw ?? new Network();
 
             XmlReaderSettings settings = new XmlReaderSettings {
                 CloseInput = false,
@@ -62,112 +60,112 @@ namespace Epanet.Network.IO.Input {
             try {
 
 
-                Stream stream = this.gzipped
+                Stream stream = _gzipped
                     ? (Stream)new GZipStream(File.OpenRead(f), CompressionMode.Decompress)
                     : File.OpenRead(f);
 
                 using (stream) {
 
-                    using (this.reader = XmlReader.Create(stream, settings)) {
-                        this.reader.ReadToFollowing("network");
-                        this.ParsePc(this.reader);
+                    using (_reader = XmlReader.Create(stream, settings)) {
+                        _reader.ReadToFollowing("network");
+                        ParsePc(_reader);
                     }
 
                     stream.Position = 0;
 
-                    using (this.reader = XmlReader.Create(stream, settings)) {
-                        this.reader.ReadToFollowing("network");
+                    using (_reader = XmlReader.Create(stream, settings)) {
+                        _reader.ReadToFollowing("network");
                         // this.reader.Read(); // skip "network"
                         // this.reader.MoveToContent(); // If that node is whitespace, skip to content.
 
 
 
-                        while (this.reader.Read()) {
-                            if (this.reader.NodeType != XmlNodeType.Element || this.reader.IsEmptyElement)
+                        while (_reader.Read()) {
+                            if (_reader.NodeType != XmlNodeType.Element || _reader.IsEmptyElement)
                                 continue;
 
                             try {
-                                this.sectionType = (SectType)Enum.Parse(typeof(SectType), reader.Name, true);
+                                _sectionType = (SectType)Enum.Parse(typeof(SectType), _reader.Name, true);
                             }
                             catch (ArgumentException) {
                                 continue;
                             }
 
 
-                            var r = this.reader.ReadSubtree();
+                            var r = _reader.ReadSubtree();
 
-                            switch (this.sectionType) {
+                            switch (_sectionType) {
                             case SectType.TITLE:
-                                this.ParseTitle(r);
+                                ParseTitle(r);
                                 break;
 
                             case SectType.JUNCTIONS:
-                                this.ParseJunction(r);
+                                ParseJunction(r);
                                 break;
 
                             case SectType.RESERVOIRS:
                             case SectType.TANKS:
-                                this.ParseTank(r);
+                                ParseTank(r);
                                 break;
 
                             case SectType.PIPES:
-                                this.ParsePipe(r);
+                                ParsePipe(r);
                                 break;
                             case SectType.PUMPS:
-                                this.ParsePump(r);
+                                ParsePump(r);
                                 break;
                             case SectType.VALVES:
-                                this.ParseValve(r);
+                                ParseValve(r);
                                 break;
                             case SectType.CONTROLS:
-                                this.ParseControl(r);
+                                ParseControl(r);
                                 break;
 
                             case SectType.RULES:
-                                this.ParseRule(r);
+                                ParseRule(r);
                                 break;
 
                             case SectType.DEMANDS:
-                                this.ParseDemand(r);
+                                ParseDemand(r);
                                 break;
                             case SectType.SOURCES:
-                                this.ParseSource(r);
+                                ParseSource(r);
                                 break;
                             case SectType.EMITTERS:
-                                this.ParseEmitter(r);
+                                ParseEmitter(r);
                                 break;
                             case SectType.QUALITY:
-                                this.ParseQuality(r);
+                                ParseQuality(r);
                                 break;
                             case SectType.STATUS:
-                                this.ParseStatus(r);
+                                ParseStatus(r);
                                 break;
                             case SectType.ENERGY:
-                                this.ParseEnergy(r);
+                                ParseEnergy(r);
                                 break;
                             case SectType.REACTIONS:
-                                this.ParseReact(r);
+                                ParseReact(r);
                                 break;
                             case SectType.MIXING:
-                                this.ParseMixing(r);
+                                ParseMixing(r);
                                 break;
                             case SectType.REPORT:
-                                this.ParseReport(r);
+                                ParseReport(r);
                                 break;
                             case SectType.TIMES:
-                                this.ParseTime(r);
+                                ParseTime(r);
                                 break;
                             case SectType.OPTIONS:
-                                this.ParseOption(r);
+                                ParseOption(r);
                                 break;
                             case SectType.COORDINATES:
-                                this.ParseCoordinate(r);
+                                ParseCoordinate(r);
                                 break;
                             case SectType.VERTICES:
-                                this.ParseVertice(r);
+                                ParseVertice(r);
                                 break;
                             case SectType.LABELS:
-                                this.ParseLabel(r);
+                                ParseLabel(r);
                                 break;
                             }
                         }
@@ -178,7 +176,7 @@ namespace Epanet.Network.IO.Input {
                 throw new ENException(ErrorCode.Err302);
             }
 
-            return this.net;
+            return net;
         }
 
         private void ParseTitle(XmlReader r) {
@@ -187,7 +185,7 @@ namespace Epanet.Network.IO.Input {
             
             while (r.ReadToFollowing("line") && i-- > 0) {
                 string s = r.ReadString();
-                this.net.Title.Add(s);
+                net.Title.Add(s);
             } 
         }
 
@@ -200,7 +198,7 @@ namespace Epanet.Network.IO.Input {
                     node.Elevation = XmlConvert.ToDouble(r.GetAttribute("elevation") ?? "0");
                 }
                 catch (ArgumentException) {
-                    this.LogException(ErrorCode.Err202, r.ReadOuterXml());
+                    LogException(ErrorCode.Err202, r.ReadOuterXml());
                 }
 
 
@@ -210,7 +208,7 @@ namespace Epanet.Network.IO.Input {
                         XmlConvert.ToDouble(r.GetAttribute("y") ?? "0"));
                 }
                 catch(ArgumentException) {
-                    this.LogException(ErrorCode.Err202, r.ReadOuterXml());
+                    LogException(ErrorCode.Err202, r.ReadOuterXml());
                 }
 
                 using(var rr = r.ReadSubtree()) {
@@ -228,7 +226,7 @@ namespace Epanet.Network.IO.Input {
                                 // cur.Add(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
                             }
                             catch(FormatException) {
-                                this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                                LogException(ErrorCode.Err202, rr.ReadInnerXml());
                             }
                         }
 
@@ -246,10 +244,10 @@ namespace Epanet.Network.IO.Input {
 
 
                 try {
-                    this.net.Nodes.Add(node);
+                    net.Nodes.Add(node);
                 }
                 catch(ArgumentException) {
-                    this.LogException(ErrorCode.Err215, node.Name);
+                    LogException(ErrorCode.Err215, node.Name);
                 }
 
 
@@ -298,25 +296,25 @@ namespace Epanet.Network.IO.Input {
         
 
         private void ParsePc(XmlReader r) {
-            this.reader.ReadStartElement();
+            _reader.ReadStartElement();
            
             while(!r.EOF) {
 
                 try {
-                    this.sectionType = (SectType)Enum.Parse(typeof(SectType), r.Name, true);
+                    _sectionType = (SectType)Enum.Parse(typeof(SectType), r.Name, true);
                 }
                 catch (ArgumentException) {
-                    this.sectionType = (SectType)(-1);
+                    _sectionType = (SectType)(-1);
                 }
 
 
                 try {
-                    switch (this.sectionType) {
+                    switch (_sectionType) {
                     case SectType.PATTERNS:
-                        this.ParsePattern(r.ReadSubtree());
+                        ParsePattern(r.ReadSubtree());
                         break;
                     case SectType.CURVES:
-                        this.ParseCurve(r.ReadSubtree());
+                        ParseCurve(r.ReadSubtree());
                         break;
                     }
                 }
@@ -328,7 +326,7 @@ namespace Epanet.Network.IO.Input {
 
             }
 
-            if(this.Errors.Count > 0)
+            if(errors.Count > 0)
                 throw new ENException(ErrorCode.Err200);
 
         }
@@ -362,7 +360,7 @@ namespace Epanet.Network.IO.Input {
                                     pat.Add(XmlConvert.ToDouble(s));
                                 }
                                 catch (FormatException) {
-                                    this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                                    LogException(ErrorCode.Err202, rr.ReadInnerXml());
                                 }
                             }
 
@@ -377,10 +375,10 @@ namespace Epanet.Network.IO.Input {
 
 
                 try {
-                    this.net.Patterns.Add(pat);
+                    net.Patterns.Add(pat);
                 }
                 catch(ArgumentException) {
-                    this.LogException(ErrorCode.Err215, pat.Name);
+                    LogException(ErrorCode.Err215, pat.Name);
                 }
 
 
@@ -418,7 +416,7 @@ namespace Epanet.Network.IO.Input {
                                     cur.Add(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
                                 }
                                 catch (FormatException) {
-                                    this.LogException(ErrorCode.Err202, rr.ReadInnerXml());
+                                    LogException(ErrorCode.Err202, rr.ReadInnerXml());
                                 }
                             }
 
@@ -432,10 +430,10 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 try {
-                    this.net.Curves.Add(cur);
+                    net.Curves.Add(cur);
                 }
                 catch(ArgumentException) {
-                    this.LogException(ErrorCode.Err215, cur.Name);
+                    LogException(ErrorCode.Err215, cur.Name);
                 }
 
             } while(r.ReadToNextSibling("curve"));

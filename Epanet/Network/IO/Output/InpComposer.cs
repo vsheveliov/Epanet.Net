@@ -51,36 +51,36 @@ namespace Epanet.Network.IO.Output {
 
         public override void Composer(Network net, string fileName) {
             try {
-                this.buffer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default); // "ISO-8859-1"
-                this.ComposeHeader(net);
-                this.ComposeJunctions(net);
-                this.ComposeReservoirs(net);
-                this.ComposeTanks(net);
-                this.ComposePipes(net);
-                this.ComposePumps(net);
-                this.ComposeValves(net);
-                this.ComposeDemands(net);
-                this.ComposeEmitters(net);
-                this.ComposeStatus(net);
-                this.ComposePatterns(net);
-                this.ComposeCurves(net);
-                this.ComposeControls(net);
-                this.ComposeQuality(net);
-                this.ComposeSource(net);
-                this.ComposeMixing(net);
-                this.ComposeReaction(net);
-                this.ComposeEnergy(net);
-                this.ComposeTimes(net);
-                this.ComposeOptions(net);
-                this.ComposeExtraOptions(net);
-                this.ComposeReport(net);
-                this.ComposeLabels(net);
-                this.ComposeCoordinates(net);
-                this.ComposeVertices(net);
-                this.ComposeRules(net);
+                buffer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default); // "ISO-8859-1"
+                ComposeHeader(net);
+                ComposeJunctions(net);
+                ComposeReservoirs(net);
+                ComposeTanks(net);
+                ComposePipes(net);
+                ComposePumps(net);
+                ComposeValves(net);
+                ComposeDemands(net);
+                ComposeEmitters(net);
+                ComposeStatus(net);
+                ComposePatterns(net);
+                ComposeCurves(net);
+                ComposeControls(net);
+                ComposeQuality(net);
+                ComposeSource(net);
+                ComposeMixing(net);
+                ComposeReaction(net);
+                ComposeEnergy(net);
+                ComposeTimes(net);
+                ComposeOptions(net);
+                ComposeExtraOptions(net);
+                ComposeReport(net);
+                ComposeLabels(net);
+                ComposeCoordinates(net);
+                ComposeVertices(net);
+                ComposeRules(net);
 
-                this.buffer.WriteLine(SectType.END.ParseStr());
-                this.buffer.Close();
+                buffer.WriteLine(SectType.END.ParseStr());
+                buffer.Close();
             }
             catch (IOException) {}
         }
@@ -89,13 +89,13 @@ namespace Epanet.Network.IO.Output {
             if (net.Title.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.TITLE.ParseStr());
+            buffer.WriteLine(SectType.TITLE.ParseStr());
 
             foreach (string str  in  net.Title) {
-                this.buffer.WriteLine(str);
+                buffer.WriteLine(str);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
 
@@ -105,32 +105,32 @@ namespace Epanet.Network.IO.Output {
             if (!net.Junctions.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.JUNCTIONS.ParseStr());
-            this.buffer.WriteLine(JUNCS_SUBTITLE);
+            buffer.WriteLine(SectType.JUNCTIONS.ParseStr());
+            buffer.WriteLine(JUNCS_SUBTITLE);
 
             foreach (Node node in net.Junctions) {
-                this.buffer.Write(" {0}\t{1}", node.Name, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
+                buffer.Write(" {0}\t{1}", node.Name, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
 
                 //if(node.getDemand()!=null && node.getDemand().size()>0 && !node.getDemand()[0].getPattern().getId().equals(""))
                 //    buffer.write("\t"+node.getDemand()[0].getPattern().getId());
 
                 if (node.Demands.Count > 0) {
                     Demand demand = node.Demands[0];
-                    this.buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, demand.Base));
+                    buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, demand.Base));
 
-                    if (!string.IsNullOrEmpty(demand.Pattern.Name)
-                        && !net.DefPatId.Equals(demand.Pattern.Name, StringComparison.OrdinalIgnoreCase))
-                        this.buffer.Write("\t" + demand.Pattern.Name);
+                    if (!string.IsNullOrEmpty(demand.pattern.Name)
+                        && !net.DefPatId.Equals(demand.pattern.Name, StringComparison.OrdinalIgnoreCase))
+                        buffer.Write("\t" + demand.pattern.Name);
                 }
 
                 if (!string.IsNullOrEmpty(node.Comment))
-                    this.buffer.Write("\t;" + node.Comment);
+                    buffer.Write("\t;" + node.Comment);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
 
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeReservoirs(Network net) {
@@ -139,24 +139,24 @@ namespace Epanet.Network.IO.Output {
             if (!net.Reservoirs.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.RESERVOIRS.ParseStr());
-            this.buffer.WriteLine(RESERVOIRS_SUBTITLE);
+            buffer.WriteLine(SectType.RESERVOIRS.ParseStr());
+            buffer.WriteLine(RESERVOIRS_SUBTITLE);
 
             foreach(Tank tank in net.Reservoirs) {
-                this.buffer.Write(" {0}\t{1}", tank.Name, fMap.RevertUnit(FieldType.ELEV, tank.Elevation));
+                buffer.Write(" {0}\t{1}", tank.Name, fMap.RevertUnit(FieldType.ELEV, tank.Elevation));
 
 
                 if (tank.Pattern != null)
-                    this.buffer.Write("\t{0}", tank.Pattern.Name);
+                    buffer.Write("\t{0}", tank.Pattern.Name);
 
 
                 if (!string.IsNullOrEmpty(tank.Comment))
-                    this.buffer.Write("\t;" + tank.Comment);
+                    buffer.Write("\t;" + tank.Comment);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeTanks(Network net) {
@@ -165,15 +165,15 @@ namespace Epanet.Network.IO.Output {
             if (!net.Tanks.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.TANKS.ParseStr());
-            this.buffer.WriteLine(TANK_SUBTITLE);
+            buffer.WriteLine(SectType.TANKS.ParseStr());
+            buffer.WriteLine(TANK_SUBTITLE);
 
             foreach(Tank tank in net.Tanks) {
                 double vmin = tank.Vmin;
                 if (Math.Round(vmin / tank.Area) == Math.Round(tank.Hmin - tank.Elevation))
                     vmin = 0;
 
-                this.buffer.Write(
+                buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
                         tank.Name,
                         fMap.RevertUnit(FieldType.ELEV, tank.Elevation),
@@ -184,14 +184,14 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.VOLUME, vmin));
 
                 if (tank.Vcurve != null)
-                    this.buffer.Write(" " + tank.Vcurve.Name);
+                    buffer.Write(" " + tank.Vcurve.Name);
 
                 if (!string.IsNullOrEmpty(tank.Comment))
-                    this.buffer.Write("\t;" + tank.Comment);
-                this.buffer.WriteLine();
+                    buffer.Write("\t;" + tank.Comment);
+                buffer.WriteLine();
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposePipes(Network net) {
@@ -206,8 +206,8 @@ namespace Epanet.Network.IO.Output {
                     pipes.Add(link);
 
 
-            this.buffer.WriteLine(SectType.PIPES.ParseStr());
-            this.buffer.WriteLine(PIPES_SUBTITLE);
+            buffer.WriteLine(SectType.PIPES.ParseStr());
+            buffer.WriteLine(PIPES_SUBTITLE);
 
             foreach (Link link  in  pipes) {
                 double d = link.Diameter;
@@ -217,7 +217,7 @@ namespace Epanet.Network.IO.Output {
 
                 double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
 
-                this.buffer.Write(
+                buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
                         link.Name,
                         link.FirstNode.Name,
@@ -226,22 +226,22 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.DIAM, d));
 
                 // if (net.FormFlag == FormType.DW)
-                this.buffer.Write(" {0}\t{1}", kc, km);
+                buffer.Write(" {0}\t{1}", kc, km);
 
                 if (link.Type == LinkType.CV)
-                    this.buffer.Write(" CV");
+                    buffer.Write(" CV");
                 else if (link.Status == StatType.CLOSED)
-                    this.buffer.Write(" CLOSED");
+                    buffer.Write(" CLOSED");
                 else if (link.Status == StatType.OPEN)
-                    this.buffer.Write(" OPEN");
+                    buffer.Write(" OPEN");
 
                 if (!string.IsNullOrEmpty(link.Comment))
-                    this.buffer.Write("\t;" + link.Comment);
+                    buffer.Write("\t;" + link.Comment);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposePumps(Network net) {
@@ -250,11 +250,11 @@ namespace Epanet.Network.IO.Output {
             if (!net.Pumps.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.PUMPS.ParseStr());
-            this.buffer.WriteLine(PUMPS_SUBTITLE);
+            buffer.WriteLine(SectType.PUMPS.ParseStr());
+            buffer.WriteLine(PUMPS_SUBTITLE);
 
             foreach (Pump pump in net.Pumps) {
-                this.buffer.Write(
+                buffer.Write(
                         " {0}\t{1}\t{2}",
                         pump.Name,
                         pump.FirstNode.Name,
@@ -263,13 +263,13 @@ namespace Epanet.Network.IO.Output {
 
                 // Pump has constant power
                 if (pump.Ptype == PumpType.CONST_HP)
-                    this.buffer.Write(" POWER " + pump.Km);
+                    buffer.Write(" POWER " + pump.Km);
                 // Pump has a head curve
                 else if (pump.HCurve != null)
-                    this.buffer.Write(" HEAD " + pump.HCurve.Name);
+                    buffer.Write(" HEAD " + pump.HCurve.Name);
                 // Old format used for pump curve
                 else {
-                    this.buffer.Write(
+                    buffer.Write(
                             " {0}\t{1}\t{2}\t0.0\t{3}",
                             fMap.RevertUnit(FieldType.HEAD, -pump.H0),
                             fMap.RevertUnit(
@@ -282,19 +282,19 @@ namespace Epanet.Network.IO.Output {
                 }
 
                 if (pump.UPat != null)
-                    this.buffer.Write(" PATTERN " + pump.UPat.Name);
+                    buffer.Write(" PATTERN " + pump.UPat.Name);
 
 
                 if (pump.Kc != 1.0)
-                    this.buffer.Write(" SPEED {0}", pump.Kc);
+                    buffer.Write(" SPEED {0}", pump.Kc);
 
                 if (!string.IsNullOrEmpty(pump.Comment))
-                    this.buffer.Write("\t;" + pump.Comment);
+                    buffer.Write("\t;" + pump.Comment);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeValves(Network net) {
@@ -303,8 +303,8 @@ namespace Epanet.Network.IO.Output {
             if (!net.Valves.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.VALVES.ParseStr());
-            this.buffer.WriteLine(VALVES_SUBTITLE);
+            buffer.WriteLine(SectType.VALVES.ParseStr());
+            buffer.WriteLine(VALVES_SUBTITLE);
             
             foreach (Valve valve in net.Valves) {
                 double d = valve.Diameter;
@@ -325,7 +325,7 @@ namespace Epanet.Network.IO.Output {
 
                 double km = valve.Km * Math.Pow(d, 4) / 0.02517;
 
-                this.buffer.Write(
+                buffer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
                         valve.Name,
                         valve.FirstNode.Name,
@@ -334,16 +334,16 @@ namespace Epanet.Network.IO.Output {
                         valve.Type.ParseStr());
 
                 if (valve.Type == LinkType.GPV && valve.Curve != null)
-                    this.buffer.Write(" {0}\t{1}", valve.Curve.Name, km);
+                    buffer.Write(" {0}\t{1}", valve.Curve.Name, km);
                 else
-                    this.buffer.Write(" {0}\t{1}", kc, km);
+                    buffer.Write(" {0}\t{1}", kc, km);
 
                 if (!string.IsNullOrEmpty(valve.Comment))
-                    this.buffer.Write("\t;" + valve.Comment);
+                    buffer.Write("\t;" + valve.Comment);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeDemands(Network net) {
@@ -352,23 +352,23 @@ namespace Epanet.Network.IO.Output {
             if (!net.Junctions.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.DEMANDS.ParseStr());
-            this.buffer.WriteLine(DEMANDS_SUBTITLE);
+            buffer.WriteLine(SectType.DEMANDS.ParseStr());
+            buffer.WriteLine(DEMANDS_SUBTITLE);
 
             double ucf = fMap.GetUnits(FieldType.DEMAND);
 
             foreach (Node node in net.Junctions) {
                 foreach (Demand demand in node.Demands) {
-                    this.buffer.Write("{0}\t{1}", node.Name, ucf * demand.Base);
+                    buffer.Write("{0}\t{1}", node.Name, ucf * demand.Base);
 
-                    if (demand.Pattern != null)
-                        this.buffer.Write("\t" + demand.Pattern.Name);
+                    if (demand.pattern != null)
+                        buffer.Write("\t" + demand.pattern.Name);
 
-                    this.buffer.WriteLine();
+                    buffer.WriteLine();
                 }
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeEmitters(Network net) {
@@ -376,8 +376,8 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.EMITTERS.ParseStr());
-            this.buffer.WriteLine(EMITTERS_SUBTITLE);
+            buffer.WriteLine(SectType.EMITTERS.ParseStr());
+            buffer.WriteLine(EMITTERS_SUBTITLE);
 
             double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
             double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
@@ -386,10 +386,10 @@ namespace Epanet.Network.IO.Output {
             foreach (Node node  in  net.Junctions) {
                 if (node.Ke == 0.0) continue;
                 double ke = uflow / Math.Pow(upressure * node.Ke, (1.0 / qexp));
-                this.buffer.WriteLine(" {0}\t{1}", node.Name, ke);
+                buffer.WriteLine(" {0}\t{1}", node.Name, ke);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeStatus(Network net) {
@@ -397,13 +397,13 @@ namespace Epanet.Network.IO.Output {
             if (net.Links.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.STATUS.ParseStr());
-            this.buffer.WriteLine(STATUS_SUBTITLE);
+            buffer.WriteLine(SectType.STATUS.ParseStr());
+            buffer.WriteLine(STATUS_SUBTITLE);
 
             foreach (Link link  in  net.Links) {
                 if (link.Type <= LinkType.PUMP) {
                     if (link.Status == StatType.CLOSED)
-                        this.buffer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED);
+                        buffer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED);
 
                     // Write pump speed here for pumps with old-style pump curve input
                     else if (link.Type == LinkType.PUMP) {
@@ -411,7 +411,7 @@ namespace Epanet.Network.IO.Output {
                         if (pump.HCurve == null &&
                             pump.Ptype != PumpType.CONST_HP &&
                             pump.Kc != 1.0)
-                            this.buffer.WriteLine(" {0}\t{1}", link.Name, link.Kc);
+                            buffer.WriteLine(" {0}\t{1}", link.Name, link.Kc);
                     }
                 }
                 // Write fixed-status PRVs & PSVs (setting = MISSING)
@@ -419,7 +419,7 @@ namespace Epanet.Network.IO.Output {
                     switch (link.Status) {
                     case StatType.OPEN:
                     case StatType.CLOSED:
-                        this.buffer.WriteLine(" {0}\t{1}", link.Name, link.Status);
+                        buffer.WriteLine(" {0}\t{1}", link.Name, link.Status);
                         break;
                     }
 
@@ -427,7 +427,7 @@ namespace Epanet.Network.IO.Output {
 
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposePatterns(Network net) {
@@ -437,24 +437,24 @@ namespace Epanet.Network.IO.Output {
             if (pats.Count <= 1)
                 return;
 
-            this.buffer.WriteLine(SectType.PATTERNS.ParseStr());
-            this.buffer.WriteLine(PATTERNS_SUBTITLE);
+            buffer.WriteLine(SectType.PATTERNS.ParseStr());
+            buffer.WriteLine(PATTERNS_SUBTITLE);
 
             for (int i = 1; i < pats.Count; i++) {
                 Pattern pat = pats[i];
                 for (int j = 0; j < pats[i].Count; j++) {
                     if (j % 6 == 0)
-                        this.buffer.Write(" {0}", pat.Name);
+                        buffer.Write(" {0}", pat.Name);
 
-                    this.buffer.Write(" {0}", pat[j]);
+                    buffer.Write(" {0}", pat[j]);
 
                     if (j % 6 == 5)
-                        this.buffer.WriteLine();
+                        buffer.WriteLine();
                 }
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeCurves(Network net) {
@@ -464,16 +464,16 @@ namespace Epanet.Network.IO.Output {
             if (curves.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.CURVES.ParseStr());
-            this.buffer.WriteLine(CURVE_SUBTITLE);
+            buffer.WriteLine(SectType.CURVES.ParseStr());
+            buffer.WriteLine(CURVE_SUBTITLE);
 
             foreach (Curve curve  in  curves) {
                 foreach (var pt in curve) {
-                    this.buffer.WriteLine(" {0}\t{1}\t{2}", curve.Name, pt.X, pt.Y);
+                    buffer.WriteLine(" {0}\t{1}\t{2}", curve.Name, pt.X, pt.Y);
                 }
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeControls(Network net) {
@@ -483,7 +483,7 @@ namespace Epanet.Network.IO.Output {
             if (controls.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.CONTROLS.ParseStr());
+            buffer.WriteLine(SectType.CONTROLS.ParseStr());
 
             foreach (Control control  in  controls) {
                 // Check that controlled link exists
@@ -491,7 +491,7 @@ namespace Epanet.Network.IO.Output {
 
                 // Get text of control's link status/setting
                 if (control.Setting.IsMissing()) {
-                    this.buffer.Write(" LINK {0} {1} ", control.Link.Name, control.Status);
+                    buffer.Write(" LINK {0} {1} ", control.Link.Name, control.Status);
                 }
                 else {
                     double kc = control.Setting;
@@ -505,7 +505,7 @@ namespace Epanet.Network.IO.Output {
                         kc = fmap.RevertUnit(FieldType.FLOW, kc);
                         break;
                     }
-                    this.buffer.Write(" LINK {0} {1} ", control.Link.Name, kc);
+                    buffer.Write(" LINK {0} {1} ", control.Link.Name, kc);
                 }
 
 
@@ -520,7 +520,7 @@ namespace Epanet.Network.IO.Output {
                             : FieldType.HEAD,
                         kc);
 
-                    this.buffer.Write(
+                    buffer.Write(
                             " IF NODE {0} {1} {2}",
                             control.Node.Name,
                             control.Type.ParseStr(),
@@ -530,7 +530,7 @@ namespace Epanet.Network.IO.Output {
 
                 // Print timer control
                 case ControlType.TIMER:
-                    this.buffer.Write(
+                    buffer.Write(
                             " AT {0} {1} HOURS",
                             ControlType.TIMER.ParseStr(),
                             control.Time / 3600.0f);
@@ -539,16 +539,16 @@ namespace Epanet.Network.IO.Output {
 
                 // Print time-of-day control
                 case ControlType.TIMEOFDAY:
-                    this.buffer.Write(
+                    buffer.Write(
                             " AT {0} {1}",
                             ControlType.TIMEOFDAY.ParseStr(),
                             control.Time.GetClockTime());
 
                     break;
                 }
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeQuality(Network net) {
@@ -557,15 +557,15 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.QUALITY.ParseStr());
-            this.buffer.WriteLine(QUALITY_SUBTITLE);
+            buffer.WriteLine(SectType.QUALITY.ParseStr());
+            buffer.WriteLine(QUALITY_SUBTITLE);
 
             foreach (Node node  in  net.Nodes) {
                 if (node.C0 == 0.0) continue;
-                this.buffer.WriteLine(" {0}\t{1}", node.Name, fmap.RevertUnit(FieldType.QUALITY, node.C0));
+                buffer.WriteLine(" {0}\t{1}", node.Name, fmap.RevertUnit(FieldType.QUALITY, node.C0));
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeSource(Network net) {
@@ -573,8 +573,8 @@ namespace Epanet.Network.IO.Output {
             if (net.Nodes.Count == 0)
                 return;
 
-            this.buffer.WriteLine(SectType.SOURCES.ParseStr());
-            this.buffer.WriteLine(SOURCE_SUBTITLE);
+            buffer.WriteLine(SectType.SOURCES.ParseStr());
+            buffer.WriteLine(SOURCE_SUBTITLE);
 
 
             foreach (Node node in net.Nodes) {
@@ -582,18 +582,18 @@ namespace Epanet.Network.IO.Output {
                 if (source == null)
                     continue;
 
-                this.buffer.Write(
+                buffer.Write(
                         " {0}\t{1}\t{2}",
                         node.Name,
                         source.Type,
                         source.C0);
 
                 if (source.Pattern != null)
-                    this.buffer.Write(" " + source.Pattern.Name);
+                    buffer.Write(" " + source.Pattern.Name);
 
-                this.buffer.WriteLine();
+                buffer.WriteLine();
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
 
@@ -602,36 +602,36 @@ namespace Epanet.Network.IO.Output {
             if (!net.Tanks.Any())
                 return;
 
-            this.buffer.WriteLine(SectType.MIXING.ParseStr());
-            this.buffer.WriteLine(MIXING_SUBTITLE);
+            buffer.WriteLine(SectType.MIXING.ParseStr());
+            buffer.WriteLine(MIXING_SUBTITLE);
 
             foreach (Tank tank in net.Tanks) {
-                this.buffer.WriteLine(
+                buffer.WriteLine(
                         " {0}\t{1}\t{2}",
                         tank.Name,
                         tank.MixModel.ParseStr(),
                         tank.V1Max / tank.Vmax);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeReaction(Network net) {
             
-            this.buffer.WriteLine(SectType.REACTIONS.ParseStr());
-            this.buffer.WriteLine(REACTIONS_SUBTITLE);
+            buffer.WriteLine(SectType.REACTIONS.ParseStr());
+            buffer.WriteLine(REACTIONS_SUBTITLE);
 
-            this.buffer.WriteLine("ORDER BULK {0}", net.BulkOrder);
-            this.buffer.WriteLine("ORDER WALL {0}", net.WallOrder);
-            this.buffer.WriteLine("ORDER TANK {0}", net.TankOrder);
-            this.buffer.WriteLine("GLOBAL BULK {0}", net.KBulk * Constants.SECperDAY);
-            this.buffer.WriteLine("GLOBAL WALL {0}", net.KWall * Constants.SECperDAY);
+            buffer.WriteLine("ORDER BULK {0}", net.BulkOrder);
+            buffer.WriteLine("ORDER WALL {0}", net.WallOrder);
+            buffer.WriteLine("ORDER TANK {0}", net.TankOrder);
+            buffer.WriteLine("GLOBAL BULK {0}", net.KBulk * Constants.SECperDAY);
+            buffer.WriteLine("GLOBAL WALL {0}", net.KWall * Constants.SECperDAY);
 
             // if (net.CLimit > 0.0)
-            this.buffer.WriteLine("LIMITING POTENTIAL {0}", net.CLimit);
+            buffer.WriteLine("LIMITING POTENTIAL {0}", net.CLimit);
 
             // if (!net.RFactor.IsMissing() && net.RFactor != 0.0)
-            this.buffer.WriteLine("ROUGHNESS CORRELATION {0}", net.RFactor);
+            buffer.WriteLine("ROUGHNESS CORRELATION {0}", net.RFactor);
 
 
             foreach (Link link  in  net.Links) {
@@ -639,114 +639,114 @@ namespace Epanet.Network.IO.Output {
                     continue;
 
                 if (link.Kb != net.KBulk)
-                    this.buffer.WriteLine("BULK {0} {1}", link.Name, link.Kb * Constants.SECperDAY);
+                    buffer.WriteLine("BULK {0} {1}", link.Name, link.Kb * Constants.SECperDAY);
                 if (link.Kw != net.KWall)
-                    this.buffer.WriteLine("WALL {0} {1}", link.Name, link.Kw * Constants.SECperDAY);
+                    buffer.WriteLine("WALL {0} {1}", link.Name, link.Kw * Constants.SECperDAY);
             }
 
             foreach (Tank tank  in  net.Tanks) {
                 if (tank.Kb != net.KBulk)
-                    this.buffer.WriteLine("TANK {0} {1}", tank.Name, tank.Kb * Constants.SECperDAY);
+                    buffer.WriteLine("TANK {0} {1}", tank.Name, tank.Kb * Constants.SECperDAY);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeEnergy(Network net) {
             
-            this.buffer.WriteLine(SectType.ENERGY.ParseStr());
+            buffer.WriteLine(SectType.ENERGY.ParseStr());
 
             if (net.ECost != 0.0)
-                this.buffer.WriteLine("GLOBAL PRICE {0}", net.ECost);
+                buffer.WriteLine("GLOBAL PRICE {0}", net.ECost);
 
             if (!net.EPatId.Equals(""))
-                this.buffer.WriteLine("GLOBAL PATTERN {0}", net.EPatId);
+                buffer.WriteLine("GLOBAL PATTERN {0}", net.EPatId);
 
-            this.buffer.WriteLine("GLOBAL EFFIC {0}", net.EPump);
-            this.buffer.WriteLine("DEMAND CHARGE {0}", net.DCost);
+            buffer.WriteLine("GLOBAL EFFIC {0}", net.EPump);
+            buffer.WriteLine("DEMAND CHARGE {0}", net.DCost);
 
             foreach (Pump p  in  net.Pumps) {
                 if (p.ECost > 0.0)
-                    this.buffer.WriteLine("PUMP {0} PRICE {1}", p.Name, p.ECost);
+                    buffer.WriteLine("PUMP {0} PRICE {1}", p.Name, p.ECost);
 
                 if (p.EPat != null)
-                    this.buffer.WriteLine("PUMP {0} PATTERN {1}", p.Name, p.EPat.Name);
+                    buffer.WriteLine("PUMP {0} PATTERN {1}", p.Name, p.EPat.Name);
 
                 if (p.ECurve != null)
-                    this.buffer.WriteLine("PUMP {0} EFFIC {1}", p.Name, p.ECurve.Name);
+                    buffer.WriteLine("PUMP {0} EFFIC {1}", p.Name, p.ECurve.Name);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
 
         }
 
         private void ComposeTimes(Network net) {
             
-            this.buffer.WriteLine(SectType.TIMES.ParseStr());
-            this.buffer.WriteLine("DURATION {0}", net.Duration.GetClockTime());
-            this.buffer.WriteLine("HYDRAULIC TIMESTEP {0}", net.HStep.GetClockTime());
-            this.buffer.WriteLine("QUALITY TIMESTEP {0}", net.QStep.GetClockTime());
-            this.buffer.WriteLine("REPORT TIMESTEP {0}", net.RStep.GetClockTime());
-            this.buffer.WriteLine("REPORT START {0}", net.RStart.GetClockTime());
-            this.buffer.WriteLine("PATTERN TIMESTEP {0}", net.PStep.GetClockTime());
-            this.buffer.WriteLine("PATTERN START {0}", net.PStart.GetClockTime());
-            this.buffer.WriteLine("RULE TIMESTEP {0}", net.RuleStep.GetClockTime());
-            this.buffer.WriteLine("START CLOCKTIME {0}", net.TStart.GetClockTime());
-            this.buffer.WriteLine("STATISTIC {0}", net.TStatFlag.ParseStr());
-            this.buffer.WriteLine();
+            buffer.WriteLine(SectType.TIMES.ParseStr());
+            buffer.WriteLine("DURATION {0}", net.Duration.GetClockTime());
+            buffer.WriteLine("HYDRAULIC TIMESTEP {0}", net.HStep.GetClockTime());
+            buffer.WriteLine("QUALITY TIMESTEP {0}", net.QStep.GetClockTime());
+            buffer.WriteLine("REPORT TIMESTEP {0}", net.RStep.GetClockTime());
+            buffer.WriteLine("REPORT START {0}", net.RStart.GetClockTime());
+            buffer.WriteLine("PATTERN TIMESTEP {0}", net.PStep.GetClockTime());
+            buffer.WriteLine("PATTERN START {0}", net.PStart.GetClockTime());
+            buffer.WriteLine("RULE TIMESTEP {0}", net.RuleStep.GetClockTime());
+            buffer.WriteLine("START CLOCKTIME {0}", net.Tstart.GetClockTime());
+            buffer.WriteLine("STATISTIC {0}", net.TstatFlag.ParseStr());
+            buffer.WriteLine();
         }
 
         private void ComposeOptions(Network net) {
             
             FieldsMap fMap = net.FieldsMap;
 
-            this.buffer.WriteLine(SectType.OPTIONS.ParseStr());
-            this.buffer.WriteLine("UNITS               " + net.FlowFlag);
-            this.buffer.WriteLine("PRESSURE            " + net.PressFlag);
-            this.buffer.WriteLine("HEADLOSS            " + net.FormFlag);
+            buffer.WriteLine(SectType.OPTIONS.ParseStr());
+            buffer.WriteLine("UNITS               " + net.FlowFlag);
+            buffer.WriteLine("PRESSURE            " + net.PressFlag);
+            buffer.WriteLine("HEADLOSS            " + net.FormFlag);
 
             if (!string.IsNullOrEmpty(net.DefPatId))
-                this.buffer.WriteLine("PATTERN             " + net.DefPatId);
+                buffer.WriteLine("PATTERN             " + net.DefPatId);
 
             if (net.HydFlag == HydType.USE)
-                this.buffer.WriteLine("HYDRAULICS USE      " + net.HydFname);
+                buffer.WriteLine("HYDRAULICS USE      " + net.HydFname);
 
             if (net.HydFlag == HydType.SAVE)
-                this.buffer.WriteLine("HYDRAULICS SAVE     " + net.HydFname);
+                buffer.WriteLine("HYDRAULICS SAVE     " + net.HydFname);
 
             if (net.ExtraIter == -1)
-                this.buffer.WriteLine("UNBALANCED          STOP");
+                buffer.WriteLine("UNBALANCED          STOP");
 
             if (net.ExtraIter >= 0)
-                this.buffer.WriteLine("UNBALANCED          CONTINUE " + net.ExtraIter);
+                buffer.WriteLine("UNBALANCED          CONTINUE " + net.ExtraIter);
 
             switch (net.QualFlag) {
             case QualType.CHEM:
-                this.buffer.WriteLine("QUALITY             {0} {1}", net.ChemName, net.ChemUnits);
+                buffer.WriteLine("QUALITY             {0} {1}", net.ChemName, net.ChemUnits);
                 break;
             case QualType.TRACE:
-                this.buffer.WriteLine("QUALITY             TRACE " + net.TraceNode);
+                buffer.WriteLine("QUALITY             TRACE " + net.TraceNode);
                 break;
             case QualType.AGE:
-                this.buffer.WriteLine("QUALITY             AGE");
+                buffer.WriteLine("QUALITY             AGE");
                 break;
             case QualType.NONE:
-                this.buffer.WriteLine("QUALITY             NONE");
+                buffer.WriteLine("QUALITY             NONE");
                 break;
             }
 
-            this.buffer.WriteLine("DEMAND MULTIPLIER {0}", net.DMult);
-            this.buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / net.QExp);
-            this.buffer.WriteLine("VISCOSITY         {0}", net.Viscos / Constants.VISCOS);
-            this.buffer.WriteLine("DIFFUSIVITY       {0}", net.Diffus / Constants.DIFFUS);
-            this.buffer.WriteLine("SPECIFIC GRAVITY  {0}", net.SpGrav);
-            this.buffer.WriteLine("TRIALS            {0}", net.MaxIter);
-            this.buffer.WriteLine("ACCURACY          {0}", net.HAcc);
-            this.buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, net.Ctol));
-            this.buffer.WriteLine("CHECKFREQ         {0}", net.CheckFreq);
-            this.buffer.WriteLine("MAXCHECK          {0}", net.MaxCheck);
-            this.buffer.WriteLine("DAMPLIMIT         {0}", net.DampLimit);
-            this.buffer.WriteLine();
+            buffer.WriteLine("DEMAND MULTIPLIER {0}", net.DMult);
+            buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / net.QExp);
+            buffer.WriteLine("VISCOSITY         {0}", net.Viscos / Constants.VISCOS);
+            buffer.WriteLine("DIFFUSIVITY       {0}", net.Diffus / Constants.DIFFUS);
+            buffer.WriteLine("SPECIFIC GRAVITY  {0}", net.SpGrav);
+            buffer.WriteLine("TRIALS            {0}", net.MaxIter);
+            buffer.WriteLine("ACCURACY          {0}", net.HAcc);
+            buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, net.Ctol));
+            buffer.WriteLine("CHECKFREQ         {0}", net.CheckFreq);
+            buffer.WriteLine("MAXCHECK          {0}", net.MaxCheck);
+            buffer.WriteLine("DAMPLIMIT         {0}", net.DampLimit);
+            buffer.WriteLine();
         }
 
         private void ComposeExtraOptions(Network net) {
@@ -756,28 +756,28 @@ namespace Epanet.Network.IO.Output {
                 return;
 
             foreach(var pair in extraOptions) {
-                this.buffer.WriteLine(pair.Key + " " + pair.Value);
+                buffer.WriteLine(pair.Key + " " + pair.Value);
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeReport(Network net) {
 
-            this.buffer.WriteLine(SectType.REPORT.ParseStr());
+            buffer.WriteLine(SectType.REPORT.ParseStr());
 
             FieldsMap fMap = net.FieldsMap;
-            this.buffer.WriteLine("PAGESIZE       {0}", net.PageSize);
-            this.buffer.WriteLine("STATUS         " + net.StatFlag);
-            this.buffer.WriteLine("SUMMARY        " + (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            this.buffer.WriteLine("ENERGY         " + (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            buffer.WriteLine("PAGESIZE       {0}", net.PageSize);
+            buffer.WriteLine("STATUS         " + net.StatFlag);
+            buffer.WriteLine("SUMMARY        " + (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
+            buffer.WriteLine("ENERGY         " + (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
             switch (net.NodeFlag) {
             case ReportFlag.FALSE:
-                this.buffer.WriteLine("NODES NONE");
+                buffer.WriteLine("NODES NONE");
                 break;
             case ReportFlag.TRUE:
-                this.buffer.WriteLine("NODES ALL");
+                buffer.WriteLine("NODES ALL");
                 break;
             case ReportFlag.SOME: {
                 int j = 0;
@@ -786,11 +786,11 @@ namespace Epanet.Network.IO.Output {
                         // if (j % 5 == 0) buffer.WriteLine("NODES "); // BUG: Baseform bug
 
                         if (j % 5 == 0) {
-                            this.buffer.WriteLine();
-                            this.buffer.Write("NODES ");
+                            buffer.WriteLine();
+                            buffer.Write("NODES ");
                         }
 
-                        this.buffer.Write("{0} ", node.Name);
+                        buffer.Write("{0} ", node.Name);
                         j++;
                     }
                 }
@@ -800,10 +800,10 @@ namespace Epanet.Network.IO.Output {
 
             switch (net.LinkFlag) {
             case ReportFlag.FALSE:
-                this.buffer.WriteLine("LINKS NONE");
+                buffer.WriteLine("LINKS NONE");
                 break;
             case ReportFlag.TRUE:
-                this.buffer.WriteLine("LINKS ALL");
+                buffer.WriteLine("LINKS ALL");
                 break;
             case ReportFlag.SOME: {
                 int j = 0;
@@ -811,11 +811,11 @@ namespace Epanet.Network.IO.Output {
                     if (link.RptFlag) {
                         // if (j % 5 == 0) buffer.write("LINKS \n"); // BUG: Baseform bug
                         if (j % 5 == 0) {
-                            this.buffer.WriteLine();
-                            this.buffer.Write("LINKS ");
+                            buffer.WriteLine();
+                            buffer.Write("LINKS ");
                         }
 
-                        this.buffer.Write("{0} ", link.Name);
+                        buffer.Write("{0} ", link.Name);
                         j++;
                     }
                 }
@@ -827,45 +827,45 @@ namespace Epanet.Network.IO.Output {
                 Field f = fMap.GetField(i);
 
                 if (!f.Enabled) {
-                    this.buffer.WriteLine("{0,-19} NO", f.Name);
+                    buffer.WriteLine("{0,-19} NO", f.Name);
                     continue;
                 }
 
-                this.buffer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
+                buffer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
 
                 if (f.GetRptLim(RangeType.LOW) < Constants.BIG)
-                    this.buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(RangeType.LOW));
+                    buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(RangeType.LOW));
 
                 if (f.GetRptLim(RangeType.HI) > -Constants.BIG)
-                    this.buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(RangeType.HI));
+                    buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(RangeType.HI));
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeCoordinates(Network net) {
-            this.buffer.WriteLine(SectType.COORDINATES.ParseStr());
-            this.buffer.WriteLine(COORDINATES_SUBTITLE);
+            buffer.WriteLine(SectType.COORDINATES.ParseStr());
+            buffer.WriteLine(COORDINATES_SUBTITLE);
 
             foreach (Node node  in  net.Nodes) {
                 if (!node.Position.IsInvalid) {
-                    this.buffer.WriteLine(
+                    buffer.WriteLine(
                             " {0,-16}\t{1,-12}\t{2,-12}",
                             node.Name,
                             node.Position.X,
                             node.Position.Y);
                 }
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
 
         private void ComposeLabels(Network net) {
-            this.buffer.WriteLine(SectType.LABELS.ParseStr());
-            this.buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
+            buffer.WriteLine(SectType.LABELS.ParseStr());
+            buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
 
             foreach (Label label  in  net.Labels) {
-                this.buffer.WriteLine(
+                buffer.WriteLine(
                         " {0,-16}\t{1,-16}\t\"{2}\" {3,-16}",
                         label.Position.X,
                         label.Position.Y,
@@ -875,36 +875,36 @@ namespace Epanet.Network.IO.Output {
                     );
 
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeVertices(Network net) {
-            this.buffer.WriteLine(SectType.VERTICES.ParseStr());
-            this.buffer.WriteLine(";Link\tX-Coord\tY-Coord");
+            buffer.WriteLine(SectType.VERTICES.ParseStr());
+            buffer.WriteLine(";Link\tX-Coord\tY-Coord");
 
             foreach (Link link  in  net.Links) {
                 if (link.Vertices.Count == 0)
                     continue;
 
                 foreach (EnPoint p  in  link.Vertices) {
-                    this.buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Name, p.X, p.Y);
+                    buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Name, p.X, p.Y);
                 }
             }
 
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
 
         private void ComposeRules(Network net) {
-            this.buffer.WriteLine(SectType.RULES.ParseStr());
-            this.buffer.WriteLine();
+            buffer.WriteLine(SectType.RULES.ParseStr());
+            buffer.WriteLine();
 
             foreach (Rule r  in  net.Rules) {
-                this.buffer.WriteLine("RULE " + r.Name);
+                buffer.WriteLine("RULE " + r.Name);
                 foreach (string s  in  r.Code)
-                    this.buffer.WriteLine(s);
-                this.buffer.WriteLine();
+                    buffer.WriteLine(s);
+                buffer.WriteLine();
             }
-            this.buffer.WriteLine();
+            buffer.WriteLine();
         }
     }
 
