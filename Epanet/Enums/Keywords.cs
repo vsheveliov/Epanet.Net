@@ -15,83 +15,55 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
+using System.Reflection;
+
 namespace Epanet.Enums
 {
 
     ///<summary>Parse and report keywords.</summary>
-    public static class Keywords {
-// ReSharper disable InconsistentNaming
-        public const string s_BACKDROP = "[BACKDROP]";
-        public const string s_CONTROLS = "[CONTROLS]";
+    internal static class Keywords {
 
-        public const string s_COORDS = "[COORDINATES]";
-        public const string s_CURVES = "[CURVES]";
+        /// <summary>Retrives <see cref="KeywordAttribute"/> value from enum member.</summary>
+        /// <returns>Keyword strng on success, <see cref="string.Empty"/> otherwise.</returns>
+        public static string Keyword2<T>(this T value) where T : struct
+        {
+            FieldInfo field;
+            Type t = typeof(T);
 
-        public const string s_DEMANDS = "[DEMANDS]";
-        public const string s_EMITTERS = "[EMITTERS]";
-        public const string s_END = "[END]";
+            if (t.IsEnum
+                && (field = t.GetField(value.ToString())) != null
+                && Attribute.GetCustomAttribute(field, typeof(KeywordAttribute)) is KeywordAttribute att
+                && att.Keyword != null) {
+                return att.Keyword;
+            }
 
-        public const string s_ENERGY = "[ENERGY]";
-        public const string s_JUNCTIONS = "[JUNCTIONS]";
-        public const string s_LABELS = "[LABELS]";
-        public const string s_MIXING = "[MIXING]";
-        public const string s_OPTIONS = "[OPTIONS]";
-        public const string s_PATTERNS = "[PATTERNS]";
-        public const string s_PIPES = "[PIPES]";
-        public const string s_PUMPS = "[PUMPS]";
-        public const string s_QUALITY = "[QUALITY]";
-        public const string s_REACTIONS = "[REACTIONS]";
-        public const string s_REPORT = "[REPORT]";
-        public const string s_RESERVOIRS = "[RESERVOIRS]";
-        public const string s_ROUGHNESS = "[ROUGHNESS]";
-        public const string s_RULES = "[RULES]";
+            return string.Empty;
 
-        public const string s_SOURCES = "[SOURCES]";
-        public const string s_STATUS = "[STATUS]";
-        public const string s_TAGS = "[TAGS]";
-        public const string s_TANKS = "[TANKS]";
-        public const string s_TIMES = "[TIMES]";
-        
-        // INP sections types strings
-        //public const string s_TITLE =      "[TITL";
-        //public const string s_JUNCTIONS =  "[JUNC";
-        //public const string s_RESERVOIRS = "[RESE";
-        //public const string s_TANKS =      "[TANK";
-        //public const string s_PIPES =      "[PIPE";
-        //public const string s_PUMPS =      "[PUMP";
-        //public const string s_VALVES =     "[VALV";
-        //public const string s_CONTROLS =   "[CONT";
-        //public const string s_RULES =      "[RULE";
-        //public const string s_DEMANDS =    "[DEMA";
-        //public const string s_SOURCES =    "[SOUR";
-        //public const string s_EMITTERS =   "[EMIT";
-        //public const string s_PATTERNS =   "[PATT";
-        //public const string s_CURVES =     "[CURV";
-        //public const string s_QUALITY =    "[QUAL";
-        //public const string s_STATUS =     "[STAT";
-        //public const string s_ROUGHNESS =  "[ROUG";
-        //public const string s_ENERGY =     "[ENER";
-        //public const string s_REACTIONS =  "[REAC";
-        //public const string s_MIXING =     "[MIXI";
-        //public const string s_REPORT =     "[REPO";
-        //public const string s_TIMES =      "[TIME";
-        //public const string s_OPTIONS =    "[OPTI";
-        //public const string s_COORDS =     "[COOR";
-        //public const string s_VERTICES =   "[VERT";
-        //public const string s_LABELS =     "[LABE";
-        //public const string s_BACKDROP =   "[BACK";
-        //public const string s_TAGS =       "[TAGS";
-        //public const string s_END =        "[END";
+        }
 
-        public const string s_TITLE = "[TITLE]";
-        public const string s_VALVES = "[VALVES]";
-        public const string s_VERTICES = "[VERTICES]";
-        public const string t_ABOVE = "above";
+        /// <summary>Searches for Enum member, marked with <see cref="KeywordAttribute"/> with value <paramref name="keyword"/>.</summary>
+        /// <typeparam name="T">Enum type.</typeparam>
+        /// <param name="keyword">Value of <see cref="KeywordAttribute"/> to search.</param>
+        /// <param name="value">Recives value of Enum member found.</param>
+        /// <returns>true, if Enum member witn <paramref name="keyword"/> was found, false if not.</returns>
+        public static bool ToEnum<T>(this string keyword, out T value) where T : struct
+        {
+            Type t = typeof(T);
+
+            if (t.IsEnum)
+                foreach (FieldInfo fi in t.GetFields())
+                    if (Attribute.GetCustomAttribute(fi, typeof(KeywordAttribute)) is KeywordAttribute at)
+                        if (string.Equals(at.Keyword, keyword, StringComparison.OrdinalIgnoreCase)) {
+                            value = (T)fi.GetRawConstantValue();
+                            return true;
+                        }
+
+            value = default(T);
+            return false;
+        }
 
         public const string t_ACTIVE = "active";
-        public const string t_BACKDROP = "Backdrop";
-
-        public const string t_BELOW = "below";
         public const string t_CHEMICAL = "Chemical";
         public const string t_CLOSED = "closed";
         public const string t_CM = "Chezy-Manning";
@@ -341,10 +313,10 @@ namespace Epanet.Enums
         public const string w_UNITS = "UNIT";
         public const string w_USE = "USE";
         public const string w_VALVE = "Valve";
-        public const string w_VELOCITY = "VELO";
-        public const string w_VERIFY = "VERI";
+        // public const string w_VELOCITY = "VELO";
+        // public const string w_VERIFY = "VERI";
         public const string w_VISCOSITY = "VISC";
-        public const string w_VOLUME = "VOLU";
+        // public const string w_VOLUME = "VOLU";
         public const string w_WALL = "WALL";
         public const string w_YES = "YES";
 
@@ -365,8 +337,7 @@ namespace Epanet.Enums
         public const string wr_IS = "IS";
         public const string wr_JUNC = "Junc";
         public const string wr_LEVEL = "LEVEL";
-        public const string wr_LINK = "LINK";
-        public const string wr_NODE = "NODE";
+
         public const string wr_NOT = "NOT";
         public const string wr_OPEN = "OPEN";
         public const string wr_OR = "OR";

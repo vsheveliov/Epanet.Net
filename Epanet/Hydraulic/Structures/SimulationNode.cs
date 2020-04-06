@@ -28,52 +28,38 @@ namespace Epanet.Hydraulic.Structures {
 
 
     public class SimulationNode {
-        private readonly int _index;
-        protected readonly Node node;
-
-        ///<summary>Epanet 'H[n]' variable, node head.</summary>
-        protected double head; 
-
-        ///<summary>Epanet 'D[n]' variable, node demand.</summary>
-        protected double demand; 
-
-        ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
-        private double _emitter; 
-
         public SimulationNode(Node @ref, int idx) {
-            node = @ref;
-            _index = idx;
+            Node = @ref;
+            Index = idx;
         }
 
-        public int Index { get { return _index; } }
+        public int Index { get; }
 
-        public Node Node { get { return node; } }
+        public Node Node { get; }
 
-        public string Id { get { return node.Name; } }
+        public string Id => Node.Name;
 
-        public NodeType Type { get { return node.Type; } }
+        public NodeType Type => Node.NodeType;
 
-        public double Elevation { get { return node.Elevation; } }
+        public double Elevation => Node.Elevation;
 
-        public List<Demand> Demand { get { return node.Demands; } }
+        public List<Demand> Demand => Node.Demands;
 
-        public double Ke { get { return node.Ke; } }
+        public double Ke => Node.Ke;
 
         ///<summary>Epanet 'H[n]' variable, node head.</summary>
-        public double SimHead { get { return head; } set { head = value; } }
+        public double SimHead { get; set; }
 
         ///<summary>Epanet 'D[n]' variable, node demand.</summary>
-        public double SimDemand { get { return demand; } set { demand = value; } }
+        public double SimDemand { get; set; }
 
         ///<summary>Epanet 'E[n]' variable, emitter flows</summary>
-        public double SimEmitter { get { return _emitter; } set { _emitter = value; } }
+        public double SimEmitter { get; set; }
 
         /// <summary>Completes calculation of nodal flow imbalance (X) flow correction (F) arrays.</summary>
-        public static void ComputeNodeCoeffs(List<SimulationNode> junctions, SparseMatrix smat, LsVariables ls) {
-            foreach (SimulationNode node  in  junctions) {
-                ls.AddNodalInFlow(node, -node.demand);
-                ls.AddRhsCoeff(smat.GetRow(node.Index), +ls.GetNodalInFlow(node));
-            }
+        internal void ComputeNodeCoeff(SparseMatrix smat, LsVariables ls) {
+            ls.x[Index] -= SimDemand;
+            ls.f[smat.GetRow(Index)] += ls.x[Index];
         }
 
         /// <summary>Computes matrix coeffs. for emitters.</summary>
@@ -83,36 +69,30 @@ namespace Epanet.Hydraulic.Structures {
         /// of the junction. The headloss through this pipe is
         /// Ke*(Flow)^Qexp, where Ke = emitter headloss coeff.
         /// </remarks>
-        public static void ComputeEmitterCoeffs(
-            EpanetNetwork net,
-            List<SimulationNode> junctions,
-            SparseMatrix smat,
-            LsVariables ls) {
+        internal void ComputeEmitterCoeff(EpanetNetwork net, SparseMatrix smat, LsVariables ls)
+        {
+            if (Node.Ke.IsZero()) return;
 
-            foreach (SimulationNode node  in  junctions) {
-                if (node.Node.Ke == 0.0)
-                    continue;
+            double ke = Math.Max(Constants.CSMALL, Node.Ke);
+            double q = SimEmitter;
+            double z = ke * Math.Pow(Math.Abs(q), net.QExp);
+            double p = net.QExp * z / Math.Abs(q);
 
-                double ke = Math.Max(Constants.CSMALL, node.Node.Ke);
-                double q = node._emitter;
-                double z = ke * Math.Pow(Math.Abs(q), net.QExp);
-                double p = net.QExp * z / Math.Abs(q);
+            p = p < net.RQtol ? 1.0 / net.RQtol : 1.0 / p;
 
-                p = p < net.RQtol ? 1.0 / net.RQtol : 1.0 / p;
-
-                double y = Utilities.GetSignal(q) * z * p;
-                ls.AddAii(smat.GetRow(node.Index), +p);
-                ls.AddRhsCoeff(smat.GetRow(node.Index), +(y + p * node.Node.Elevation));
-                ls.AddNodalInFlow(node, -q);
-            }
+            double y = q.Sign() * z * p;
+            ls.aii[smat.GetRow(Index)] += p;
+            ls.f[smat.GetRow(Index)] += y + p * Node.Elevation;
+            ls.x[Index] -= q;
         }
+
 
         /// <summary>Computes flow change at an emitter node.</summary>
         public double EmitFlowChange(EpanetNetwork net) {
             double ke = Math.Max(Constants.CSMALL, Ke);
-            double p = net.QExp * ke * Math.Pow(Math.Abs(_emitter), (net.QExp - 1.0));
+            double p = net.QExp * ke * Math.Pow(Math.Abs(SimEmitter), net.QExp - 1.0);
             p = p < net.RQtol ? 1.0d / net.RQtol : 1.0d / p;
-            return (_emitter / net.QExp - p * (head - Elevation));
+            return (SimEmitter / net.QExp - p * (SimHead - Elevation));
         }
 
     }

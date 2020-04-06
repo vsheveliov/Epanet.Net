@@ -24,11 +24,13 @@ using Epanet.Enums;
 namespace Epanet.Network.Structures {
 
     ///<summary>2D graph used to map volume, pump, efficiency and head loss curves.</summary>
-    public class Curve : Element, IEnumerable<EnPoint> {
-        private readonly List<EnPoint> points = new List<EnPoint>();
+    public sealed class Curve : Element, IEnumerable<EnPoint> {
+        private readonly List<EnPoint> _points = new List<EnPoint>();
 
         public Curve(string name):base(name) { }
 
+        public override ElementType ElementType => ElementType.CURVE;
+        
         /// <summary>Computes intercept and slope of head v. flow curve at current flow.</summary>
         /// <param name="fMap"></param>
         /// <param name="q">Flow value.</param>
@@ -37,18 +39,18 @@ namespace Epanet.Network.Structures {
         public void GetCoeff(FieldsMap fMap, double q, out double h0, out double r) {
             q *= fMap.GetUnits(FieldType.FLOW);
 
-            int npts = points.Count;
+            int npts = _points.Count;
 
             var k2 = 0;
-            while (k2 < npts && points[k2].X < q) k2++;
+            while (k2 < npts && _points[k2].X < q) k2++;
 
             if (k2 == 0) k2++;
             else if (k2 == npts) k2--;
             
             int k1 = k2 - 1;
 
-            r = (points[k2].Y - points[k1].Y) / (points[k2].X - points[k1].X);
-            h0 = points[k1].Y - r * points[k1].X;
+            r = (_points[k2].Y - _points[k1].Y) / (_points[k2].X - _points[k1].X);
+            h0 = _points[k1].Y - r * _points[k1].X;
 
             h0 /= fMap.GetUnits(FieldType.HEAD);
             r *= fMap.GetUnits(FieldType.FLOW) / fMap.GetUnits(FieldType.HEAD);
@@ -58,14 +60,12 @@ namespace Epanet.Network.Structures {
         ///<summary>Curve type.</summary>
         public CurveType Type { get; set; } //TODO: parse it correctly
 
-        public List<EnPoint> Points { get { return points; } }
-
         /// <summary>Compute the linear interpolation of a 2d cartesian graph.</summary>
         /// <param name="x">The abscissa value.</param>
         /// <returns>The interpolated value.</returns>
         public double Interpolate(double x) {
-            var p = points;
-            int m = points.Count - 1;
+            var p = _points;
+            int m = _points.Count - 1;
 
             if (x <= p[0].X) return p[0].Y;
 
@@ -74,28 +74,23 @@ namespace Epanet.Network.Structures {
                     double dx = p[i].X - p[i - 1].X;
                     double dy = p[i].Y - p[i - 1].Y;
                     if (Math.Abs(dx) < Constants.TINY) return p[i].Y;
-                    else return p[i].Y - (p[i].X - x) * dy / dx;
+
+                    return p[i].Y - (p[i].X - x) * dy / dx;
                 }
             }
 
             return p[m].Y;
         }
 
-        public override ElementType ElementType {
-            get { return ElementType.Curve; }
-        }
-
         #region partial implementation of IList<EnPoint>
 
-        public void Add(double x, double y) { points.Add(new EnPoint(x, y)); }
+        public void Add(double x, double y) { _points.Add(new EnPoint(x, y)); }
 
-        IEnumerator IEnumerable.GetEnumerator() { return points.GetEnumerator(); }
-        public IEnumerator<EnPoint> GetEnumerator() { return points.GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() { return _points.GetEnumerator(); }
+        public IEnumerator<EnPoint> GetEnumerator() { return _points.GetEnumerator(); }
         
-        public int Count { get { return points.Count; } }
-        public EnPoint this[int index] {
-            get { return points[index]; }
-        }
+        public int Count => _points.Count;
+        public EnPoint this[int index] => _points[index];
 
         #endregion
 

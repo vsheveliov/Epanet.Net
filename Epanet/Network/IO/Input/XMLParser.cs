@@ -22,7 +22,6 @@ using System.Xml;
 
 using Epanet.Enums;
 using Epanet.Network.Structures;
-using Epanet.Util;
 
 namespace Epanet.Network.IO.Input {
 
@@ -75,10 +74,6 @@ namespace Epanet.Network.IO.Input {
 
                     using (_reader = XmlReader.Create(stream, settings)) {
                         _reader.ReadToFollowing("network");
-                        // this.reader.Read(); // skip "network"
-                        // this.reader.MoveToContent(); // If that node is whitespace, skip to content.
-
-
 
                         while (_reader.Read()) {
                             if (_reader.NodeType != XmlNodeType.Element || _reader.IsEmptyElement)
@@ -95,85 +90,122 @@ namespace Epanet.Network.IO.Input {
                             var r = _reader.ReadSubtree();
 
                             switch (_sectionType) {
-                            case SectType.TITLE:
-                                ParseTitle(r);
-                                break;
+                                case SectType.TITLE:
+                                    ParseTitle(r);
+                                    break;
 
-                            case SectType.JUNCTIONS:
-                                ParseJunction(r);
-                                break;
+                                case SectType.JUNCTIONS:
+                                    ParseJunction(r);
+                                    break;
 
-                            case SectType.RESERVOIRS:
-                            case SectType.TANKS:
-                                ParseTank(r);
-                                break;
+                                case SectType.RESERVOIRS:
+                                    ParseReservoir(r);
+                                    break;
 
-                            case SectType.PIPES:
-                                ParsePipe(r);
-                                break;
-                            case SectType.PUMPS:
-                                ParsePump(r);
-                                break;
-                            case SectType.VALVES:
-                                ParseValve(r);
-                                break;
-                            case SectType.CONTROLS:
-                                ParseControl(r);
-                                break;
+                                case SectType.TANKS:
+                                    ParseTank(r);
+                                    break;
 
-                            case SectType.RULES:
-                                ParseRule(r);
-                                break;
+                                case SectType.PIPES:
+                                    ParsePipe(r);
+                                    break;
 
-                            case SectType.DEMANDS:
-                                ParseDemand(r);
-                                break;
-                            case SectType.SOURCES:
-                                ParseSource(r);
-                                break;
-                            case SectType.EMITTERS:
-                                ParseEmitter(r);
-                                break;
-                            case SectType.QUALITY:
-                                ParseQuality(r);
-                                break;
-                            case SectType.STATUS:
-                                ParseStatus(r);
-                                break;
-                            case SectType.ENERGY:
-                                ParseEnergy(r);
-                                break;
-                            case SectType.REACTIONS:
-                                ParseReact(r);
-                                break;
-                            case SectType.MIXING:
-                                ParseMixing(r);
-                                break;
-                            case SectType.REPORT:
-                                ParseReport(r);
-                                break;
-                            case SectType.TIMES:
-                                ParseTime(r);
-                                break;
-                            case SectType.OPTIONS:
-                                ParseOption(r);
-                                break;
-                            case SectType.COORDINATES:
-                                ParseCoordinate(r);
-                                break;
-                            case SectType.VERTICES:
-                                ParseVertice(r);
-                                break;
-                            case SectType.LABELS:
-                                ParseLabel(r);
-                                break;
+                                case SectType.PUMPS:
+                                    ParsePump(r);
+                                    break;
+
+                                case SectType.VALVES:
+                                    ParseValve(r);
+                                    break;
+
+                                case SectType.CONTROLS:
+                                    ParseControl(r);
+                                    break;
+
+                                case SectType.RULES:
+                                    ParseRule(r);
+                                    break;
+
+                                case SectType.DEMANDS:
+                                    ParseDemand(r);
+                                    break;
+
+                                case SectType.SOURCES:
+                                    ParseSource(r);
+                                    break;
+
+                                case SectType.EMITTERS:
+                                    ParseEmitter(r);
+                                    break;
+
+                                case SectType.PATTERNS:
+                                case SectType.CURVES:
+                                    break;
+
+                                case SectType.QUALITY:
+                                    ParseQuality(r);
+                                    break;
+
+                                case SectType.STATUS:
+                                    ParseStatus(r);
+                                    break;
+
+                                case SectType.ROUGHNESS:
+                                    // TODO add ParseRoughness 
+                                    break;
+
+                                case SectType.ENERGY:
+                                    ParseEnergy(r);
+                                    break;
+
+                                case SectType.REACTIONS:
+                                    ParseReact(r);
+                                    break;
+
+                                case SectType.MIXING:
+                                    ParseMixing(r);
+                                    break;
+
+                                case SectType.REPORT:
+                                    ParseReport(r);
+                                    break;
+
+                                case SectType.TIMES:
+                                    ParseTime(r);
+                                    break;
+
+                                case SectType.OPTIONS:
+                                    ParseOption(r);
+                                    break;
+
+                                case SectType.COORDINATES:
+                                    ParseCoordinate(r);
+                                    break;
+
+                                case SectType.VERTICES:
+                                    ParseVertice(r);
+                                    break;
+
+                                case SectType.LABELS:
+                                    ParseLabel(r);
+                                    break;
+
+                                case SectType.BACKDROP:
+                                // TODO add ParseRoughness 
+                                    break;
+
+                                case SectType.TAGS:
+
+                                case SectType.END:
+                                    break;
+                                // TODO add etc
                             }
                         }
                     }
                 }
             }
             catch (IOException) {
-                throw new ENException(ErrorCode.Err302);
+                throw new EnException(ErrorCode.Err302);
             }
 
             return net;
@@ -190,71 +222,369 @@ namespace Epanet.Network.IO.Input {
         }
 
         private void ParseJunction(XmlReader r) {
-            while (r.ReadToFollowing("node")) {
-                
-                Node node = new Node(r.GetAttribute("name"));
+            if (!r.ReadToDescendant("node"))
+                return;
 
-                try {
-                    node.Elevation = XmlConvert.ToDouble(r.GetAttribute("elevation") ?? "0");
-                }
-                catch (ArgumentException) {
-                    LogException(ErrorCode.Err202, r.ReadOuterXml());
-                }
+            // while (r.ReadToFollowing("node"))
 
+            do {
+                string name = r.GetAttribute("name");
 
-                try {
-                    node.Position = new EnPoint(
-                        XmlConvert.ToDouble(r.GetAttribute("x") ?? "0"),
-                        XmlConvert.ToDouble(r.GetAttribute("y") ?? "0"));
-                }
-                catch(ArgumentException) {
-                    LogException(ErrorCode.Err202, r.ReadOuterXml());
-                }
-
-                using(var rr = r.ReadSubtree()) {
-                    rr.Read();
-                    while(rr.Read()) {
-                        switch(rr.NodeType) {
-                        case XmlNodeType.Element:
-
-                        if(rr.Name.Equals("demand", StringComparison.Ordinal)) {
-
-                            string sx = rr.GetAttribute("base") ?? string.Empty;
-                            string sy = rr.GetAttribute("pattern") ?? string.Empty;
-
-                            try {
-                                // cur.Add(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
-                            }
-                            catch(FormatException) {
-                                LogException(ErrorCode.Err202, rr.ReadInnerXml());
-                            }
-                        }
-
-                        break;
-
-                        case XmlNodeType.Comment:
-                        node.Comment = rr.Value;
-                        break;
-                        }
-                    }
-                }
-
-
-
-
+                Node node = new Junction(name);
 
                 try {
                     net.Nodes.Add(node);
                 }
-                catch(ArgumentException) {
-                    LogException(ErrorCode.Err215, node.Name);
+                catch (ArgumentException) {
+                    LogException(ErrorCode.Err215, name);
+                    continue;
+                }
+
+                string el = r.GetAttribute("elevation");
+
+                if (string.IsNullOrEmpty(el)) {
+                    LogException(ErrorCode.Err201, r.Value);
+                    continue;
+                }
+
+                try {
+                    node.Elevation = XmlConvert.ToDouble(el);
+                }
+                catch (FormatException) {
+                    LogException(ErrorCode.Err202, name);
+                    continue;
+                }
+
+                string sx = r.GetAttribute("x");
+                string sy = r.GetAttribute("y");
+
+                if (!string.IsNullOrEmpty(sx) && !string.IsNullOrEmpty(sy)) {
+                    try {
+                        node.Coordinate = new EnPoint(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
+                    }
+                    catch (FormatException) {
+                        LogException(ErrorCode.Err202, node.Name);
+                        continue;
+                    }
                 }
 
 
-            }
+                using (var rr = r.ReadSubtree()) {
+
+                    rr.Read();
+
+                    while (rr.Read()) {
+                        switch (rr.NodeType) {
+                            case XmlNodeType.Element:
+
+                                if (rr.Name.Equals("demand", StringComparison.Ordinal)) {
+                                    string att = rr.GetAttribute("base");
+
+                                    if (!string.IsNullOrEmpty(att)) {
+                                        try {
+                                            node.PrimaryDemand.Base = XmlConvert.ToDouble(att.Trim());
+                                        }
+                                        catch (FormatException) {
+                                            LogException(ErrorCode.Err202, name);
+                                            continue;
+                                        }
+                                    }
+
+                                    att = rr.GetAttribute("pattern");
+
+                                    if (!string.IsNullOrEmpty(att)) {
+                                        Pattern p = net.GetPattern(att.Trim());
+                                        if (p == null) {
+                                            LogException(ErrorCode.Err205, name);
+                                            continue;
+                                        }
+
+                                        node.PrimaryDemand.Pattern = p;
+                                    }
+
+                                }
+                                else if (rr.Name.Equals("tag", StringComparison.Ordinal)) {
+                                    string s = rr.ReadString();
+                                    if (!string.IsNullOrEmpty(s)) node.Tag = s.Trim();
+                                }
+
+                                break;
+
+                            case XmlNodeType.Comment:
+                                node.Comment = rr.Value;
+                                break;
+                        }
+                    }
+                }
+
+            } while (r.ReadToNextSibling("node"));
         }
 
-        private void ParseTank(XmlReader r) { throw new NotImplementedException(); }
+        private void ParseReservoir(XmlReader r) {
+
+            if (!r.ReadToDescendant("node"))
+                return;
+
+            // while (r.ReadToFollowing("node"))
+
+            do
+            {
+                string name = r.GetAttribute("name");
+
+                Tank node = new Tank(name);
+
+                try
+                {
+                    net.Nodes.Add(node);
+                }
+                catch (ArgumentException)
+                {
+                    LogException(ErrorCode.Err215, name);
+                    continue;
+                }
+
+                string el = r.GetAttribute("elevation");
+                
+                if (string.IsNullOrEmpty(el))
+                {
+                    LogException(ErrorCode.Err201, r.Value);
+                    continue;
+                }
+
+                try
+                {
+                    node.Elevation = XmlConvert.ToDouble(el);
+                }
+                catch (FormatException)
+                {
+                    LogException(ErrorCode.Err202, name);
+                    continue;
+                }
+
+
+                string pattern = r.GetAttribute("pattern");
+
+                if(!string.IsNullOrEmpty(pattern)) {
+                    Pattern p = net.GetPattern(pattern.Trim());
+                    if(p == null) {
+                        LogException(ErrorCode.Err205, name);
+                        continue;
+                    }
+
+                    node.Pattern = p;
+                }
+
+                string sx = r.GetAttribute("x");
+                string sy = r.GetAttribute("y");
+
+                if (!string.IsNullOrEmpty(sx) && !string.IsNullOrEmpty(sy))
+                {
+                    try
+                    {
+                        node.Coordinate = new EnPoint(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
+                    }
+                    catch (FormatException)
+                    {
+                        LogException(ErrorCode.Err202, node.Name);
+                        continue;
+                    }
+                }
+
+
+                using (var rr = r.ReadSubtree())
+                {
+
+                    rr.Read();
+
+                    while (rr.Read())
+                    {
+                        switch (rr.NodeType)
+                        {
+                            case XmlNodeType.Element:
+
+                                if (rr.Name.Equals("demand", StringComparison.Ordinal))
+                                {
+                                    string att = rr.GetAttribute("base");
+
+                                    if (!string.IsNullOrEmpty(att))
+                                    {
+                                        try
+                                        {
+                                            node.PrimaryDemand.Base = XmlConvert.ToDouble(att.Trim());
+                                        }
+                                        catch (FormatException)
+                                        {
+                                            LogException(ErrorCode.Err202, name);
+                                            continue;
+                                        }
+                                    }
+
+                                    att = rr.GetAttribute("pattern");
+
+                                    if (!string.IsNullOrEmpty(att))
+                                    {
+                                        Pattern p = net.GetPattern(att.Trim());
+                                        if (p == null)
+                                        {
+                                            LogException(ErrorCode.Err205, name);
+                                            continue;
+                                        }
+
+                                        node.PrimaryDemand.Pattern = p;
+                                    }
+
+                                }
+                                else if (rr.Name.Equals("tag", StringComparison.Ordinal))
+                                {
+                                    string s = rr.ReadString();
+                                    if (!string.IsNullOrEmpty(s)) node.Tag = s.Trim();
+                                }
+
+                                break;
+
+                            case XmlNodeType.Comment:
+                                node.Comment = rr.Value;
+                                break;
+                        }
+                    }
+                }
+
+            } while (r.ReadToNextSibling("node"));
+            
+        }
+
+        private void ParseTank(XmlReader r) {
+
+            if (!r.ReadToDescendant("node"))
+                return;
+
+            // while (r.ReadToFollowing("node"))
+
+            do
+            {
+                string name = r.GetAttribute("name");
+
+                Tank node = new Tank(name);
+
+                try
+                {
+                    net.Nodes.Add(node);
+                }
+                catch (ArgumentException)
+                {
+                    LogException(ErrorCode.Err215, name);
+                    continue;
+                }
+
+                string el = r.GetAttribute("elevation");
+
+
+
+                if (string.IsNullOrEmpty(el))
+                { 
+                    // Reservour
+                    string pattern = r.GetAttribute("pattern");
+
+                    if (!string.IsNullOrEmpty(pattern)) {
+                        // TODO
+                    }
+
+
+                }
+                else {
+                    // Tank
+                    // TODO
+                }
+
+
+                try
+                {
+                    node.Elevation = XmlConvert.ToDouble(el);
+                }
+                catch (FormatException)
+                {
+                    LogException(ErrorCode.Err202, name);
+                    continue;
+                }
+
+                string sx = r.GetAttribute("x");
+                string sy = r.GetAttribute("y");
+
+                if (!string.IsNullOrEmpty(sx) && !string.IsNullOrEmpty(sy))
+                {
+                    try
+                    {
+                        node.Coordinate = new EnPoint(XmlConvert.ToDouble(sx), XmlConvert.ToDouble(sy));
+                    }
+                    catch (FormatException)
+                    {
+                        LogException(ErrorCode.Err202, node.Name);
+                        continue;
+                    }
+                }
+
+
+                using (var rr = r.ReadSubtree())
+                {
+
+                    rr.Read();
+
+                    while (rr.Read())
+                    {
+                        switch (rr.NodeType)
+                        {
+                            case XmlNodeType.Element:
+
+                                if (rr.Name.Equals("demand", StringComparison.Ordinal))
+                                {
+                                    string att = rr.GetAttribute("base");
+
+                                    if (!string.IsNullOrEmpty(att))
+                                    {
+                                        try
+                                        {
+                                            node.PrimaryDemand.Base = XmlConvert.ToDouble(att.Trim());
+                                        }
+                                        catch (FormatException)
+                                        {
+                                            LogException(ErrorCode.Err202, name);
+                                            continue;
+                                        }
+                                    }
+
+                                    att = rr.GetAttribute("pattern");
+
+                                    if (!string.IsNullOrEmpty(att))
+                                    {
+                                        Pattern p = net.GetPattern(att.Trim());
+                                        if (p == null)
+                                        {
+                                            LogException(ErrorCode.Err205, name);
+                                            continue;
+                                        }
+
+                                        node.PrimaryDemand.Pattern = p;
+                                    }
+
+                                }
+                                else if (rr.Name.Equals("tag", StringComparison.Ordinal))
+                                {
+                                    string s = rr.ReadString();
+                                    if (!string.IsNullOrEmpty(s)) node.Tag = s.Trim();
+                                }
+
+                                break;
+
+                            case XmlNodeType.Comment:
+                                node.Comment = rr.Value;
+                                break;
+                        }
+                    }
+                }
+
+            } while (r.ReadToNextSibling("node"));
+
+        }
 
         private void ParsePipe(XmlReader r) { throw new NotImplementedException(); }
 
@@ -327,7 +657,7 @@ namespace Epanet.Network.IO.Input {
             }
 
             if(errors.Count > 0)
-                throw new ENException(ErrorCode.Err200);
+                throw new EnException(ErrorCode.Err200);
 
         }
 
@@ -340,7 +670,7 @@ namespace Epanet.Network.IO.Input {
                 if (r.IsEmptyElement) 
                     continue;
 
-                string name = r.GetAttribute("name"); // this.reader["name"];
+                string name = r.GetAttribute("name"); 
 
                 if (string.IsNullOrEmpty(name))
                     continue;
@@ -395,7 +725,7 @@ namespace Epanet.Network.IO.Input {
                 if(r.IsEmptyElement)
                     continue;
 
-                string name = r.GetAttribute("name"); // this.reader["name"];
+                string name = r.GetAttribute("name"); 
 
                 if(string.IsNullOrEmpty(name))
                     continue;

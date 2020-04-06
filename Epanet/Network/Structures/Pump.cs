@@ -15,24 +15,52 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
+
 using Epanet.Enums;
 
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic pump structure.</summary>
     public class Pump:Link {
-        ///<summary>Energy usage statistics.</summary>
-        private readonly double[] _energy = {0, 0, 0, 0, 0, 0};
-
         public Pump(string name):base(name) {
             // Link attributes
             Kc = 1.0;
-            Type = LinkType.PUMP;
             Status = StatType.OPEN;
             
             // Pump attributes
             Ptype = PumpType.NOCURVE;
         }
+
+        public override LinkType LinkType => LinkType.PUMP;
+
+        public override void InitResistance(FormType formflag, double hexp) {
+            FlowResistance = Constants.CBIG;
+        }
+
+        public override void ConvertUnits(Network nw) {
+            FieldsMap fMap = nw.FieldsMap;
+
+            if(Ptype == PumpType.CONST_HP) {
+                if(nw.UnitsFlag == UnitsType.SI)
+                    FlowCoefficient /= fMap.GetUnits(FieldType.POWER);
+            }
+            else {
+                if(Ptype == PumpType.POWER_FUNC) {
+                    H0 /= fMap.GetUnits(FieldType.HEAD);
+
+                    FlowCoefficient *=
+                                           Math.Pow(fMap.GetUnits(FieldType.FLOW), N) /
+                                           fMap.GetUnits(FieldType.HEAD);
+                }
+
+                Q0 /= fMap.GetUnits(FieldType.FLOW);
+                Qmax /= fMap.GetUnits(FieldType.FLOW);
+                Hmax /= fMap.GetUnits(FieldType.HEAD);
+            }
+                        
+        }
+
 
         ///<summary>Unit energy cost.</summary>
         public double ECost { get; set; }
@@ -40,7 +68,8 @@ namespace Epanet.Network.Structures {
         ///<summary>Effic. v. flow curve reference.</summary>
         public Curve ECurve { get; set; }
 
-        public double[] Energy { get { return _energy; } }
+        ///<summary>Energy usage statistics.</summary>
+        public double[] Energy { get; } = {0, 0, 0, 0, 0, 0};
 
         ///<summary>Energy cost pattern.</summary>
         public Pattern EPat { get; set; }
@@ -118,6 +147,10 @@ namespace Epanet.Network.Structures {
 
 
 #endif
+
+        
+
+        
     }
 
 }

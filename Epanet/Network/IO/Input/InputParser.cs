@@ -18,7 +18,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 
 using Epanet.Enums;
@@ -35,15 +34,15 @@ namespace Epanet.Network.IO.Input {
 
         ///<summary>Reference to the error logger.</summary>
         protected readonly TraceSource log = new TraceSource("epanet", SourceLevels.All);
-        protected readonly List<ENException> errors = new List<ENException>();
+        protected readonly List<EnException> errors = new List<EnException>();
 
-        protected void LogException(ENException ex) {
+        protected void LogException(EnException ex) {
             errors.Add(ex);
             
             log.Error(ex);
 
             if(errors.Count > Constants.MAXERRS)
-                throw new ENException(ErrorCode.Err200);
+                throw new EnException(ErrorCode.Err200);
         }
 
         public static InputParser Create(FileType type) {
@@ -66,21 +65,20 @@ namespace Epanet.Network.IO.Input {
         
         /// <summary>
         ///     Parses string S into N tokens stored in T.
-        ///     Words between " " are stored 7as a single token.
+        ///     Words between " " are stored as a single token.
         ///     Characters to right of ';' are ignored.
         /// </summary>
-        protected static int Tokenize(string stringToSplit, List<string> results) {
+        protected static int GetTokens(string stringToSplit, List<string> results) {
             // const string SEPARATORS = " \t,\r\n";
             // char[] SEPARATORS = { ' ', '\t', ',', '\r', '\n' };
 
             if(results == null)
-                throw new ArgumentNullException("results");
+                throw new ArgumentNullException(nameof(results));
 
             bool inQuote = false;
             var tok = new StringBuilder(Constants.MAXLINE);
 
             results.Clear();
-
 
             foreach (char c in stringToSplit) {
                 if (c == ';')
@@ -131,18 +129,18 @@ namespace Epanet.Network.IO.Input {
         ///<summary>Adjust simulation configurations.</summary>
         protected static void AdjustData(Network net) {
             
-            if (net.PStep <= 0) net.PStep = 3600;
-            if (net.RStep == 0) net.RStep = net.PStep;
-            if (net.HStep <= 0) net.HStep = 3600;
+            if (net.PStep.Ticks <= 0) net.PStep = TimeSpan.FromHours(1);
+            if(net.RStep.IsZero()) net.RStep = net.PStep;
+            if (net.HStep.Ticks <= 0) net.HStep = TimeSpan.FromHours(1);
             if (net.HStep > net.PStep) net.HStep = net.PStep;
             if (net.HStep > net.RStep) net.HStep = net.RStep;
-            if (net.RStart > net.Duration) net.RStart = 0;
-            if (net.Duration == 0) net.QualFlag = QualType.NONE;
-            if (net.QStep == 0) net.QStep = net.HStep / 10;
-            if (net.RuleStep == 0) net.RuleStep = net.HStep / 10;
+            if (net.RStart > net.Duration) net.RStart = TimeSpan.Zero;
+            if (net.Duration.IsZero()) net.QualFlag = QualType.NONE;
+            if (net.QStep.IsZero()) net.QStep = new TimeSpan(net.HStep.Ticks / 10);
+            if (net.RuleStep.IsZero()) net.RuleStep = new TimeSpan(net.HStep.Ticks / 10);
 
-            net.RuleStep = Math.Min(net.RuleStep, net.HStep);
-            net.QStep = Math.Min(net.QStep, net.HStep);
+            net.RuleStep = new TimeSpan(Math.Min(net.RuleStep.Ticks, net.HStep.Ticks));
+            net.QStep = new TimeSpan(Math.Min(net.QStep.Ticks, net.HStep.Ticks));
 
             if (double.IsNaN(net.Ctol)) {
                 net.Ctol = net.QualFlag == QualType.AGE ? Constants.AGETOL : Constants.CHEMTOL;
@@ -192,26 +190,31 @@ namespace Epanet.Network.IO.Input {
             double kbulk = net.KBulk;
 
             foreach (Link link  in  net.Links) {
-                if (link.Type > LinkType.PIPE)
+                if (link.LinkType > LinkType.PIPE)
                     continue;
 
                 if (double.IsNaN(link.Kb))
                     link.Kb = kbulk;
 
-                if (double.IsNaN(link.Kw)) {
-                    if (rfactor == 0.0)
-                        link.Kw = net.KWall;
-                    else if ((link.Kc > 0.0) && (link.Diameter > 0.0)) {
-                        if (formFlag == FormType.HW)
+                if (!double.IsNaN(link.Kw)) continue;
+
+                if (rfactor.IsZero())
+                    link.Kw = net.KWall;
+                else if (link.Kc > 0.0 && link.Diameter > 0.0) {
+                    switch (formFlag) {
+                        case FormType.HW:
                             link.Kw = rfactor / link.Kc;
-                        if (formFlag == FormType.DW)
+                            break;
+                        case FormType.DW:
                             link.Kw = rfactor / Math.Abs(Math.Log(link.Kc / link.Diameter));
-                        if (formFlag == FormType.CM)
+                            break;
+                        case FormType.CM:
                             link.Kw = rfactor * link.Kc;
+                            break;
                     }
-                    else
-                        link.Kw = 0.0;
                 }
+                else
+                    link.Kw = 0.0;
             }
 
             foreach (Tank tank  in  net.Tanks)
@@ -225,8 +228,8 @@ namespace Epanet.Network.IO.Input {
                     node.Demands.Add(node.PrimaryDemand);
 
                 foreach (Demand d  in  node.Demands) {
-                    if (d.pattern == null)
-                        d.pattern = defpat;
+                    if (d.Pattern == null)
+                        d.Pattern = defpat;
                 }
             }
 
@@ -257,7 +260,7 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (levelerr != 0) {
-                    throw new ENException(ErrorCode.Err225, tank.Name);
+                    throw new EnException(ErrorCode.Err225, tank.Name);
                 }
 
                 if (curv != null) {
@@ -274,136 +277,26 @@ namespace Epanet.Network.IO.Input {
         }
 
         ///<summary>Convert hydraulic structures values from user units to simulation system units.</summary>
-        /// <param name="net">Hydraulic network reference.</param>
-        private static void ConvertUnits(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        /// <param name="nw">Hydraulic network reference.</param>
+        private static void ConvertUnits(Network nw) {
+            FieldsMap fMap = nw.FieldsMap;
             
-            foreach (Node node  in  net.Nodes) {
-                node.Elevation /= fMap.GetUnits(FieldType.ELEV);
-                node.C0 /= fMap.GetUnits(FieldType.QUALITY);
-            }
-
-
-            foreach (Node node  in  net.Junctions) {
-                foreach (Demand d  in  node.Demands) {
-                    d.Base /= fMap.GetUnits(FieldType.DEMAND);
-                }
-            }
-
-
-            double ucf = Math.Pow(fMap.GetUnits(FieldType.FLOW), net.QExp)
-                         / fMap.GetUnits(FieldType.PRESSURE);
-
-            foreach (Node node  in  net.Junctions) {
-                if (node.Ke > 0.0)
-                    node.Ke = ucf / Math.Pow(node.Ke, net.QExp);
-            }
-
-
-            // FIXME:Tanks and reservoirs here?
-            // foreach (var res in net.Reservoirs) res.H0 = res.Elevation + res.H0 / fMap.GetUnits(FieldType.ELEV);
-
-            foreach (Tank tk  in  net.Nodes.OfType<Tank>()) {
-                tk.H0 = tk.Elevation + tk.H0 / fMap.GetUnits(FieldType.ELEV);
-                tk.Hmin = tk.Elevation + tk.Hmin / fMap.GetUnits(FieldType.ELEV);
-                tk.Hmax = tk.Elevation + tk.Hmax / fMap.GetUnits(FieldType.ELEV);
-                tk.Area = Math.PI * Math.Pow(tk.Area / fMap.GetUnits(FieldType.ELEV), 2) / 4.0;
-                tk.V0 /= fMap.GetUnits(FieldType.VOLUME);
-                tk.Vmin /= fMap.GetUnits(FieldType.VOLUME);
-                tk.Vmax /= fMap.GetUnits(FieldType.VOLUME);
-                tk.Kb /= Constants.SECperDAY;
-                // tk.Volume = tk.V0;
-                tk.C = tk.C0;
-                tk.V1Max *= tk.Vmax;
+            foreach (Node node  in  nw.Nodes) {
+                node.ConvertUnits(nw);
             }
             
-            net.CLimit /= fMap.GetUnits(FieldType.QUALITY);
-            net.Ctol /= fMap.GetUnits(FieldType.QUALITY);
+            nw.CLimit /= fMap.GetUnits(FieldType.QUALITY);
+            nw.Ctol /= fMap.GetUnits(FieldType.QUALITY);
+            nw.KBulk /= Constants.SECperDAY;
+            nw.KWall /= Constants.SECperDAY;
 
-            net.KBulk /= Constants.SECperDAY;
-            net.KWall /= Constants.SECperDAY;
-
-            foreach (Link link  in  net.Links) {
-                switch (link.Type) {
-                case LinkType.CV:
-                case LinkType.PIPE:
-                    if (net.FormFlag == FormType.DW)
-                        link.Kc /= 1000.0 * fMap.GetUnits(FieldType.ELEV);
-
-                    link.Diameter /= fMap.GetUnits(FieldType.DIAM);
-                    link.Lenght /= fMap.GetUnits(FieldType.LENGTH);
-
-                    link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
-
-                    link.Kb /= Constants.SECperDAY;
-                    link.Kw /= Constants.SECperDAY;
-                    break;
-
-                case LinkType.PUMP:
-                    Pump pump = (Pump)link;
-
-                    if (pump.Ptype == PumpType.CONST_HP) {
-                        if (net.UnitsFlag == UnitsType.SI)
-                            pump.FlowCoefficient /= fMap.GetUnits(FieldType.POWER);
-                    }
-                    else {
-                        if (pump.Ptype == PumpType.POWER_FUNC) {
-                            pump.H0 /= fMap.GetUnits(FieldType.HEAD);
-
-                            pump.FlowCoefficient *=
-                                                   Math.Pow(fMap.GetUnits(FieldType.FLOW), pump.N) /
-                                                   fMap.GetUnits(FieldType.HEAD);
-                        }
-
-                        pump.Q0 /= fMap.GetUnits(FieldType.FLOW);
-                        pump.Qmax /= fMap.GetUnits(FieldType.FLOW);
-                        pump.Hmax /= fMap.GetUnits(FieldType.HEAD);
-                    }
-                    break;
-
-                default:
-                    link.Diameter /= fMap.GetUnits(FieldType.DIAM);
-                    link.Km = 0.02517 * link.Km / Math.Pow(link.Diameter, 2) / Math.Pow(link.Diameter, 2);
-                   
-                    if (!double.IsNaN(link.Kc))
-                        switch (link.Type) {
-                        case LinkType.FCV:
-                            link.Kc /= fMap.GetUnits(FieldType.FLOW);
-                            break;
-                        case LinkType.PRV:
-                        case LinkType.PSV:
-                        case LinkType.PBV:
-                            link.Kc /= fMap.GetUnits(FieldType.PRESSURE);
-                            break;
-                        }
-
-                    break;
-                }
-
-                link.InitResistance(net.FormFlag, net.HExp);
+            foreach (Link link  in  nw.Links) {
+                link.ConvertUnits(nw);
+                link.InitResistance(nw.FormFlag, nw.HExp);
             }
 
-            foreach (Control ctl  in  net.Controls) {
-
-
-                if (ctl.Link == null) continue;
-                if (ctl.Node != null) {
-                    ctl.Grade = ctl.Node.Type == NodeType.JUNC
-                        ? ctl.Node.Elevation + ctl.Grade / fMap.GetUnits(FieldType.PRESSURE)
-                        : ctl.Node.Elevation + ctl.Grade / fMap.GetUnits(FieldType.ELEV);
-                }
-
-                if (!double.IsNaN(ctl.Setting))
-                    switch (ctl.Link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                        ctl.Setting /= fMap.GetUnits(FieldType.PRESSURE);
-                        break;
-                    case LinkType.FCV:
-                        ctl.Setting /= fMap.GetUnits(FieldType.FLOW);
-                        break;
-                    }
+            foreach (Control ctl  in  nw.Controls) {
+                ctl.ConvertUnits(nw);
             }
         }
 
@@ -428,7 +321,7 @@ namespace Epanet.Network.IO.Input {
                         // Set parameters for pump curves
                         Curve curve = pump.HCurve;
                         if (curve == null)
-                            throw new ENException(ErrorCode.Err226, pump.Name);
+                            throw new EnException(ErrorCode.Err226, pump.Name);
 
                         int n = curve.Count;
 
@@ -441,7 +334,7 @@ namespace Epanet.Network.IO.Input {
                             q2 = 2.0 * q1;
                             h2 = 0.0;
                         }
-                        else if (n == 3 && curve[0].X == 0.0) {
+                        else if (n == 3 && curve[0].X.IsZero()) {
                             pump.Ptype = PumpType.POWER_FUNC;
                             h0 = curve[0].Y;
                             q1 = curve[1].X;
@@ -454,9 +347,8 @@ namespace Epanet.Network.IO.Input {
 
                         // Compute shape factors & limits of power function pump curves
                         if (pump.Ptype == PumpType.POWER_FUNC) {
-                            double a, b, c;
-                            if (!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                                throw new ENException(ErrorCode.Err227, pump.Name);
+                            if (!GetPowerCurve(h0, h1, h2, q1, q2, out double a, out double b, out double c))
+                                throw new EnException(ErrorCode.Err227, pump.Name);
 
 
                             pump.H0 = -a;
@@ -477,7 +369,7 @@ namespace Epanet.Network.IO.Input {
                     for(int i = 1; i < curve.Count; i++) {
                         // Check for invalid curve
                         if(curve[i].Y >= curve[i - 1].Y) {
-                            throw new ENException(ErrorCode.Err227, pump.Name);
+                            throw new EnException(ErrorCode.Err227, pump.Name);
                         }
                     }
 
@@ -510,7 +402,7 @@ namespace Epanet.Network.IO.Input {
 
             foreach (Node node in nodes) {
                 if (!marked[node]) {
-                    LogException(new ENException(ErrorCode.Err233, node.Name));
+                    LogException(new EnException(ErrorCode.Err233, node.Name));
                 }
             }
 
@@ -554,45 +446,45 @@ namespace Epanet.Network.IO.Input {
         /// <param name="j1">upstream node</param>
         /// <param name="j2">downstream node</param>
         /// <returns>returns true for legal connection, false otherwise</returns>
-        protected static bool Valvecheck(Network net, LinkType type, Node j1, Node j2) {
+        protected static bool Valvecheck(Network net, ValveType type, Node j1, Node j2) {
             // Examine each existing valve
-            foreach(Valve vk in net.Valves) {
-                Node vj1 = vk.FirstNode;
-                Node vj2 = vk.SecondNode;
-                LinkType vtype = vk.Type;
+            foreach(Valve valve in net.Valves) {
+                Node fNode = valve.FirstNode;
+                Node tNode = valve.SecondNode;
+                ValveType type2 = valve.ValveType;
 
                 /* Cannot have two PRVs sharing downstream nodes or in series */
-                if(vtype == LinkType.PRV && type == LinkType.PRV) {
-                    if(Equals(vj2, j2) ||
-                        Equals(vj2, j1) ||
-                        Equals(vj1, j2))
+                if(type2 == ValveType.PRV && type == ValveType.PRV) {
+                    if(Equals(tNode, j2) ||
+                        Equals(tNode, j1) ||
+                        Equals(fNode, j2))
                         return false;
                 }
 
                 /* Cannot have two PSVs sharing upstream nodes or in series */
-                if(vtype == LinkType.PSV && type == LinkType.PSV) {
-                    if(Equals(vj1, j1) ||
-                        Equals(vj1, j2) ||
-                        Equals(vj2, j1))
+                if(type2 == ValveType.PSV && type == ValveType.PSV) {
+                    if(Equals(fNode, j1) ||
+                        Equals(fNode, j2) ||
+                        Equals(tNode, j1))
                         return false;
                 }
 
                 /* Cannot have PSV connected to downstream node of PRV */
-                if(vtype == LinkType.PSV && type == LinkType.PRV && vj1 == j2)
+                if(type2 == ValveType.PSV && type == ValveType.PRV && fNode == j2)
                     return false;
-                if(vtype == LinkType.PRV && type == LinkType.PSV && vj2 == j1)
+                if(type2 == ValveType.PRV && type == ValveType.PSV && tNode == j1)
                     return false;
 
                 /* Cannot have PSV connected to downstream node of FCV */
                 /* nor have PRV connected to upstream node of FCV */
-                if(vtype == LinkType.FCV && type == LinkType.PSV && vj2 == j1)
+                if(type2 == ValveType.FCV && type == ValveType.PSV && tNode == j1)
                     return false;
-                if(vtype == LinkType.FCV && type == LinkType.PRV && vj1 == j2)
+                if(type2 == ValveType.FCV && type == ValveType.PRV && fNode == j2)
                     return false;
 
-                if(vtype == LinkType.PSV && type == LinkType.FCV && vj1 == j2)
+                if(type2 == ValveType.PSV && type == ValveType.FCV && fNode == j2)
                     return false;
-                if(vtype == LinkType.PRV && type == LinkType.FCV && vj2 == j1)
+                if(type2 == ValveType.PRV && type == ValveType.FCV && tNode == j1)
                     return false;
             }
 
@@ -601,10 +493,9 @@ namespace Epanet.Network.IO.Input {
 
         protected static void GetPumpCurve(Pump pump, int n, double[] x) {
 
-
             if(n == 1) {
                 if(x[0] <= 0.0)
-                    throw new ENException(ErrorCode.Err202);
+                    throw new EnException(ErrorCode.Err202);
                 pump.Ptype = PumpType.CONST_HP;
                 pump.Km = x[0];
             }
@@ -626,13 +517,12 @@ namespace Epanet.Network.IO.Input {
                     q2 = x[4];
                 }
                 else
-                    throw new ENException(ErrorCode.Err202);
+                    throw new EnException(ErrorCode.Err202);
 
                 pump.Ptype = PumpType.POWER_FUNC;
-                double a, b, c;
 
-                if(!GetPowerCurve(h0, h1, h2, q1, q2, out a, out b, out c))
-                    throw new ENException(ErrorCode.Err206);
+                if(!GetPowerCurve(h0, h1, h2, q1, q2, out double a, out double b, out double c))
+                    throw new EnException(ErrorCode.Err206);
 
                 pump.H0 = -a;
                 pump.FlowCoefficient = -b;
@@ -643,42 +533,51 @@ namespace Epanet.Network.IO.Input {
             }
         }
 
-        // TODO: move to link class
+        // TODO: move to link class?
         protected static void ChangeStatus(Link link, StatType status, double y) {
 
-            switch (link.Type) {
-            case LinkType.PIPE:
-            case LinkType.GPV:
-                if (status != StatType.ACTIVE)
+            switch (link.LinkType) {
+                case LinkType.PIPE:
+                    if (!((Pipe)link).HasCheckValve && status != StatType.ACTIVE)
+                        link.Status = status;
+
+                    break;
+
+                case LinkType.PUMP:
+
+                    switch (status) {
+                        case StatType.ACTIVE:
+                            link.Kc = y;
+                            link.Status = y.IsZero() ? StatType.CLOSED : StatType.OPEN;
+                            break;
+                        case StatType.OPEN:
+                            link.Kc = 1.0;
+                            break;
+                    }
+
                     link.Status = status;
-                break;
-
-            case LinkType.PUMP:
-
-                switch (status) {
-                case StatType.ACTIVE:
-                    link.Kc = y;
-                    link.Status = y == 0.0 ? StatType.CLOSED : StatType.OPEN;
                     break;
-                case StatType.OPEN:
-                    link.Kc = 1.0; 
+
+                case LinkType.VALVE:
+                    switch (((Valve)link).ValveType) {
+                        case ValveType.GPV:
+                            if (status != StatType.ACTIVE)
+                                link.Status = status;
+
+                            break;
+
+                        case ValveType.PRV:
+                        case ValveType.PSV:
+                        case ValveType.PBV:
+                        case ValveType.FCV:
+                        case ValveType.TCV:
+                            link.Status = status;
+                            link.Kc = status == StatType.ACTIVE ? y : double.NaN;
+                            break;
+
+                    }
+
                     break;
-                }
-
-                link.Status = status;
-                break;
-
-            case LinkType.CV:
-                break;
-
-            case LinkType.PRV:
-            case LinkType.PSV:
-            case LinkType.PBV:
-            case LinkType.FCV:
-            case LinkType.TCV:
-                link.Status = status;
-                link.Kc = status == StatType.ACTIVE ? y : double.NaN; 
-                break;
             }
         }
 

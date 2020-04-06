@@ -47,133 +47,140 @@ namespace Epanet.Network.IO.Output {
         private const string REACTIONS_SUBTITLE = ";Type\tPipe/Tank";
         private const string COORDINATES_SUBTITLE = ";Node\tX-Coord\tY-Coord";
 
-        TextWriter buffer;
+        private TextWriter _writer;
 
-        public override void Composer(Network net, string fileName) {
+        public InpComposer(Network net) : base(net) { }
+
+        public override void Compose(string fileName) {
+
             try {
-                buffer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default); // "ISO-8859-1"
-                ComposeHeader(net);
-                ComposeJunctions(net);
-                ComposeReservoirs(net);
-                ComposeTanks(net);
-                ComposePipes(net);
-                ComposePumps(net);
-                ComposeValves(net);
-                ComposeDemands(net);
-                ComposeEmitters(net);
-                ComposeStatus(net);
-                ComposePatterns(net);
-                ComposeCurves(net);
-                ComposeControls(net);
-                ComposeQuality(net);
-                ComposeSource(net);
-                ComposeMixing(net);
-                ComposeReaction(net);
-                ComposeEnergy(net);
-                ComposeTimes(net);
-                ComposeOptions(net);
-                ComposeExtraOptions(net);
-                ComposeReport(net);
-                ComposeLabels(net);
-                ComposeCoordinates(net);
-                ComposeVertices(net);
-                ComposeRules(net);
+                using (_writer = new StreamWriter(File.OpenWrite(fileName), Encoding.Default)) { // "ISO-8859-1"
+                    ComposeHeader();
+                    ComposeJunctions();
+                    ComposeReservoirs();
+                    ComposeTanks();
+                    ComposePipes();
+                    ComposePumps();
+                    ComposeValves();
+                    ComposeTags();
+                    ComposeDemands();
+                    ComposeEmitters();
+                    ComposeStatus();
+                    ComposePatterns();
+                    ComposeCurves();
+                    ComposeControls();
+                    ComposeQuality();
+                    ComposeSource();
+                    ComposeMixing();
+                    ComposeReaction();
+                    ComposeEnergy();
+                    ComposeTimes();
+                    ComposeOptions();
+                    ComposeExtraOptions();
+                    ComposeReport();
+                    ComposeLabels();
+                    ComposeCoordinates();
+                    ComposeVertices();
+                    ComposeRules();
 
-                buffer.WriteLine(SectType.END.ParseStr());
-                buffer.Close();
+                    _writer.WriteLine(SectType.END.ToString());
+                }
             }
-            catch (IOException) {}
+            catch(IOException ex) {
+                throw new EnException(ErrorCode.Err308, ex);
+            }
+
         }
 
-        private void ComposeHeader(Network net) {
-            if (net.Title.Count == 0)
+        private void ComposeHeader() {
+            if (_net.Title.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.TITLE.ParseStr());
+            _writer.WriteLine(SectType.TITLE.ParseStr());
 
-            foreach (string str  in  net.Title) {
-                buffer.WriteLine(str);
+            foreach (string str  in  _net.Title) {
+                _writer.WriteLine(str);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
 
-        private void ComposeJunctions(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposeJunctions() {
+            FieldsMap fMap = _net.FieldsMap;
             
-            if (!net.Junctions.Any())
+            if (!_net.Junctions.Any())
                 return;
 
-            buffer.WriteLine(SectType.JUNCTIONS.ParseStr());
-            buffer.WriteLine(JUNCS_SUBTITLE);
+            _writer.WriteLine(SectType.JUNCTIONS.ParseStr());
+            _writer.WriteLine(JUNCS_SUBTITLE);
 
-            foreach (Node node in net.Junctions) {
-                buffer.Write(" {0}\t{1}", node.Name, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
+            foreach (Node node in _net.Junctions) {
+                _writer.Write(" {0}\t{1}", node.Name, fMap.RevertUnit(FieldType.ELEV, node.Elevation));
 
                 //if(node.getDemand()!=null && node.getDemand().size()>0 && !node.getDemand()[0].getPattern().getId().equals(""))
                 //    buffer.write("\t"+node.getDemand()[0].getPattern().getId());
 
                 if (node.Demands.Count > 0) {
                     Demand demand = node.Demands[0];
-                    buffer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, demand.Base));
+                    _writer.Write("\t{0}", fMap.RevertUnit(FieldType.DEMAND, demand.Base));
 
-                    if (!string.IsNullOrEmpty(demand.pattern.Name)
-                        && !net.DefPatId.Equals(demand.pattern.Name, StringComparison.OrdinalIgnoreCase))
-                        buffer.Write("\t" + demand.pattern.Name);
+                    if (!string.IsNullOrEmpty(demand.Pattern.Name)
+                        && !_net.DefPatId.Equals(demand.Pattern.Name, StringComparison.OrdinalIgnoreCase))
+                        _writer.Write("\t" + demand.Pattern.Name);
                 }
 
                 if (!string.IsNullOrEmpty(node.Comment))
-                    buffer.Write("\t;" + node.Comment);
+                    _writer.Write("\t;" + node.Comment);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
 
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeReservoirs(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposeReservoirs() {
+            FieldsMap fMap = _net.FieldsMap;
 
-            if (!net.Reservoirs.Any())
+            if (!_net.Reservoirs.Any())
                 return;
 
-            buffer.WriteLine(SectType.RESERVOIRS.ParseStr());
-            buffer.WriteLine(RESERVOIRS_SUBTITLE);
+            _writer.WriteLine(SectType.RESERVOIRS.ParseStr());
+            _writer.WriteLine(RESERVOIRS_SUBTITLE);
 
-            foreach(Tank tank in net.Reservoirs) {
-                buffer.Write(" {0}\t{1}", tank.Name, fMap.RevertUnit(FieldType.ELEV, tank.Elevation));
+            foreach(Tank tank in _net.Reservoirs) {
+                _writer.Write(" {0}\t{1}", tank.Name, fMap.RevertUnit(FieldType.ELEV, tank.Elevation));
 
 
                 if (tank.Pattern != null)
-                    buffer.Write("\t{0}", tank.Pattern.Name);
+                    _writer.Write("\t{0}", tank.Pattern.Name);
 
 
                 if (!string.IsNullOrEmpty(tank.Comment))
-                    buffer.Write("\t;" + tank.Comment);
+                    _writer.Write("\t;" + tank.Comment);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeTanks(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposeTanks() {
+            FieldsMap fMap = _net.FieldsMap;
 
-            if (!net.Tanks.Any())
+            if (!_net.Tanks.Any())
                 return;
 
-            buffer.WriteLine(SectType.TANKS.ParseStr());
-            buffer.WriteLine(TANK_SUBTITLE);
+            _writer.WriteLine(SectType.TANKS.ParseStr());
+            _writer.WriteLine(TANK_SUBTITLE);
 
-            foreach(Tank tank in net.Tanks) {
+            foreach(Tank tank in _net.Tanks) {
                 double vmin = tank.Vmin;
-                if (Math.Round(vmin / tank.Area) == Math.Round(tank.Hmin - tank.Elevation))
+                if (Math.Round(vmin / tank.Area).EqualsTo(Math.Round(tank.Hmin - tank.Elevation)))
                     vmin = 0;
 
-                buffer.Write(
+                _writer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
                         tank.Name,
                         fMap.RevertUnit(FieldType.ELEV, tank.Elevation),
@@ -184,77 +191,77 @@ namespace Epanet.Network.IO.Output {
                         fMap.RevertUnit(FieldType.VOLUME, vmin));
 
                 if (tank.Vcurve != null)
-                    buffer.Write(" " + tank.Vcurve.Name);
+                    _writer.Write(" " + tank.Vcurve.Name);
 
                 if (!string.IsNullOrEmpty(tank.Comment))
-                    buffer.Write("\t;" + tank.Comment);
-                buffer.WriteLine();
+                    _writer.Write("\t;" + tank.Comment);
+                _writer.WriteLine();
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposePipes(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposePipes() {
+            FieldsMap fMap = _net.FieldsMap;
             
-            if (net.Links.Count == 0)
+            if (_net.Links.Count == 0)
                 return;
+            
+            _writer.WriteLine(SectType.PIPES.ParseStr());
+            _writer.WriteLine(PIPES_SUBTITLE);
 
-            List<Link> pipes = new List<Link>();
-            foreach (Link link  in  net.Links)
-                if (link.Type == LinkType.PIPE || link.Type == LinkType.CV)
-                    pipes.Add(link);
-
-
-            buffer.WriteLine(SectType.PIPES.ParseStr());
-            buffer.WriteLine(PIPES_SUBTITLE);
-
-            foreach (Link link  in  pipes) {
-                double d = link.Diameter;
-                double kc = link.Kc;
-                if (net.FormFlag == FormType.DW)
+            foreach (Pipe pipe in  _net.Pipes) {
+                double d = pipe.Diameter;
+                double kc = pipe.Kc;
+                if (_net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
-                double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
+                double km = pipe.Km * Math.Pow(d, 4.0) / 0.02517;
 
-                buffer.Write(
+                _writer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
-                        link.Name,
-                        link.FirstNode.Name,
-                        link.SecondNode.Name,
-                        fMap.RevertUnit(FieldType.LENGTH, link.Lenght),
+                        pipe.Name,
+                        pipe.FirstNode.Name,
+                        pipe.SecondNode.Name,
+                        fMap.RevertUnit(FieldType.LENGTH, pipe.Lenght),
                         fMap.RevertUnit(FieldType.DIAM, d));
 
                 // if (net.FormFlag == FormType.DW)
-                buffer.Write(" {0}\t{1}", kc, km);
+                _writer.Write(" {0}\t{1}", kc, km);
 
-                if (link.Type == LinkType.CV)
-                    buffer.Write(" CV");
-                else if (link.Status == StatType.CLOSED)
-                    buffer.Write(" CLOSED");
-                else if (link.Status == StatType.OPEN)
-                    buffer.Write(" OPEN");
+                if (pipe.HasCheckValve)
+                    _writer.Write(" CV");
+                else {
+                    switch (pipe.Status) {
+                        case StatType.CLOSED:
+                            _writer.Write(" CLOSED");
+                            break;
+                        case StatType.OPEN:
+                            _writer.Write(" OPEN");
+                            break;
+                    }
+                }
 
-                if (!string.IsNullOrEmpty(link.Comment))
-                    buffer.Write("\t;" + link.Comment);
+                if (!string.IsNullOrEmpty(pipe.Comment))
+                    _writer.Write("\t;" + pipe.Comment);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposePumps(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposePumps() {
+            FieldsMap fMap = _net.FieldsMap;
 
-            if (!net.Pumps.Any())
+            if (!_net.Pumps.Any())
                 return;
 
-            buffer.WriteLine(SectType.PUMPS.ParseStr());
-            buffer.WriteLine(PUMPS_SUBTITLE);
+            _writer.WriteLine(SectType.PUMPS.ParseStr());
+            _writer.WriteLine(PUMPS_SUBTITLE);
 
-            foreach (Pump pump in net.Pumps) {
-                buffer.Write(
+            foreach (Pump pump in _net.Pumps) {
+                _writer.Write(
                         " {0}\t{1}\t{2}",
                         pump.Name,
                         pump.FirstNode.Name,
@@ -263,13 +270,13 @@ namespace Epanet.Network.IO.Output {
 
                 // Pump has constant power
                 if (pump.Ptype == PumpType.CONST_HP)
-                    buffer.Write(" POWER " + pump.Km);
+                    _writer.Write(" POWER " + pump.Km);
                 // Pump has a head curve
                 else if (pump.HCurve != null)
-                    buffer.Write(" HEAD " + pump.HCurve.Name);
+                    _writer.Write(" HEAD " + pump.HCurve.Name);
                 // Old format used for pump curve
                 else {
-                    buffer.Write(
+                    _writer.Write(
                             " {0}\t{1}\t{2}\t0.0\t{3}",
                             fMap.RevertUnit(FieldType.HEAD, -pump.H0),
                             fMap.RevertUnit(
@@ -282,136 +289,168 @@ namespace Epanet.Network.IO.Output {
                 }
 
                 if (pump.UPat != null)
-                    buffer.Write(" PATTERN " + pump.UPat.Name);
+                    _writer.Write(" PATTERN " + pump.UPat.Name);
 
 
-                if (pump.Kc != 1.0)
-                    buffer.Write(" SPEED {0}", pump.Kc);
+                if (!pump.Kc.EqualsTo(1.0))
+                    _writer.Write(" SPEED {0}", pump.Kc);
 
                 if (!string.IsNullOrEmpty(pump.Comment))
-                    buffer.Write("\t;" + pump.Comment);
+                    _writer.Write("\t;" + pump.Comment);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeValves(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposeValves() {
+            FieldsMap fMap = _net.FieldsMap;
 
-            if (!net.Valves.Any())
+            if (!_net.Valves.Any())
                 return;
 
-            buffer.WriteLine(SectType.VALVES.ParseStr());
-            buffer.WriteLine(VALVES_SUBTITLE);
+            _writer.WriteLine(SectType.VALVES.ParseStr());
+            _writer.WriteLine(VALVES_SUBTITLE);
             
-            foreach (Valve valve in net.Valves) {
+            foreach (Valve valve in _net.Valves) {
                 double d = valve.Diameter;
                 double kc = valve.Kc;
                 if(double.IsNaN(kc))
                     kc = 0.0;
 
-                switch (valve.Type) {
-                case LinkType.FCV:
+                switch (valve.ValveType) {
+                case ValveType.FCV:
                     kc = fMap.RevertUnit(FieldType.FLOW, kc);
                     break;
-                case LinkType.PRV:
-                case LinkType.PSV:
-                case LinkType.PBV:
+                case ValveType.PRV:
+                case ValveType.PSV:
+                case ValveType.PBV:
                     kc = fMap.RevertUnit(FieldType.PRESSURE, kc);
                     break;
                 }
 
                 double km = valve.Km * Math.Pow(d, 4) / 0.02517;
 
-                buffer.Write(
+                _writer.Write(
                         " {0}\t{1}\t{2}\t{3}\t{4}",
                         valve.Name,
                         valve.FirstNode.Name,
                         valve.SecondNode.Name,
                         fMap.RevertUnit(FieldType.DIAM, d),
-                        valve.Type.ParseStr());
+                        valve.ValveType.Keyword2());
 
-                if (valve.Type == LinkType.GPV && valve.Curve != null)
-                    buffer.Write(" {0}\t{1}", valve.Curve.Name, km);
+                if (valve.ValveType == ValveType.GPV && valve.Curve != null)
+                    _writer.Write(" {0}\t{1}", valve.Curve.Name, km);
                 else
-                    buffer.Write(" {0}\t{1}", kc, km);
+                    _writer.Write(" {0}\t{1}", kc, km);
 
                 if (!string.IsNullOrEmpty(valve.Comment))
-                    buffer.Write("\t;" + valve.Comment);
+                    _writer.Write("\t;" + valve.Comment);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeDemands(Network net) {
-            FieldsMap fMap = net.FieldsMap;
+        private void ComposeTags() {
+            _writer.WriteLine(SectType.TAGS.ParseStr());
+            char[] spaces = {' ', '\t',};
 
-            if (!net.Junctions.Any())
+            foreach (var node in _net.Nodes) {
+                string tag = node.Tag.Trim();
+
+                if (string.IsNullOrEmpty(tag)) continue;
+
+                if (tag.IndexOf('\r') >= 0) tag = tag.Replace('\r', ' ');
+                if (tag.IndexOf('\n') >= 0) tag = tag.Replace('\n', ' ');
+                if (tag.IndexOfAny(spaces) > 0) tag = '"' + tag + '"';
+
+                _writer.WriteLine(" {0} \t{1,-16} {2}", Keywords.w_NODE, node.Name, tag);
+            }
+
+            foreach(var link in _net.Links) {
+                string tag = link.Tag;
+
+                if(string.IsNullOrEmpty(tag))
+                    continue;
+
+                if(tag.IndexOf('\r') >= 0) tag = tag.Replace('\r', ' ');
+                if(tag.IndexOf('\n') >= 0) tag = tag.Replace('\n', ' ');
+                if(tag.IndexOfAny(spaces) > 0) tag = '"' + tag + '"';
+
+                _writer.WriteLine(" {0} \t{1,-16} {2}", Keywords.w_LINK, link.Name, tag);
+            }
+
+        }
+
+
+        private void ComposeDemands() {
+            FieldsMap fMap = _net.FieldsMap;
+
+            if (!_net.Junctions.Any())
                 return;
 
-            buffer.WriteLine(SectType.DEMANDS.ParseStr());
-            buffer.WriteLine(DEMANDS_SUBTITLE);
+            _writer.WriteLine(SectType.DEMANDS.ParseStr());
+            _writer.WriteLine(DEMANDS_SUBTITLE);
 
             double ucf = fMap.GetUnits(FieldType.DEMAND);
 
-            foreach (Node node in net.Junctions) {
+            foreach (Node node in _net.Junctions) {
                 foreach (Demand demand in node.Demands) {
-                    buffer.Write("{0}\t{1}", node.Name, ucf * demand.Base);
+                    _writer.Write("{0}\t{1}", node.Name, ucf * demand.Base);
 
-                    if (demand.pattern != null)
-                        buffer.Write("\t" + demand.pattern.Name);
+                    if (demand.Pattern != null)
+                        _writer.Write("\t" + demand.Pattern.Name);
 
-                    buffer.WriteLine();
+                    _writer.WriteLine();
                 }
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeEmitters(Network net) {
+        private void ComposeEmitters() {
 
-            if (net.Nodes.Count == 0)
+            if (_net.Nodes.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.EMITTERS.ParseStr());
-            buffer.WriteLine(EMITTERS_SUBTITLE);
+            _writer.WriteLine(SectType.EMITTERS.ParseStr());
+            _writer.WriteLine(EMITTERS_SUBTITLE);
 
-            double uflow = net.FieldsMap.GetUnits(FieldType.FLOW);
-            double upressure = net.FieldsMap.GetUnits(FieldType.PRESSURE);
-            double qexp = net.QExp;
+            double uflow = _net.FieldsMap.GetUnits(FieldType.FLOW);
+            double upressure = _net.FieldsMap.GetUnits(FieldType.PRESSURE);
+            double qexp = _net.QExp;
 
-            foreach (Node node  in  net.Junctions) {
-                if (node.Ke == 0.0) continue;
-                double ke = uflow / Math.Pow(upressure * node.Ke, (1.0 / qexp));
-                buffer.WriteLine(" {0}\t{1}", node.Name, ke);
+            foreach (Node node  in  _net.Junctions) {
+                if (node.Ke.IsZero()) continue;
+                double ke = uflow / Math.Pow(upressure * node.Ke, 1.0 / qexp);
+                _writer.WriteLine(" {0}\t{1}", node.Name, ke);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeStatus(Network net) {
+        private void ComposeStatus() {
 
-            if (net.Links.Count == 0)
+            if (_net.Links.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.STATUS.ParseStr());
-            buffer.WriteLine(STATUS_SUBTITLE);
+            _writer.WriteLine(SectType.STATUS.ParseStr());
+            _writer.WriteLine(STATUS_SUBTITLE);
 
-            foreach (Link link  in  net.Links) {
-                if (link.Type <= LinkType.PUMP) {
+            foreach (Link link  in  _net.Links) {
+                if (link.LinkType <= LinkType.PUMP) {
                     if (link.Status == StatType.CLOSED)
-                        buffer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED);
+                        _writer.WriteLine(" {0}\t{1}", link.Name, StatType.CLOSED);
 
                     // Write pump speed here for pumps with old-style pump curve input
-                    else if (link.Type == LinkType.PUMP) {
+                    else if (link.LinkType == LinkType.PUMP) {
                         Pump pump = (Pump)link;
                         if (pump.HCurve == null &&
                             pump.Ptype != PumpType.CONST_HP &&
-                            pump.Kc != 1.0)
-                            buffer.WriteLine(" {0}\t{1}", link.Name, link.Kc);
+                            !pump.Kc.EqualsTo(1.0))
+                            _writer.WriteLine(" {0}\t{1}", link.Name, link.Kc);
                     }
                 }
                 // Write fixed-status PRVs & PSVs (setting = MISSING)
@@ -419,7 +458,7 @@ namespace Epanet.Network.IO.Output {
                     switch (link.Status) {
                     case StatType.OPEN:
                     case StatType.CLOSED:
-                        buffer.WriteLine(" {0}\t{1}", link.Name, link.Status);
+                        _writer.WriteLine(" {0}\t{1}", link.Name, link.Status);
                         break;
                     }
 
@@ -427,63 +466,63 @@ namespace Epanet.Network.IO.Output {
 
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposePatterns(Network net) {
+        private void ComposePatterns() {
 
-            var pats = net.Patterns;
+            var pats = _net.Patterns;
 
             if (pats.Count <= 1)
                 return;
 
-            buffer.WriteLine(SectType.PATTERNS.ParseStr());
-            buffer.WriteLine(PATTERNS_SUBTITLE);
+            _writer.WriteLine(SectType.PATTERNS.ParseStr());
+            _writer.WriteLine(PATTERNS_SUBTITLE);
 
             for (int i = 1; i < pats.Count; i++) {
                 Pattern pat = pats[i];
                 for (int j = 0; j < pats[i].Count; j++) {
                     if (j % 6 == 0)
-                        buffer.Write(" {0}", pat.Name);
+                        _writer.Write(" {0}", pat.Name);
 
-                    buffer.Write(" {0}", pat[j]);
+                    _writer.Write(" {0}", pat[j]);
 
                     if (j % 6 == 5)
-                        buffer.WriteLine();
+                        _writer.WriteLine();
                 }
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeCurves(Network net) {
+        private void ComposeCurves() {
 
-            var curves = net.Curves;
+            var curves = _net.Curves;
 
             if (curves.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.CURVES.ParseStr());
-            buffer.WriteLine(CURVE_SUBTITLE);
+            _writer.WriteLine(SectType.CURVES.ParseStr());
+            _writer.WriteLine(CURVE_SUBTITLE);
 
             foreach (Curve curve  in  curves) {
                 foreach (var pt in curve) {
-                    buffer.WriteLine(" {0}\t{1}\t{2}", curve.Name, pt.X, pt.Y);
+                    _writer.WriteLine(" {0}\t{1}\t{2}", curve.Name, pt.X, pt.Y);
                 }
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeControls(Network net) {
-            var controls = net.Controls;
-            FieldsMap fmap = net.FieldsMap;
+        private void ComposeControls() {
+            var controls = _net.Controls;
+            FieldsMap fmap = _net.FieldsMap;
 
             if (controls.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.CONTROLS.ParseStr());
+            _writer.WriteLine(SectType.CONTROLS.ParseStr());
 
             foreach (Control control  in  controls) {
                 // Check that controlled link exists
@@ -491,21 +530,25 @@ namespace Epanet.Network.IO.Output {
 
                 // Get text of control's link status/setting
                 if (double.IsNaN(control.Setting)) {
-                    buffer.Write(" LINK {0} {1} ", control.Link.Name, control.Status);
+                    _writer.Write(" LINK {0} {1} ", control.Link.Name, control.Status);
                 }
                 else {
                     double kc = control.Setting;
-                    switch (control.Link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                        kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
-                        break;
-                    case LinkType.FCV:
-                        kc = fmap.RevertUnit(FieldType.FLOW, kc);
-                        break;
+
+                    if (control.Link.LinkType == LinkType.VALVE) {
+                        switch (((Valve)control.Link).ValveType) {
+                            case ValveType.PRV:
+                            case ValveType.PSV:
+                            case ValveType.PBV:
+                                kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
+                                break;
+                            case ValveType.FCV:
+                                kc = fmap.RevertUnit(FieldType.FLOW, kc);
+                                break;
+                        }
                     }
-                    buffer.Write(" LINK {0} {1} ", control.Link.Name, kc);
+
+                    _writer.Write(" LINK {0} {1} ", control.Link.Name, kc);
                 }
 
 
@@ -515,12 +558,12 @@ namespace Epanet.Network.IO.Output {
                 case ControlType.HILEVEL:
                     double kc = control.Grade - control.Node.Elevation;
                     kc = fmap.RevertUnit(
-                        control.Node.Type == NodeType.JUNC
+                        control.Node.NodeType == NodeType.JUNC
                             ? FieldType.PRESSURE
                             : FieldType.HEAD,
                         kc);
 
-                    buffer.Write(
+                    _writer.Write(
                             " IF NODE {0} {1} {2}",
                             control.Node.Name,
                             control.Type.ParseStr(),
@@ -530,267 +573,270 @@ namespace Epanet.Network.IO.Output {
 
                 // Print timer control
                 case ControlType.TIMER:
-                    buffer.Write(
+                    _writer.Write(
                             " AT {0} {1} HOURS",
                             ControlType.TIMER.ParseStr(),
-                            control.Time / 3600.0f);
+                            control.Time.TotalHours);
 
                     break;
 
                 // Print time-of-day control
                 case ControlType.TIMEOFDAY:
-                    buffer.Write(
+                    _writer.Write(
                             " AT {0} {1}",
                             ControlType.TIMEOFDAY.ParseStr(),
                             control.Time.GetClockTime());
 
                     break;
                 }
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeQuality(Network net) {
-            FieldsMap fmap = net.FieldsMap;
+        private void ComposeQuality() {
+            FieldsMap fmap = _net.FieldsMap;
 
-            if (net.Nodes.Count == 0)
+            if (_net.Nodes.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.QUALITY.ParseStr());
-            buffer.WriteLine(QUALITY_SUBTITLE);
+            _writer.WriteLine(SectType.QUALITY.ParseStr());
+            _writer.WriteLine(QUALITY_SUBTITLE);
 
-            foreach (Node node  in  net.Nodes) {
-                if (node.C0 == 0.0) continue;
-                buffer.WriteLine(" {0}\t{1}", node.Name, fmap.RevertUnit(FieldType.QUALITY, node.C0));
+            foreach (Node node  in  _net.Nodes) {
+                if (node.C0.IsZero()) continue;
+                _writer.WriteLine(" {0}\t{1}", node.Name, fmap.RevertUnit(FieldType.QUALITY, node.C0));
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeSource(Network net) {
+        private void ComposeSource() {
 
-            if (net.Nodes.Count == 0)
+            if (_net.Nodes.Count == 0)
                 return;
 
-            buffer.WriteLine(SectType.SOURCES.ParseStr());
-            buffer.WriteLine(SOURCE_SUBTITLE);
+            _writer.WriteLine(SectType.SOURCES.ParseStr());
+            _writer.WriteLine(SOURCE_SUBTITLE);
 
 
-            foreach (Node node in net.Nodes) {
+            foreach (Node node in _net.Nodes) {
                 QualSource source = node.QualSource;
                 if (source == null)
                     continue;
 
-                buffer.Write(
+                _writer.Write(
                         " {0}\t{1}\t{2}",
                         node.Name,
                         source.Type,
                         source.C0);
 
                 if (source.Pattern != null)
-                    buffer.Write(" " + source.Pattern.Name);
+                    _writer.Write(" " + source.Pattern.Name);
 
-                buffer.WriteLine();
+                _writer.WriteLine();
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
 
-        private void ComposeMixing(Network net) {
+        private void ComposeMixing() {
 
-            if (!net.Tanks.Any())
+            if (!_net.Tanks.Any())
                 return;
 
-            buffer.WriteLine(SectType.MIXING.ParseStr());
-            buffer.WriteLine(MIXING_SUBTITLE);
+            _writer.WriteLine(SectType.MIXING.ParseStr());
+            _writer.WriteLine(MIXING_SUBTITLE);
 
-            foreach (Tank tank in net.Tanks) {
-                buffer.WriteLine(
+            foreach (Tank tank in _net.Tanks) {
+                _writer.WriteLine(
                         " {0}\t{1}\t{2}",
                         tank.Name,
                         tank.MixModel.ParseStr(),
                         tank.V1Max / tank.Vmax);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeReaction(Network net) {
+        private void ComposeReaction() {
             
-            buffer.WriteLine(SectType.REACTIONS.ParseStr());
-            buffer.WriteLine(REACTIONS_SUBTITLE);
+            _writer.WriteLine(SectType.REACTIONS.ParseStr());
+            _writer.WriteLine(REACTIONS_SUBTITLE);
 
-            buffer.WriteLine("ORDER BULK {0}", net.BulkOrder);
-            buffer.WriteLine("ORDER WALL {0}", net.WallOrder);
-            buffer.WriteLine("ORDER TANK {0}", net.TankOrder);
-            buffer.WriteLine("GLOBAL BULK {0}", net.KBulk * Constants.SECperDAY);
-            buffer.WriteLine("GLOBAL WALL {0}", net.KWall * Constants.SECperDAY);
+            _writer.WriteLine("ORDER BULK {0}", _net.BulkOrder);
+            _writer.WriteLine("ORDER WALL {0}", _net.WallOrder);
+            _writer.WriteLine("ORDER TANK {0}", _net.TankOrder);
+            _writer.WriteLine("GLOBAL BULK {0}", _net.KBulk * Constants.SECperDAY);
+            _writer.WriteLine("GLOBAL WALL {0}", _net.KWall * Constants.SECperDAY);
 
             // if (net.CLimit > 0.0)
-            buffer.WriteLine("LIMITING POTENTIAL {0}", net.CLimit);
+            _writer.WriteLine("LIMITING POTENTIAL {0}", _net.CLimit);
 
             // if (!net.RFactor.IsMissing() && net.RFactor != 0.0)
-            buffer.WriteLine("ROUGHNESS CORRELATION {0}", net.RFactor);
+            _writer.WriteLine("ROUGHNESS CORRELATION {0}", _net.RFactor);
 
 
-            foreach (Link link  in  net.Links) {
-                if (link.Type > LinkType.PIPE)
+            foreach (Link link  in  _net.Links) {
+                if (link.LinkType > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != net.KBulk)
-                    buffer.WriteLine("BULK {0} {1}", link.Name, link.Kb * Constants.SECperDAY);
-                if (link.Kw != net.KWall)
-                    buffer.WriteLine("WALL {0} {1}", link.Name, link.Kw * Constants.SECperDAY);
+                if (!link.Kb.EqualsTo(_net.KBulk))
+                    _writer.WriteLine("BULK {0} {1}", link.Name, link.Kb * Constants.SECperDAY);
+                if (!link.Kw.EqualsTo(_net.KWall))
+                    _writer.WriteLine("WALL {0} {1}", link.Name, link.Kw * Constants.SECperDAY);
             }
 
-            foreach (Tank tank  in  net.Tanks) {
-                if (tank.Kb != net.KBulk)
-                    buffer.WriteLine("TANK {0} {1}", tank.Name, tank.Kb * Constants.SECperDAY);
+            foreach (Tank tank  in  _net.Tanks) {
+                if (!tank.Kb.EqualsTo(_net.KBulk))
+                    _writer.WriteLine("TANK {0} {1}", tank.Name, tank.Kb * Constants.SECperDAY);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeEnergy(Network net) {
+        private void ComposeEnergy() {
             
-            buffer.WriteLine(SectType.ENERGY.ParseStr());
+            _writer.WriteLine(SectType.ENERGY.ParseStr());
 
-            if (net.ECost != 0.0)
-                buffer.WriteLine("GLOBAL PRICE {0}", net.ECost);
+            if (!_net.ECost.IsZero())
+                _writer.WriteLine("GLOBAL PRICE {0}", _net.ECost);
 
-            if (!net.EPatId.Equals(""))
-                buffer.WriteLine("GLOBAL PATTERN {0}", net.EPatId);
+            if (!_net.EPatId.Equals(""))
+                _writer.WriteLine("GLOBAL PATTERN {0}", _net.EPatId);
 
-            buffer.WriteLine("GLOBAL EFFIC {0}", net.EPump);
-            buffer.WriteLine("DEMAND CHARGE {0}", net.DCost);
+            _writer.WriteLine("GLOBAL EFFIC {0}", _net.EPump);
+            _writer.WriteLine("DEMAND CHARGE {0}", _net.DCost);
 
-            foreach (Pump p  in  net.Pumps) {
+            foreach (Pump p  in  _net.Pumps) {
                 if (p.ECost > 0.0)
-                    buffer.WriteLine("PUMP {0} PRICE {1}", p.Name, p.ECost);
+                    _writer.WriteLine("PUMP {0} PRICE {1}", p.Name, p.ECost);
 
                 if (p.EPat != null)
-                    buffer.WriteLine("PUMP {0} PATTERN {1}", p.Name, p.EPat.Name);
+                    _writer.WriteLine("PUMP {0} PATTERN {1}", p.Name, p.EPat.Name);
 
                 if (p.ECurve != null)
-                    buffer.WriteLine("PUMP {0} EFFIC {1}", p.Name, p.ECurve.Name);
+                    _writer.WriteLine("PUMP {0} EFFIC {1}", p.Name, p.ECurve.Name);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
 
         }
 
-        private void ComposeTimes(Network net) {
+        private void ComposeTimes() {
             
-            buffer.WriteLine(SectType.TIMES.ParseStr());
-            buffer.WriteLine("DURATION {0}", net.Duration.GetClockTime());
-            buffer.WriteLine("HYDRAULIC TIMESTEP {0}", net.HStep.GetClockTime());
-            buffer.WriteLine("QUALITY TIMESTEP {0}", net.QStep.GetClockTime());
-            buffer.WriteLine("REPORT TIMESTEP {0}", net.RStep.GetClockTime());
-            buffer.WriteLine("REPORT START {0}", net.RStart.GetClockTime());
-            buffer.WriteLine("PATTERN TIMESTEP {0}", net.PStep.GetClockTime());
-            buffer.WriteLine("PATTERN START {0}", net.PStart.GetClockTime());
-            buffer.WriteLine("RULE TIMESTEP {0}", net.RuleStep.GetClockTime());
-            buffer.WriteLine("START CLOCKTIME {0}", net.Tstart.GetClockTime());
-            buffer.WriteLine("STATISTIC {0}", net.TstatFlag.ParseStr());
-            buffer.WriteLine();
+            _writer.WriteLine(SectType.TIMES.ParseStr());
+            _writer.WriteLine("DURATION {0}", _net.Duration.GetClockTime());
+            _writer.WriteLine("HYDRAULIC TIMESTEP {0}", _net.HStep.GetClockTime());
+            _writer.WriteLine("QUALITY TIMESTEP {0}", _net.QStep.GetClockTime());
+            _writer.WriteLine("REPORT TIMESTEP {0}", _net.RStep.GetClockTime());
+            _writer.WriteLine("REPORT START {0}", _net.RStart.GetClockTime());
+            _writer.WriteLine("PATTERN TIMESTEP {0}", _net.PStep.GetClockTime());
+            _writer.WriteLine("PATTERN START {0}", _net.PStart.GetClockTime());
+            _writer.WriteLine("RULE TIMESTEP {0}", _net.RuleStep.GetClockTime());
+            _writer.WriteLine("START CLOCKTIME {0}", _net.Tstart.GetClockTime());
+            _writer.WriteLine("STATISTIC {0}", _net.TstatFlag.ParseStr());
+            _writer.WriteLine();
         }
 
-        private void ComposeOptions(Network net) {
+        private void ComposeOptions() {
             
-            FieldsMap fMap = net.FieldsMap;
+            FieldsMap fMap = _net.FieldsMap;
 
-            buffer.WriteLine(SectType.OPTIONS.ParseStr());
-            buffer.WriteLine("UNITS               " + net.FlowFlag);
-            buffer.WriteLine("PRESSURE            " + net.PressFlag);
-            buffer.WriteLine("HEADLOSS            " + net.FormFlag);
+            _writer.WriteLine(SectType.OPTIONS.ParseStr());
+            _writer.WriteLine("UNITS               " + _net.FlowFlag);
+            _writer.WriteLine("PRESSURE            " + _net.PressFlag);
+            _writer.WriteLine("HEADLOSS            " + _net.FormFlag);
 
-            if (!string.IsNullOrEmpty(net.DefPatId))
-                buffer.WriteLine("PATTERN             " + net.DefPatId);
+            if (!string.IsNullOrEmpty(_net.DefPatId))
+                _writer.WriteLine("PATTERN             " + _net.DefPatId);
 
-            if (net.HydFlag == HydType.USE)
-                buffer.WriteLine("HYDRAULICS USE      " + net.HydFname);
+            switch (_net.HydFlag) {
+                case HydType.USE:
+                    _writer.WriteLine("HYDRAULICS USE      " + _net.HydFname);
+                    break;
+                case HydType.SAVE:
+                    _writer.WriteLine("HYDRAULICS SAVE     " + _net.HydFname);
+                    break;
+            }
 
-            if (net.HydFlag == HydType.SAVE)
-                buffer.WriteLine("HYDRAULICS SAVE     " + net.HydFname);
+            if (_net.ExtraIter == -1)
+                _writer.WriteLine("UNBALANCED          STOP");
 
-            if (net.ExtraIter == -1)
-                buffer.WriteLine("UNBALANCED          STOP");
+            if (_net.ExtraIter >= 0)
+                _writer.WriteLine("UNBALANCED          CONTINUE " + _net.ExtraIter);
 
-            if (net.ExtraIter >= 0)
-                buffer.WriteLine("UNBALANCED          CONTINUE " + net.ExtraIter);
-
-            switch (net.QualFlag) {
+            switch (_net.QualFlag) {
             case QualType.CHEM:
-                buffer.WriteLine("QUALITY             {0} {1}", net.ChemName, net.ChemUnits);
+                _writer.WriteLine("QUALITY             {0} {1}", _net.ChemName, _net.ChemUnits);
                 break;
             case QualType.TRACE:
-                buffer.WriteLine("QUALITY             TRACE " + net.TraceNode);
+                _writer.WriteLine("QUALITY             TRACE " + _net.TraceNode);
                 break;
             case QualType.AGE:
-                buffer.WriteLine("QUALITY             AGE");
+                _writer.WriteLine("QUALITY             AGE");
                 break;
             case QualType.NONE:
-                buffer.WriteLine("QUALITY             NONE");
+                _writer.WriteLine("QUALITY             NONE");
                 break;
             }
 
-            buffer.WriteLine("DEMAND MULTIPLIER {0}", net.DMult);
-            buffer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / net.QExp);
-            buffer.WriteLine("VISCOSITY         {0}", net.Viscos / Constants.VISCOS);
-            buffer.WriteLine("DIFFUSIVITY       {0}", net.Diffus / Constants.DIFFUS);
-            buffer.WriteLine("SPECIFIC GRAVITY  {0}", net.SpGrav);
-            buffer.WriteLine("TRIALS            {0}", net.MaxIter);
-            buffer.WriteLine("ACCURACY          {0}", net.HAcc);
-            buffer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, net.Ctol));
-            buffer.WriteLine("CHECKFREQ         {0}", net.CheckFreq);
-            buffer.WriteLine("MAXCHECK          {0}", net.MaxCheck);
-            buffer.WriteLine("DAMPLIMIT         {0}", net.DampLimit);
-            buffer.WriteLine();
+            _writer.WriteLine("DEMAND MULTIPLIER {0}", _net.DMult);
+            _writer.WriteLine("EMITTER EXPONENT  {0}", 1.0 / _net.QExp);
+            _writer.WriteLine("VISCOSITY         {0}", _net.Viscos / Constants.VISCOS);
+            _writer.WriteLine("DIFFUSIVITY       {0}", _net.Diffus / Constants.DIFFUS);
+            _writer.WriteLine("SPECIFIC GRAVITY  {0}", _net.SpGrav);
+            _writer.WriteLine("TRIALS            {0}", _net.MaxIter);
+            _writer.WriteLine("ACCURACY          {0}", _net.HAcc);
+            _writer.WriteLine("TOLERANCE         {0}", fMap.RevertUnit(FieldType.QUALITY, _net.Ctol));
+            _writer.WriteLine("CHECKFREQ         {0}", _net.CheckFreq);
+            _writer.WriteLine("MAXCHECK          {0}", _net.MaxCheck);
+            _writer.WriteLine("DAMPLIMIT         {0}", _net.DampLimit);
+            _writer.WriteLine();
         }
 
-        private void ComposeExtraOptions(Network net) {
-            var extraOptions = net.ExtraOptions;
+        private void ComposeExtraOptions() {
+            var extraOptions = _net.ExtraOptions;
 
             if(extraOptions.Count == 0)
                 return;
 
             foreach(var pair in extraOptions) {
-                buffer.WriteLine(pair.Key + " " + pair.Value);
+                _writer.WriteLine(pair.Key + " " + pair.Value);
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeReport(Network net) {
+        private void ComposeReport() {
 
-            buffer.WriteLine(SectType.REPORT.ParseStr());
+            _writer.WriteLine(SectType.REPORT.ParseStr());
 
-            FieldsMap fMap = net.FieldsMap;
-            buffer.WriteLine("PAGESIZE       {0}", net.PageSize);
-            buffer.WriteLine("STATUS         " + net.StatFlag);
-            buffer.WriteLine("SUMMARY        " + (net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            buffer.WriteLine("ENERGY         " + (net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            FieldsMap fMap = _net.FieldsMap;
+            _writer.WriteLine("PAGESIZE       {0}", _net.PageSize);
+            _writer.WriteLine("STATUS         " + _net.StatFlag);
+            _writer.WriteLine("SUMMARY        " + (_net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
+            _writer.WriteLine("ENERGY         " + (_net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
 
-            switch (net.NodeFlag) {
+            switch (_net.NodeFlag) {
             case ReportFlag.FALSE:
-                buffer.WriteLine("NODES NONE");
+                _writer.WriteLine("NODES NONE");
                 break;
             case ReportFlag.TRUE:
-                buffer.WriteLine("NODES ALL");
+                _writer.WriteLine("NODES ALL");
                 break;
             case ReportFlag.SOME: {
                 int j = 0;
-                foreach (Node node  in  net.Nodes) {
+                foreach (Node node  in  _net.Nodes) {
                     if (node.RptFlag) {
                         // if (j % 5 == 0) buffer.WriteLine("NODES "); // BUG: Baseform bug
 
                         if (j % 5 == 0) {
-                            buffer.WriteLine();
-                            buffer.Write("NODES ");
+                            _writer.WriteLine();
+                            _writer.Write("NODES ");
                         }
 
-                        buffer.Write("{0} ", node.Name);
+                        _writer.Write("{0} ", node.Name);
                         j++;
                     }
                 }
@@ -798,24 +844,24 @@ namespace Epanet.Network.IO.Output {
             }
             }
 
-            switch (net.LinkFlag) {
+            switch (_net.LinkFlag) {
             case ReportFlag.FALSE:
-                buffer.WriteLine("LINKS NONE");
+                _writer.WriteLine("LINKS NONE");
                 break;
             case ReportFlag.TRUE:
-                buffer.WriteLine("LINKS ALL");
+                _writer.WriteLine("LINKS ALL");
                 break;
             case ReportFlag.SOME: {
                 int j = 0;
-                foreach (Link link  in  net.Links) {
+                foreach (Link link  in  _net.Links) {
                     if (link.RptFlag) {
                         // if (j % 5 == 0) buffer.write("LINKS \n"); // BUG: Baseform bug
                         if (j % 5 == 0) {
-                            buffer.WriteLine();
-                            buffer.Write("LINKS ");
+                            _writer.WriteLine();
+                            _writer.Write("LINKS ");
                         }
 
-                        buffer.Write("{0} ", link.Name);
+                        _writer.Write("{0} ", link.Name);
                         j++;
                     }
                 }
@@ -827,45 +873,45 @@ namespace Epanet.Network.IO.Output {
                 Field f = fMap.GetField(i);
 
                 if (!f.Enabled) {
-                    buffer.WriteLine("{0,-19} NO", f.Name);
+                    _writer.WriteLine("{0,-19} NO", f.Name);
                     continue;
                 }
 
-                buffer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
+                _writer.WriteLine("{0,-19} PRECISION {1}", f.Name, f.Precision);
 
                 if (f.GetRptLim(RangeType.LOW) < Constants.BIG)
-                    buffer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(RangeType.LOW));
+                    _writer.WriteLine("{0,-19} BELOW {1:0.######}", f.Name, f.GetRptLim(RangeType.LOW));
 
                 if (f.GetRptLim(RangeType.HI) > -Constants.BIG)
-                    buffer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(RangeType.HI));
+                    _writer.WriteLine("{0,-19} ABOVE {1:0.######}", f.Name, f.GetRptLim(RangeType.HI));
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeCoordinates(Network net) {
-            buffer.WriteLine(SectType.COORDINATES.ParseStr());
-            buffer.WriteLine(COORDINATES_SUBTITLE);
+        private void ComposeCoordinates() {
+            _writer.WriteLine(SectType.COORDINATES.ParseStr());
+            _writer.WriteLine(COORDINATES_SUBTITLE);
 
-            foreach (Node node  in  net.Nodes) {
-                if (!node.Position.IsInvalid) {
-                    buffer.WriteLine(
+            foreach (Node node  in  _net.Nodes) {
+                if (!node.Coordinate.IsInvalid) {
+                    _writer.WriteLine(
                             " {0,-16}\t{1,-12}\t{2,-12}",
                             node.Name,
-                            node.Position.X,
-                            node.Position.Y);
+                            node.Coordinate.X,
+                            node.Coordinate.Y);
                 }
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
 
-        private void ComposeLabels(Network net) {
-            buffer.WriteLine(SectType.LABELS.ParseStr());
-            buffer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
+        private void ComposeLabels() {
+            _writer.WriteLine(SectType.LABELS.ParseStr());
+            _writer.WriteLine(";X-Coord\tY-Coord\tLabel & Anchor Node");
 
-            foreach (Label label  in  net.Labels) {
-                buffer.WriteLine(
+            foreach (Label label  in  _net.Labels) {
+                _writer.WriteLine(
                         " {0,-16}\t{1,-16}\t\"{2}\" {3,-16}",
                         label.Position.X,
                         label.Position.Y,
@@ -875,37 +921,38 @@ namespace Epanet.Network.IO.Output {
                     );
 
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeVertices(Network net) {
-            buffer.WriteLine(SectType.VERTICES.ParseStr());
-            buffer.WriteLine(";Link\tX-Coord\tY-Coord");
+        private void ComposeVertices() {
+            _writer.WriteLine(SectType.VERTICES.ParseStr());
+            _writer.WriteLine(";Link\tX-Coord\tY-Coord");
 
-            foreach (Link link  in  net.Links) {
+            foreach (Link link  in  _net.Links) {
                 if (link.Vertices.Count == 0)
                     continue;
 
                 foreach (EnPoint p  in  link.Vertices) {
-                    buffer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Name, p.X, p.Y);
+                    _writer.WriteLine(" {0,-16}\t{1,-16}\t{2,-16}", link.Name, p.X, p.Y);
                 }
             }
 
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
 
-        private void ComposeRules(Network net) {
-            buffer.WriteLine(SectType.RULES.ParseStr());
-            buffer.WriteLine();
+        private void ComposeRules() {
+            _writer.WriteLine(SectType.RULES.ParseStr());
+            _writer.WriteLine();
 
-            foreach (Rule r  in  net.Rules) {
-                buffer.WriteLine("RULE " + r.Name);
+            foreach (Rule r  in  _net.Rules) {
+                _writer.WriteLine("RULE " + r.Name);
                 foreach (string s  in  r.Code)
-                    buffer.WriteLine(s);
-                buffer.WriteLine();
+                    _writer.WriteLine(s);
+                _writer.WriteLine();
             }
-            buffer.WriteLine();
+            _writer.WriteLine();
         }
+        
     }
 
 }

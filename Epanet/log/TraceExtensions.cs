@@ -133,7 +133,7 @@ namespace Epanet.Log {
 
         #endregion
 
-        #region Information
+        #region Verbose
 
         [Conditional("TRACE")]
         public static void Verbose(this TraceSource src, string message) {

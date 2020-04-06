@@ -56,6 +56,16 @@ namespace Epanet.Util {
             return str.StartsWith(substr, StringComparison.OrdinalIgnoreCase);
         }
 
+        public static int FindMatch(this string str, params string[] substrings) {
+            for (int i = 0; i < substrings.Length; i++) {
+                if (Match(str, substrings[i])) {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         /// <summary>Converts time from units to hours.</summary>
         /// <param name="time">string containing a time value</param>
         /// <param name="units">string containing time units (PM or AM)</param>
@@ -104,11 +114,15 @@ namespace Epanet.Util {
             return -1.0;
         }
 
+        public static TimeSpan TimeOfDay(this TimeSpan t) {
+            return new TimeSpan(t.Ticks % TimeSpan.TicksPerDay);
+        }
+
         /// <summary>Converts time from units to hours.</summary>
         /// <param name="time">string containing a time value</param>
         /// <param name="units">string containing time units (PM or AM)</param>
         /// <returns>numerical value of time in hours (1.0 is 3600 seconds), or -1 if an error occurs </returns>
-        public static TimeSpan? ToTimeSpan(string time, string units = null)
+        public static TimeSpan ToTimeSpan(string time, string units = null)
         {
             const int COUNT = 3;
             double[] y = new double[COUNT];
@@ -119,7 +133,7 @@ namespace Epanet.Util {
             int n;
             for(n = 0; n < COUNT && n < s.Length; n++) {
                 if(!s[n].ToDouble(out y[n]))
-                    return null;
+                    return TimeSpan.MinValue;
             }
 
             // If decimal time with units attached then convert to hours. 
@@ -141,38 +155,27 @@ namespace Epanet.Util {
                 return TimeSpan.FromHours(y[0]);
 
             if(units.Equals(Keywords.w_AM, StringComparison.OrdinalIgnoreCase)) {
-                if(y[0] >= 13.0) return null;
+                if(y[0] >= 13.0) return TimeSpan.MinValue;
                 if(y[0] >= 12.0) return TimeSpan.FromHours(y[0] - 12.0);
                 return TimeSpan.FromHours(y[0]);
             }
 
             if(units.Equals(Keywords.w_PM, StringComparison.OrdinalIgnoreCase)) {
-                if(y[0] >= 13.0) return null;
+                if(y[0] >= 13.0) return TimeSpan.MinValue;
                 if(y[0] >= 12.0) return TimeSpan.FromHours(y[0]);
                 return TimeSpan.FromHours(y[0] + 12.0);
             }
 
-            return null;
+            return TimeSpan.MinValue;
         }
 
-        /// <summary>Convert time to a string.</summary>
-        /// <param name="seconds">Time to convert, in seconds.</param>
-        /// <returns>Time string in epanet format.</returns>
-        public static string GetClockTime(this long seconds) {
-            TimeSpan ts = TimeSpan.FromSeconds(seconds);
-            return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
-        }
 
-        public static string GetClockTime(this TimeSpan ts) {
-            return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
-        }
+        public static string GetClockTime(this TimeSpan ts) => string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
 
         ///<summary>Get value signal, if bigger than 0 returns 1, -1 otherwise.</summary>
         /// <param name="val">Any real number.</param>
         /// <returns>-1 or 1</returns>
-        public static double GetSignal(double val) {
-            return val < 0 ? -1d : 1d;
-        }
+        public static double Sign(this double val) => val < 0 ? -1d : 1d;
 
         public static void Reverse<T>(this LinkedList<T> linkedList) {
             if (linkedList == null || linkedList.Count < 2) return;
@@ -186,9 +189,7 @@ namespace Epanet.Util {
                 linkedList.AddFirst(next.Value);
             }
         }
-
-    
-
+        
         public static bool ToDouble(this string s, out double result) {
             return double.TryParse(
                 s,
@@ -196,6 +197,19 @@ namespace Epanet.Util {
                 NumberFormatInfo.InvariantInfo,
                 out result);
         }
+
+        private const double DOUBLE_EPSILON = double.Epsilon * 100;
+        
+        public static bool IsZero(this double value) {
+            return Math.Abs(value) < DOUBLE_EPSILON;
+        }
+
+        public static bool EqualsTo(this double value, double other) {
+            return Math.Abs(value - other) < DOUBLE_EPSILON;
+        }
+
+        public static bool IsZero(this TimeSpan value) { return value.Ticks == 0L; }
+
     }
 
 }

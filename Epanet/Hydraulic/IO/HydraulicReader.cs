@@ -20,11 +20,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
+using Epanet.Util;
+
 namespace Epanet.Hydraulic.IO {
 
 
     ///<summary>Hydraulic binary file reader class.</summary>
-    public class HydraulicReader:IEnumerable<AwareStep>, IDisposable {
+    public sealed class HydraulicReader:IEnumerable<AwareStep>, IDisposable {
 
         private readonly AwareStep.HeaderInfo _headerInfo;
 
@@ -50,11 +52,9 @@ namespace Epanet.Hydraulic.IO {
         /// </summary>
         /// <param name="time">Step instant.</param>
         /// <returns>Reference to step snapshot.</returns>
-        public AwareStep GetStep(long time) {
-            if (_curStep != null) {
-                if (_curStep.Time == time) return _curStep;
-            }
-            
+        public AwareStep GetStep(TimeSpan time) {
+            if (_curStep != null && _curStep.Time == time) return _curStep;
+
             while (_curStep == null || _curStep.Time < time)
                 _curStep = new AwareStep(_inputStream, _headerInfo);
 
@@ -72,21 +72,21 @@ namespace Epanet.Hydraulic.IO {
 
         /// <summary>Get the epanet hydraulic file version.</summary>
         /// <value>Version number.</value>
-        public int Version { get { return _headerInfo.version; } }
+        public int Version => _headerInfo.version;
 
         /// <summary>Get the number of nodes in the file.</summary>
         /// <value>Number of nodes.</value>
-        public int Nodes { get { return _headerInfo.nodes; } }
+        public int Nodes => _headerInfo.nodes;
 
         /// <summary>Get the number of links in the file.</summary>
         /// <value>Number of links.</value>
-        public int Links { get { return _headerInfo.links; } }
+        public int Links => _headerInfo.links;
 
-        public long ReportStart { get { return _headerInfo.rstart; } }
+        public TimeSpan ReportStart => _headerInfo.rstart;
 
-        public long ReportStep { get { return _headerInfo.rstep; } }
+        public TimeSpan ReportStep => _headerInfo.rstep;
 
-        public long Duration { get { return _headerInfo.duration; } }
+        public TimeSpan Duration => _headerInfo.duration;
 
         ///<summary>Get step snapshot iterator.</summary>
         /// <returns>StepSnapshot iterator.</returns>
@@ -117,7 +117,7 @@ namespace Epanet.Hydraulic.IO {
                         yield return stp;
 
                     }
-                    while (stp.Step != 0);
+                    while (!stp.Step.IsZero());
                 }
             }
         }

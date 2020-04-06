@@ -20,14 +20,14 @@ namespace Epanet.Quality.Structures {
     ///<summary>Discrete water quality segment.</summary>
     public class QualitySegment {
         ///<summary>Segment concentration.</summary>
-        public double C;
+        public double Conc { get; set; }
 
         ///<summary>Segment volume.</summary>
-        public double V;
+        public double Vol { get; set; }
 
-        public QualitySegment(double v, double c) {
-            V = v;
-            C = c;
+        public QualitySegment(double vol, double conc) {
+            Vol = vol;
+            Conc = conc;
         }
     }
 

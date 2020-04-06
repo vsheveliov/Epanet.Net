@@ -17,6 +17,8 @@
 
 using System;
 
+using Epanet.Util;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Simple 2d point.</summary>
@@ -27,18 +29,24 @@ namespace Epanet.Network.Structures {
         private readonly double _y;
 
         public EnPoint(double x, double y) {
-
             _x = x;
             _y = y;
         }
 
-        public bool IsInvalid { get { return double.IsNaN(_x) || double.IsNaN(_y); } }
+        public bool IsInvalid => double.IsNaN(_x) || double.IsNaN(_y);
 
         ///<summary>Absciss coordinate.</summary>
-        public double X { get { return _x; } }
+        public double X => _x;
 
         ///<summary>Ordinate coordinate.</summary>
-        public double Y { get { return _y; } }
+        public double Y => _y;
+
+        public double DistanceTo(EnPoint other) {
+            double dx = _x - other._x;
+            double dy = _y - other._y;
+
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
 
         public int CompareTo(EnPoint other) {
             var cmp = _x.CompareTo(other._x);
@@ -46,23 +54,23 @@ namespace Epanet.Network.Structures {
         }
 
         public bool Equals(EnPoint other) {
-            bool ex = (_x == other._x) || (double.IsNaN(_x) && double.IsNaN(other._x));
-            bool ey = (_y == other._y) || (double.IsNaN(_y) && double.IsNaN(other._y)); 
+            bool ex = _x.EqualsTo(other._x) || double.IsNaN(_x) && double.IsNaN(other._x);
+            bool ey = _y.EqualsTo(other._y) || double.IsNaN(_y) && double.IsNaN(other._y); 
             
             return ex && ey;
         }
         
         public override bool Equals(object obj) {
-            if (!(obj is EnPoint)) return false;
-
-            return Equals((EnPoint)obj);
+            return obj is EnPoint point && Equals(point);
         }
         
         public override int GetHashCode() {
             return _x.GetHashCode() ^ _y.GetHashCode();
         }
-        
-        public override string ToString() { return "EnPoint{" + "x=" + _x + ", y=" + _y + '}'; }
+
+        public override string ToString() {
+            return string.Format(nameof(EnPoint) + "{{x={0}, y={1}}}", _x, _y);
+        }
     }
 
 }

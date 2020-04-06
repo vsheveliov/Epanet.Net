@@ -1,6 +1,7 @@
 *.suo
 src/*
 temp/*
+bak/*
 lib/*
 */bin/*
 */obj/*
@@ -10,3 +11,5 @@ lib/*
 *.user
 package.html
 todo.txt
+/.vs/EpaNet2013/v15/Server/sqlite3
+/.vs

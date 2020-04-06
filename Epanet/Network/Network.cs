@@ -26,7 +26,7 @@ namespace Epanet.Network {
 
 
     ///<summary>Hydraulic network structure.</summary>
-    public class Network {
+    public sealed class Network {
         private readonly List<Control> _controls = new List<Control>();
         private readonly ElementCollection<Curve> _curves = new ElementCollection<Curve>();
         
@@ -42,63 +42,62 @@ namespace Epanet.Network {
         };
 
         private readonly ElementCollection<Rule> _rules = new ElementCollection<Rule>();
-        private readonly List<string> _title = new List<string>();
 
         public Network() {
             LoadDefaults();
         }
         
-        public IList<Control> Controls { get { return _controls; } }
+        public IList<Control> Controls => _controls;
 
-        public Curve GetCurve(string name) { return _curves.GetValueOrDefault(name); }
+        public Curve GetCurve(string name) { return _curves[name]; }
 
-        public IList<Curve> Curves { get { return _curves; } }
+        public IList<Curve> Curves => _curves;
 
         ///<summary>Fields map with report variables properties and conversion units.</summary>
-        public FieldsMap FieldsMap { get { return _fields; } }
+        public FieldsMap FieldsMap => _fields;
 
         ///<summary>Transient colleciton of junctions.</summary>
         public IEnumerable<Node> Junctions {
-            get { return _nodes.Where(x => x.Type == NodeType.JUNC); }
+            get { return _nodes.Where(x => x.NodeType == NodeType.JUNC); }
         }
 
-        public IList<Label> Labels { get { return _labels; } }
+        public IList<Label> Labels => _labels;
 
-        public Link GetLink(string name) { return _links.GetValueOrDefault(name); }
+        public Link GetLink(string name) => _links[name];
 
-        public IList<Link> Links { get { return _links; } }
+        public IList<Link> Links => _links;
 
-        public Node GetNode(string name) { return _nodes.GetValueOrDefault(name); }
+        public IEnumerable<Pipe> Pipes => _links.Where(x => x.LinkType == LinkType.PIPE).Cast<Pipe>();
 
-        public IList<Node> Nodes { get { return _nodes; } }
+        public Node GetNode(string name) => _nodes[name];
 
-        public Pattern GetPattern(string name) { return _patterns.GetValueOrDefault(name); }
+        public IList<Node> Nodes => _nodes;
 
-        public IList<Pattern> Patterns { get { return _patterns; } }
+        public Pattern GetPattern(string name) => _patterns[name];
+
+        public IList<Pattern> Patterns => _patterns;
 
         ///<summary>Transient colleciton of pumps.</summary>
         public IEnumerable<Pump> Pumps {
-            get { return _links.Where(x => x.Type == LinkType.PUMP).Cast<Pump>(); }
+            get { return _links.Where(x => x.LinkType == LinkType.PUMP).Cast<Pump>(); }
         }
 
-        public Rule GetRule(string ruleName) { return _rules.GetValueOrDefault(ruleName); }
+        public Rule GetRule(string name) => _rules[name];
 
-        public IList<Rule> Rules { get { return _rules; } }
+        public IList<Rule> Rules => _rules;
 
         public IEnumerable<Tank> Tanks {
-            get { return _nodes.Where(x => x.Type == NodeType.TANK).Cast<Tank>(); }
+            get { return _nodes.Where(x => x.NodeType == NodeType.TANK).Cast<Tank>(); }
         }
 
         public IEnumerable<Tank> Reservoirs {
-            get { return _nodes.Where(x => x.Type == NodeType.RESERV).Cast<Tank>(); }
+            get { return _nodes.Where(x => x.NodeType == NodeType.RESERV).Cast<Tank>(); }
         }
 
-        public List<string> Title { get { return _title; } }
+        public List<string> Title { get; } = new List<string>();
 
         ///<summary>Transient colleciton of valves.</summary>
-        public IEnumerable<Valve> Valves {
-            get { return _links.OfType<Valve>(); }
-        }
+        public IEnumerable<Valve> Valves => _links.OfType<Valve>();
 
         #region properties map
 
@@ -144,7 +143,7 @@ namespace Epanet.Network {
         public double DMult { get; set; }
 
         /// <summary>Duration of simulation (sec).</summary>
-        public long Duration { get; set; }
+        public TimeSpan Duration { get; set; }
 
         /// <summary>Base energy cost per kwh.</summary>
         public double ECost { get; set; }
@@ -177,7 +176,7 @@ namespace Epanet.Network {
         public double HExp { get; set; }
 
         /// <summary>Nominal hyd. time step (sec).</summary>
-        public long HStep { get; set; }
+        public TimeSpan HStep { get; set; }
 
         /// <summary>Hydraulic head tolerance.</summary>
         public double HTol { get; set; }
@@ -219,16 +218,16 @@ namespace Epanet.Network {
         public PressUnitsType PressFlag { get; set; }
 
         /// <summary>Starting pattern time (sec).</summary>
-        public long PStart { get; set; }
+        public TimeSpan PStart { get; set; }
 
         /// <summary>Time pattern time step (sec).</summary>
-        public long PStep { get; set; }
+        public TimeSpan PStep { get; set; }
 
         /// <summary>Exponent in orifice formula.</summary>
         public double QExp { get; set; }
 
         /// <summary>Quality time step (sec).</summary>
-        public long QStep { get; set; }
+        public TimeSpan QStep { get; set; }
 
         /// <summary>Flow rate tolerance.</summary>
         public double QTol { get; set; }
@@ -243,13 +242,13 @@ namespace Epanet.Network {
         public double RQtol { get; set; }
 
         /// <summary>Time when reporting starts.</summary>
-        public long RStart { get; set; }
+        public TimeSpan RStart { get; set; }
 
         /// <summary>Reporting time step (sec).</summary>
-        public long RStep { get; set; }
+        public TimeSpan RStep { get; set; }
 
         /// <summary>Rule evaluation time step.</summary>
-        public long RuleStep { get; set; }
+        public TimeSpan RuleStep { get; set; }
 
         /// <summary>Specific gravity.</summary>
         public double SpGrav { get; set; }
@@ -267,10 +266,10 @@ namespace Epanet.Network {
         public string TraceNode { get; set; }
 
         /// <summary>Starting time of day (sec).</summary>
-        public long Tstart { get; set; }
+        public TimeSpan Tstart { get; set; }
 
         /// <summary>Time statistics flag.</summary>
-        public TStatType TstatFlag { get; set; }
+        public TimeStatType TstatFlag { get; set; }
 
         /// <summary>Unit system flag.</summary>
         public UnitsType UnitsFlag { get; set; }
@@ -283,11 +282,9 @@ namespace Epanet.Network {
 
         #endregion
 
-        public Dictionary<string, string> ExtraOptions {
-            get {
-                return _extraOptions ?? (_extraOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
-            }
-        }
+        public Dictionary<string, string> ExtraOptions => _extraOptions 
+                                                          ?? (_extraOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        public bool AutoLength { get; set; }
 
         /// <summary>Init properties with default value.</summary>
         private void LoadDefaults() {
@@ -309,16 +306,16 @@ namespace Epanet.Network {
             EnergyFlag = false;
             NodeFlag = ReportFlag.FALSE;
             LinkFlag = ReportFlag.FALSE;
-            TstatFlag = TStatType.SERIES; // Generate time series output
-            HStep = 3600L; // 1 hr hydraulic time step
-            Duration = 0L; // 0 sec duration (steady state)
-            QStep = 0L; // No pre-set quality time step
-            RuleStep = 0L; // No pre-set rule time step
-            PStep = 3600L; // 1 hr time pattern period
-            PStart = 0L; // Starting pattern period
-            RStep = 3600L; // 1 hr reporting period
-            RStart = 0L; // Start reporting at time 0
-            Tstart = 0L; // Starting time of day
+            TstatFlag = TimeStatType.SERIES; // Generate time series output
+            HStep = new TimeSpan(TimeSpan.TicksPerHour); // 1 hr hydraulic time step
+            Duration = TimeSpan.Zero; // 0 sec duration (steady state)
+            QStep = TimeSpan.Zero; // No pre-set quality time step
+            RuleStep = TimeSpan.Zero; // No pre-set rule time step
+            PStep = TimeSpan.FromHours(1); // 1 hr time pattern period
+            PStart = TimeSpan.Zero; // Starting pattern period
+            RStep = TimeSpan.FromHours(1); // 1 hr reporting period
+            RStart = TimeSpan.Zero; // Start reporting at time 0
+            Tstart = TimeSpan.Zero; // Starting time of day
             FlowFlag = FlowUnitsType.GPM; // Flow units are gpm
             PressFlag = PressUnitsType.PSI; // Pressure units are psi
             FormFlag = FormType.HW; // Use Hazen-Williams formula

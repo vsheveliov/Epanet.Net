@@ -33,9 +33,9 @@ namespace Epanet.Hydraulic.Structures {
     public class SimulationRule {
         /// <summary>Temporary action item</summary>
         private struct ActItem {
-            public ActItem(SimulationRule rule, Action action) {
-                this.rule = rule;
-                this.action = action;
+            public ActItem(SimulationRule r, Action a) {
+                rule = r;
+                action = a;
             }
 
             public readonly SimulationRule rule;
@@ -44,115 +44,121 @@ namespace Epanet.Hydraulic.Structures {
 
         /// <summary>Rule premise.</summary>
         private class Premise {
-            public Premise(string[] tok, Rulewords lOp, IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links) {
-                Objects loType;
+            public Premise(
+                string[] tok,
+                Rulewords lOp,
+                IEnumerable<SimulationNode> nodes,
+                IEnumerable<SimulationLink> links) {
                 Varwords lVar;
                 object lObj;
                 Operators lROp;
 
                 if (tok.Length != 5 && tok.Length != 6)
-                    throw new ENException(ErrorCode.Err201);
+                    throw new EnException(ErrorCode.Err201);
 
-                EnumsTxt.TryParse(tok[1], out loType);
+                tok[1].TryParse(out Objects loType);
 
                 if (loType == Objects.SYSTEM) {
                     EnumsTxt.TryParse(tok[2], out lVar);
 
                     switch (lVar) {
-                    case Varwords.DEMAND:
-                    case Varwords.TIME:
-                    case Varwords.CLOCKTIME:
-                        lObj = Objects.SYSTEM;
-                        break;
-                    default:
-                        throw new ENException(ErrorCode.Err201);
+                        case Varwords.DEMAND:
+                        case Varwords.TIME:
+                        case Varwords.CLOCKTIME:
+                            lObj = Objects.SYSTEM;
+                            break;
+                        default:
+                            throw new EnException(ErrorCode.Err201);
                     }
                 }
                 else {
                     if (!EnumsTxt.TryParse(tok[3], out lVar))
-                        throw new ENException(ErrorCode.Err201);
+                        throw new EnException(ErrorCode.Err201);
 
                     switch (loType) {
-                    case Objects.NODE:
-                    case Objects.JUNC:
-                    case Objects.RESERV:
-                    case Objects.TANK:
-                        loType = Objects.NODE;
-                        break;
-                    case Objects.LINK:
-                    case Objects.PIPE:
-                    case Objects.PUMP:
-                    case Objects.VALVE:
-                        loType = Objects.LINK;
-                        break;
-                    default:
-                        throw new ENException(ErrorCode.Err201);
+                        case Objects.NODE:
+                        case Objects.JUNC:
+                        case Objects.RESERV:
+                        case Objects.TANK:
+                            loType = Objects.NODE;
+                            break;
+                        case Objects.LINK:
+                        case Objects.PIPE:
+                        case Objects.PUMP:
+                        case Objects.VALVE:
+                            loType = Objects.LINK;
+                            break;
+                        default:
+                            throw new EnException(ErrorCode.Err201);
                     }
 
                     if (loType == Objects.NODE) {
-                        SimulationNode node = nodes.FirstOrDefault(simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                        SimulationNode node = nodes.FirstOrDefault(
+                            simNode => simNode.Node.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (node == null)
-                            throw new ENException(ErrorCode.Err203);
+                            throw new EnException(ErrorCode.Err203);
 
                         switch (lVar) {
-                        case Varwords.DEMAND:
-                        case Varwords.HEAD:
-                        case Varwords.GRADE:
-                        case Varwords.LEVEL:
-                        case Varwords.PRESSURE:
-                            break;
-                        case Varwords.FILLTIME:
-                        case Varwords.DRAINTIME:
-                            if (node is SimulationTank)
-                                throw new ENException(ErrorCode.Err201);
-                            break;
+                            case Varwords.DEMAND:
+                            case Varwords.HEAD:
+                            case Varwords.GRADE:
+                            case Varwords.LEVEL:
+                            case Varwords.PRESSURE:
+                                break;
+                            case Varwords.FILLTIME:
+                            case Varwords.DRAINTIME:
+                                if (node is SimulationTank)
+                                    throw new EnException(ErrorCode.Err201);
 
-                        default:
-                            throw new ENException(ErrorCode.Err201);
+                                break;
+
+                            default:
+                                throw new EnException(ErrorCode.Err201);
                         }
+
                         lObj = node;
                     }
                     else {
                         SimulationLink link = links
-                            .FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                            .FirstOrDefault(
+                                simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
                         if (link == null)
-                            throw new ENException(ErrorCode.Err204);
+                            throw new EnException(ErrorCode.Err204);
 
                         switch (lVar) {
-                        case Varwords.FLOW:
-                        case Varwords.STATUS:
-                        case Varwords.SETTING:
-                            break;
-                        default:
-                            throw new ENException(ErrorCode.Err201);
+                            case Varwords.FLOW:
+                            case Varwords.STATUS:
+                            case Varwords.SETTING:
+                                break;
+                            default:
+                                throw new EnException(ErrorCode.Err201);
                         }
+
                         lObj = link;
                     }
                 }
 
-                Operators op;
-
-                if (!EnumsTxt.TryParse(loType == Objects.SYSTEM ? tok[3] : tok[4], out op))
-                    throw new ENException(ErrorCode.Err201);
+                if (!(loType == Objects.SYSTEM ? tok[3] : tok[4]).TryParse(out Operators op))
+                    throw new EnException(ErrorCode.Err201);
 
                 switch (op) {
-                case Operators.IS:
-                    lROp = Operators.EQ;
-                    break;
-                case Operators.NOT:
-                    lROp = Operators.NE;
-                    break;
-                case Operators.BELOW:
-                    lROp = Operators.LT;
-                    break;
-                case Operators.ABOVE:
-                    lROp = Operators.GT;
-                    break;
-                default:
-                    lROp = op;
-                    break;
+                    case Operators.IS:
+                        lROp = Operators.EQ;
+                        break;
+                    case Operators.NOT:
+                        lROp = Operators.NE;
+                        break;
+                    case Operators.BELOW:
+                        lROp = Operators.LT;
+                        break;
+                    case Operators.ABOVE:
+                        lROp = Operators.GT;
+                        break;
+                    default:
+                        lROp = op;
+                        break;
                 }
 
                 // BUG: Baseform bug lStat == Rule.Values.IS_NUMBER
@@ -161,21 +167,19 @@ namespace Epanet.Hydraulic.Structures {
 
                 if (lVar == Varwords.TIME || lVar == Varwords.CLOCKTIME) {
                     lVal = tok.Length == 6
-                        ? Utilities.GetHour(tok[4], tok[5]) 
+                        ? Utilities.GetHour(tok[4], tok[5])
                         : Utilities.GetHour(tok[4]);
 
                     lVal *= 3600;
 
                     if (lVal < 0.0)
-                        throw new ENException(ErrorCode.Err202);
+                        throw new EnException(ErrorCode.Err202);
                 }
                 else {
-                    Values k;
-
-                    if (!EnumsTxt.TryParse(tok[tok.Length - 1], out k) || lStat <= Values.IS_NUMBER) {
+                    if (!EnumsTxt.TryParse(tok[tok.Length - 1], out Values k) || lStat <= Values.IS_NUMBER) {
                         if (lStat == (Values)(-1) || lStat <= Values.IS_NUMBER) {
                             if (!tok[tok.Length - 1].ToDouble(out lVal))
-                                throw new ENException(ErrorCode.Err202);
+                                throw new EnException(ErrorCode.Err202);
 
                             if (lVar == Varwords.FILLTIME || lVar == Varwords.DRAINTIME)
                                 lVal *= 3600.0;
@@ -210,21 +214,21 @@ namespace Epanet.Hydraulic.Structures {
             /// <summary>Checks if a particular premise is true.</summary>
             public bool CheckPremise(
                 EpanetNetwork net,
-                long time1,
-                long htime,
-                double dsystem) 
-            {
+                TimeSpan time1,
+                TimeSpan htime,
+                double dsystem) {
+
                 if (_variable == Varwords.TIME || _variable == Varwords.CLOCKTIME)
                     return CheckTime(net, time1, htime);
-                else if (_status > Values.IS_NUMBER)
-                    return CheckStatus();
-                else
-                    return CheckValue(net.FieldsMap, dsystem);
+
+                return _status > Values.IS_NUMBER
+                    ? CheckStatus()
+                    : CheckValue(net.FieldsMap, dsystem);
             }
 
             /// <summary>Checks if condition on system time holds.</summary>
-            private bool CheckTime(EpanetNetwork net, long time1, long htime) {
-                long t1, t2;
+            private bool CheckTime(EpanetNetwork net, TimeSpan time1, TimeSpan htime) {
+                TimeSpan t1, t2;
 
                 switch (_variable) {
                     case Varwords.TIME:
@@ -232,40 +236,56 @@ namespace Epanet.Hydraulic.Structures {
                         t2 = htime;
                         break;
                     case Varwords.CLOCKTIME:
-                        t1 = (time1 + net.Tstart) % Constants.SECperDAY;
-                        t2 = (htime + net.Tstart) % Constants.SECperDAY;
+                        t1 = (time1 + net.Tstart).TimeOfDay();
+                        t2 = (htime + net.Tstart).TimeOfDay();
                         break;
                     default:
                         return false;
                 }
 
-                var x = (long)_value;
-                switch (_relop) {
-                case Operators.LT:
-                    if (t2 >= x) return false;
-                    break;
-                case Operators.LE:
-                    if (t2 > x) return false;
-                    break;
-                case Operators.GT:
-                    if (t2 <= x) return false;
-                    break;
-                case Operators.GE:
-                    if (t2 < x) return false;
-                    break;
+                var x = TimeSpan.FromSeconds(_value);
 
-                case Operators.EQ:
-                case Operators.NE:
-                    var flag = false;
-                    if (t2 < t1) {
-                        if (x >= t1 || x <= t2) flag = true;
-                    }
-                    else {
-                        if (x >= t1 && x <= t2) flag = true;
-                    }
-                    if (_relop == Operators.EQ && !flag) return true;
-                    if (_relop == Operators.NE && flag) return true;
-                    break;
+                switch (_relop) {
+                    case Operators.LT:
+                        if (t2 >= x) return false;
+
+                        break;
+                    case Operators.LE:
+                        if (t2 > x) return false;
+
+                        break;
+                    case Operators.GT:
+                        if (t2 <= x) return false;
+
+                        break;
+                    case Operators.GE:
+                        if (t2 < x) return false;
+
+                        break;
+
+                    case Operators.EQ:
+                    case Operators.NE:
+                        var flag = false;
+                        if (t2 < t1) {
+                            if (x >= t1 || x <= t2) flag = true;
+                        }
+                        else {
+                            if (x >= t1 && x <= t2) flag = true;
+                        }
+
+                        switch (_relop) {
+                            case Operators.EQ:
+                                if (!flag) return true;
+
+                                break;
+                            case Operators.NE: {
+                                if (flag) return true;
+
+                                break;
+                            }
+                        }
+
+                        break;
                 }
 
                 return true;
@@ -274,26 +294,28 @@ namespace Epanet.Hydraulic.Structures {
             /// <summary>Checks if condition on link status holds.</summary>
             private bool CheckStatus() {
                 switch (_status) {
-                case Values.IS_OPEN:
-                case Values.IS_CLOSED:
-                case Values.IS_ACTIVE:
-                    Values j;
-                    var simlink = _object as SimulationLink;
-                    StatType i = simlink == null ? (StatType)(-1) : simlink.SimStatus;
+                    case Values.IS_OPEN:
+                    case Values.IS_CLOSED:
+                    case Values.IS_ACTIVE:
+                        Values j;
+                        var simlink = _object as SimulationLink;
+                        StatType i = simlink?.SimStatus ?? (StatType)(-1);
 
-                    if(i >= StatType.XHEAD && i <= StatType.CLOSED)
-                        j = Values.IS_CLOSED;
-                    else if (i == StatType.ACTIVE)
-                        j = Values.IS_ACTIVE;
-                    else
-                        j = Values.IS_OPEN;
+                        if (i >= StatType.XHEAD && i <= StatType.CLOSED)
+                            j = Values.IS_CLOSED;
+                        else if (i == StatType.ACTIVE)
+                            j = Values.IS_ACTIVE;
+                        else
+                            j = Values.IS_OPEN;
 
-                    if (j == _status && _relop == Operators.EQ)
-                        return true;
-                    if (j != _status && _relop == Operators.NE)
-                        return true;
-                    break;
+                        if (j == _status && _relop == Operators.EQ)
+                            return true;
+                        if (j != _status && _relop == Operators.NE)
+                            return true;
+
+                        break;
                 }
+
                 return false;
             }
 
@@ -302,114 +324,122 @@ namespace Epanet.Hydraulic.Structures {
                 const double TOL = 0.001D;
                 double x;
 
-                SimulationLink link = _object as SimulationLink;
-                SimulationNode node = _object as SimulationNode;
-
-
                 switch (_variable) {
-                case Varwords.DEMAND:
-                    if ((Objects)_object == Objects.SYSTEM)
-                        x = dsystem * fMap.GetUnits(FieldType.DEMAND);
-                    else
-                        x = node.SimDemand * fMap.GetUnits(FieldType.DEMAND);
-
-                    break;
-
-                case Varwords.HEAD:
-                case Varwords.GRADE:
-                    x = node.SimHead * fMap.GetUnits(FieldType.HEAD);
-                    break;
-
-                case Varwords.PRESSURE:
-                    x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldType.PRESSURE);
-                    break;
-
-                case Varwords.LEVEL:
-                    x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldType.HEAD);
-                    break;
-
-                case Varwords.FLOW:
-                    x = Math.Abs(link.SimFlow) * fMap.GetUnits(FieldType.FLOW);
-                    break;
-
-                case Varwords.SETTING:
-
-                    if (double.IsNaN(link.SimSetting))
-                        return false;
-
-                    x = link.SimSetting;
-                    switch (link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                        x *= fMap.GetUnits(FieldType.PRESSURE);
+                    case Varwords.DEMAND: {
+                        switch (_object) {
+                            case Objects o when o == Objects.SYSTEM:
+                                x = dsystem * fMap.GetUnits(FieldType.DEMAND);
+                                break;
+                            case SimulationNode node:
+                                x = node.SimDemand * fMap.GetUnits(FieldType.DEMAND);
+                                break;
+                            default:
+                                return false;
+                        }
+                    }
                         break;
-                    case LinkType.FCV:
-                        x *= fMap.GetUnits(FieldType.FLOW);
+
+                    case Varwords.HEAD:
+                    case Varwords.GRADE: {
+                        if (!(_object is SimulationNode node))
+                            return false;
+
+                        x = node.SimHead * fMap.GetUnits(FieldType.HEAD);
+                    }
+                        break;
+
+                    case Varwords.PRESSURE: {
+                        if (!(_object is SimulationNode node))
+                            return false;
+
+                        x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldType.PRESSURE);
+                    }
+                        break;
+
+                    case Varwords.LEVEL: {
+                        if (!(_object is SimulationNode node))
+                            return false;
+
+                        x = (node.SimHead - node.Elevation) * fMap.GetUnits(FieldType.HEAD);
+                    }
+                        break;
+
+                    case Varwords.FLOW: {
+                        if (!(_object is SimulationLink link))
+                            return false;
+
+                        x = Math.Abs(link.SimFlow) * fMap.GetUnits(FieldType.FLOW);
+                    }
+                        break;
+
+                    case Varwords.SETTING: {
+                        if (!(_object is SimulationLink link) || double.IsNaN(link.SimSetting))
+                            return false;
+
+                        x = link.SimSetting;
+
+                        if (link.LinkType == LinkType.VALVE) {
+                            switch (((SimulationValve)link).ValveType) {
+                                case ValveType.PRV:
+                                case ValveType.PSV:
+                                case ValveType.PBV:
+                                    x *= fMap.GetUnits(FieldType.PRESSURE);
+                                    break;
+                                case ValveType.FCV:
+                                    x *= fMap.GetUnits(FieldType.FLOW);
+                                    break;
+                            }
+                        }
+
                         break;
                     }
-                    break;
-                case Varwords.FILLTIME: {
-                    if (!(_object is SimulationTank))
+
+                    case Varwords.FILLTIME: {
+                        if (!(_object is SimulationTank tank) || 
+                            tank.IsReservoir || 
+                            tank.SimDemand <= Constants.TINY)
+                            return false;
+
+                        x = (tank.Vmax - tank.SimVolume) / tank.SimDemand;
+
+                        break;
+                    }
+
+                    case Varwords.DRAINTIME: {
+                        if (!(_object is SimulationTank tank) || 
+                            tank.IsReservoir || 
+                            tank.SimDemand >= -Constants.TINY)
+                            return false;
+
+                        x = (tank.Vmin - tank.SimVolume) / tank.SimDemand;
+                        break;
+                    }
+
+                    default:
                         return false;
-
-                    SimulationTank tank = (SimulationTank)_object;
-
-                    if (tank.IsReservoir)
-                        return false;
-
-                    if (tank.SimDemand <= Constants.TINY)
-                        return false;
-
-                    x = (tank.Vmax - tank.SimVolume) / tank.SimDemand;
-
-                    break;
-                }
-                case Varwords.DRAINTIME: {
-                    if (!(_object is SimulationTank))
-                        return false;
-
-                    SimulationTank tank = (SimulationTank)_object;
-
-                    if (tank.IsReservoir)
-                        return false;
-
-                    if (tank.SimDemand >= -Constants.TINY)
-                        return false;
-
-                    x = (tank.Vmin - tank.SimVolume) / tank.SimDemand;
-                    break;
-                }
-                default:
-                    return false;
                 }
 
                 switch (_relop) {
-                case Operators.EQ:
-                    if (Math.Abs(x - _value) > TOL)
-                        return false;
-                    break;
-                case Operators.NE:
-                    if (Math.Abs(x - _value) < TOL)
-                        return false;
-                    break;
-                case Operators.LT:
-                    if (x > _value + TOL)
-                        return false;
-                    break;
-                case Operators.LE:
-                    if (x > _value - TOL)
-                        return false;
-                    break;
-                case Operators.GT:
-                    if (x < _value - TOL)
-                        return false;
-                    break;
-                case Operators.GE:
-                    if (x < _value + TOL)
-                        return false;
-                    break;
+                    case Operators.EQ:
+                        if (Math.Abs(x - _value) > TOL) return false;
+                        break;
+                    case Operators.NE:
+                        if (Math.Abs(x - _value) < TOL) return false;
+                        break;
+                    case Operators.LT:
+                        if (x > _value + TOL) return false;
+                        break;
+                    case Operators.LE:
+                        if (x > _value - TOL) return false;
+                        break;
+                    case Operators.GT:
+                        if (x < _value - TOL) return false;
+                        break;
+                    case Operators.GE:
+                        if (x < _value + TOL) return false;
+                        break;
                 }
+
                 return true;
             }
 
@@ -423,79 +453,83 @@ namespace Epanet.Hydraulic.Structures {
 
                 int ntokens = tok.Length;
 
-                Values k;
-
                 if (ntokens != 6)
-                    throw new ENException(ErrorCode.Err201);
+                    throw new EnException(ErrorCode.Err201);
 
-                SimulationLink link = links.FirstOrDefault(simLink => simLink.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
+                SimulationLink slink = links.FirstOrDefault(l => l.Link.Name.Equals(tok[2], StringComparison.OrdinalIgnoreCase));
 
-                if (link == null)
-                    throw new ENException(ErrorCode.Err204);
+                if (slink == null)
+                    throw new EnException(ErrorCode.Err204);
 
-                if (link.Type == LinkType.CV)
-                    throw new ENException(ErrorCode.Err207);
+                if (slink.LinkType == LinkType.PIPE && ((Pipe)slink.Link).HasCheckValve)
+                    throw new EnException(ErrorCode.Err207);
 
                 var s = (Values)(-1);
                 double x = double.NaN;
 
-                if (EnumsTxt.TryParse(tok[5], out k) && k > Values.IS_NUMBER) {
+                if (EnumsTxt.TryParse(tok[5], out Values k) && k > Values.IS_NUMBER) {
                     s = k;
                 }
                 else {
                     if (!tok[5].ToDouble(out x) || x < 0.0)
-                        throw new ENException(ErrorCode.Err202);
+                        throw new EnException(ErrorCode.Err202);
                 }
 
-                if (!double.IsNaN(x) && link.Type == LinkType.GPV)
-                    throw new ENException(ErrorCode.Err202);
+                if (!double.IsNaN(x)) {
+                    if (slink.LinkType == LinkType.VALVE)
+                        if (((SimulationValve)slink).ValveType == ValveType.GPV)
+                            throw new EnException(ErrorCode.Err202);
+                }
 
-                if (!double.IsNaN(x) && link.Type == LinkType.PIPE) {
-                    s = x == 0.0 ? Values.IS_CLOSED : Values.IS_OPEN;
+                if (!double.IsNaN(x) && slink.LinkType == LinkType.PIPE) {
+                    s = x.IsZero() ? Values.IS_CLOSED : Values.IS_OPEN;
                     x = double.NaN;
                 }
 
-                _link = link;
+                link = slink;
                 _status = s;
                 _setting = x;
             }
 
-            internal readonly SimulationLink _link;
+            internal readonly SimulationLink link; // FIXME internal?
             private readonly Values _status;
             private readonly double _setting;
 
             /// <summary>Execute action, returns true if the link was alterated.</summary>
-            public bool Execute(EpanetNetwork net, TraceSource log, double tol, long htime) {
+            public bool Execute(EpanetNetwork net, TraceSource log, double tol, TimeSpan htime) {
                 bool flag = false;
 
-                StatType s = _link.SimStatus;
-                double v = _link.SimSetting;
+                StatType s = link.SimStatus;
+                double v = link.SimSetting;
                 double x = _setting;
 
                 if (_status == Values.IS_OPEN && s <= StatType.CLOSED) {
                     // Switch link from closed to open
-                    _link.SetLinkStatus(true);
+                    link.SetLinkStatus(true);
                     flag = true;
                 }
                 else if (_status == Values.IS_CLOSED && s > StatType.CLOSED) {
                     // Switch link from not closed to closed
-                    _link.SetLinkStatus(false);
+                    link.SetLinkStatus(false);
                     flag = true;
                 }
                 else if (!double.IsNaN(x)) {
                     // Change link's setting
-                    switch (_link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                        x /= net.FieldsMap.GetUnits(FieldType.PRESSURE);
-                        break;
-                    case LinkType.FCV:
-                        x /= net.FieldsMap.GetUnits(FieldType.FLOW);
-                        break;
+                    if (link.LinkType == LinkType.VALVE) {
+                        switch (((Valve)link.Link).ValveType) {
+                            case ValveType.PRV:
+                            case ValveType.PSV:
+                            case ValveType.PBV:
+                                x /= net.FieldsMap.GetUnits(FieldType.PRESSURE);
+                                break;
+                            case ValveType.FCV:
+                                x /= net.FieldsMap.GetUnits(FieldType.FLOW);
+                                break;
+                        }
                     }
+
                     if (Math.Abs(x - v) > tol) {
-                        _link.SetLinkSetting(x);
+                        link.SetLinkSetting(x);
                         flag = true;
                     }
                 }
@@ -509,12 +543,12 @@ namespace Epanet.Hydraulic.Structures {
                 return false;
             }
 
-            private void LogRuleExecution(TraceSource log, long htime) {
+            private void LogRuleExecution(TraceSource log, TimeSpan htime) {
                 log.Warning(
                     Properties.Text.FMT63,
                     htime.GetClockTime(),
-                    _link.Type.ParseStr(),
-                    _link.Link.Name,
+                    link.LinkType.Keyword2(),
+                    link.Link.Name,
                     _label);
             }
         }
@@ -533,8 +567,8 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Evaluate rule premises.</summary>
         private bool EvalPremises(
             EpanetNetwork net,
-            long time1,
-            long htime,
+            TimeSpan time1,
+            TimeSpan htime,
             double dsystem) {
             bool result = true;
 
@@ -576,7 +610,7 @@ namespace Epanet.Hydraulic.Structures {
             
             for (int i = 0; i < actionList.Count; i++) {
 
-                if(actionList[i].action._link != action._link)
+                if(actionList[i].action.link != action.link)
                     continue;
 
                 // Action with same link
@@ -592,7 +626,7 @@ namespace Epanet.Hydraulic.Structures {
         }
 
         /// <summary>Implements actions on action list, returns the number of actions executed.</summary>
-        private static int TakeActions(EpanetNetwork net, TraceSource log, List<ActItem> actionList, long htime) {
+        private static int TakeActions(EpanetNetwork net, TraceSource log, List<ActItem> actionList, TimeSpan htime) {
             double tol = 1e-3;
             int n = 0;
 
@@ -610,11 +644,11 @@ namespace Epanet.Hydraulic.Structures {
             EpanetNetwork net,
             IEnumerable<SimulationRule> rules,
             TraceSource log,
-            long htime,
-            long dt,
+            TimeSpan htime,
+            TimeSpan dt,
             double dsystem) {
             // Start of rule evaluation time interval
-            long time1 = htime - dt + 1;
+            TimeSpan time1 = (htime - dt).Add(new TimeSpan(TimeSpan.TicksPerSecond));
 
             List<ActItem> actionList = new List<ActItem>();
 
@@ -633,18 +667,18 @@ namespace Epanet.Hydraulic.Structures {
             TraceSource log,
             SimulationRule[] rules,
             List<SimulationTank> tanks,
-            long htime,
-            long tstep,
+            TimeSpan htime,
+            TimeSpan tstep,
             double dsystem,
-            out long tstepOut,
-            out long htimeOut) {
+            out TimeSpan tstepOut,
+            out TimeSpan htimeOut) {
 
-            long dt; // Normal time increment for rule evaluation
-            long dt1; // Actual time increment for rule evaluation
+            TimeSpan dt; // Normal time increment for rule evaluation
+            TimeSpan dt1; // Actual time increment for rule evaluation
 
             // Find interval of time for rule evaluation
-            long tnow = htime;        // Start of time interval for rule evaluation
-            long tmax = tnow + tstep; // End of time interval for rule evaluation
+            TimeSpan tnow = htime;        // Start of time interval for rule evaluation
+            TimeSpan tmax = tnow + tstep; // End of time interval for rule evaluation
 
             //If no rules, then time increment equals current time step
             if (rules.Length == 0) {
@@ -656,14 +690,14 @@ namespace Epanet.Hydraulic.Structures {
                 // first actual increment equals time until next even multiple of
                 // Rulestep occurs.
                 dt = net.RuleStep;
-                dt1 = net.RuleStep - tnow % net.RuleStep;
+                dt1 = net.RuleStep - new TimeSpan(tnow.Ticks % net.RuleStep.Ticks);
             }
 
             // Make sure time increment is no larger than current time step
-            dt = Math.Min(dt, tstep);
-            dt1 = Math.Min(dt1, tstep);
+            dt = new TimeSpan(Math.Min(dt.Ticks, tstep.Ticks));
+            dt1 = new TimeSpan(Math.Min(dt1.Ticks, tstep.Ticks));
 
-            if (dt1 == 0)
+            if (dt1.IsZero())
                 dt1 = dt;
 
             // Step through time, updating tank levels, until either
@@ -681,10 +715,10 @@ namespace Epanet.Hydraulic.Structures {
                 htime += dt1; // Update simulation clock
                 SimulationTank.StepWaterLevels(tanks, net.FieldsMap, dt1); // Find new tank levels
                 if (Check(net, rules, log, htime, dt1, dsystem) != 0) break; // Stop if rules fire
-                dt = Math.Min(dt, tmax - htime); // Update time increment
+                dt = new TimeSpan(Math.Min(dt.Ticks, (tmax - htime).Ticks)); // Update time increment
                 dt1 = dt; // Update actual increment
             }
-            while (dt > 0);
+            while (dt > TimeSpan.Zero);
 
             //Compute an updated simulation time step (*tstep)
             // and return simulation time to its original value
@@ -702,15 +736,14 @@ namespace Epanet.Hydraulic.Structures {
 
             foreach (string line in rule.Code) {
                 string[] tok = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                Rulewords key;
 
-                if (!EnumsTxt.TryParse(tok[0], out key))
-                    throw new ENException(ErrorCode.Err201);
+                if (!tok[0].TryParse(out Rulewords key))
+                    throw new EnException(ErrorCode.Err201);
 
                 switch (key) {
                 case Rulewords.IF:
                     if (ruleState != Rulewords.RULE)
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
                     ruleState = Rulewords.IF;
                     ParsePremise(tok, Rulewords.AND, nodes, links);
                     break;
@@ -725,7 +758,7 @@ namespace Epanet.Hydraulic.Structures {
                         ParseAction(ruleState, tok, links);
                         break;
                     default:
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
                     }
                     break;
 
@@ -733,37 +766,37 @@ namespace Epanet.Hydraulic.Structures {
                     if (ruleState == Rulewords.IF)
                         ParsePremise(tok, Rulewords.OR, nodes, links);
                     else
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
                     break;
 
                 case Rulewords.THEN:
                     if (ruleState != Rulewords.IF)
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
                     ruleState = Rulewords.THEN;
                     ParseAction(ruleState, tok, links);
                     break;
 
                 case Rulewords.ELSE:
                     if (ruleState != Rulewords.THEN)
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
                     ruleState = Rulewords.ELSE;
                     ParseAction(ruleState, tok, links);
                     break;
 
                 case Rulewords.PRIORITY: {
                     if (ruleState != Rulewords.THEN && ruleState != Rulewords.ELSE)
-                        throw new ENException(ErrorCode.Err221);
+                        throw new EnException(ErrorCode.Err221);
 
                     ruleState = Rulewords.PRIORITY;
 
                     if (!tok[1].ToDouble(out tempPriority))
-                        throw new ENException(ErrorCode.Err202);
+                        throw new EnException(ErrorCode.Err202);
 
                     break;
                 }
 
                 default:
-                    throw new ENException(ErrorCode.Err201);
+                    throw new EnException(ErrorCode.Err201);
                 }
             }
 

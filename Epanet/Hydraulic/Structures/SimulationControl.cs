@@ -32,15 +32,13 @@ namespace Epanet.Hydraulic.Structures {
 
     public class SimulationControl {
         private readonly Control _control;
-        private readonly SimulationLink _link;
-        private readonly SimulationNode _node;
 
         public SimulationControl(IEnumerable<SimulationNode> nodes, IEnumerable<SimulationLink> links, Control @ref) {
             if (@ref.Node != null) {
                 string nid = @ref.Node.Name;
                 foreach (SimulationNode simulationNode  in  nodes) {
-                    if (simulationNode.Id.Equals(nid, StringComparison.OrdinalIgnoreCase)) {
-                        _node = simulationNode;
+                    if (string.Equals(simulationNode.Id, nid, StringComparison.OrdinalIgnoreCase)) {
+                        Node = simulationNode;
                         break;
                     }
                 }
@@ -49,8 +47,8 @@ namespace Epanet.Hydraulic.Structures {
             if (@ref.Link != null) {
                 string linkId = @ref.Link.Name;
                 foreach (SimulationLink simulationLink  in  links) {
-                    if (simulationLink.Link.Name.Equals(linkId, StringComparison.OrdinalIgnoreCase)) {
-                        _link = simulationLink;
+                    if (string.Equals(simulationLink.Link.Name, linkId, StringComparison.OrdinalIgnoreCase)) {
+                        Link = simulationLink;
                         break;
                     }
                 }
@@ -59,82 +57,90 @@ namespace Epanet.Hydraulic.Structures {
             _control = @ref;
         }
 
-        public SimulationLink Link { get { return _link; } }
+        public SimulationLink Link { get; }
 
-        public SimulationNode Node { get { return _node; } }
+        public SimulationNode Node { get; }
 
-        public long Time { get { return _control.Time; } }
+        public TimeSpan Time => _control.Time;
 
-        public double Grade { get { return _control.Grade; } }
+        public double Grade => _control.Grade;
 
-        public double Setting { get { return _control.Setting; } }
+        public double Setting => _control.Setting;
 
-        public StatType Status { get { return _control.Status; } }
+        public StatType Status => _control.Status;
 
-        public ControlType Type { get { return _control.Type; } }
+        public ControlType Type => _control.Type;
 
         ///<summary>Get the shortest time step to activate the control.</summary>
-        private long GetRequiredTimeStep(EpanetNetwork net, long htime, long tstep) {
+        private TimeSpan GetRequiredTimeStep(EpanetNetwork net, TimeSpan htime, TimeSpan tstep)
+        {
 
-            long t = 0;
+            TimeSpan t = TimeSpan.Zero;
 
             // Node control
             if (Node != null) {
 
-                if (!(Node is SimulationTank)) // Check if node is a tank
-                    return tstep;
+                // Check if node is a tank
+                SimulationTank tank = Node as SimulationTank;
+                if (tank == null) return tstep;
 
-                double h = _node.SimHead; // Current tank grade
-                double q = _node.SimDemand; // Flow into tank
+                double h = Node.SimHead; // Current tank grade
+                double q = Node.SimDemand; // Flow into tank
 
                 if (Math.Abs(q) <= Constants.QZERO)
                     return tstep;
 
-                if ((h < Grade && Type == ControlType.HILEVEL && q > 0.0) // Tank below hi level & filling
-                    || (h > Grade && Type == ControlType.LOWLEVEL && q < 0.0))
-                    // Tank above low level & emptying
+                if (h < Grade && Type == ControlType.HILEVEL && q > 0.0 || // Tank below hi level & filling
+                    h > Grade && Type == ControlType.LOWLEVEL && q < 0.0   // Tank above low level & emptying
+                    )
+                    
                 {
-                    SimulationTank tank = (SimulationTank)Node;
                     double v = tank.FindVolume(net.FieldsMap, Grade) - tank.SimVolume;
-                    t = (long)Math.Round(v / q); // Time to reach level
+                    t = TimeSpan.FromSeconds(Math.Round(v / q)); // Time to reach level
                 }
             }
 
-            // Time control
-            if (Type == ControlType.TIMER) {
-                if (Time > htime)
-                    t = Time - htime;
+            
+            switch (Type) {
+                case ControlType.TIMER:
+                    // Time control
+                    if (Time > htime) t = Time - htime;
+                    break;
+
+                case ControlType.TIMEOFDAY:
+                    // Time-of-day control
+                    TimeSpan timeOfDay = (htime + net.Tstart).TimeOfDay();
+                    if (Time >= timeOfDay) t = Time - timeOfDay;
+                    else t = TimeSpan.FromDays(1) - timeOfDay + Time;
+                    break;
             }
 
-            // Time-of-day control
-            if (Type == ControlType.TIMEOFDAY) {
-                long t1 = (htime + net.Tstart) % Constants.SECperDAY;
-                long t2 = Time;
-                if (t2 >= t1) t = t2 - t1;
-                else t = Constants.SECperDAY - t1 + t2;
-            }
-
+            
             // Revise time step
-            if (t > 0 && t < tstep) {
-                SimulationLink link = Link;
-
+            if (t > TimeSpan.Zero && t < tstep) {
                 // Check if rule actually changes link status or setting
-                if (link != null
-                    && (link.Type > LinkType.PIPE && link.SimSetting != Setting)
-                    || (link.SimStatus != Status))
+                if (Link == null) return tstep;
+
+                if (Link.LinkType > LinkType.PIPE &&
+                    !Link.SimSetting.EqualsTo(Setting) ||
+                    Link.SimStatus != Status)
+                {
                     tstep = t;
+                }
             }
 
             return tstep;
         }
 
         /// <summary>Revises time step based on shortest time to fill or drain a tank.</summary>
-        public static long MinimumTimeStep(
+        public static TimeSpan MinimumTimeStep(
             EpanetNetwork net,
             IEnumerable<SimulationControl> controls,
-            long htime,
-            long tstep) {
-            long newTStep = tstep;
+            TimeSpan htime,
+            TimeSpan tstep) {
+
+            TimeSpan newTStep = tstep;
+
             foreach (SimulationControl control  in  controls)
                 newTStep = control.GetRequiredTimeStep(net, htime, newTStep);
 
@@ -147,7 +153,7 @@ namespace Epanet.Hydraulic.Structures {
             TraceSource log,
             EpanetNetwork net,
             IEnumerable<SimulationControl> controls,
-            long htime) {
+            TimeSpan htime) {
             int setsum = 0;
 
             // Examine each control statement
@@ -159,8 +165,7 @@ namespace Epanet.Hydraulic.Structures {
                     continue;
 
                 // Link is controlled by tank level
-                var node = control.Node as SimulationTank;
-                if (node != null) {
+                if (control.Node is SimulationTank node) {
 
                     double h = node.SimHead;
                     double vplus = Math.Abs(node.SimDemand);
@@ -170,43 +175,45 @@ namespace Epanet.Hydraulic.Structures {
                     double v1 = tank.FindVolume(net.FieldsMap, h);
                     double v2 = tank.FindVolume(net.FieldsMap, control.Grade);
 
-                    if (control.Type == ControlType.LOWLEVEL && v1 <= v2 + vplus)
-                        reset = true;
-                    if (control.Type == ControlType.HILEVEL && v1 >= v2 - vplus)
-                        reset = true;
+                    switch (control.Type) {
+                        case ControlType.LOWLEVEL:
+                            if (v1 <= v2 + vplus) reset = true;
+                            break;
+                        case ControlType.HILEVEL:
+                            if (v1 >= v2 - vplus) reset = true;
+                            break;
+                    }
                 }
 
-                // Link is time-controlled
-                if (control.Type == ControlType.TIMER) {
-                    if (control.Time == htime)
-                        reset = true;
-                }
+                switch (control.Type) {
+                    case ControlType.TIMER:
+                        // Link is time-controlled
+                        if (control.Time == htime)
+                            reset = true;
 
-                //  Link is time-of-day controlled
-                if (control.Type == ControlType.TIMEOFDAY) {
-                    if ((htime + net.Tstart) % Constants.SECperDAY == control.Time)
-                        reset = true;
+                        break;
+
+                    case ControlType.TIMEOFDAY:
+                        //  Link is time-of-day controlled
+                        if ((htime + net.Tstart).TimeOfDay() == control.Time)
+                            reset = true;
+
+                        break;
                 }
 
                 // Update link status & pump speed or valve setting
                 if (reset) {
-                    StatType s1, s2;
                     SimulationLink link = control.Link;
-
-                    if (link.SimStatus <= StatType.CLOSED)
-                        s1 = StatType.CLOSED;
-                    else
-                        s1 = StatType.OPEN;
-
-                    s2 = control.Status;
+                    StatType s1 = link.SimStatus <= StatType.CLOSED ? StatType.CLOSED : StatType.OPEN;
+                    StatType s2 = control.Status;
 
                     double k1 = link.SimSetting;
                     double k2 = k1;
 
-                    if (control.Link.Type > LinkType.PIPE)
+                    if (control.Link.LinkType > LinkType.PIPE)
                         k2 = control.Setting;
 
-                    if (s1 != s2 || k1 != k2) {
+                    if (s1 != s2 || !k1.EqualsTo(k2)) {
                         link.SimStatus = s2;
                         link.SimSetting = k2;
                         if (net.StatFlag != StatFlag.NO)
@@ -234,56 +241,61 @@ namespace Epanet.Hydraulic.Structures {
 
                 // Determine if control based on a junction, not a tank
                 if (control.Node != null && !(control.Node is SimulationTank)) {
-
-                    // Determine if control conditions are satisfied
-                    if (control.Type == ControlType.LOWLEVEL
-                        && control.Node.SimHead <= control.Grade + net.HTol)
-                        reset = true;
-
-                    if (control.Type == ControlType.HILEVEL
-                        && control.Node.SimHead >= control.Grade - net.HTol)
-                        reset = true;
+                    switch (control.Type) {
+                        // Determine if control conditions are satisfied
+                        case ControlType.LOWLEVEL: {
+                            if (control.Node.SimHead <= control.Grade + net.HTol) reset = true;
+                            break;
+                        }
+                        case ControlType.HILEVEL: {
+                            if (control.Node.SimHead >= control.Grade - net.HTol) reset = true;
+                            break;
+                        }
+                    }
                 }
 
                 SimulationLink link = control.Link;
 
                 //  Determine if control forces a status or setting change
-                if (reset) {
-                    bool change = false;
+                if (!reset) continue;
 
-                    StatType s = link.SimStatus;
+                bool change = false;
 
-                    if (link.Type == LinkType.PIPE) {
+                StatType s = link.SimStatus;
+
+                switch (link.LinkType) {
+                    case LinkType.PIPE:
                         if (s != control.Status) change = true;
-                    }
+                        break;
 
-                    if (link.Type == LinkType.PUMP) {
-                        if (link.SimSetting != control.Setting) change = true;
-                    }
+                    case LinkType.PUMP:
+                        if (!link.SimSetting.EqualsTo(control.Setting)) change = true;
+                        break;
 
-                    if (link.Type >= LinkType.PRV) {
-                        if (link.SimSetting != control.Setting)
+                    case LinkType.VALVE:
+                        if (link.SimSetting.EqualsTo(control.Setting))
                             change = true;
                         else if (double.IsNaN(link.SimSetting) &&
                                  s != control.Status) change = true;
-                    }
+                        break;
+                }
 
-                    // If a change occurs, update status & setting
-                    if (change) {
-                        link.SimStatus = control.Status;
-                        if (link.Type > LinkType.PIPE)
-                            link.SimSetting = control.Setting;
-                        if (net.StatFlag == StatFlag.FULL)
-                            LogStatChange(log, net.FieldsMap, link, s);
+                // If a change occurs, update status & setting
+                if (change) {
+                    link.SimStatus = control.Status;
+                    if (link.LinkType > LinkType.PIPE)
+                        link.SimSetting = control.Setting;
+                    if (net.StatFlag == StatFlag.FULL)
+                        LogStatChange(log, net.FieldsMap, link, s);
 
-                        anychange = true;
-                    }
+                    anychange = true;
                 }
             }
+
             return anychange;
         }
 
-        private static void LogControlAction(TraceSource log, SimulationControl control, long htime) {
+        private static void LogControlAction(TraceSource log, SimulationControl control, TimeSpan htime) {
             SimulationNode n = control.Node;
             SimulationLink l = control.Link;
             string msg;
@@ -292,14 +304,12 @@ namespace Epanet.Hydraulic.Structures {
             case ControlType.LOWLEVEL:
             case ControlType.HILEVEL: {
                 string type = Keywords.w_JUNC; //  NodeType type= NodeType.JUNC;
-                    var tank = n as SimulationTank;
-                    if (tank != null)
-                        type = tank.IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
+                if (n is SimulationTank tank) type = tank.IsReservoir ? Keywords.w_RESERV : Keywords.w_TANK;
 
-                    msg = string.Format(
+                msg = string.Format(
                     Text.FMT54,
                     htime.GetClockTime(),
-                    l.Type.ParseStr(),
+                    l.LinkType.Keyword2(),
                     l.Link.Name,
                     type,
                     n.Id);
@@ -310,7 +320,7 @@ namespace Epanet.Hydraulic.Structures {
                 msg = string.Format(
                     Text.FMT55,
                     htime.GetClockTime(),
-                    l.Type.ParseStr(),
+                    l.LinkType.Keyword2(),
                     l.Link.Name);
                 break;
             default:
@@ -325,23 +335,21 @@ namespace Epanet.Hydraulic.Structures {
             try {
                 if (s2 == s1) {
                     double setting = link.SimSetting;
-                    switch (link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                        setting *= fMap.GetUnits(FieldType.PRESSURE);
-                        break;
-                    case LinkType.FCV:
-                        setting *= fMap.GetUnits(FieldType.FLOW);
-                        break;
+
+                    if (link.LinkType == LinkType.VALVE) {
+                        switch (((Valve)link.Link).ValveType) {
+                            case ValveType.PRV:
+                            case ValveType.PSV:
+                            case ValveType.PBV:
+                                setting *= fMap.GetUnits(FieldType.PRESSURE);
+                                break;
+                            case ValveType.FCV:
+                                setting *= fMap.GetUnits(FieldType.FLOW);
+                                break;
+                        }
                     }
 
-                    log.Warning(
-                        string.Format(
-                            Text.FMT56,
-                            link.Type.ParseStr(),
-                            link.Link.Name,
-                            setting));
+                    log.Warning(Text.FMT56, link.LinkType.Keyword2(), link.Link.Name, setting);
                     return;
                 }
 
@@ -360,15 +368,10 @@ namespace Epanet.Hydraulic.Structures {
                     j2 = StatType.OPEN;
 
                 if (j1 != j2) {
-                    log.Warning(
-                        Text.FMT57,
-                        link.Type.ParseStr(),
-                        link.Link.Name,
-                        j1.ReportStr(),
-                        j2.ReportStr());
+                    log.Warning(Text.FMT57, link.LinkType.Keyword2(), link.Link.Name, j1.ReportStr(), j2.ReportStr());
                 }
             }
-            catch (ENException) {}
+            catch (EnException) {}
         }
     }
 

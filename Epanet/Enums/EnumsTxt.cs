@@ -22,35 +22,21 @@ using Epanet.Util;
 namespace Epanet.Enums {
 
     public static class EnumsTxt {
-        public static string ParseStr(this LinkType value) {
-            switch (value) {
-            case LinkType.CV:       return Keywords.w_CV;
-            case LinkType.PIPE:     return Keywords.w_PIPE;
-            case LinkType.PUMP:     return Keywords.w_PUMP;
-            case LinkType.PRV:      return Keywords.w_PRV;
-            case LinkType.PSV:      return Keywords.w_PSV;
-            case LinkType.PBV:      return Keywords.w_PBV;
-            case LinkType.FCV:      return Keywords.w_FCV;
-            case LinkType.TCV:      return Keywords.w_TCV;
-            case LinkType.GPV:      return Keywords.w_GPV;
-            default:
-                return null;
-            }
-        }
 
-        public static bool TryParse(string text, out Varwords result) {
-            if (text.Match(Keywords.wr_DEMAND))         result = Varwords.DEMAND;
-            else if (text.Match(Keywords.wr_HEAD))      result = Varwords.HEAD;
-            else if (text.Match(Keywords.wr_GRADE))     result = Varwords.GRADE;
-            else if (text.Match(Keywords.wr_LEVEL))     result = Varwords.LEVEL;
-            else if (text.Match(Keywords.wr_PRESSURE))  result = Varwords.PRESSURE;
-            else if (text.Match(Keywords.wr_FLOW))      result = Varwords.FLOW;
-            else if (text.Match(Keywords.wr_STATUS))    result = Varwords.STATUS;
-            else if (text.Match(Keywords.wr_SETTING))   result = Varwords.SETTING;
-            else if (text.Match(Keywords.wr_POWER))     result = Varwords.POWER;
-            else if (text.Match(Keywords.wr_TIME))      result = Varwords.CLOCKTIME;
+        public static bool TryParse(string text, out Varwords result)
+        {
+            if (text.Match(Keywords.wr_DEMAND)) result = Varwords.DEMAND;
+            else if (text.Match(Keywords.wr_HEAD)) result = Varwords.HEAD;
+            else if (text.Match(Keywords.wr_GRADE)) result = Varwords.GRADE;
+            else if (text.Match(Keywords.wr_LEVEL)) result = Varwords.LEVEL;
+            else if (text.Match(Keywords.wr_PRESSURE)) result = Varwords.PRESSURE;
+            else if (text.Match(Keywords.wr_FLOW)) result = Varwords.FLOW;
+            else if (text.Match(Keywords.wr_STATUS)) result = Varwords.STATUS;
+            else if (text.Match(Keywords.wr_SETTING)) result = Varwords.SETTING;
+            else if (text.Match(Keywords.wr_POWER)) result = Varwords.POWER;
+            else if (text.Match(Keywords.wr_TIME)) result = Varwords.CLOCKTIME;
             else if (text.Match(Keywords.wr_CLOCKTIME)) result = Varwords.CLOCKTIME;
-            else if (text.Match(Keywords.wr_FILLTIME))  result = Varwords.FILLTIME;
+            else if (text.Match(Keywords.wr_FILLTIME)) result = Varwords.FILLTIME;
             else if (text.Match(Keywords.wr_DRAINTIME)) result = Varwords.DRAINTIME;
             else {
                 result = (Varwords)(-1);
@@ -60,11 +46,13 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out Values result) {
-            if (text.Match(Keywords.wr_ACTIVE))      result = Values.IS_ACTIVE;
+
+        public static bool TryParse(string text, out Values result)
+        {
+            if (text.Match(Keywords.wr_ACTIVE)) result = Values.IS_ACTIVE;
             else if (text.Match(Keywords.wr_CLOSED)) result = Values.IS_CLOSED;
             // else if (text.Match("XXXX"))             result = Rule.Values.IS_NUMBER;
-            else if (text.Match(Keywords.wr_OPEN))   result = Values.IS_OPEN;
+            else if (text.Match(Keywords.wr_OPEN)) result = Values.IS_OPEN;
             else {
                 result = (Values)(-1);
                 return false;
@@ -73,24 +61,23 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out Rulewords result) {
-            if (text.Match(Keywords.wr_RULE))          result = Rulewords.RULE;
-            else if (text.Match(Keywords.wr_IF))       result = Rulewords.IF;
-            else if (text.Match(Keywords.wr_AND))      result = Rulewords.AND;
-            else if (text.Match(Keywords.wr_OR))       result = Rulewords.ERROR;
-            else if (text.Match(Keywords.wr_THEN))     result = Rulewords.THEN;
-            else if (text.Match(Keywords.wr_ELSE))     result = Rulewords.ELSE;
-            else if (text.Match(Keywords.wr_PRIORITY)) result = Rulewords.PRIORITY;
-            else if (text.Match(string.Empty))         result = Rulewords.ERROR;
-            else {
-                result = (Rulewords)(-1);
-                return false;
-            }
 
-            return true;
+        public static bool TryParse(this string text, out Rulewords result) {
+            int index = text.FindMatch(
+                text,
+                Keywords.wr_AND,
+                Keywords.wr_ELSE,
+                string.Empty,
+                Keywords.wr_IF,
+                Keywords.wr_OR,
+                Keywords.wr_PRIORITY,
+                Keywords.wr_RULE,
+                Keywords.wr_THEN);
+
+            return (int)(result = (Rulewords)index) != -1;
         }
 
-        public static bool TryParse(string text, out Operators result) {
+        public static bool TryParse(this string text, out Operators result) {
             text = text.Trim();
             
             if (text.Equals(Keywords.wr_ABOVE, StringComparison.OrdinalIgnoreCase)) 
@@ -121,16 +108,16 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out Objects result) {
+        public static bool TryParse(this string text, out Objects result) {
             if (text.Match(Keywords.wr_JUNC))        result = Objects.JUNC;
-            else if (text.Match(Keywords.wr_RESERV)) result = Objects.RESERV;
-            else if (text.Match(Keywords.wr_TANK))   result = Objects.TANK;
-            else if (text.Match(Keywords.wr_PIPE))   result = Objects.PIPE;
-            else if (text.Match(Keywords.wr_PUMP))   result = Objects.PUMP;
-            else if (text.Match(Keywords.wr_VALVE))  result = Objects.VALVE;
-            else if (text.Match(Keywords.wr_NODE))   result = Objects.NODE;
-            else if (text.Match(Keywords.wr_LINK))   result = Objects.LINK;
-            else if (text.Match(Keywords.wr_SYSTEM)) result = Objects.SYSTEM;
+            else if (text.Match(Keywords.w_RESERV)) result = Objects.RESERV;
+            else if (text.Match(Keywords.w_TANK))   result = Objects.TANK;
+            else if (text.Match(Keywords.w_PIPE))   result = Objects.PIPE;
+            else if (text.Match(Keywords.w_PUMP))   result = Objects.PUMP;
+            else if (text.Match(Keywords.w_VALVE))  result = Objects.VALVE;
+            else if (text.Match(Keywords.w_NODE))   result = Objects.NODE;
+            else if (text.Match(Keywords.w_LINK))   result = Objects.LINK;
+            else if (text.Match(Keywords.w_SYSTEM)) result = Objects.SYSTEM;
             else {
                 result = (Objects)(-1);
                 return false;
@@ -139,7 +126,7 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out MixType result) {
+        public static bool TryParse(this string text, out MixType result) {
             if (text.Match(Keywords.w_MIXED))      result = MixType.MIX1;
             else if (text.Match(Keywords.w_2COMP)) result = MixType.MIX2;
             else if (text.Match(Keywords.w_FIFO))  result = MixType.FIFO;
@@ -162,7 +149,7 @@ namespace Epanet.Enums {
             }
         }
 
-        public static bool TryParse(string text, out FieldType result) {
+        public static bool TryParse(this string text, out FieldType result) {
             if (text.Match(Keywords.t_ELEV))           result = FieldType.ELEV;
             else if (text.Match(Keywords.t_DEMAND))    result = FieldType.DEMAND;
             else if (text.Match(Keywords.t_HEAD))      result = FieldType.HEAD;
@@ -186,7 +173,7 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out SourceType result) {
+        public static bool TryParse(this string text, out SourceType result) {
             if (text.Match(Keywords.w_CONCEN))         result = SourceType.CONCEN;
             else if (text.Match(Keywords.w_FLOWPACED)) result = SourceType.FLOWPACED;
             else if (text.Match(Keywords.w_MASS))      result = SourceType.MASS;
@@ -246,7 +233,7 @@ namespace Epanet.Enums {
             }
         }
 
-        public static bool TryParse(string text, out FlowUnitsType result) {
+        public static bool TryParse(this string text, out FlowUnitsType result) {
             if (text.Match(Keywords.w_CFS))       result = FlowUnitsType.CFS;
             else if (text.Match(Keywords.w_GPM))  result = FlowUnitsType.GPM;
             else if (text.Match(Keywords.w_MGD))  result = FlowUnitsType.MGD;
@@ -291,7 +278,7 @@ namespace Epanet.Enums {
             }
         }
 
-        public static bool TryParse(string text, out QualType result) {
+        public static bool TryParse(this string text, out QualType result) {
             if (text.Match(Keywords.w_NONE))       result = QualType.NONE;
             else if (text.Match(Keywords.w_CHEM))  result = QualType.CHEM;
             else if (text.Match(Keywords.w_AGE))   result = QualType.AGE;
@@ -304,7 +291,7 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out StatFlag result) {
+        public static bool TryParse(this string text, out StatFlag result) {
             if (text.Match(Keywords.w_NO))        result = StatFlag.NO;
             else if (text.Match(Keywords.w_FULL)) result = StatFlag.FULL;
             else if (text.Match(Keywords.w_YES))  result = StatFlag.YES;
@@ -325,52 +312,37 @@ namespace Epanet.Enums {
             }
         }
 
-        public static string ParseStr(this TStatType value) {
+        public static string ParseStr(this TimeStatType value) {
             switch (value) {
-            case TStatType.AVG:    return Keywords.w_AVG;
-            case TStatType.MAX:    return Keywords.w_MAX;
-            case TStatType.MIN:    return Keywords.w_MIN;
-            case TStatType.RANGE:  return Keywords.w_RANGE;
-            case TStatType.SERIES: return Keywords.w_NONE;
+            case TimeStatType.AVG:    return Keywords.w_AVG;
+            case TimeStatType.MAX:    return Keywords.w_MAX;
+            case TimeStatType.MIN:    return Keywords.w_MIN;
+            case TimeStatType.RANGE:  return Keywords.w_RANGE;
+            case TimeStatType.SERIES: return Keywords.w_NONE;
             default:                             return null;
             }
         }
-        public static bool TryParse(string text, out TStatType result) {
-            if (text.Match(Keywords.w_NONE))       result = TStatType.SERIES;
-            else if (text.Match(Keywords.w_NO))    result = TStatType.SERIES;
-            else if (text.Match(Keywords.w_AVG))   result = TStatType.AVG;
-            else if (text.Match(Keywords.w_MIN))   result = TStatType.MIN;
-            else if (text.Match(Keywords.w_MAX))   result = TStatType.MAX;
-            else if (text.Match(Keywords.w_RANGE)) result = TStatType.RANGE;
+        public static bool TryParse(this string text, out TimeStatType result) {
+            if (text.Match(Keywords.w_NONE))       result = TimeStatType.SERIES;
+            else if (text.Match(Keywords.w_NO))    result = TimeStatType.SERIES;
+            else if (text.Match(Keywords.w_AVG))   result = TimeStatType.AVG;
+            else if (text.Match(Keywords.w_MIN))   result = TimeStatType.MIN;
+            else if (text.Match(Keywords.w_MAX))   result = TimeStatType.MAX;
+            else if (text.Match(Keywords.w_RANGE)) result = TimeStatType.RANGE;
             else {
-                result = (TStatType)(-1);
+                result = (TimeStatType)(-1);
                 return false;
             }
 
             return true;
         }
 
-        public static bool TryParse(string text, out RangeType result) {
+        public static bool TryParse(this string text, out RangeType result) {
             if (text.Match(Keywords.w_BELOW))          result = RangeType.LOW;
             else if (text.Match(Keywords.w_ABOVE))     result = RangeType.HI;
             else if (text.Match(Keywords.w_PRECISION)) result = RangeType.PREC;
             else {
                 result = (RangeType)(-1);
-                return false;
-            }
-
-            return true;
-        }
-
-        public static bool TryParse(string text, out LinkType result) {
-            if (text.Match(Keywords.w_PRV)) result = LinkType.PRV;
-            else if (text.Match(Keywords.w_PSV)) result = LinkType.PSV;
-            else if (text.Match(Keywords.w_PBV)) result = LinkType.PBV;
-            else if (text.Match(Keywords.w_FCV)) result = LinkType.FCV;
-            else if (text.Match(Keywords.w_TCV)) result = LinkType.TCV;
-            else if (text.Match(Keywords.w_GPV)) result = LinkType.GPV;
-            else {
-                result = (LinkType)(-1);
                 return false;
             }
 
@@ -386,79 +358,6 @@ namespace Epanet.Enums {
             return "[" + value + "]";
         }
 
-        public static string ReportStr(this SectType value) {
-            switch (value) {
-            case SectType.BACKDROP:    return Keywords.t_BACKDROP;
-            case SectType.CONTROLS:    return Keywords.t_CONTROL;
-            case SectType.COORDINATES: return Keywords.t_COORD;
-            case SectType.CURVES:      return Keywords.t_CURVE;
-            case SectType.DEMANDS:     return Keywords.t_DEMAND;
-            case SectType.EMITTERS:    return Keywords.t_EMITTER;
-            case SectType.END:         return Keywords.t_END;
-            case SectType.ENERGY:      return Keywords.t_ENERGY;
-            case SectType.JUNCTIONS:   return Keywords.t_JUNCTION;
-            case SectType.LABELS:      return Keywords.t_LABEL;
-            case SectType.MIXING:      return Keywords.t_MIXING;
-            case SectType.OPTIONS:     return Keywords.t_OPTION;
-            case SectType.PATTERNS:    return Keywords.t_PATTERN;
-            case SectType.PIPES:       return Keywords.t_PIPE;
-            case SectType.PUMPS:       return Keywords.t_PUMP;
-            case SectType.QUALITY:     return Keywords.t_QUALITY;
-            case SectType.REACTIONS:   return Keywords.t_REACTION;
-            case SectType.REPORT:      return Keywords.t_REPORT;
-            case SectType.RESERVOIRS:  return Keywords.t_RESERVOIR;
-            case SectType.ROUGHNESS:   return Keywords.t_ROUGHNESS;
-            case SectType.RULES:       return Keywords.t_RULE;
-            case SectType.SOURCES:     return Keywords.t_SOURCE;
-            case SectType.STATUS:      return Keywords.t_STATUS;
-            case SectType.TAGS:        return Keywords.t_TAG;
-            case SectType.TANKS:       return Keywords.t_TANK;
-            case SectType.TIMES:       return Keywords.t_TIME;
-            case SectType.TITLE:       return Keywords.t_TITLE;
-            case SectType.VALVES:      return Keywords.t_VALVE;
-            case SectType.VERTICES:    return Keywords.t_VERTICE;
-            default:                                   return null;
-            }
-        }
-
-        public static bool TryParse(string text, out SectType result) {
-            if (text.Match(Keywords.s_BACKDROP))        result = SectType.BACKDROP;
-            else if (text.Match(Keywords.s_CONTROLS))   result = SectType.CONTROLS;
-            else if (text.Match(Keywords.s_COORDS))     result = SectType.COORDINATES;
-            else if (text.Match(Keywords.s_CURVES))     result = SectType.CURVES;
-            else if (text.Match(Keywords.s_DEMANDS))    result = SectType.DEMANDS;
-            else if (text.Match(Keywords.s_EMITTERS))   result = SectType.EMITTERS;
-            else if (text.Match(Keywords.s_END))        result = SectType.END;
-            else if (text.Match(Keywords.s_ENERGY))     result = SectType.ENERGY;
-            else if (text.Match(Keywords.s_JUNCTIONS))  result = SectType.JUNCTIONS;
-            else if (text.Match(Keywords.s_LABELS))     result = SectType.LABELS;
-            else if (text.Match(Keywords.s_MIXING))     result = SectType.MIXING;
-            else if (text.Match(Keywords.s_OPTIONS))    result = SectType.OPTIONS;
-            else if (text.Match(Keywords.s_PATTERNS))   result = SectType.PATTERNS;
-            else if (text.Match(Keywords.s_PIPES))      result = SectType.PIPES;
-            else if (text.Match(Keywords.s_PUMPS))      result = SectType.PUMPS;
-            else if (text.Match(Keywords.s_QUALITY))    result = SectType.QUALITY;
-            else if (text.Match(Keywords.s_REACTIONS))  result = SectType.REACTIONS;
-            else if (text.Match(Keywords.s_REPORT))     result = SectType.REPORT;
-            else if (text.Match(Keywords.s_RESERVOIRS)) result = SectType.RESERVOIRS;
-            else if (text.Match(Keywords.s_ROUGHNESS))  result = SectType.ROUGHNESS;
-            else if (text.Match(Keywords.s_RULES))      result = SectType.RULES;
-            else if (text.Match(Keywords.s_SOURCES))    result = SectType.SOURCES;
-            else if (text.Match(Keywords.s_STATUS))     result = SectType.STATUS;
-            else if (text.Match(Keywords.s_TAGS))       result = SectType.TAGS;
-            else if (text.Match(Keywords.s_TANKS))      result = SectType.TANKS;
-            else if (text.Match(Keywords.s_TIMES))      result = SectType.TIMES;
-            else if (text.Match(Keywords.s_TITLE))      result = SectType.TITLE;
-            else if (text.Match(Keywords.s_VALVES))     result = SectType.VALVES;
-            else if (text.Match(Keywords.s_VERTICES))   result = SectType.VERTICES;
-            else {
-                result = (SectType)(-1);
-                return false;
-            }
-
-            return true;
-        }
-
         public static string ParseStr(this PressUnitsType value) {
             switch (value) {
             case PressUnitsType.KPA:    return Keywords.w_KPA;
@@ -468,7 +367,7 @@ namespace Epanet.Enums {
             }
         }
 
-        public static bool TryParse(string text, out PressUnitsType result) {
+        public static bool TryParse(this string text, out PressUnitsType result) {
             if(text.Match(Keywords.w_PSI))         result = PressUnitsType.PSI;
             else if(text.Match(Keywords.w_KPA))    result = PressUnitsType.KPA;
             else if(text.Match(Keywords.w_METERS)) result = PressUnitsType.METERS;
@@ -481,7 +380,7 @@ namespace Epanet.Enums {
             
         }
 
-        public static bool TryParse(string text, out FormType result) {
+        public static bool TryParse(this string text, out FormType result) {
             if(text.Match(Keywords.w_HW))       result = FormType.HW;
             else if(text.Match(Keywords.w_DW))  result = FormType.DW;
             else if(text.Match(Keywords.w_CM))  result = FormType.CM;
@@ -493,7 +392,7 @@ namespace Epanet.Enums {
             return true;
         }
 
-        public static bool TryParse(string text, out HydType result) {
+        public static bool TryParse(this string text, out HydType result) {
             if(text.Match(Keywords.w_USE))       result = HydType.USE;
             else if(text.Match(Keywords.w_SAVE)) result = HydType.SAVE;
             else {
@@ -503,6 +402,8 @@ namespace Epanet.Enums {
 
             return true;
         }
+
+        public static bool TryParse(this string s, out ValveType result) { throw new NotImplementedException(); }
     }
 
 }

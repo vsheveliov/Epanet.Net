@@ -16,7 +16,6 @@
  */
 
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -33,22 +32,20 @@ namespace Epanet.Network.IO.Output {
     public class XmlComposer:OutputComposer {
         private readonly bool _gzip;
         private XmlWriter _writer;
-        private Network _net;
+        
+        public XmlComposer(Network net, bool gzip):base(net) { _gzip = gzip; }
 
-        public XmlComposer(bool gzip) { _gzip = gzip; }
-
-        public override void Composer(Network net, string f) {
-            _net = net;
-
+        public override void Compose(string f) {
+            
+            var settings = new XmlWriterSettings {
+                Indent = true,
+                Encoding = Encoding.UTF8,
+                CloseOutput = true
+            };
+        
             try {
                 Stream stream = new FileStream(f, FileMode.Create, FileAccess.Write, FileShare.Read, 0x1000, FileOptions.SequentialScan);
                 if (_gzip) stream = new GZipStream(stream, CompressionMode.Compress, false);
-
-                var settings = new XmlWriterSettings {
-                    Indent = true,
-                    Encoding = Encoding.UTF8,
-                    CloseOutput = true
-                };
 
                 using (_writer = XmlWriter.Create(stream, settings)) {
                     _writer.WriteStartDocument();
@@ -80,9 +77,8 @@ namespace Epanet.Network.IO.Output {
                     _writer.WriteEndDocument();
                 }
             }
-            catch (IOException e) {
-                Debug.Print(e.ToString());
-                throw new ENException(ErrorCode.Err308);
+            catch (IOException ex) {
+                throw new EnException(ErrorCode.Err308, ex);
             }
         }
 
@@ -124,22 +120,22 @@ namespace Epanet.Network.IO.Output {
                 
                 double ke = node.Ke;
 
-                if(ke != 0.0) {
-                    ke = fUcf / Math.Pow(pUcf * ke, (1.0 / _net.QExp));
+                if(!ke.IsZero()) {
+                    ke = fUcf / Math.Pow(pUcf * ke, 1.0 / _net.QExp);
                     _writer.WriteAttributeString("emmiter", XmlConvert.ToString(ke));
                 }
 
-                if (!node.Position.IsInvalid) {
-                    _writer.WriteAttributeString("x", XmlConvert.ToString(node.Position.X));
-                    _writer.WriteAttributeString("y", XmlConvert.ToString(node.Position.Y));
+                if (!node.Coordinate.IsInvalid) {
+                    _writer.WriteAttributeString("x", XmlConvert.ToString(node.Coordinate.X));
+                    _writer.WriteAttributeString("y", XmlConvert.ToString(node.Coordinate.Y));
                 }
 
                 foreach(Demand d in node.Demands) {
                     _writer.WriteStartElement("demand");
 
                     _writer.WriteAttributeString("base", XmlConvert.ToString(dUcf * d.Base));
-                    if(d.pattern != null) {
-                        var patName = d.pattern.Name;
+                    if(d.Pattern != null) {
+                        var patName = d.Pattern.Name;
                         if (!string.IsNullOrEmpty(patName)
                             && !_net.DefPatId.Equals(patName, StringComparison.OrdinalIgnoreCase))
                         {
@@ -173,15 +169,15 @@ namespace Epanet.Network.IO.Output {
             foreach(Tank r in _net.Reservoirs) {
                 _writer.WriteStartElement("node");
                 _writer.WriteAttributeString("name", r.Name);
-                _writer.WriteAttributeString("head", XmlConvert.ToString(fMap.RevertUnit(FieldType.ELEV, r.Elevation)));
+                _writer.WriteAttributeString("elevation", XmlConvert.ToString(fMap.RevertUnit(FieldType.ELEV, r.Elevation)));
                 
 
                 if(r.Pattern != null)
                     _writer.WriteAttributeString("pattern", r.Pattern.Name);
 
-                if (!r.Position.IsInvalid) {
-                    _writer.WriteAttributeString("x", XmlConvert.ToString(r.Position.X));
-                    _writer.WriteAttributeString("y", XmlConvert.ToString(r.Position.Y));
+                if (!r.Coordinate.IsInvalid) {
+                    _writer.WriteAttributeString("x", XmlConvert.ToString(r.Coordinate.X));
+                    _writer.WriteAttributeString("y", XmlConvert.ToString(r.Coordinate.Y));
                 }
 
                 ComposeElement(r);
@@ -205,7 +201,7 @@ namespace Epanet.Network.IO.Output {
 
             foreach(Tank tank in _net.Tanks) {
                 double vmin = tank.Vmin;
-                if(Math.Round(vmin / tank.Area) == Math.Round(tank.Hmin - tank.Elevation))
+                if(Math.Round(vmin / tank.Area).EqualsTo(Math.Round(tank.Hmin - tank.Elevation)))
                     vmin = 0;
 
                 double elev = fMap.RevertUnit(FieldType.ELEV, tank.Elevation);
@@ -227,9 +223,9 @@ namespace Epanet.Network.IO.Output {
                 if(tank.Vcurve != null)
                     _writer.WriteAttributeString("volcurve", tank.Vcurve.Name);
 
-                if (!tank.Position.IsInvalid) {
-                    _writer.WriteAttributeString("x", XmlConvert.ToString(tank.Position.X));
-                    _writer.WriteAttributeString("y", XmlConvert.ToString(tank.Position.Y));
+                if (!tank.Coordinate.IsInvalid) {
+                    _writer.WriteAttributeString("x", XmlConvert.ToString(tank.Coordinate.X));
+                    _writer.WriteAttributeString("y", XmlConvert.ToString(tank.Coordinate.Y));
                 }
 
                 if (tank.MixModel != MixType.MIX1) {
@@ -252,42 +248,47 @@ namespace Epanet.Network.IO.Output {
 
         private void ComposePipes() {
             
-            var pipes = _net.Links.Where(x => x.Type == LinkType.PIPE || x.Type == LinkType.CV).ToArray();
-
-            if(pipes.Length == 0)
+            if(!_net.Pipes.Any())
                 return;
 
             FieldsMap fMap = _net.FieldsMap;
 
             _writer.WriteStartElement(SectType.PIPES.ToString().ToLower());
             
-            foreach(Link link in pipes) {
-                double d = link.Diameter;
-                double kc = link.Kc;
+            foreach(Pipe pipe in _net.Pipes) {
+                double d = pipe.Diameter;
+                double kc = pipe.Kc;
                 if(_net.FormFlag == FormType.DW)
                     kc = fMap.RevertUnit(FieldType.ELEV, kc * 1000.0);
 
-                double km = link.Km * Math.Pow(d, 4.0) / 0.02517;
+                double km = pipe.Km * Math.Pow(d, 4.0) / 0.02517;
 
                 _writer.WriteStartElement("link");
-                _writer.WriteAttributeString("name", link.Name);
-                _writer.WriteAttributeString("node1", link.FirstNode.Name);
-                _writer.WriteAttributeString("node2", link.SecondNode.Name);
-                _writer.WriteAttributeString("length", XmlConvert.ToString(fMap.RevertUnit(FieldType.LENGTH, link.Lenght)));
+                _writer.WriteAttributeString("name", pipe.Name);
+                _writer.WriteAttributeString("node1", pipe.FirstNode.Name);
+                _writer.WriteAttributeString("node2", pipe.SecondNode.Name);
+                _writer.WriteAttributeString("length", XmlConvert.ToString(fMap.RevertUnit(FieldType.LENGTH, pipe.Lenght)));
                 _writer.WriteAttributeString("diameter", XmlConvert.ToString(fMap.RevertUnit(FieldType.DIAM, d)));
                 _writer.WriteAttributeString("roughness", XmlConvert.ToString(kc));
                 _writer.WriteAttributeString("minorloss", XmlConvert.ToString(km));
 
-                if(link.Type == LinkType.CV)
-                    _writer.WriteAttributeString("status", LinkType.CV.ToString());
-                else if(link.Status == StatType.CLOSED)
-                    _writer.WriteAttributeString("status", StatType.CLOSED.ToString());
-                else if(link.Status == StatType.OPEN)
-                    _writer.WriteAttributeString("status", StatType.OPEN.ToString());
+                if (pipe.HasCheckValve) {
+                    _writer.WriteAttributeString("status", "CV");
+                }
+                else {
+                    switch (pipe.Status) {
+                        case StatType.CLOSED:
+                            _writer.WriteAttributeString("status", StatType.CLOSED.ToString());
+                            break;
+                        case StatType.OPEN:
+                            _writer.WriteAttributeString("status", StatType.OPEN.ToString());
+                            break;
+                    }
+                }
 
-                ComposeVertices(link);
+                ComposeVertices(pipe);
 
-                ComposeElement(link);
+                ComposeElement(pipe);
 
                 _writer.WriteEndElement();
             }
@@ -338,7 +339,7 @@ namespace Epanet.Network.IO.Output {
                     if (pump.UPat != null)
                         _writer.WriteAttributeString("pattern", pump.UPat.Name);
 
-                    if (pump.Kc != 1.0)
+                    if (!pump.Kc.EqualsTo(1.0))
                         _writer.WriteAttributeString("speed", XmlConvert.ToString(pump.Kc));
                 }
 
@@ -376,16 +377,16 @@ namespace Epanet.Network.IO.Output {
             foreach(Valve valve in valves) {
                 double d = valve.Diameter;
                 double kc = double.IsNaN(valve.Kc) ? 0.0 : valve.Kc;
-                
-                switch(valve.Type) {
-                case LinkType.FCV:
-                kc = fMap.RevertUnit(FieldType.FLOW, kc);
-                break;
-                case LinkType.PRV:
-                case LinkType.PSV:
-                case LinkType.PBV:
-                kc = fMap.RevertUnit(FieldType.PRESSURE, kc);
-                break;
+
+                switch (valve.ValveType) {
+                    case ValveType.FCV:
+                        kc = fMap.RevertUnit(FieldType.FLOW, kc);
+                        break;
+                    case ValveType.PRV:
+                    case ValveType.PSV:
+                    case ValveType.PBV:
+                        kc = fMap.RevertUnit(FieldType.PRESSURE, kc);
+                        break;
                 }
 
                 double km = valve.Km * Math.Pow(d, 4) / 0.02517;
@@ -395,9 +396,9 @@ namespace Epanet.Network.IO.Output {
                 _writer.WriteAttributeString("node1", valve.FirstNode.Name);
                 _writer.WriteAttributeString("node2", valve.SecondNode.Name);
                 _writer.WriteAttributeString("diameter", XmlConvert.ToString(fMap.RevertUnit(FieldType.DIAM, d)));
-                _writer.WriteAttributeString("type", valve.Type.ParseStr());
+                _writer.WriteAttributeString("type", valve.ValveType.Keyword2());
 
-                if (valve.Type == LinkType.GPV && valve.Curve != null) {
+                if (valve.ValveType == ValveType.GPV && valve.Curve != null) {
                     _writer.WriteAttributeString("setting", valve.Curve.Name);
                 }
                 else {
@@ -426,19 +427,19 @@ namespace Epanet.Network.IO.Output {
             _writer.WriteStartElement(SectType.STATUS.ToString().ToLower());
             
             foreach(Link link in _net.Links) {
-                if(link.Type <= LinkType.PUMP) {
+                if(link.LinkType <= LinkType.PUMP) {
                     if (link.Status == StatType.CLOSED) {
                         _writer.WriteStartElement("link");
                         _writer.WriteAttributeString("name", link.Name);
                         _writer.WriteAttributeString("setting", link.Status.ToString());
                         _writer.WriteEndElement();
                     }
-                    else if(link.Type == LinkType.PUMP) {
+                    else if(link.LinkType == LinkType.PUMP) {
                         // Write pump speed here for pumps with old-style pump curve input
                         Pump pump = (Pump)link;
                         if (pump.HCurve == null &&
                             pump.Ptype != PumpType.CONST_HP &&
-                            pump.Kc != 1.0) {
+                            !pump.Kc.EqualsTo(1.0)) {
                             _writer.WriteStartElement("link");
                             _writer.WriteAttributeString("name", link.Name);
                             _writer.WriteAttributeString("setting", XmlConvert.ToString(link.Kc));
@@ -541,15 +542,18 @@ namespace Epanet.Network.IO.Output {
                 }
                 else {
                     double kc = control.Setting;
-                    switch(control.Link.Type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.PBV:
-                    kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
-                    break;
-                    case LinkType.FCV:
-                    kc = fmap.RevertUnit(FieldType.FLOW, kc);
-                    break;
+
+                    if (control.Link.LinkType == LinkType.VALVE) {
+                        switch (((Valve)control.Link).ValveType) {
+                            case ValveType.PRV:
+                            case ValveType.PSV:
+                            case ValveType.PBV:
+                                kc = fmap.RevertUnit(FieldType.PRESSURE, kc);
+                                break;
+                            case ValveType.FCV:
+                                kc = fmap.RevertUnit(FieldType.FLOW, kc);
+                                break;
+                        }
                     }
 
                     _writer.WriteAttributeString("link", control.Link.Name);
@@ -562,7 +566,7 @@ namespace Epanet.Network.IO.Output {
                 case ControlType.LOWLEVEL:
                 case ControlType.HILEVEL:
                 double kc = control.Grade - control.Node.Elevation;
-                kc = fmap.RevertUnit(control.Node.Type == NodeType.JUNC ? FieldType.PRESSURE : FieldType.HEAD, kc);
+                kc = fmap.RevertUnit(control.Node.NodeType == NodeType.JUNC ? FieldType.PRESSURE : FieldType.HEAD, kc);
                 
                 _writer.WriteAttributeString("type", control.Type.ParseStr());
                 _writer.WriteAttributeString("node", control.Node.Name);
@@ -596,7 +600,7 @@ namespace Epanet.Network.IO.Output {
             _writer.WriteStartElement(SectType.QUALITY.ToString().ToLower());
             
             foreach(Node node in _net.Nodes) {
-                if (node.C0 == 0.0) continue;
+                if (node.C0.IsZero()) continue;
 
                 _writer.WriteStartElement("node");
                 _writer.WriteAttributeString("name", node.Name);
@@ -652,10 +656,10 @@ namespace Epanet.Network.IO.Output {
 
 
             foreach(Link link in _net.Links) {
-                if(link.Type > LinkType.PIPE)
+                if(link.LinkType > LinkType.PIPE)
                     continue;
 
-                if (link.Kb != _net.KBulk) {
+                if (!link.Kb.EqualsTo(_net.KBulk)) {
                     _writer.WriteStartElement("option");
                     _writer.WriteAttributeString("name", "bulk");
                     _writer.WriteAttributeString("link", link.Name);
@@ -663,7 +667,7 @@ namespace Epanet.Network.IO.Output {
                     _writer.WriteEndElement();                    
                 }
 
-                if (link.Kw != _net.KWall) {
+                if (!link.Kw.EqualsTo(_net.KWall)) {
                     _writer.WriteStartElement("option");
                     _writer.WriteAttributeString("name", "wall");
                     _writer.WriteAttributeString("link", link.Name);
@@ -673,7 +677,7 @@ namespace Epanet.Network.IO.Output {
             }
 
             foreach(Tank tank in _net.Tanks) {
-                if (tank.Kb != _net.KBulk) {
+                if (!tank.Kb.EqualsTo(_net.KBulk)) {
                     _writer.WriteStartElement("option");
                     _writer.WriteAttributeString("name", "tank");
                     _writer.WriteAttributeString("name", tank.Name);
@@ -689,7 +693,7 @@ namespace Epanet.Network.IO.Output {
             
             _writer.WriteStartElement(SectType.ENERGY.ToString().ToLower());
 
-            if (_net.ECost != 0.0)
+            if (!_net.ECost.IsZero())
                 WriteOption("global price", XmlConvert.ToString(_net.ECost));
 
             if (!string.IsNullOrEmpty(_net.EPatId))
@@ -841,8 +845,8 @@ namespace Epanet.Network.IO.Output {
             FieldsMap fMap = _net.FieldsMap;
             WriteOption("pagesize", _net.PageSize.ToString());
             WriteOption("status", _net.StatFlag.ParseStr());
-            WriteOption("summary", (_net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO));
-            WriteOption("energy", (_net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO));
+            WriteOption("summary", _net.SummaryFlag ? Keywords.w_YES : Keywords.w_NO);
+            WriteOption("energy", _net.EnergyFlag ? Keywords.w_YES : Keywords.w_NO);
 
             switch (_net.NodeFlag) {
             case ReportFlag.FALSE:
@@ -932,7 +936,7 @@ namespace Epanet.Network.IO.Output {
                 _writer.WriteStartElement("label");
                 _writer.WriteAttributeString("x", XmlConvert.ToString(label.Position.X));
                 _writer.WriteAttributeString("y", XmlConvert.ToString(label.Position.Y));
-                // this.buffer.WriteAttributeString("node", label.AnchorNodeId); // TODO: add AnchorNodeId property to label
+                // _writer.WriteAttributeString("node", label.AnchorNodeId); // TODO: add AnchorNodeId property to label
 
                 _writer.WriteElementString("text", label.Text);
 
@@ -962,6 +966,7 @@ namespace Epanet.Network.IO.Output {
 
             _writer.WriteEndElement();
         }
+
     }
 
 }

@@ -2,34 +2,35 @@
 
 namespace Epanet.Network.Structures {
 
-    public enum ElementType { Node, Link, Pattern, Curve, Control, Rule };
+    public enum ElementType { NODE, LINK, PATTERN, CURVE, CONTROL, RULE }
 
     /// <summary>Base class for all epanet elements - Links, Nodes etc.</summary>
     public abstract class Element:IComparable<Element>, IEquatable<Element> {
         private readonly string _name;
 
         protected Element(string name) {
-            _name = name.Length > Constants.MAXID 
-                ? name.Substring(0, Constants.MAXID) 
-                : name;
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
 
-            // this.Comment = string.Empty;
-            // this.Tag = string.Empty;
+            if (name.Length == 0 || name.Length > Constants.MAXID)
+                throw new ArgumentException(nameof(name));
+
+            _name = name;
         }
 
-        public string Name { get { return _name; } }
+        public abstract ElementType ElementType { get; }
 
-        public string Tag { get; set; }
+        public string Name => _name;
+
+        public string Tag { get; set; } = string.Empty;
 
         /// <summary>Element comment (parsed from INP or excel file)</summary>
         public string Comment { get; set; }
 
-        public abstract ElementType ElementType { get; }
-
         #region Overrides of Object
 
         public override string ToString() {
-            return GetType().FullName + ":Name=" + (_name ?? string.Empty);
+            return string.Format("{0}{{{1}}}", GetType().Name, _name);
         }
 
         #endregion

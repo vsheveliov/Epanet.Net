@@ -1,7 +1,9 @@
 ﻿namespace Epanet.Enums {
 
+    #region TODO: move it to SimulationRule
     ///<summary>Rule variables.</summary>
-    public enum Varwords {
+    public enum Varwords
+    {
         CLOCKTIME,
         DEMAND,
         DRAINTIME,
@@ -18,13 +20,9 @@
     }
 
     ///<summary>Rule values types.</summary>
-    public enum Values {
-        IS_NUMBER = 0,
-        IS_OPEN = 1,
-        IS_CLOSED = 2,
-        IS_ACTIVE = 3
+    public enum Values { IS_NUMBER, IS_OPEN, IS_CLOSED, IS_ACTIVE }
 
-    }
+    #endregion
 
     /// <summary>Unit system.</summary>
     public enum UnitsType {
@@ -34,9 +32,10 @@
         US
     }
 
+
     /// <summary>Time series statistics.</summary>
     public enum 
-        TStatType {
+        TimeStatType {
         /// <summary>none</summary>
         SERIES,
         /// <summary>time-averages</summary>
@@ -70,7 +69,7 @@
         /// <summary>Tank filling.</summary>
         FILLING = 8,
         /// <summary>Tank emptying.</summary>
-        EMPTYING = 9,
+        EMPTYING = 9
     }
 
     /// <summary>Status report options.</summary>
@@ -84,15 +83,12 @@
     public enum SourceType {
         ///<summary>Inflow concentration.</summary>
         CONCEN = 0,
-
         ///<summary>Mass inflow booster.</summary>
         MASS = 1,
-
         ///<summary>Setpoint booster.</summary>
         SETPOINT = 2,
-
         ///<summary>Flow paced booster.</summary>
-        FLOWPACED = 3,
+        FLOWPACED = 3
     }
 
     ///<summary>Available section types.</summary>
@@ -125,36 +121,21 @@
         LABELS = 25,
         BACKDROP = 26,
         TAGS = 27,
-        END = 28,
+        END = 28
     }
 
     ///<summary>Rule statements.</summary>
-    public enum Rulewords {
-        AND,
-        ELSE,
-        ERROR,
-        IF,
-        OR,
-        PRIORITY,
-        RULE,
-        THEN
-    }
+    public enum Rulewords { AND, ELSE, ERROR, IF, OR, PRIORITY, RULE, THEN }
 
     /// <summary>Reporting flag.</summary>
-    public enum ReportFlag {
-        FALSE = 0,
-        SOME = 2,
-        TRUE = 1
-    }
+    public enum ReportFlag { FALSE = 0, SOME = 2, TRUE = 1 }
 
     ///<summary>Range limits.</summary>
     public enum RangeType {
         ///<summary>lower limit</summary>
         LOW = 0,
-
         ///<summary>upper limit</summary>
         HI = 1,
-
         ///<summary>precision</summary>
         PREC = 2
     }
@@ -193,31 +174,10 @@
     }
 
     ///<summary>Rule operators.</summary>
-    public enum Operators {
-        ABOVE,
-        BELOW,
-        EQ,
-        GE,
-        GT,
-        IS,
-        LE,
-        LT,
-        NE,
-        NOT
-    }
+    public enum Operators { ABOVE, BELOW, EQ, GE, GT, IS, LE, LT, NE, NOT }
 
     ///<summary>Rule object types.</summary>
-    public enum Objects {
-        JUNC,
-        LINK,
-        NODE,
-        PIPE,
-        PUMP,
-        RESERV,
-        SYSTEM,
-        TANK,
-        VALVE
-    }
+    public enum Objects { JUNC, LINK, NODE, PIPE, PUMP, RESERV, SYSTEM, TANK, VALVE }
 
     /// <summary>Type of node.</summary>
     public enum NodeType {
@@ -238,29 +198,39 @@
         /// <summary>First in, first out model</summary>
         FIFO = 2,
         /// <summary> Last in, first out model</summary>
-        LIFO = 3,
+        LIFO = 3
+    }
+
+    public enum ValveType
+    {
+        ///<summary> pressure reducing valve</summary>
+        [Keyword("PRV")]
+        PRV,
+        ///<summary> pressure sustaining valve</summary>
+        [Keyword("PSV")]
+        PSV,
+        ///<summary> flow control valve</summary>
+        [Keyword("FCV")]
+        FCV,
+        ///<summary> throttle control valve</summary>
+        [Keyword("TCV")]
+        TCV,
+        ///<summary> pressure breaker valve</summary>
+        [Keyword("PBV")]
+        PBV,
+        ///<summary> general purpose valve</summary>
+        [Keyword("GPV")]
+        GPV
     }
 
     /// <summary>Type of link</summary>
     public enum LinkType {
-        /// <summary>Pipe with check valve.</summary>
-        CV = 0,
         /// <summary>Regular pipe.</summary>
         PIPE = 1,
         /// <summary>Pump.</summary>
         PUMP = 2,
-        /// <summary>Pressure reducing valve.</summary>
-        PRV = 3,
-        /// <summary>Pressure sustaining valve.</summary>
-        PSV = 4,
-        /// <summary>Pressure breaker valve.</summary>
-        PBV = 5,
-        /// <summary>Flow control valve.</summary>
-        FCV = 6,
-        /// <summary>Throttle control valve.</summary>
-        TCV = 7,
-        /// <summary>General purpose valve.</summary>
-        GPV = 8
+        /// <summary>Valve.</summary>
+        VALVE = 3
     }
 
     /// <summary>Hydraulics solution option.</summary>
@@ -280,7 +250,7 @@
         /// <summary>Darcy-Weisbach</summary>
         DW,
         /// <summary>Chezy-Manning</summary>
-        CM,
+        CM
     }
 
     /// <summary>Flow units.</summary>
@@ -313,7 +283,7 @@
         INP_FILE,
         NULL_FILE,
         XML_FILE,
-        XML_GZ_FILE,
+        XML_GZ_FILE
     }
 
     /// <summary>Network variables</summary>
@@ -388,7 +358,7 @@
         /// <summary>act when set time reached</summary>
         TIMER = 2,
         /// <summary>act when time of day occurs</summary>
-        TIMEOFDAY = 3,
+        TIMEOFDAY = 3
     }
 
 }

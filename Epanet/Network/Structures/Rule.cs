@@ -21,15 +21,15 @@ namespace Epanet.Network.Structures {
 
     ///<summary>Rule source code class.</summary>
     public class Rule:Element {
-        private readonly List<string> _code = new List<string>();
-
         public Rule(string name) : base(name) { }
 
-        public List<string> Code { get { return _code; } }
-  
-        public override ElementType ElementType { get { return ElementType.Rule;} }
+        #region Overrides of Element
 
-  
+        public override ElementType ElementType => ElementType.RULE;
+
+        #endregion
+
+        public List<string> Code { get; } = new List<string>();
     }
 
 }

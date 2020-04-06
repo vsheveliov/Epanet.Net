@@ -23,14 +23,14 @@ namespace Epanet.Network.Structures {
     public class Demand {
         public Demand(double @base, Pattern pattern) {
             Base = @base;
-            this.pattern = pattern;
+            Pattern = pattern;
         }
 
         ///<summary>Baseline demand (Feet^3/t)</summary>
-        public double Base;
+        public double Base { get; set; }
 
         ///<summary>Pattern reference.</summary>
-        public Pattern pattern;
+        public Pattern Pattern { get; set; }
 
 #if NUCONVERT
         public double GetBaseNu(FlowUnitsType units) { return NUConvert.RevertFlow(units, Base); }

@@ -21,57 +21,58 @@ using System.Collections.Generic;
 using Epanet.Enums;
 using Epanet.Network;
 using Epanet.Network.Structures;
+using Epanet.Util;
 
 namespace Epanet.Hydraulic.Structures {
 
     public class SimulationTank:SimulationNode {
+        private readonly Tank _tank;
         public SimulationTank(Node @ref, int idx):base(@ref, idx) {
-            _volume = ((Tank)node).V0;
+            _tank = (Tank)@ref;
+            _volume = _tank.V0;
 
             // Init
-            head = ((Tank)node).H0;
-            demand = 0.0;
+            SimHead = _tank.H0;
+            SimDemand = 0.0;
             OldStat = StatType.TEMPCLOSED;
         }
 
-        // public Tank Node { get { return (Tank)this.node; } }
-
         private double _volume;
 
-        public double Area { get { return ((Tank)node).Area; } }
+        public double Area => _tank.Area;
 
-        public double Hmin { get { return ((Tank)node).Hmin; } }
+        public double Hmin => _tank.Hmin;
 
-        public double Hmax { get { return ((Tank)node).Hmax; } }
+        public double Hmax => _tank.Hmax;
 
-        public double Vmin { get { return ((Tank)node).Vmin; } }
+        public double Vmin => _tank.Vmin;
 
-        public double Vmax { get { return ((Tank)node).Vmax; } }
+        public double Vmax => _tank.Vmax;
 
-        public double V0 { get { return ((Tank)node).V0; } }
+        public double V0 => _tank.V0;
 
-        public Pattern Pattern { get { return ((Tank)node).Pattern; } }
+        public Pattern Pattern => _tank.Pattern;
 
-        public Curve Vcurve { get { return ((Tank)node).Vcurve; } }
+        public Curve Vcurve => _tank.Vcurve;
 
 #if COMMENTED
 
-        public double H0 { get { return ((Tank)node).H0; } }
+        public double H0 => _tank.H0;
 
-        public double Kb { get { return ((Tank)node).Kb; } }
+        public double Kb => _tank.Kb;
 
-        public double Concentration { get { return ((Tank)node).C; } }
+        public double Concentration => _tank.C;
 
-        public MixType MixModel { get { return ((Tank)node).MixModel; } }
+        public MixType MixModel => _tank.MixModel;
 
-        public double V1Max { get { return ((Tank)node).V1Max; } }
+        public double V1Max => _tank.V1Max;
 
 #endif
 
         /// Simulation getters & setters.
-        public double SimVolume { get { return _volume; } }
+        public double SimVolume => _volume;
 
-        public bool IsReservoir { get { return ((Tank)node).Area == 0; } }
+        public bool IsReservoir => _tank.Area.IsZero();
 
         public StatType OldStat { get; set; }
 
@@ -83,31 +84,30 @@ namespace Epanet.Hydraulic.Structures {
             Curve curve = Vcurve;
             if (curve == null)
                 return Vmin + (h - Hmin) * Area;
-            else {
-                return
-                    curve.Interpolate((h - Elevation) * fMap.GetUnits(FieldType.HEAD)
-                                      / fMap.GetUnits(FieldType.VOLUME));
-            }
+
+            return
+                curve.Interpolate((h - Elevation) * fMap.GetUnits(FieldType.HEAD)
+                                  / fMap.GetUnits(FieldType.VOLUME));
 
         }
 
         /// <summary>Computes new water levels in tank after current time step, with Euler integrator.</summary>
-        private void UpdateLevel(FieldsMap fMap, long tstep) {
+        private void UpdateLevel(FieldsMap fMap, TimeSpan tstep) {
 
-            if (Area == 0.0) // Reservoir
+            if (Area.IsZero()) // Reservoir
                 return;
 
             // Euler
-            double dv = demand * tstep;
+            double dv = SimDemand * tstep.TotalSeconds;
             _volume += dv;
 
-            if (_volume + demand >= Vmax)
+            if (_volume + SimDemand >= Vmax)
                 _volume = Vmax;
 
-            if (_volume - demand <= Vmin)
+            if (_volume - SimDemand <= Vmin)
                 _volume = Vmin;
 
-            head = FindGrade(fMap);
+            SimHead = FindGrade(fMap);
         }
 
         /// <summary>Finds water level in tank corresponding to current volume.</summary>
@@ -115,18 +115,18 @@ namespace Epanet.Hydraulic.Structures {
             Curve curve = Vcurve;
             if (curve == null)
                 return Hmin + (_volume - Vmin) / Area;
-            else
-                return Elevation
-                       + curve.Interpolate(_volume * fMap.GetUnits(FieldType.VOLUME))
-                       / fMap.GetUnits(FieldType.HEAD);
+
+            return Elevation
+                   + curve.Interpolate(_volume * fMap.GetUnits(FieldType.VOLUME))
+                   / fMap.GetUnits(FieldType.HEAD);
         }
 
         /// <summary>Get the required time step based to fill or drain a tank.</summary>
-        private long GetRequiredTimeStep(long tstep) {
+        private TimeSpan GetRequiredTimeStep(TimeSpan tstep) {
             if (IsReservoir) return tstep; //  Skip reservoirs
 
-            double h = head; // Current tank grade
-            double q = demand; // Flow into tank
+            double h = SimHead; // Current tank grade
+            double q = SimDemand; // Flow into tank
             double v;
 
             if (Math.Abs(q) <= Constants.QZERO)
@@ -140,25 +140,26 @@ namespace Epanet.Hydraulic.Structures {
                 return tstep;
 
             // Compute time to fill/drain
-            long t = (long)Math.Round(v / q);
+            TimeSpan t = TimeSpan.FromSeconds(Math.Round(v / q));
 
             // Revise time step
-            if (t > 0 && t < tstep)
+            if (t > TimeSpan.Zero && t < tstep)
                 tstep = t;
 
             return tstep;
         }
 
         /// <summary>Revises time step based on shortest time to fill or drain a tank.</summary>
-        public static long MinimumTimeStep(List<SimulationTank> tanks, long tstep) {
-            long newTStep = tstep;
+        public static TimeSpan MinimumTimeStep(List<SimulationTank> tanks, TimeSpan tstep) {
+            TimeSpan newTStep = tstep;
             foreach (SimulationTank tank  in  tanks)
                 newTStep = tank.GetRequiredTimeStep(newTStep);
+
             return newTStep;
         }
 
         /// <summary>Computes new water levels in tanks after current time step.</summary>
-        public static void StepWaterLevels(List<SimulationTank> tanks, FieldsMap fMap, long tstep) {
+        public static void StepWaterLevels(List<SimulationTank> tanks, FieldsMap fMap, TimeSpan tstep) {
             foreach (SimulationTank tank  in  tanks)
                 tank.UpdateLevel(fMap, tstep);
         }

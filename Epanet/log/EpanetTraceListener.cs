@@ -26,41 +26,27 @@ namespace Epanet.Log {
     public sealed class EpanetTraceListener : TextWriterTraceListener {
         
         private sealed class RollingFileStream : FileStream {
-
-            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode)
-                : base(path, BaseFileMode(mode), FileAccess.Write) {
-                Init(path, maxFileLength, maxFileCount, mode);
-            }
-
             public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode, FileShare share)
-                : base(path, BaseFileMode(mode), FileAccess.Write, share) {
+                :base(path, BaseFileMode(mode), FileAccess.Write, share) {
+                Init(path, maxFileLength, maxFileCount, mode);
+            }
+/*
+            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode)
+                :base(path, BaseFileMode(mode), FileAccess.Write) {
                 Init(path, maxFileLength, maxFileCount, mode);
             }
 
-            public RollingFileStream(
-                string path,
-                long maxFileLength,
-                int maxFileCount,
-                FileMode mode,
-                FileShare share,
-                int bufferSize)
+            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode, FileShare share, int bufferSize)
                 : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize) {
                 Init(path, maxFileLength, maxFileCount, mode);
             }
 
-            public RollingFileStream(
-                string path,
-                long maxFileLength,
-                int maxFileCount,
-                FileMode mode,
-                FileShare share,
-                int bufferSize,
-                bool isAsync)
+            public RollingFileStream(string path, long maxFileLength, int maxFileCount, FileMode mode, FileShare share, int bufferSize, bool isAsync)
                 : base(path, BaseFileMode(mode), FileAccess.Write, share, bufferSize, isAsync) {
                 Init(path, maxFileLength, maxFileCount, mode);
             }
-
-            public override bool CanRead { get { return false; } }
+*/
+            public override bool CanRead => false;
 
             public override void Write(byte[] array, int offset, int count) {
                 while(true) {
@@ -79,7 +65,7 @@ namespace Epanet.Log {
                     }
                     else {
                         if(count > MaxFileLength) {
-                            throw new ArgumentOutOfRangeException("count", "Buffer size exceeds maximum file length");
+                            throw new ArgumentOutOfRangeException(nameof(count), "Buffer size exceeds maximum file length");
                         }
                     }
                     BackupAndResetStream();
@@ -92,13 +78,13 @@ namespace Epanet.Log {
 
             private void Init(string path, long maxFileLength, int maxFileCount, FileMode mode) {
                 if(maxFileLength <= 0)
-                    throw new ArgumentOutOfRangeException("maxFileLength", "Invalid maximum file length");
+                    throw new ArgumentOutOfRangeException(nameof(maxFileLength), "Invalid maximum file length");
                 if(maxFileCount <= 0)
-                    throw new ArgumentOutOfRangeException("maxFileCount", "Invalid maximum file count");
+                    throw new ArgumentOutOfRangeException(nameof(maxFileCount), "Invalid maximum file count");
 
                 MaxFileLength = maxFileLength;
                 MaxFileCount = maxFileCount;
-                // this.CanSplitData = true;
+                // CanSplitData = true;
 
                 string fullPath = Path.GetFullPath(path);
                 _fileDir = Path.GetDirectoryName(fullPath);
@@ -178,10 +164,9 @@ namespace Epanet.Log {
 
             public InvariantStreamWriter(string path, bool append, Encoding encoding) : base(path, append, encoding) { }
 
-            public override IFormatProvider FormatProvider { get { return CultureInfo.InvariantCulture; } }
+            public override IFormatProvider FormatProvider => CultureInfo.InvariantCulture;
         }
 
-        private bool _printDate = true;
         public EpanetTraceListener() { }
 
         public EpanetTraceListener(Stream stream) : base(stream) { }
@@ -207,7 +192,7 @@ namespace Epanet.Log {
         }
 
         public EpanetTraceListener(TextWriter writer, string name) : base(writer, name) { }
-        public bool PrintDate { get { return _printDate; } set { _printDate = value; } }
+        public bool PrintDate { get; set; } = true;
 
         public override void WriteLine(string message) {
             base.Write(DateTime.Now.ToString(base.Writer.FormatProvider));
@@ -237,7 +222,7 @@ namespace Epanet.Log {
                 return;
 
             WriteHeader(source, eventType, id);
-            if(args != null && args.Length > 0)
+            if(args.Length > 0)
                 WriteLine(string.Format(CultureInfo.InvariantCulture, format, args));
             else
                 WriteLine(format);
@@ -250,9 +235,7 @@ namespace Epanet.Log {
                 return;
 
             WriteHeader(source, eventType, id);
-            string datastring = data == null ? string.Empty : data.ToString();
-
-            WriteLine(datastring);
+            WriteLine(data.ToString());
             // WriteFooter(eventCache);
         }
 

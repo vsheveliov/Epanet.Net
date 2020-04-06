@@ -20,28 +20,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Epanet.Enums;
-using Epanet.Network.IO;
 using Epanet.Network.Structures;
-using Epanet.Util;
 
 namespace Epanet.Network {
 
     ///<summary>Units report properties & conversion support class</summary>
     public class FieldsMap {
         ///<summary>Report fields properties.</summary>
-        private readonly Dictionary<FieldType, Field> _fields;
-
+        private readonly Dictionary<FieldType, Field> _fields = new Dictionary<FieldType, Field>();
         ///<summary>Fields units values.</summary>
-        private readonly Dictionary<FieldType, double> _units;
+        private readonly Dictionary<FieldType, double> _units = new Dictionary<FieldType, double>();
 
         ///<summary>Init fields default configuration</summary>
         public FieldsMap() {
             try {
-                _fields = new Dictionary<FieldType, Field>();
-                _units = new Dictionary<FieldType, double>();
 
                 foreach (FieldType type in Enum.GetValues(typeof(FieldType)))
-                    _fields[type] = new Field(type.ParseStr());
+                    _fields[type] = new Field(type);
 
                 GetField(FieldType.FRICTION).Precision = 3;
 
@@ -51,7 +46,7 @@ namespace Epanet.Network {
                 for (var i = FieldType.FLOW; i <= FieldType.HEADLOSS; i++)
                     GetField(i).Enabled = true;
             }
-            catch (ENException e) {
+            catch (EnException e) {
                 Debug.Print(e.ToString());
             }
         }
@@ -60,14 +55,12 @@ namespace Epanet.Network {
         /// <param name="fieldType">Field type.</param>
         /// <returns>Report field.</returns>
         /// <remarks>
-        /// Throws <see cref="ENException"/> 
+        /// Throws <see cref="EnException"/> 
         /// If specified type not found.
         /// </remarks>
         public Field GetField(FieldType fieldType) {
-            Field value;
-
-            if (!_fields.TryGetValue(fieldType, out value))
-                throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
+            if (!_fields.TryGetValue(fieldType, out Field value))
+                throw new EnException(ErrorCode.Err201, fieldType.ParseStr());
 
             return value;
         }
@@ -76,12 +69,11 @@ namespace Epanet.Network {
         /// <param name="fieldType">Field type.</param>
         /// <returns>Conversion units value (from user units to system units).</returns>
         /// <remarks>
-        /// Throws <see cref="ENException"/> If specified type not found.
+        /// Throws <see cref="EnException"/> If specified type not found.
         /// </remarks>
         public double GetUnits(FieldType fieldType) {
-            double value;
-            if (!_units.TryGetValue(fieldType, out value))
-                throw new ENException(ErrorCode.Err201, fieldType.ParseStr());
+            if (!_units.TryGetValue(fieldType, out double value))
+                throw new EnException(ErrorCode.Err201, fieldType.ParseStr());
 
             return value;
         }
@@ -94,7 +86,7 @@ namespace Epanet.Network {
             QualType qualFlag,
             string chemUnits,
             double spGrav,
-            long hstep) {
+            TimeSpan hstep) {
 
             double dcf,
                    ccf,
@@ -123,10 +115,21 @@ namespace Epanet.Network {
 
                 dcf = 1000.0 * Constants.MperFT;
                 qcf = Constants.LPSperCFS;
-                if (flowFlag == FlowUnitsType.LPM) qcf = Constants.LPMperCFS;
-                if (flowFlag == FlowUnitsType.MLD) qcf = Constants.MLDperCFS;
-                if (flowFlag == FlowUnitsType.CMH) qcf = Constants.CMHperCFS;
-                if (flowFlag == FlowUnitsType.CMD) qcf = Constants.CMDperCFS;
+                switch (flowFlag) {
+                    case FlowUnitsType.LPM:
+                        qcf = Constants.LPMperCFS;
+                        break;
+                    case FlowUnitsType.MLD:
+                        qcf = Constants.MLDperCFS;
+                        break;
+                    case FlowUnitsType.CMH:
+                        qcf = Constants.CMHperCFS;
+                        break;
+                    case FlowUnitsType.CMD:
+                        qcf = Constants.CMDperCFS;
+                        break;
+                }
+
                 hcf = Constants.MperFT;
                 if (pressFlag == PressUnitsType.METERS) pcf = Constants.MperFT * spGrav;
                 else pcf = Constants.KPAperPSI * Constants.PSIperFT * spGrav;
@@ -149,10 +152,22 @@ namespace Epanet.Network {
 
                 dcf = 12.0;
                 qcf = 1.0;
-                if (flowFlag == FlowUnitsType.GPM) qcf = Constants.GPMperCFS;
-                if (flowFlag == FlowUnitsType.MGD) qcf = Constants.MGDperCFS;
-                if (flowFlag == FlowUnitsType.IMGD) qcf = Constants.IMGDperCFS;
-                if (flowFlag == FlowUnitsType.AFD) qcf = Constants.AFDperCFS;
+
+                switch (flowFlag) {
+                    case FlowUnitsType.GPM:
+                        qcf = Constants.GPMperCFS;
+                        break;
+                    case FlowUnitsType.MGD:
+                        qcf = Constants.MGDperCFS;
+                        break;
+                    case FlowUnitsType.IMGD:
+                        qcf = Constants.IMGDperCFS;
+                        break;
+                    case FlowUnitsType.AFD:
+                        qcf = Constants.AFDperCFS;
+                        break;
+                }
+
                 hcf = 1.0;
                 pcf = Constants.PSIperFT * spGrav;
                 wcf = 1.0;
@@ -191,7 +206,7 @@ namespace Epanet.Network {
             SetUnits(FieldType.POWER, wcf);
             SetUnits(FieldType.VOLUME, hcf * hcf * hcf);
 
-            if (hstep < 1800) {
+            if (hstep.TotalSeconds < 1800) {
                 SetUnits(FieldType.TIME, 1.0 / 60.0);
                 GetField(FieldType.TIME).Units = Keywords.u_MINUTES;
             }

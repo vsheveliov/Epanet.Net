@@ -22,12 +22,9 @@ namespace Epanet.Quality.Structures {
 
     ///<summary>Wrapper class for the Tank in the water quality simulation.</summary>
     public class QualityTank:QualityNode {
-        ///<summary>Discrete water quality segments assigned to this tank.</summary>
-        private readonly LinkedList<QualitySegment> _segments;
-
         ///<summary>Initialize tank properties from the original tank node.</summary>
         public QualityTank(Node node):base(node) {
-            _segments = new LinkedList<QualitySegment>();
+            Segments = new LinkedList<QualitySegment>();
             Volume = ((Tank)node).V0;
             Concentration = node.C0;
         }
@@ -36,7 +33,8 @@ namespace Epanet.Quality.Structures {
         /// <remarks>Current species concentration [user units].</remarks>
         public double Concentration { get; set; }
 
-        public LinkedList<QualitySegment> Segments { get { return _segments; } }
+        ///<summary>Discrete water quality segments assigned to this tank.</summary>
+        public LinkedList<QualitySegment> Segments { get; }
 
         ///<summary>Get tank water volume.</summary>
         ///<return>Water volume [Feet^3].</return>

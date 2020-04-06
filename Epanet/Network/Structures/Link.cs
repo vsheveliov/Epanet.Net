@@ -23,53 +23,25 @@ using Epanet.Enums;
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic link structure (pipe)</summary>
-    public class Link:Element {
+    public abstract class Link:Element {
 
         ///<summary>Init links flow resistance values.</summary>
-        public void InitResistance(FormType formflag, double hexp) {
-            FlowResistance = Constants.CSMALL;
+        public abstract void InitResistance(FormType formflag, double hexp);
 
-            switch (Type) {
-            case LinkType.CV:
-            case LinkType.PIPE:
-                double e = Kc;
-                double d = Diameter;
-                double L = Lenght;
+        public abstract void ConvertUnits(Network nw);
 
-                switch (formflag) {
-                case FormType.HW:
-                    FlowResistance = 4.727 * L / Math.Pow(e, hexp) / Math.Pow(d, 4.871);
-                    break;
-                case FormType.DW:
-                    FlowResistance = L / 2.0 / 32.2 / d / Math.Pow(Math.PI * Math.Pow(d, 2) / 4.0, 2);
-                    break;
-                case FormType.CM:
-                    FlowResistance = Math.Pow(4.0 * e / (1.49 * Math.PI * d * d), 2) *
-                                          Math.Pow((d / 4.0), -1.333) * L;
-                    break;
-                }
-                break;
-
-            case LinkType.PUMP:
-                FlowResistance = Constants.CBIG;
-                break;
-            }
-        }
-
-        private readonly List<EnPoint> vertices;
-
-        public Link(string name):base(name) {
-            vertices = new List<EnPoint>();
-            Type = LinkType.CV;
+        protected Link(string name):base(name) {
+            Vertices = new List<EnPoint>();
             Status = StatType.XHEAD;
         }
 
+        public override ElementType ElementType => ElementType.LINK;
+
+        ///<summary>Link subtype.</summary>
+        public abstract LinkType LinkType { get; }
+
         ///<summary>Initial species concentrations.</summary>
         public double C0 { get; set; }
-
-        public override ElementType ElementType {
-            get { return ElementType.Link; }
-        }
 
         ///<summary>Link diameter (feet).</summary>
         public double Diameter { get; set; }
@@ -78,7 +50,7 @@ namespace Epanet.Network.Structures {
         public Node FirstNode { get; set; }
 
         ///<summary>Flow resistance.</summary>
-        public double FlowResistance { get; set; }
+        public double FlowResistance { get; protected set; }
 
         ///<summary>Bulk react. coeff.</summary>
         public double Kb { get; set; }
@@ -104,11 +76,8 @@ namespace Epanet.Network.Structures {
         ///<summary>Link status.</summary>
         public StatType Status { get; set; }
 
-        ///<summary>Link subtype.</summary>
-        public LinkType Type { get; set; }
-
         ///<summary>List of points for link path rendering.</summary>
-        public List<EnPoint> Vertices { get { return vertices; } }
+        public List<EnPoint> Vertices { get; }
 
         ///<summary>Link report flag.</summary>
         public bool RptFlag { get; set; }
@@ -118,6 +87,28 @@ namespace Epanet.Network.Structures {
             Diameter = diameter;
             Km = 0.02517 * realkm / Math.Pow(diameter, 4);
             InitResistance(net.FormFlag, net.HExp);
+        }
+
+        /// <summary>Returns string with length of pipe with given index.</summary>
+
+        public double GetPipeLength(UnitsType type)
+        {
+            double length = 0;
+            
+            EnPoint pt1 = FirstNode.Coordinate;
+            
+            foreach(var pt in Vertices) {
+                length += pt1.DistanceTo(pt);
+                pt1 = pt;
+            }
+            
+            length += pt1.DistanceTo(SecondNode.Coordinate);
+
+            // length = MapDimensions.LengthUCF * length;
+            if(type == UnitsType.SI)
+                length *= 1 / Constants.MperFT;
+
+            return Lenght = length;
         }
 
 #if NUCONVERT
@@ -137,18 +128,7 @@ namespace Epanet.Network.Structures {
             Lenght = NUConvert.ConvertDistance(utype, value);
         }
 
-        public double GetNuRoughness(
-            FlowUnitsType fType,
-            PressUnitsType pType,
-            double spGrav) {
-            switch (Type) {
-            case LinkType.FCV:
-                return NUConvert.RevertFlow(fType, Kc);
-            case LinkType.PRV:
-            case LinkType.PSV:
-            case LinkType.PBV:
-                return NUConvert.RevertPressure(pType, spGrav, Kc);
-            }
+        public virtual double GetNuRoughness(FlowUnitsType fType, PressUnitsType pType, double spGrav) {
             return Kc;
         }
 

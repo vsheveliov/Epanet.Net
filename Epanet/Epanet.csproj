@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="Enums\KeywordAttribute.cs" />
     <Compile Include="Enums\_enums.cs" />
     <Compile Include="ErrorCode.cs" />
     <Compile Include="Log\EpanetTraceListener.cs" />
@@ -77,13 +78,16 @@
     <Compile Include="Network\Structures\Demand.cs" />
     <Compile Include="Network\Structures\Element.cs" />
     <Compile Include="Network\Structures\Field.cs" />
+    <Compile Include="Network\Structures\Junction.cs" />
     <Compile Include="Network\Structures\Label.cs" />
     <Compile Include="Network\Structures\Link.cs" />
     <Compile Include="Network\Structures\Node.cs" />
     <Compile Include="Network\Structures\NUConvert.cs" />
     <Compile Include="Network\Structures\Pattern.cs" />
     <Compile Include="Network\Structures\EnPoint.cs" />
+    <Compile Include="Network\Structures\Pipe.cs" />
     <Compile Include="Network\Structures\Pump.cs" />
+    <Compile Include="Network\Structures\Reservoir.cs" />
     <Compile Include="Network\Structures\Rule.cs" />
     <Compile Include="Network\Structures\QualSource.cs" />
     <Compile Include="Network\Structures\Tank.cs" />
@@ -108,39 +112,6 @@
     <Compile Include="ENException.cs" />
     <Compile Include="Enums\EnumsTxt.cs" />
     <Compile Include="Util\Utilities.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Hydraulic\IO\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Hydraulic\_namespace.xml" />
-    <Content Include="Hydraulic\Structures\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Log\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Network\IO\Input\_namespace.xml" />
-    <Content Include="Network\IO\Output\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Network\IO\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Network\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Network\Structures\_namespace.xml" />
-    <Content Include="_namespace.xml" />
-    <Content Include="Quality\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Quality\Structures\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Util\_namespace.xml">
-      <SubType>Designer</SubType>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Error.resx">

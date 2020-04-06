@@ -22,21 +22,18 @@ using Epanet.Hydraulic.Structures;
 namespace Epanet.Hydraulic {
 
     ///<summary>Linear system solving support class.</summary>
-    public class SparseMatrix {
+    internal class SparseMatrix {
 
         ///<summary>Adjacent item</summary>
         private class AdjItem {
-            private readonly int _node;
-            private readonly int _link;
-
             public AdjItem(int node, int link) {
-                _node = node;
-                _link = link;
+                Node = node;
+                Link = link;
             }
 
-            public int Node { get { return _node; } }
+            public int Node { get; }
 
-            public int Link { get { return _link; } }
+            public int Link { get; }
         }
 
         ///<summary>Number of coefficients(number of links)</summary>
@@ -52,10 +49,10 @@ namespace Epanet.Hydraulic {
         private readonly int[] _degree;
 
 
-        public int GetOrder(int id) { return _order[id + 1] - 1; }
-        public int GetRow(int id) { return _row[id + 1] - 1; }
-        public int GetNdx(int id) { return _ndx[id + 1] - 1; }
-        public int CoeffsCount { get { return _coeffsCount; } }
+        public int GetOrder(int id) => _order[id + 1] - 1;
+        public int GetRow(int id) => _row[id + 1] - 1;
+        public int GetNdx(int id) => _ndx[id + 1] - 1;
+        public int CoeffsCount => _coeffsCount;
 
         ///<summary>Creates sparse representation of coeff. matrix.</summary>
         public SparseMatrix(ICollection<SimulationNode> nodes, ICollection<SimulationLink> links, int juncs) {

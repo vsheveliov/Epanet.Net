@@ -23,28 +23,31 @@ namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic node structure  (junction)</summary>
 
-    public class Node: Element {
-        private readonly List<Demand> _demands = new List<Demand>(1);
-        private readonly Demand _primaryDemand = new Demand(0, null);
-
-        public Node(string name):base(name) {
-            Position = EnPoint.Invalid;
+    public abstract class Node: Element {
+        protected Node(string name):base(name) {
+            Coordinate = EnPoint.Invalid;
         }
 
-        public override ElementType ElementType { get { return ElementType.Node; } }
+        #region Overrides of Element
 
-        public Demand PrimaryDemand { get { return _primaryDemand; } }
+        public override ElementType ElementType => ElementType.NODE;
 
-        public virtual NodeType Type { get { return NodeType.JUNC; } }
+        #endregion
+
+        public abstract void ConvertUnits(Network nw);
+
+        public Demand PrimaryDemand { get; } = new Demand(0, null);
+
+        public virtual NodeType NodeType => NodeType.JUNC;
 
         ///<summary>Node position.</summary>
-        public EnPoint Position { get; set; }
+        public EnPoint Coordinate { get; set; }
 
         ///<summary>Node elevation(foot).</summary>
         public double Elevation { get; set; }
 
         ///<summary>Node demand list.</summary>
-        public List<Demand> Demands { get { return _demands; } }
+        public List<Demand> Demands { get; } = new List<Demand>(1);
 
         ///<summary>Water quality source.</summary>
         public QualSource QualSource { get; set; }

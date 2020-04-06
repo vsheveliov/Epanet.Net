@@ -23,22 +23,22 @@ using Epanet.Network.Structures;
 
 using EpanetNetwork = Epanet.Network.Network;
 
+/// <summary>Compute link coefficients through the implemented pipe headloss model.</summary>
+///  <param name="net">Epanet Network.</param>
+///  <param name="sL">Simulation link.</param>
+/// <param name="invHeadLoss">Computed link coefficients.</param>
+/// <param name="flowCorrection">Computed link coefficients.</param>
+/// <returns>Computed link coefficients.</returns>
+public delegate void PipeHeadModelCalculator(
+    EpanetNetwork net,
+    SimulationLink sL,
+    out double invHeadLoss,
+    out double flowCorrection);
+
 namespace Epanet.Hydraulic.Models {
 
     ///<summary>Pipe head loss model calculators.</summary>
-    public static class PipeHeadModelCalculators {
-        /// <summary>Compute link coefficients through the implemented pipe headloss model.</summary>
-        ///  <param name="net">Epanet Network.</param>
-        ///  <param name="sL">Simulation link.</param>
-        /// <param name="invHeadLoss">Computed link coefficients.</param>
-        /// <param name="flowCorrection">Computed link coefficients.</param>
-        /// <returns>Computed link coefficients.</returns>
-        public delegate void Compute(
-            EpanetNetwork net,
-            SimulationLink sL,
-            out double invHeadLoss,
-            out double flowCorrection);
-
+    internal static class PipeHeadModelCalculators {
         #region Darcy-Weishbach model calculator
 
         // Constants used for computing Darcy-Weisbach friction factor
@@ -65,7 +65,7 @@ namespace Epanet.Hydraulic.Models {
             double flowResistance = link.FlowResistance; // Resistance coeff.
             double roughness = link.Kc;
             double diameter = link.Diameter;
-            bool isOne = sL.Type > LinkType.PIPE;
+            bool isOne = sL.LinkType > LinkType.PIPE;
 
             double resistance;
 
@@ -172,5 +172,7 @@ namespace Epanet.Hydraulic.Models {
 
         #endregion
     }
+
+
 
 }

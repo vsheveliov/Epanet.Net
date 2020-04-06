@@ -20,34 +20,32 @@ using System;
 namespace Epanet {
 
     ///<summary>Epanet exception codes handler.</summary>
-    public class ENException:Exception {
+    public class EnException:Exception {
 
         ///<summary>Array of arguments to be used in the error string creation.</summary>
         private readonly object[] _arguments;
 
         ///<summary>Epanet error code.</summary>
-        protected readonly ErrorCode code;
+        protected readonly ErrorCode _code;
 
         /// <summary>Get error code.</summary>
         /// <value>Code id.</value>
-        public ErrorCode Code {
-            get { return code; }
-        }
+        public ErrorCode Code => _code;
 
         ///<summary>Contructor from error code id.</summary>
         ///<param name="code">Error code id.</param>
 
-        public ENException(ErrorCode code) {
+        public EnException(ErrorCode code) {
             _arguments = null;
-            this.code = code;
+            _code = code;
         }
 
         /// <summary>Contructor from error code id and multiple arguments.</summary>
         ///  <param name="code">Error code id.</param>
         /// <param name="arg">Extra arguments.</param>
         ///  
-        public ENException(ErrorCode code, params object[] arg) {
-            this.code = code;
+        public EnException(ErrorCode code, params object[] arg) {
+            _code = code;
             _arguments = arg;
         }
 
@@ -55,14 +53,10 @@ namespace Epanet {
         ///  <param name="code">Error code id.</param>
         /// <param name="innerException"></param>
         ///  
-        public ENException(ErrorCode code, Exception innerException)
-            : base(null, innerException)
-        {
-            this.code = code;
+        public EnException(ErrorCode code, Exception innerException)
+            :base(null, innerException) {
+            _code = code;
         }
-
-        ///<summary>Get arguments array.</summary>
-        public object[] Arguments { get { return _arguments; } }
 
         ///<summary>Handles the exception string conversion.</summary>
         /// <returns>Final error string.</returns>
@@ -71,7 +65,7 @@ namespace Epanet {
                 string format;
                 
                 try {
-                    format = Properties.Error.ResourceManager.GetString("ERR" + (int)code);
+                    format = Properties.Error.ResourceManager.GetString("ERR" + (int)_code);
                 }
                 catch (Exception) {
                     format = null;
@@ -79,7 +73,7 @@ namespace Epanet {
 
 
                 if (format == null)
-                    return string.Format("Unknown error message ({0})", code);
+                    return string.Format("Unknown error message ({0})", _code);
 
                 return _arguments != null ? string.Format(format, _arguments) : format;
             }

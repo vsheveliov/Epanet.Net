@@ -15,15 +15,64 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
+
+using Epanet.Enums;
+
 namespace Epanet.Network.Structures {
 
     ///<summary>Hydraulic valve structure.</summary>
     public class Valve:Link {
 
-        public Valve(string name):base(name) { }
+        public Valve(string name, ValveType type):base(name) => ValveType = type;
+
+        public ValveType ValveType { get; }
+
+        public override LinkType LinkType => LinkType.VALVE;
+
+        public override void InitResistance(FormType formflag, double hexp) {  }
+
+        public override void ConvertUnits(Network nw) {
+            FieldsMap fMap = nw.FieldsMap;
+
+            Diameter /= fMap.GetUnits(FieldType.DIAM);
+
+            double diam = Math.Pow(Diameter, 2);
+            Km = 0.02517 * Km / diam / diam;
+
+            if(!double.IsNaN(Kc))
+                switch (ValveType) {
+                    case ValveType.FCV:
+                        Kc /= fMap.GetUnits(FieldType.FLOW);
+                        break;
+                    case ValveType.PRV:
+                    case ValveType.PSV:
+                    case ValveType.PBV:
+                        Kc /= fMap.GetUnits(FieldType.PRESSURE);
+                        break;
+                }
+
+        }
 
         ///<summary>Settings curve.</summary>
         public Curve Curve { get; set; }
+
+#if NUCONVERT
+        public override double GetNuRoughness(FlowUnitsType fType, PressUnitsType pType, double spGrav) {
+
+            switch (ValveType) {
+                case ValveType.FCV:
+                    return NUConvert.RevertFlow(fType, Kc);
+                case ValveType.PRV:
+                case ValveType.PSV:
+                case ValveType.PBV:
+                    return NUConvert.RevertPressure(pType, spGrav, Kc);
+            }
+
+            return Kc;
+        }
+
+#endif
 
     }
 

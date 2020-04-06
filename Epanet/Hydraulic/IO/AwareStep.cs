@@ -24,6 +24,7 @@ using Epanet.Network;
 using Epanet.Network.Structures;
 using Epanet.Quality;
 using Epanet.Quality.Structures;
+using Epanet.Util;
 
 namespace Epanet.Hydraulic.IO {
 
@@ -37,8 +38,6 @@ namespace Epanet.Hydraulic.IO {
         private readonly double[] _h;
         private readonly double[] _q;
         private readonly double[] _dh;
-        private readonly long _hydTime;
-        private readonly long _hydStep;
 
         private const int FORMAT_VERSION = 1;
 
@@ -46,9 +45,9 @@ namespace Epanet.Hydraulic.IO {
             public int version;
             public int nodes;
             public int links;
-            public long rstart;
-            public long rstep;
-            public long duration;
+            public TimeSpan rstart;
+            public TimeSpan rstep;
+            public TimeSpan duration;
         }
 
         // ReSharper disable RedundantCast
@@ -56,15 +55,15 @@ namespace Epanet.Hydraulic.IO {
         public static void WriteHeader(
             BinaryWriter outStream,
             HydraulicSim hydraulicSim,
-            long rstart,
-            long rstep,
-            long duration) {
+            TimeSpan rstart,
+            TimeSpan rstep,
+            TimeSpan duration) {
             outStream.Write((int)FORMAT_VERSION);
             outStream.Write((int)hydraulicSim.Nodes.Count);
             outStream.Write((int)hydraulicSim.Links.Count);
-            outStream.Write((long)rstart);
-            outStream.Write((long)rstep);
-            outStream.Write((long)duration);
+            outStream.Write((long)rstart.Ticks);
+            outStream.Write((long)rstep.Ticks);
+            outStream.Write((long)duration.Ticks);
         }
 
 
@@ -74,17 +73,17 @@ namespace Epanet.Hydraulic.IO {
                 version = @in.ReadInt32(),
                 nodes = @in.ReadInt32(),
                 links = @in.ReadInt32(),
-                rstart = @in.ReadInt64(),
-                rstep = @in.ReadInt64(),
-                duration = @in.ReadInt64()
+                rstart = new TimeSpan(@in.ReadInt64()),
+                rstep = new TimeSpan(@in.ReadInt64()),
+                duration = new TimeSpan(@in.ReadInt64())
             };
 
             return headerInfo;
         }
 
 
-        public static void Write(BinaryWriter bw, HydraulicSim hydraulicSim, long hydStep) {
-            long hydTime = hydraulicSim.Htime;
+        public static void Write(BinaryWriter bw, HydraulicSim hydraulicSim, TimeSpan hydStep) {
+            TimeSpan hydTime = hydraulicSim.Htime;
 
             foreach(SimulationNode node in hydraulicSim.Nodes) {
                 bw.Write((double)node.SimDemand);
@@ -98,52 +97,48 @@ namespace Epanet.Hydraulic.IO {
                 bw.Write((double)0.0);
             }
 
-            bw.Write((long)hydStep);
-            bw.Write((long)hydTime);
+            bw.Write((long)hydStep.Ticks);
+            bw.Write((long)hydTime.Ticks);
         }
 
         public static void WriteHydAndQual(
             BinaryWriter outStream,
             HydraulicSim hydraulicSim,
             QualitySim qualitySim,
-            long step,
-            long time) {
-            QualityNode[] qNodes = qualitySim != null ? qualitySim.NNodes : null;
-            QualityLink[] qLinks = qualitySim != null ? qualitySim.NLinks : null;
+            TimeSpan step,
+            TimeSpan time) {
+            QualityNode[] qNodes = qualitySim?.NNodes;
+            QualityLink[] qLinks = qualitySim?.NLinks;
             var nodes = hydraulicSim.Nodes;
             var links = hydraulicSim.Links;
-
-            // int nNodes = nodes.Count;
-            // int nLinks = links.Count;
-            // int baSize = (nNodes * 3 + nLinks * 3) * sizeof(double) + sizeof(long) * 2;
 
             int count = 0;
             foreach (SimulationNode node  in  nodes) {
                 outStream.Write((double)node.SimDemand);
                 outStream.Write((double)node.SimHead);
-                outStream.Write((double)(qualitySim != null ? qNodes[count++].Quality : 0.0));
+                outStream.Write(qNodes?[count++].Quality ?? 0.0);
             }
 
             count = 0;
             foreach (SimulationLink link  in  links) {
                 outStream.Write((double)(link.SimStatus <= StatType.CLOSED ? 0d : link.SimFlow));
                 outStream.Write((double)(link.First.SimHead - link.Second.SimHead));
-                outStream.Write((double)(qualitySim != null ? qLinks[count++].GetAverageQuality(null) : 0));
+                outStream.Write(qLinks?[count++].GetAverageQuality() ?? 0.0);
             }
 
-            outStream.Write((long)step);
-            outStream.Write((long)time);
+            outStream.Write((long)step.Ticks);
+            outStream.Write((long)time.Ticks);
 
         }
 
-#if COMMENTED
+#if true
         public static void WriteHybrid(
             BinaryWriter outStream,
             HydraulicSim hydraulicSim,
             double[] qN,
             double[] qL,
-            long step,
-            long time) {
+            TimeSpan step,
+            TimeSpan time) {
 
             var nodes = hydraulicSim.Nodes;
             var links = hydraulicSim.Links;
@@ -166,8 +161,8 @@ namespace Epanet.Hydraulic.IO {
                 outStream.Write((double)qL[count++]);
             }
 
-            outStream.Write((long)step);
-            outStream.Write((long)time);
+            outStream.Write((long)step.Ticks);
+            outStream.Write((long)time.Ticks);
 
         }
 
@@ -204,45 +199,44 @@ namespace Epanet.Hydraulic.IO {
                 _ql[i] = br.ReadDouble();
             }
 
-            _hydStep = br.ReadInt64();
-            _hydTime = br.ReadInt64();
+            Step = new TimeSpan(br.ReadInt64());
+            Time = new TimeSpan(br.ReadInt64());
         }
 
 
-        public double GetNodeDemand(int id, Node node, FieldsMap fMap) {
+        public double GetNodeDemand(int id, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.DEMAND, _d[id]) : _d[id];
+                return fMap?.RevertUnit(FieldType.DEMAND, _d[id]) ?? _d[id];
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
 
-        public double GetNodeHead(int id, Node node, FieldsMap fMap) {
+        public double GetNodeHead(int id, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.HEAD, _h[id]) : _h[id];
+                return fMap?.RevertUnit(FieldType.HEAD, _h[id]) ?? _h[id];
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
 
         public double GetNodePressure(int id, Node node, FieldsMap fMap) {
             try {
-                double p = (GetNodeHead(id, node, null) - node.Elevation);
-
-                return fMap != null ? fMap.RevertUnit(FieldType.PRESSURE, p) : p;
+                double p = GetNodeHead(id, null) - node.Elevation;
+                return fMap?.RevertUnit(FieldType.PRESSURE, p) ?? p;
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
 
-        public double GetLinkFlow(int id, Link link, FieldsMap fMap) {
+        public double GetLinkFlow(int id, FieldsMap fMap) {
             try {
-                return fMap != null ? fMap.RevertUnit(FieldType.FLOW, _q[id]) : _q[id];
+                return fMap?.RevertUnit(FieldType.FLOW, _q[id]) ?? _q[id];
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
@@ -251,36 +245,34 @@ namespace Epanet.Hydraulic.IO {
         public double GetLinkVelocity(int id, Link link, FieldsMap fMap) {
             try {
                 double v;
-                double flow = GetLinkFlow(id, link, null);
+                double flow = GetLinkFlow(id, null);
                 if (link is Pump)
                     v = 0;
                 else
-                    v = (Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0));
+                    v = Math.Abs(flow) / (Math.PI * Math.Pow(link.Diameter, 2) / 4.0);
 
-                return fMap != null ? fMap.RevertUnit(FieldType.VELOCITY, v) : v;
+                return fMap?.RevertUnit(FieldType.VELOCITY, v) ?? v;
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
 
         public double GetLinkHeadLoss(int id, Link link, FieldsMap fMap) {
             try {
-                if (GetLinkFlow(id, link, null) == 0) {
+                if (GetLinkFlow(id, null).IsZero())
                     return 0.0;
-                }
-                else {
-                    double hh = _dh[id];
-                    if (!(link is Pump))
-                        hh = Math.Abs(hh);
 
-                    if (link.Type <= LinkType.PIPE)
-                        return (1000 * hh / link.Lenght);
-                    else
-                        return fMap != null ? fMap.RevertUnit(FieldType.HEADLOSS, hh) : hh;
-                }
+                double hh = _dh[id];
+                if (!(link is Pump))
+                    hh = Math.Abs(hh);
+
+                if (link.LinkType <= LinkType.PIPE)
+                    return 1000 * hh / link.Lenght;
+
+                return fMap?.RevertUnit(FieldType.HEADLOSS, hh) ?? hh;
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
@@ -290,8 +282,8 @@ namespace Epanet.Hydraulic.IO {
             try {
                 double f;
 
-                double flow = GetLinkFlow(id, link, null);
-                if (link.Type <= LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
+                double flow = GetLinkFlow(id, null);
+                if (link.LinkType <= LinkType.PIPE && Math.Abs(flow) > Constants.TINY) {
 
 
                     double hh = Math.Abs(_dh[id]);
@@ -301,9 +293,9 @@ namespace Epanet.Hydraulic.IO {
                 else
                     f = 0;
 
-                return fMap != null ? fMap.RevertUnit(FieldType.FRICTION, f) : f;
+                return fMap?.RevertUnit(FieldType.FRICTION, f) ?? f;
             }
-            catch (ENException) {
+            catch (EnException) {
                 return 0;
             }
         }
@@ -312,9 +304,9 @@ namespace Epanet.Hydraulic.IO {
 
         public double GetNodeQuality(int id) { return _qn[id]; }
 
-        public long Step { get { return _hydStep; } }
+        public TimeSpan Step { get; }
 
-        public long Time { get { return _hydTime; } }
+        public TimeSpan Time { get; }
     }
 
 }

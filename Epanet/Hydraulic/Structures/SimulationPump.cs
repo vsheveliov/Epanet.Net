@@ -20,6 +20,7 @@ using System.Collections.Generic;
 
 using Epanet.Enums;
 using Epanet.Network.Structures;
+using Epanet.Util;
 
 using EpanetNetwork = Epanet.Network.Network;
 
@@ -38,26 +39,26 @@ namespace Epanet.Hydraulic.Structures {
 
         private readonly double[] _energy = {0, 0, 0, 0, 0, 0};
 
-        public PumpType Ptype { get { return ((Pump)link).Ptype; } }
+        public PumpType Ptype => ((Pump)link).Ptype;
 
-        public double Q0 { get { return ((Pump)link).Q0; } }
+        public double Q0 => ((Pump)link).Q0;
 
-        public double Qmax { get { return ((Pump)link).Qmax; } }
+        public double Qmax => ((Pump)link).Qmax;
 
-        public double Hmax { get { return ((Pump)link).Hmax; } }
+        public double Hmax => ((Pump)link).Hmax;
 
-        public Curve Hcurve { get { return ((Pump)link).HCurve; } }
+        public Curve Hcurve => ((Pump)link).HCurve;
 
-        public Curve Ecurve { get { return ((Pump)link).ECurve; } }
+        public Curve Ecurve => ((Pump)link).ECurve;
 
-        public Pattern Upat { get { return ((Pump)link).UPat; } }
+        public Pattern Upat => ((Pump)link).UPat;
 
-        public Pattern Epat { get { return ((Pump)link).EPat; } }
+        public Pattern Epat => ((Pump)link).EPat;
 
-        public double Ecost { get { return ((Pump)link).ECost; } }
+        public double Ecost => ((Pump)link).ECost;
 
         // Simulation getters and setters
-        public double[] Energy { get { return _energy; } }
+        public double[] Energy => _energy;
 
         ///<summary>Simulated shutoff head</summary>
         public double H0 { set; get; }
@@ -75,11 +76,11 @@ namespace Epanet.Hydraulic.Structures {
         private void GetFlowEnergy(EpanetNetwork net, out double power, out double efficiency) {
             power = efficiency = 0.0;
 
-            if (status <= StatType.CLOSED) {
+            if (SimStatus <= StatType.CLOSED) {
                 return;
             }
 
-            double q = Math.Abs(flow);
+            double q = Math.Abs(SimFlow);
             double dh = Math.Abs(first.SimHead - second.SimHead);
 
             double e = net.EPump;
@@ -101,66 +102,59 @@ namespace Epanet.Hydraulic.Structures {
         /// <summary>Accumulates pump energy usage.</summary>
         private double UpdateEnergy(
             EpanetNetwork net,
-            long n,
+            int n,
             double c0,
             double f0,
-            double dt) {
+            TimeSpan dt) {
             //Skip closed pumps
-            if (status <= StatType.CLOSED) return 0.0;
-            double q = Math.Max(Constants.QZERO, Math.Abs(flow));
+            if (SimStatus <= StatType.CLOSED) return 0.0;
+            double q = Math.Max(Constants.QZERO, Math.Abs(SimFlow));
 
             // Find pump-specific energy cost
             double c = Ecost > 0.0 ? Ecost : c0;
 
-            if (Epat != null) {
-                int m = (int)(n % Epat.Count);
-                c *= Epat[m];
-            }
-            else
-                c *= f0;
+            c *= Epat?[n % Epat.Count] ?? f0;
 
             // Find pump energy & efficiency
-            double power, efficiency;
-            GetFlowEnergy(net, out power, out efficiency);
+            GetFlowEnergy(net, out double power, out double efficiency);
 
             // Update pump's cumulative statistics
-            _energy[0] = _energy[0] + dt; // Time on-line
-            _energy[1] = _energy[1] + efficiency * dt; // Effic.-hrs
-            _energy[2] = _energy[2] + power / q * dt; // kw/cfs-hrs
-            _energy[3] = _energy[3] + power * dt; // kw-hrs
+            _energy[0] = _energy[0] + dt.TotalHours;              // Time on-line
+            _energy[1] = _energy[1] + efficiency * dt.TotalHours; // Effic.-hrs
+            _energy[2] = _energy[2] + power / q * dt.TotalHours;  // kw/cfs-hrs
+            _energy[3] = _energy[3] + power * dt.TotalHours;      // kw-hrs
             _energy[4] = Math.Max(_energy[4], power);
-            _energy[5] = _energy[5] + c * power * dt; // cost-hrs.
+            _energy[5] = _energy[5] + c * power * dt.TotalHours;  // cost-hrs.
 
             return power;
         }
 
         /// <summary>Computes P and Y coeffs. for pump in the link.</summary>
         public void ComputePumpCoeff(EpanetNetwork net) {
-            if (status <= StatType.CLOSED || setting == 0.0) {
-                invHeadLoss = 1.0 / Constants.CBIG;
-                flowCorrection = flow;
+            if (SimStatus <= StatType.CLOSED || SimSetting.IsZero()) {
+                SimInvHeadLoss = 1.0 / Constants.CBIG;
+                SimFlowCorrection = SimFlow;
                 return;
             }
 
             
-            double q = Math.Max(Math.Abs(flow), Constants.TINY);
+            double q = Math.Max(Math.Abs(SimFlow), Constants.TINY);
 
             if (Ptype == PumpType.CUSTOM) {
-                double hh0, rr;
-                Hcurve.GetCoeff(net.FieldsMap, q / setting, out hh0, out rr);
+                Hcurve.GetCoeff(net.FieldsMap, q / SimSetting, out double hh0, out double rr);
 
                 H0 = -hh0;
                 FlowCoefficient = -rr;
                 N = 1.0;
             }
 
-            double h0 = setting * setting * H0;
+            double h0 = SimSetting * SimSetting * H0;
             double n = N;
-            double r = FlowCoefficient * Math.Pow(setting, 2.0 - n);
-            if (n != 1.0) r = n * r * Math.Pow(q, n - 1.0);
+            double r = FlowCoefficient * Math.Pow(SimSetting, 2.0 - n);
+            if (!n.EqualsTo(1.0)) r = n * r * Math.Pow(q, n - 1.0);
 
-            invHeadLoss = 1.0 / Math.Max(r, net.RQtol);
-            flowCorrection = flow / n + invHeadLoss * h0;
+            SimInvHeadLoss = 1.0 / Math.Max(r, net.RQtol);
+            SimFlowCorrection = SimFlow / n + SimInvHeadLoss * h0;
         }
 
         /// <summary>Get new pump status.</summary>
@@ -170,7 +164,7 @@ namespace Epanet.Hydraulic.Structures {
         public StatType PumpStatus(EpanetNetwork net, double dh) {
             double hmax = Ptype == PumpType.CONST_HP 
                 ? Constants.BIG
-                : setting * setting * Hmax;
+                : SimSetting * SimSetting * Hmax;
 
             return dh > hmax + net.HTol
                 ? StatType.XHEAD 
@@ -182,39 +176,50 @@ namespace Epanet.Hydraulic.Structures {
             EpanetNetwork net,
             Pattern epat,
             List<SimulationPump> pumps,
-            long htime,
-            long hstep) {
-            double dt, psum = 0.0;
-
-
-            if (net.Duration == 0)
-                dt = 1.0;
+            TimeSpan htime,
+            TimeSpan hstep) {
+            
+            TimeSpan dt;
+            
+            /* Determine current time interval in hours */
+            if (net.Duration.IsZero())
+                dt = TimeSpan.FromHours(1);
             else if (htime < net.Duration)
-                dt = hstep / 3600.0;
+                dt = hstep;
             else
-                dt = 0.0;
+                dt = TimeSpan.Zero;
 
-            if (dt == 0.0)
+            if(dt.IsZero())
                 return 0.0;
 
-            long n = (htime + net.PStart) / net.PStep;
+            int n = (int)((htime.Ticks + net.PStart.Ticks) / net.PStep.Ticks);
 
-
+            /* Compute default energy cost at current time */
             double c0 = net.ECost;
-            double f0 = 1.0;
+            double f0 = epat?[n % epat.Count] ?? 1.0;
 
-            if (epat != null) {
-                long m = n % epat.Count;
-                f0 = epat[(int)m];
-            }
+            double psum = 0.0;
 
             foreach (SimulationPump pump  in  pumps) {
                 psum += pump.UpdateEnergy(net, n, c0, f0, dt);
             }
 
+            /* Update maximum kw value */
+            net.EMax = Math.Max(net.EMax, psum);
+
             return psum;
         }
 
+        public override void SetLinkStatus(bool value) {
+            if (value) {
+                SimSetting = 1.0;
+                SimStatus = StatType.OPEN;
+            }
+            else {
+                SimSetting = 0.0;
+                SimStatus = StatType.CLOSED;
+            }
+        }
 
     }
 

@@ -31,7 +31,7 @@ namespace Epanet {
         public const int MAXTOKS = 40;       
         ///<summary>Max. input errors reported</summary>
         public const int MAXERRS = 10;
-        //public const int     MAXMSG = 79;
+        public const int     MAXMSG = 79;
         public const int     MAXID  = 31;
         //public const int     MAXFNAME = 259;
 

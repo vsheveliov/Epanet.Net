@@ -15,12 +15,42 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
+using System;
+
 using Epanet.Enums;
 
 namespace Epanet.Network.Structures {
 
     ///<summary>Control statement</summary>
     public class Control {
+
+        public void ConvertUnits(Network net) {
+            FieldsMap fMap = net.FieldsMap;
+
+            if (Link == null)
+                return;
+
+            if (Node != null) {
+                Grade = Node.NodeType == NodeType.JUNC
+                    ? Node.Elevation + Grade / fMap.GetUnits(FieldType.PRESSURE)
+                    : Node.Elevation + Grade / fMap.GetUnits(FieldType.ELEV);
+            }
+
+            if (!double.IsNaN(Setting) && Link.LinkType == LinkType.VALVE) {
+                switch (((Valve)Link).ValveType) {
+                    case ValveType.PRV:
+                    case ValveType.PSV:
+                    case ValveType.PBV:
+                        Setting /= fMap.GetUnits(FieldType.PRESSURE);
+                        break;
+                    case ValveType.FCV:
+                        Setting /= fMap.GetUnits(FieldType.FLOW);
+                        break;
+                }
+            }
+
+        }
+
         ///<summary>Control grade.</summary>
         public double Grade { get; set; }
 
@@ -37,7 +67,7 @@ namespace Epanet.Network.Structures {
         public StatType Status { get; set; }
 
         ///<summary>Control time (in seconds).</summary>
-        public long Time { get; set; }
+        public TimeSpan Time { get; set; }
 
         ///<summary>Control type</summary>
         public ControlType Type { get; set; }

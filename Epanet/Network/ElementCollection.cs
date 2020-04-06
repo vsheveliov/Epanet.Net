@@ -16,43 +16,43 @@ namespace Epanet.Network {
             base.Add(item);
         }
 
-        /*
+        /// <summary>Get item by Name.</summary>
+        /// <param name="key">Item <see cref="Element.Name"/></param>
+        /// <returns>Item with given key, null otherwise.</returns>
         public new TItem this[string key] {
             get {
 
                 if (key == null)
-                    throw new ArgumentNullException("key");
+                    throw new ArgumentNullException(nameof(key));
 
-                if (this.Dictionary != null) {
-                    TItem value;
-                    return this.Dictionary.TryGetValue(key, out value) 
+                if (Dictionary != null) {
+                    return Dictionary.TryGetValue(key, out TItem value) 
                         ? value 
                         : default(TItem);
                 }
 
                 var comparer = base.Comparer ?? StringComparer.OrdinalIgnoreCase;
 
-                foreach (var item in this.Items)
-                    if (comparer.Equals(item.Id, key))
+                foreach (var item in Items)
+                    if (comparer.Equals(item.Name, key))
                         return item;
 
                 return default(TItem);
             }
         }
-        */
 
-        /*
+        
         public bool TryGetValue(string key, out TItem value) {
             if(key == null)
-                throw new ArgumentNullException("key");
+                throw new ArgumentNullException(nameof(key));
 
             if(base.Dictionary != null)
                 return base.Dictionary.TryGetValue(key, out value);
 
-            var comparer = this.Comparer ?? StringComparer.OrdinalIgnoreCase;
+            var comparer = Comparer ?? StringComparer.OrdinalIgnoreCase;
 
-            foreach(var item in this.Items) {
-                string itemKey = this.GetKeyForItem(item);
+            foreach(var item in Items) {
+                string itemKey = item.Name;
 
                 if(comparer.Equals(itemKey, key)) {
                     value = item;
@@ -63,31 +63,8 @@ namespace Epanet.Network {
             value = default(TItem);
             return false;
         }
-        */
 
-        public TItem GetValueOrDefault(string key) {
-            if (key == null)
-                throw new ArgumentNullException("key");
-
-            if (Dictionary != null) {
-                TItem value;
-                return Dictionary.TryGetValue(key, out value) ? value : default(TItem);
-            }
-
-            var comparer = Comparer ?? StringComparer.OrdinalIgnoreCase;
-
-            foreach (var item in Items) {
-                string itemKey = GetKeyForItem(item);
-
-                if (comparer.Equals(itemKey, key))
-                    return item;
-            }
-
-            return default(TItem);
-        }
-
-
-        protected override string GetKeyForItem(TItem item) { return item.Name; }
+        protected override string GetKeyForItem(TItem item) => item.Name;
     }
 
 }

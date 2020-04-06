@@ -26,16 +26,18 @@ namespace Epanet.Network.Structures {
 
         ///<summary>Init field name, precision, report limit and state.</summary>
         /// <param name="name">Field name.</param>
-        public Field(string name) {
-            Name = name;
+        public Field(FieldType type) {
+            Type = type;
             Enabled = false;
             Precision = 2;
             SetRptLim(RangeType.LOW, Constants.BIG * Constants.BIG);
             SetRptLim(RangeType.HI, -Constants.BIG * Constants.BIG);
         }
 
+
+        public FieldType Type { get; }
         ///<summary>Name of reported variable.</summary>
-        public string Name { get; private set; }
+        public string Name => Type.ParseStr();
 
         ///<summary>Number of decimal places.</summary>
         public int Precision { get; set; }

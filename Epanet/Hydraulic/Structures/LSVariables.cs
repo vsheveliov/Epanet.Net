@@ -19,60 +19,36 @@ using System;
 
 namespace Epanet.Hydraulic.Structures {
 
-    public class LsVariables {
+    internal class LsVariables {
+        ///<summary>Nodal inflows.</summary>
+        ///<remarks>Epanet 'X[n]' variable</remarks>
+        public readonly double[] x;
 
-        ///<summary>Epanet 'X[n]' variable</summary>
-        private readonly double[] _nodalInflows; 
+        ///<summary>Matrix off diagonal.</summary>
+        ///<remarks>Epante Aij[n] variable</remarks>
+        public readonly double[] aij;
 
-        ///<summary>Epante Aij[n] variable</summary>
-        private readonly double[] _matrixOffDiagonal; 
+        ///<summary>Matrix diagonal.</summary>
+        ///<remarks>Epanet Aii[n] variable</remarks>
+        public readonly double[] aii;
 
-        ///<summary>Epanet Aii[n] variable</summary>
-        private readonly double[] _matrixDiagonal; 
-
+        ///<summary>Right hand side coeffs.</summary>
         ///<summary>Epanet F[n] variable</summary>
-        private readonly double[] _rightHandSideCoeffs; 
-        
-        public void Clear() {
-            Array.Clear(_nodalInflows, 0, _nodalInflows.Length);
-            Array.Clear(_matrixOffDiagonal, 0, _matrixOffDiagonal.Length);
-            Array.Clear(_matrixDiagonal, 0, _matrixDiagonal.Length);
-            Array.Clear(_rightHandSideCoeffs, 0, _rightHandSideCoeffs.Length);
-        }
+        public readonly double[] f;
 
         public LsVariables(int nodes, int coeffs) {
-            _nodalInflows = new double[nodes];
-            _matrixDiagonal = new double[nodes];
-            _matrixOffDiagonal = new double[coeffs];
-            _rightHandSideCoeffs = new double[nodes];
-            Clear();
+            x = new double[nodes];
+            aii = new double[nodes];
+            aij = new double[coeffs];
+            f = new double[nodes];
         }
 
-        public void AddRhsCoeff(int id, double value) { _rightHandSideCoeffs[id] += value; }
-
-        public double GetRhsCoeff(int id) { return _rightHandSideCoeffs[id]; }
-        
-        public void AddNodalInFlow(int id, double value) { _nodalInflows[id] += value; }
-
-        public double GetNodalInFlow(int id) { return _nodalInflows[id]; }
-        
-        public void AddNodalInFlow(SimulationNode id, double value) { _nodalInflows[id.Index] += value; }
-
-        public double GetNodalInFlow(SimulationNode id) { return _nodalInflows[id.Index]; }
-
-        public void AddAii(int id, double value) { _matrixDiagonal[id] += value; }
-
-        public double GetAii(int id) { return _matrixDiagonal[id]; }
-
-        public void AddAij(int id, double value) { _matrixOffDiagonal[id] += value; }
-
-        public double GetAij(int id) { return _matrixOffDiagonal[id]; }
-
-        public double[] AiiVector { get { return _matrixDiagonal; } }
-
-        public double[] AijVector { get { return _matrixOffDiagonal; } }
-
-        public double[] RhsCoeffs { get { return _rightHandSideCoeffs; } }
+        public void Clear() {
+            Array.Clear(x, 0, x.Length);
+            Array.Clear(aij, 0, aij.Length);
+            Array.Clear(aii, 0, aii.Length);
+            Array.Clear(f, 0, f.Length);
+        }
     }
 
 }

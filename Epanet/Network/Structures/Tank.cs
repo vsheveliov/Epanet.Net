@@ -25,11 +25,28 @@ namespace Epanet.Network.Structures {
     public class Tank:Node {
         public Tank(string name):base(name) { }
 
-        public override NodeType Type {
-            get {
-                return Math.Abs(Area) < double.Epsilon * 10 ? NodeType.RESERV : NodeType.TANK;
-            }
+        public override void ConvertUnits(Network nw) {
+            // FIXME:Tanks and reservoirs here?
+
+            FieldsMap fMap = nw.FieldsMap;
+
+            // ... convert from user to internal units
+            double ucfLength = fMap.GetUnits(FieldType.ELEV);
+            Elevation /= ucfLength;
+            H0 = Elevation + H0 / ucfLength;
+            Hmin = Elevation + Hmin / ucfLength;
+            Hmax = Elevation + Hmax / ucfLength;
+            Area = Math.PI * Math.Pow(Area / ucfLength, 2) / 4.0;
+            V0 /= fMap.GetUnits(FieldType.VOLUME);
+            Vmin /= fMap.GetUnits(FieldType.VOLUME);
+            Vmax /= fMap.GetUnits(FieldType.VOLUME);
+            Kb /= Constants.SECperDAY;
+            // tk.Volume = tk.V0;
+            C = C0;
+            V1Max *= Vmax;            
         }
+
+        public override NodeType NodeType => NodeType.TANK;
 
         ///<summary>Tank area (feet^2).</summary>
         public double Area { get; set; }

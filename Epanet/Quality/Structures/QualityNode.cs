@@ -25,7 +25,7 @@ namespace Epanet.Quality.Structures {
 
         ///<summary>Factory method to instantiate the quality node from the hydraulic network node.</summary>
         public static QualityNode Create(Node node) {
-            return node.Type > NodeType.JUNC ? new QualityTank(node) : new QualityNode(node);
+            return node.NodeType > NodeType.JUNC ? new QualityTank(node) : new QualityNode(node);
 
             /*
             return node.Type == NodeType.TANK || node.Type == NodeType.RESERV 
@@ -54,7 +54,7 @@ namespace Epanet.Quality.Structures {
         public double MassRate { get; set; }
 
         ///<summary>Get the original hydraulic network node.</summary>
-        public Node Node { get { return _node; } }
+        public Node Node => _node;
 
         ///<summary>Species concentration [user units].</summary>
         public double Quality { get; set; }

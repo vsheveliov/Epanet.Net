@@ -195,17 +195,17 @@ namespace Epanet.Network.IO.Input {
                 string signature = _reader.ReadString();
 
                 //Check for <EPANET2> marker at start of input file
-                if (signature != NETFILE_SIGNATURE) throw new ENException(ErrorCode.Err200);
+                if (signature != NETFILE_SIGNATURE) throw new EnException(ErrorCode.Err200);
 
                 //Read version ID
                 int ver = _reader.ReadInteger();
 
-                if ((ver < VERSIONID1) || (ver > VERSIONID2)) throw new ENException(ErrorCode.Err200);
+                if (ver < VERSIONID1 || ver > VERSIONID2) throw new EnException(ErrorCode.Err200);
 
                 //Total up number of network components
                 int ncomp = 0;
 
-                for (int i = 0; i <= (int)ObjectCategories.CNTRLS; i++)
+                for (ObjectCategories i = ObjectCategories.JUNCS; i <= ObjectCategories.CNTRLS; i++)
                     ncomp += _reader.ReadInteger();
 
                 Debug.Print("Ncomp=" + ncomp);
@@ -285,19 +285,17 @@ namespace Epanet.Network.IO.Input {
                 if (string.IsNullOrEmpty(line))
                     continue;
 
-                if(Tokenize(line, tok) == 0)
+                if(GetTokens(line, tok) == 0)
                     continue;
 
-                Rulewords key;
-                EnumsTxt.TryParse(tok[0], out key);
+                tok[0].TryParse(out Rulewords key);
                 if(key == Rulewords.RULE) {
                     currentRule = new Rule(tok[1]);
                     net.Rules.Add(currentRule);
                 }
-                else if(currentRule != null) {
-                    currentRule.Code.Add(line);
+                else {
+                    currentRule?.Code.Add(line);
                 }
-
             }
 
         }
@@ -310,7 +308,7 @@ namespace Epanet.Network.IO.Input {
                 if(string.IsNullOrEmpty(line))
                     continue;
 
-                if(Tokenize(line, tok) == 0)
+                if(GetTokens(line, tok) == 0)
                     continue;
 
                 try {
@@ -318,49 +316,60 @@ namespace Epanet.Network.IO.Input {
                     int n = tok.Count;
                     StatType status = StatType.ACTIVE;
 
-                    double setting = double.NaN, time = 0.0, level = 0.0;
+                    double setting = double.NaN, level = 0.0;
+                    TimeSpan time = TimeSpan.Zero;
 
                     if(n < 6)
-                        throw new ENException(ErrorCode.Err201, SectType.CONTROLS, line);
+                        throw new EnException(ErrorCode.Err201, SectType.CONTROLS, line);
 
                     Node node = null;
                     Link link = net.GetLink(tok[1]);
 
                     if(link == null)
-                        throw new ENException(ErrorCode.Err204, SectType.CONTROLS, tok[0]);
+                        throw new EnException(ErrorCode.Err204, SectType.CONTROLS, tok[0]);
 
-                    LinkType ltype = link.Type;
+                    LinkType ltype = link.LinkType;
 
-                    if(ltype == LinkType.CV)
-                        throw new ENException(ErrorCode.Err207, SectType.CONTROLS, tok[0]);
+                    if(ltype == LinkType.PIPE && ((Pipe)link).HasCheckValve)
+                        throw new EnException(ErrorCode.Err207, SectType.CONTROLS, tok[0]);
 
                     if(tok[2].Match(StatType.OPEN.ToString())) {
                         status = StatType.OPEN;
-                        if(ltype == LinkType.PUMP)
-                            setting = 1.0;
-                        if(ltype == LinkType.GPV)
-                            setting = link.Kc;
+                        switch (ltype) {
+                            case LinkType.PUMP:
+                                setting = 1.0;
+                                break;
+                            case LinkType.VALVE:
+                                if (((Valve)link).ValveType == ValveType.GPV)
+                                    setting = link.Kc;
+                                break;
+                        }
                     }
                     else if(tok[2].Match(StatType.CLOSED.ToString())) {
                         status = StatType.CLOSED;
-                        if(ltype == LinkType.PUMP)
-                            setting = 0.0;
-                        if(ltype == LinkType.GPV)
-                            setting = link.Kc;
+                        switch (ltype) {
+                            case LinkType.PUMP:
+                                setting = 0.0;
+                                break;
+                            case LinkType.VALVE:
+                                if (((Valve)link).ValveType == ValveType.GPV)
+                                    setting = link.Kc;
+                                break;
+                        }
                     }
-                    else if(ltype == LinkType.GPV) {
-                        throw new ENException(ErrorCode.Err206, SectType.CONTROLS, tok[0]);
+                    else if (ltype == LinkType.VALVE && ((Valve)link).ValveType == ValveType.GPV) {
+                        throw new EnException(ErrorCode.Err206, SectType.CONTROLS, tok[0]);
                     }
                     else if(!tok[2].ToDouble(out setting)) {
-                        throw new ENException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
+                        throw new EnException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
                     }
 
                     if(ltype == LinkType.PUMP || ltype == LinkType.PIPE) {
                         if(!double.IsNaN(setting)) {
                             if(setting < 0.0)
-                                throw new ENException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
+                                throw new EnException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
 
-                            status = setting == 0.0 ? StatType.CLOSED : StatType.OPEN;
+                            status = setting.IsZero() ? StatType.CLOSED : StatType.OPEN;
                         }
                     }
 
@@ -372,34 +381,41 @@ namespace Epanet.Network.IO.Input {
                         ctype = ControlType.TIMEOFDAY;
                     else {
                         if(n < 8)
-                            throw new ENException(ErrorCode.Err201, SectType.CONTROLS, line);
+                            throw new EnException(ErrorCode.Err201, SectType.CONTROLS, line);
 
                         if((node = net.GetNode(tok[5])) == null)
-                            throw new ENException(ErrorCode.Err203, SectType.CONTROLS, tok[0]);
+                            throw new EnException(ErrorCode.Err203, SectType.CONTROLS, tok[0]);
 
                         if(tok[6].Match(Keywords.w_BELOW))
                             ctype = ControlType.LOWLEVEL;
                         else if(tok[6].Match(Keywords.w_ABOVE))
                             ctype = ControlType.HILEVEL;
                         else
-                            throw new ENException(ErrorCode.Err201, SectType.CONTROLS, line);
+                            throw new EnException(ErrorCode.Err201, SectType.CONTROLS, line);
                     }
 
                     switch(ctype) {
                     case ControlType.TIMER:
                     case ControlType.TIMEOFDAY:
-                    if(n == 6)
-                        time = Utilities.GetHour(tok[5]);
-                    if(n == 7)
-                        time = Utilities.GetHour(tok[5], tok[6]);
-                    if(time < 0.0)
-                        throw new ENException(ErrorCode.Err201, SectType.CONTROLS, line);
+
+                    switch (n) {
+                        case 6:
+                            time = Utilities.ToTimeSpan(tok[5]);
+                            break;
+                        case 7:
+                            time = Utilities.ToTimeSpan(tok[5], tok[6]);
+                            break;
+                    }
+
+                    if(time == TimeSpan.MinValue)
+                        throw new EnException(ErrorCode.Err201, SectType.CONTROLS, line);
+
                     break;
 
                     case ControlType.LOWLEVEL:
                     case ControlType.HILEVEL:
                     if(!tok[7].ToDouble(out level))
-                        throw new ENException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
+                        throw new EnException(ErrorCode.Err202, SectType.CONTROLS, tok[0]);
 
                     break;
                     }
@@ -410,17 +426,13 @@ namespace Epanet.Network.IO.Input {
                         Type = ctype,
                         Status = status,
                         Setting = setting,
-
-                        Time = ctype == ControlType.TIMEOFDAY
-                            ? (long)(3600.0 * time) % Constants.SECperDAY
-                            : (long)(3600.0 * time),
-
+                        Time = ctype == ControlType.TIMEOFDAY ? time.TimeOfDay() : time,
                         Grade = level
                     };
 
                     net.Controls.Add(cntr);
                 }
-                catch (ENException ex) {
+                catch (EnException ex) {
                     LogException(ex);
                 }
             }
@@ -440,17 +452,17 @@ namespace Epanet.Network.IO.Input {
                 var data = _reader.ReadArray(MAXLINKPROPS);
 
                 if(net.GetLink(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.PUMPS, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.PUMPS, name));
                     continue;
                 }
 
                 if(j1 == null || j2 == null) {
-                    LogException(new ENException(ErrorCode.Err203, SectType.PUMPS, name));
+                    LogException(new EnException(ErrorCode.Err203, SectType.PUMPS, name));
                     continue;
                 }
 
                 if(j1.Equals(j2)) {
-                    LogException(new ENException(ErrorCode.Err222, SectType.PUMPS, name));
+                    LogException(new EnException(ErrorCode.Err222, SectType.PUMPS, name));
                     continue;
                 }
 
@@ -471,9 +483,8 @@ namespace Epanet.Network.IO.Input {
                 //----------------------------------
 
                 if(!string.IsNullOrEmpty(data[PUMP_HP_INDEX])) {
-                    double y;
-                    if (!data[PUMP_HP_INDEX].ToDouble(out y) || y <= 0.0) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.PUMPS, name));
+                    if (!data[PUMP_HP_INDEX].ToDouble(out double y) || y <= 0.0) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.PUMPS, name));
                     }
                     else {
                         pump.Ptype = PumpType.CONST_HP;
@@ -484,7 +495,7 @@ namespace Epanet.Network.IO.Input {
                 if (!string.IsNullOrEmpty(data[PUMP_HCURVE_INDEX])) {
                     Curve curve = net.GetCurve(data[PUMP_HCURVE_INDEX]);
                     if (curve == null) {
-                        LogException(new ENException(ErrorCode.Err206, SectType.PUMPS, name));
+                        LogException(new EnException(ErrorCode.Err206, SectType.PUMPS, name));
                     }
                     else {
                         pump.HCurve = curve;
@@ -495,7 +506,7 @@ namespace Epanet.Network.IO.Input {
                     Pattern p = net.GetPattern(data[PUMP_PATTERN_INDEX]);
 
                     if (p == null) {
-                        LogException(new ENException(ErrorCode.Err205, SectType.PUMPS, name));
+                        LogException(new EnException(ErrorCode.Err205, SectType.PUMPS, name));
                     }
                     else {
                         pump.UPat = p;
@@ -504,9 +515,8 @@ namespace Epanet.Network.IO.Input {
 
 
                 if(!string.IsNullOrEmpty(data[PUMP_SPEED_INDEX])) {
-                    double y;
-                    if (!data[PUMP_SPEED_INDEX].ToDouble(out y) || y < 0.0) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.PUMPS, name));
+                    if (!data[PUMP_SPEED_INDEX].ToDouble(out double y) || y < 0.0) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.PUMPS, name));
                     }
                     else {
                         pump.Kc = y;
@@ -519,7 +529,7 @@ namespace Epanet.Network.IO.Input {
                     Curve curve = net.GetCurve(data[PUMP_ECURVE_INDEX]);
 
                     if (curve == null) {
-                        LogException(new ENException(ErrorCode.Err217, SectType.ENERGY, name));
+                        LogException(new EnException(ErrorCode.Err217, SectType.ENERGY, name));
                     }
                     else {
                         pump.ECurve = curve;
@@ -527,10 +537,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if(!string.IsNullOrEmpty(data[PUMP_EPRICE_INDEX])) {
-                    double cost;
-
-                    if (!data[PUMP_EPRICE_INDEX].ToDouble(out cost)) {
-                        LogException(new ENException(ErrorCode.Err217, SectType.ENERGY, name));
+                    if (!data[PUMP_EPRICE_INDEX].ToDouble(out double cost)) {
+                        LogException(new EnException(ErrorCode.Err217, SectType.ENERGY, name));
                     }
                     else {
                         pump.ECost = cost;
@@ -541,7 +549,7 @@ namespace Epanet.Network.IO.Input {
                     Pattern pattern = net.GetPattern(data[PUMP_PRICEPAT_INDEX]);
 
                     if (pattern == null) {
-                        LogException(new ENException(ErrorCode.Err217, SectType.ENERGY, name));
+                        LogException(new EnException(ErrorCode.Err217, SectType.ENERGY, name));
                     }
                     else {
                         pump.EPat = pattern;
@@ -559,7 +567,7 @@ namespace Epanet.Network.IO.Input {
                         status = StatType.CLOSED;
                     }
                     else {
-                        LogException(new ENException(ErrorCode.Err211, SectType.STATUS, name));
+                        LogException(new EnException(ErrorCode.Err211, SectType.STATUS, name));
                     }
 
                     if (status >= 0)
@@ -577,8 +585,6 @@ namespace Epanet.Network.IO.Input {
                 return;
 
             for(int i = 0; i < n; i++) {
-                double length = 0, diam, rcoeff = 0, lcoeff, setting;
-                LinkType type;
                 StatType status = StatType.OPEN;
 
                 string name = _reader.ReadString();
@@ -589,81 +595,77 @@ namespace Epanet.Network.IO.Input {
 
 
                 if(net.GetLink(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.VALVES, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.VALVES, name));
                     continue;
                 }
 
                 if(j1 == null || j2 == null) {
-                    LogException(new ENException(ErrorCode.Err203, SectType.VALVES, name));
+                    LogException(new EnException(ErrorCode.Err203, SectType.VALVES, name));
                     continue;
                 }
 
                 if(j1.Equals(j2)) {
-                    LogException(new ENException(ErrorCode.Err222, SectType.VALVES, name));
+                    LogException(new EnException(ErrorCode.Err222, SectType.VALVES, name));
                     continue;
                 }
 
-                if (!EnumsTxt.TryParse(data[VALVE_TYPE_INDEX], out type)) {
-                    LogException(new ENException(ErrorCode.Err201, SectType.VALVES, data[VALVE_TYPE_INDEX]));
+                if (!data[VALVE_TYPE_INDEX].TryParse(out ValveType type)) {
+                    LogException(new EnException(ErrorCode.Err201, SectType.VALVES, data[VALVE_TYPE_INDEX]));
                     continue;
                 }
 
-                if(!data[VALVE_DIAM_INDEX].ToDouble(out diam) || diam <= 0.0) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.VALVES, name));
+                if(!data[VALVE_DIAM_INDEX].ToDouble(out double diam) || diam <= 0.0) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.VALVES, name));
                     continue;
                 }
 
-                Valve valve = new Valve(name) {
+                Valve valve = new Valve(name, type) {
                     FirstNode = j1,
                     SecondNode = j2
                 };
 
-                if(type == LinkType.GPV) { /* Headloss curve for GPV */
+                if(type == ValveType.GPV) { /* Headloss curve for GPV */
                     Curve t = net.GetCurve(data[VALVE_SETTING_INDEX]); 
                     if(t == null) {
-                        LogException(new ENException(ErrorCode.Err206, SectType.VALVES, name));
+                        LogException(new EnException(ErrorCode.Err206, SectType.VALVES, name));
                         continue;
                     }
 
-                    setting = net.Curves.IndexOf(t);
+                    // setting = net.Curves.IndexOf(t);
                     log.Warning("GPV Valve, index as roughness !");
                     valve.Curve = t;
                     status = StatType.OPEN;
                 }
-                else if(!data[VALVE_SETTING_INDEX].ToDouble(out setting)) {
-                    LogException(new ENException(ErrorCode.Err202));
+                else if(!data[VALVE_SETTING_INDEX].ToDouble(out double _)) {
+                    LogException(new EnException(ErrorCode.Err202));
                     continue;
                 }
 
-                if(!data[VALVE_MLOSS_INDEX].ToDouble(out lcoeff) || lcoeff < 0.0) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.VALVES, name));
+                if(!data[VALVE_MLOSS_INDEX].ToDouble(out double lcoeff) || lcoeff < 0.0) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.VALVES, name));
                     continue;
                 }
 
                 /* Check that PRV, PSV, or FCV not connected to a tank & */
                 /* check for illegal connections between pairs of valves.*/
-                if (j1.Type > NodeType.JUNC || j2.Type > NodeType.JUNC) {
-                    switch (type) {
-                    case LinkType.PRV:
-                    case LinkType.PSV:
-                    case LinkType.FCV:
-                        LogException(new ENException(ErrorCode.Err219, SectType.VALVES, name));
+                if (j1.NodeType > NodeType.JUNC || j2.NodeType > NodeType.JUNC) {
+                    if (type == ValveType.PRV || type == ValveType.PSV || type == ValveType.FCV) {
+                        LogException(new EnException(ErrorCode.Err219, SectType.VALVES, name));
                         continue;
                     }
                 }
 
                 if(!Valvecheck(net, type, j1, j2))
-                    throw new ENException(ErrorCode.Err220);
+                    throw new EnException(ErrorCode.Err220);
 
                 valve.FirstNode = j1;
                 valve.SecondNode = j2;
-                valve.Lenght = length;
+                valve.Lenght = 0.0;
                 valve.Diameter = diam;
-                valve.Kc = rcoeff;
+                valve.Kc = 0.0;
                 valve.Km = lcoeff;
                 valve.Kb = double.NaN;
                 valve.Kw = double.NaN;
-                valve.Type = type;
                 valve.Status = status;
 
                 if(points.Length > 0)
@@ -690,38 +692,38 @@ namespace Epanet.Network.IO.Input {
                 Node j2 = net.GetNode(_reader.ReadString());
                 var points = _reader.ReadVertices();
                 var data = _reader.ReadArray(MAXLINKPROPS);
-
+                
                 if (net.GetLink(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.JUNCTIONS, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.JUNCTIONS, name));
                     continue;
                 }
 
                 if (j1 == null || j2 == null) {
-                    LogException(new ENException(ErrorCode.Err203, SectType.PIPES, name));
+                    LogException(new EnException(ErrorCode.Err203, SectType.PIPES, name));
                     continue;
                 }
 
                 if (j1.Equals(j2)) {
-                    LogException(new ENException(ErrorCode.Err222, SectType.PIPES, name));
+                    LogException(new EnException(ErrorCode.Err222, SectType.PIPES, name));
                     continue;
                 }
 
-                double length, diam, rcoeff, lcoeff;
 
-                if (!data[PIPE_LEN_INDEX].ToDouble(out length) || length <= 0.0 ||
-                    !data[PIPE_DIAM_INDEX].ToDouble(out diam) || diam <= 0.0 ||
-                    !data[PIPE_ROUGH_INDEX].ToDouble(out rcoeff) || rcoeff <= 0.0 ||
-                    !data[PIPE_MLOSS_INDEX].ToDouble(out lcoeff) || lcoeff < 0.0
+
+                if (!data[PIPE_LEN_INDEX].ToDouble(out double length) || length <= 0.0 ||
+                    !data[PIPE_DIAM_INDEX].ToDouble(out double diam) || diam <= 0.0 ||
+                    !data[PIPE_ROUGH_INDEX].ToDouble(out double rcoeff) || rcoeff <= 0.0 ||
+                    !data[PIPE_MLOSS_INDEX].ToDouble(out double lcoeff) || lcoeff < 0.0
                 ) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.PIPES, name));
+                    LogException(new EnException(ErrorCode.Err202, SectType.PIPES, name));
                     continue;
                 }
 
-                LinkType type = LinkType.PIPE;
                 StatType status = StatType.OPEN;
+                bool isCv = false;
 
                 if (data[PIPE_STATUS_INDEX].Match(Keywords.w_CV)) {
-                    type = LinkType.CV;
+                    isCv = true;
                 }
                 else if(data[PIPE_STATUS_INDEX].Match(Keywords.w_CLOSED)) {
                     status = StatType.CLOSED;
@@ -730,26 +732,23 @@ namespace Epanet.Network.IO.Input {
                     status = StatType.OPEN;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err202, SectType.PIPES, name));
+                    LogException(new EnException(ErrorCode.Err202, SectType.PIPES, name));
                     continue;                    
                 }
 
-                Link link = new Link(name) {
+                Pipe link = new Pipe(name) {
                     FirstNode = j1,
-                    SecondNode = j2
+                    SecondNode = j2,
+                    Lenght = length,
+                    Diameter = diam,
+                    Kc = rcoeff,
+                    Km = lcoeff,
+                    Kb = double.NaN,
+                    Kw = double.NaN,
+                    HasCheckValve = isCv,
+                    Status = status
                 };
 
-                link.FirstNode = j1;
-                link.SecondNode = j2;
-                link.Lenght = length;
-                link.Diameter = diam;
-                link.Kc = rcoeff;
-                link.Km = lcoeff;
-                link.Kb = double.NaN;
-                link.Kw = double.NaN;
-                link.Type = type;
-                link.Status = status;
-                
                 if(points.Length > 0)
                     link.Vertices.AddRange(points);
 
@@ -760,9 +759,8 @@ namespace Epanet.Network.IO.Input {
                     link.Tag = data[TAG_INDEX];
 
                 if (!string.IsNullOrEmpty(data[PIPE_KBULK_INDEX])) {
-                    double kb;
-                    if (!data[PIPE_KBULK_INDEX].ToDouble(out kb)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.PIPES, name));
+                    if (!data[PIPE_KBULK_INDEX].ToDouble(out double kb)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.PIPES, name));
                     }
                     else {
                         link.Kb = kb;
@@ -770,9 +768,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if(!string.IsNullOrEmpty(data[PIPE_KWALL_INDEX])) {
-                    double kw;
-                    if(!data[PIPE_KWALL_INDEX].ToDouble(out kw)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.PIPES, name));
+                    if(!data[PIPE_KWALL_INDEX].ToDouble(out double kw)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.PIPES, name));
                     }
                     else {
                         link.Kw = kw;
@@ -788,7 +785,6 @@ namespace Epanet.Network.IO.Input {
             if (n <= 0) return;
 
             for(int i = 0; i < n; i++) {
-                double el, initlevel, minlevel, maxlevel, minvol, diam;
                 Curve vcurve = null;
 
                 string name = _reader.ReadString();
@@ -796,47 +792,47 @@ namespace Epanet.Network.IO.Input {
                 var data = _reader.ReadArray(MAXNODEPROPS);
 
                 if (net.GetNode(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.TANKS, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.TANKS, name));
                     continue;
                 }
 
-                if(!data[TANK_ELEV_INDEX].ToDouble(out el)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_ELEV_INDEX]));
+                if(!data[TANK_ELEV_INDEX].ToDouble(out double el)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_ELEV_INDEX]));
                     continue;
                 }
 
-                if(!data[TANK_INITLVL_INDEX].ToDouble(out initlevel)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_INITLVL_INDEX]));
+                if(!data[TANK_INITLVL_INDEX].ToDouble(out double initlevel)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_INITLVL_INDEX]));
                     continue;
                 }
 
-                if(!data[TANK_MINLVL_INDEX].ToDouble(out minlevel)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_MINLVL_INDEX]));
+                if(!data[TANK_MINLVL_INDEX].ToDouble(out double minlevel)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_MINLVL_INDEX]));
                     continue;
                 }
 
-                if(!data[TANK_MAXLVL_INDEX].ToDouble(out maxlevel)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_MAXLVL_INDEX]));
+                if(!data[TANK_MAXLVL_INDEX].ToDouble(out double maxlevel)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_MAXLVL_INDEX]));
                     continue;
                 }
 
-                if(!data[TANK_DIAM_INDEX].ToDouble(out diam) || diam < 0) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_DIAM_INDEX]));
+                if(!data[TANK_DIAM_INDEX].ToDouble(out double diam) || diam < 0) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_DIAM_INDEX]));
                     continue;
                 }
 
-                if(!data[TANK_MINVOL_INDEX].ToDouble(out minvol) || minvol < 0) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.TANKS, data[TANK_MINVOL_INDEX]));
+                if(!data[TANK_MINVOL_INDEX].ToDouble(out double minvol) || minvol < 0) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.TANKS, data[TANK_MINVOL_INDEX]));
                     continue;
                 }
 
                 if (!string.IsNullOrEmpty(data[TANK_VCURVE_INDEX])) {
                     if((vcurve = net.GetCurve(data[TANK_VCURVE_INDEX])) == null) {
-                        LogException(new ENException(ErrorCode.Err206, SectType.TANKS, data[TANK_VCURVE_INDEX]));
+                        LogException(new EnException(ErrorCode.Err206, SectType.TANKS, data[TANK_VCURVE_INDEX]));
                     }
                 }
 
-                var tank = new Tank(name) { Position = point };
+                var tank = new Tank(name) { Coordinate = point };
 
                 if(!string.IsNullOrEmpty(data[COMMENT_INDEX]))
                     tank.Comment = data[COMMENT_INDEX];
@@ -871,21 +867,18 @@ namespace Epanet.Network.IO.Input {
                 tank.V1Max = 1.0;
 
                 if (!string.IsNullOrEmpty(data[TANK_MIXMODEL_INDEX])) {
-                    MixType type;
-
-                    if (!EnumsTxt.TryParse(data[TANK_MIXMODEL_INDEX], out type)) {
-                        LogException(new ENException(ErrorCode.Err201, SectType.MIXING, data[TANK_MIXMODEL_INDEX]));
+                    if (!data[TANK_MIXMODEL_INDEX].TryParse(out MixType type)) {
+                        LogException(new EnException(ErrorCode.Err201, SectType.MIXING, data[TANK_MIXMODEL_INDEX]));
                     }
                     else {
                         tank.MixModel = type;
 
                         if (type == MixType.MIX2 && !string.IsNullOrEmpty(data[TANK_MIXFRAC_INDEX])) {
-                            double v;
-                            if (!data[TANK_MIXFRAC_INDEX].ToDouble(out v)) {
-                                LogException(new ENException(ErrorCode.Err209, SectType.MIXING, name));
+                            if (!data[TANK_MIXFRAC_INDEX].ToDouble(out double v)) {
+                                LogException(new EnException(ErrorCode.Err209, SectType.MIXING, name));
                             }
                             else {
-                                if (v == 0.0)
+                                if (v.IsZero())
                                     v = 1.0;
                             
                                 tank.V1Max = v;
@@ -896,9 +889,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (!string.IsNullOrEmpty(data[TANK_KBULK_INDEX])) {
-                    double kb;
-                    if (!data[TANK_KBULK_INDEX].ToDouble(out kb)) {
-                        LogException(new ENException(ErrorCode.Err209, SectType.REACTIONS, name));
+                    if (!data[TANK_KBULK_INDEX].ToDouble(out double kb)) {
+                        LogException(new EnException(ErrorCode.Err209, SectType.REACTIONS, name));
                     }
                     else {
                         tank.Kb = kb;
@@ -906,10 +898,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if(!string.IsNullOrEmpty(data[TANK_INITQUAL_INDEX])) {
-                    double c0;
-
-                    if(!data[TANK_INITQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.QUALITY, data[TANK_INITQUAL_INDEX]));
+                    if(!data[TANK_INITQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.QUALITY, data[TANK_INITQUAL_INDEX]));
                     }
                     else {
                         tank.C0 = c0;
@@ -917,18 +907,16 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if(!string.IsNullOrEmpty(data[TANK_SRCQUAL_INDEX])) {
-                    SourceType type;
-                    double c0;
                     Pattern pat = null;
 
-                    if(!data[TANK_SRCQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.SOURCES, data[TANK_SRCQUAL_INDEX]));
+                    if(!data[TANK_SRCQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.SOURCES, data[TANK_SRCQUAL_INDEX]));
                     }
-                    else if(!EnumsTxt.TryParse(data[TANK_SRCTYPE_INDEX], out type)) {
-                        LogException(new ENException(ErrorCode.Err201, SectType.SOURCES, data[TANK_SRCTYPE_INDEX]));
+                    else if(!data[TANK_SRCTYPE_INDEX].TryParse(out SourceType type)) {
+                        LogException(new EnException(ErrorCode.Err201, SectType.SOURCES, data[TANK_SRCTYPE_INDEX]));
                     }
                     else if(!string.IsNullOrEmpty(data[TANK_SRCPAT_INDEX]) && (pat = net.GetPattern(data[TANK_SRCPAT_INDEX])) == null) {
-                        LogException(new ENException(ErrorCode.Err205, SectType.SOURCES, data[TANK_SRCPAT_INDEX]));
+                        LogException(new EnException(ErrorCode.Err205, SectType.SOURCES, data[TANK_SRCPAT_INDEX]));
                     }
                     else {
                         tank.QualSource = new QualSource(type, c0, pat);
@@ -951,11 +939,11 @@ namespace Epanet.Network.IO.Input {
                 var data = _reader.ReadArray(MAXNODEPROPS);
 
                 if(net.GetNode(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.RESERVOIRS, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.RESERVOIRS, name));
                     continue;
                 }
 
-                var tank = new Tank(name) { Position = point };
+                var tank = new Tank(name) { Coordinate = point };
                 
                 if(!string.IsNullOrEmpty(data[COMMENT_INDEX])) 
                     tank.Comment = data[COMMENT_INDEX];
@@ -963,10 +951,8 @@ namespace Epanet.Network.IO.Input {
                 if (!string.IsNullOrEmpty(data[TAG_INDEX]))
                     tank.Tag = data[TAG_INDEX];
 
-                double head;
-
-                if (!data[RES_HEAD_INDEX].ToDouble(out head)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.RESERVOIRS, data[RES_HEAD_INDEX]));
+                if (!data[RES_HEAD_INDEX].ToDouble(out double head)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.RESERVOIRS, data[RES_HEAD_INDEX]));
                     continue;
                 }
                 
@@ -976,7 +962,7 @@ namespace Epanet.Network.IO.Input {
                     Pattern pat = net.GetPattern(data[RES_PATTERN_INDEX]);
 
                     if (pat == null) {
-                        LogException(new ENException(ErrorCode.Err205, tank.Name, data[RES_PATTERN_INDEX]));
+                        LogException(new EnException(ErrorCode.Err205, tank.Name, data[RES_PATTERN_INDEX]));
                     }
                     
                     tank.Pattern = pat;
@@ -984,9 +970,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (!string.IsNullOrEmpty(data[RES_INITQUAL_INDEX])) {
-                    double c0;
-                    if (!data[RES_INITQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.RESERVOIRS, data[RES_INITQUAL_INDEX]));
+                    if (!data[RES_INITQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.RESERVOIRS, data[RES_INITQUAL_INDEX]));
                     }
                     else {
                         tank.C0 = c0;
@@ -994,18 +979,16 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if(!string.IsNullOrEmpty(data[RES_SRCQUAL_INDEX])) {
-                    SourceType type;
-                    double c0;
                     Pattern pat = null;
 
-                    if(!data[RES_SRCQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.SOURCES, data[RES_SRCQUAL_INDEX]));
+                    if(!data[RES_SRCQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.SOURCES, data[RES_SRCQUAL_INDEX]));
                     }
-                    else if(!EnumsTxt.TryParse(data[RES_SRCTYPE_INDEX], out type)) {
-                        LogException(new ENException(ErrorCode.Err201, SectType.SOURCES, data[RES_SRCTYPE_INDEX]));
+                    else if(!data[RES_SRCTYPE_INDEX].TryParse(out SourceType type)) {
+                        LogException(new EnException(ErrorCode.Err201, SectType.SOURCES, data[RES_SRCTYPE_INDEX]));
                     }
                     else if(!string.IsNullOrEmpty(data[RES_SRCPAT_INDEX]) && (pat = net.GetPattern(data[RES_SRCPAT_INDEX])) == null) {
-                        LogException(new ENException(ErrorCode.Err205, SectType.SOURCES, data[RES_SRCPAT_INDEX]));
+                        LogException(new EnException(ErrorCode.Err205, SectType.SOURCES, data[RES_SRCPAT_INDEX]));
                     }
                     else {
                         tank.QualSource = new QualSource(type, c0, pat);
@@ -1030,11 +1013,11 @@ namespace Epanet.Network.IO.Input {
                 var demands = _reader.ReadList();
 
                 if (net.GetNode(name) != null) {
-                    LogException(new ENException(ErrorCode.Err215, SectType.JUNCTIONS, name));
+                    LogException(new EnException(ErrorCode.Err215, SectType.JUNCTIONS, name));
                     continue;
                 }                
                 
-                var node = new Node(name) { Position = position };
+                var node = new Junction(name) { Coordinate = position };
 
                 
                 if(!string.IsNullOrEmpty(data[COMMENT_INDEX])) 
@@ -1043,20 +1026,16 @@ namespace Epanet.Network.IO.Input {
                 if (!string.IsNullOrEmpty(data[TAG_INDEX]))
                     node.Tag = data[TAG_INDEX];
 
-                double el;
-
-                if (!data[JUNC_ELEV_INDEX].ToDouble(out el)) {
-                    LogException(new ENException(ErrorCode.Err202, SectType.JUNCTIONS, name));
+                if (!data[JUNC_ELEV_INDEX].ToDouble(out double el)) {
+                    LogException(new EnException(ErrorCode.Err202, SectType.JUNCTIONS, name));
                     continue;
                 }
 
                 node.Elevation = el;
 
                 if (!string.IsNullOrEmpty(data[JUNC_DEMAND_INDEX])) {
-                    double demand;
-                   
-                    if (!data[JUNC_DEMAND_INDEX].ToDouble(out demand)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.JUNCTIONS, name));
+                    if (!data[JUNC_DEMAND_INDEX].ToDouble(out double demand)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.JUNCTIONS, name));
                         continue;
                     }
 
@@ -1069,30 +1048,27 @@ namespace Epanet.Network.IO.Input {
                 if(!string.IsNullOrEmpty(data[JUNC_PATTERN_INDEX])) {
                     Pattern pattern = net.GetPattern(data[JUNC_PATTERN_INDEX]);
                     if (pattern == null) {
-                        LogException(new ENException(ErrorCode.Err205, SectType.JUNCTIONS, data[JUNC_PATTERN_INDEX]));
+                        LogException(new EnException(ErrorCode.Err205, SectType.JUNCTIONS, data[JUNC_PATTERN_INDEX]));
                     }
                     else {
-                        node.PrimaryDemand.pattern = pattern;
+                        node.PrimaryDemand.Pattern = pattern;
                     }
                 }
 
-                int demandCount;
-
-                if (int.TryParse(data[JUNC_DMNDCAT_INDEX], out demandCount) && demandCount > 1) {
+                if (int.TryParse(data[JUNC_DMNDCAT_INDEX], out int demandCount) && demandCount > 1) {
                     foreach (string s in demands) {
                         Pattern pat;
-                        double @base;
 
                         string[] demandData = s.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
                         if (demandData.Length < 2) {
                             // TODO:ERROR?
                         }
-                        else if(!demandData[0].ToDouble(out @base)) {
-                            LogException(new ENException(ErrorCode.Err202, SectType.JUNCTIONS, name));
+                        else if(!demandData[0].ToDouble(out double @base)) {
+                            LogException(new EnException(ErrorCode.Err202, SectType.JUNCTIONS, name));
                         }
                         else if ((pat = net.GetPattern(demandData[1])) == null) {
-                            LogException(new ENException(ErrorCode.Err205, SectType.JUNCTIONS, demandData[1]));
+                            LogException(new EnException(ErrorCode.Err205, SectType.JUNCTIONS, demandData[1]));
                         }
                         else {
                             node.Demands.Add(new Demand(@base, pat));
@@ -1102,13 +1078,11 @@ namespace Epanet.Network.IO.Input {
                 }
                 
                 if(!string.IsNullOrEmpty(data[JUNC_EMITTER_INDEX])) {
-                    double k;
-
-                    if (node.Type == NodeType.TANK) {
-                        LogException(new ENException(ErrorCode.Err209, data[JUNC_EMITTER_INDEX], name));
+                    if (node.NodeType == NodeType.TANK) {
+                        LogException(new EnException(ErrorCode.Err209, data[JUNC_EMITTER_INDEX], name));
                     }
-                    else if (!data[JUNC_EMITTER_INDEX].ToDouble(out k) || k < 0.0) {
-                        LogException(new ENException(ErrorCode.Err202));
+                    else if (!data[JUNC_EMITTER_INDEX].ToDouble(out double k) || k < 0.0) {
+                        LogException(new EnException(ErrorCode.Err202));
                     }
                     else {
                         node.Ke = k;
@@ -1116,10 +1090,8 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (!string.IsNullOrEmpty(data[JUNC_INITQUAL_INDEX])) {
-                    double c0;
-
-                    if (!data[JUNC_INITQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202));
+                    if (!data[JUNC_INITQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202));
                     }
                     else {
                         node.C0 = c0;
@@ -1127,18 +1099,16 @@ namespace Epanet.Network.IO.Input {
                 }
 
                 if (!string.IsNullOrEmpty(data[JUNC_SRCQUAL_INDEX])) {
-                    SourceType type;
-                    double c0;
                     Pattern pat = null;
 
-                    if (!data[JUNC_SRCQUAL_INDEX].ToDouble(out c0)) {
-                        LogException(new ENException(ErrorCode.Err202, SectType.SOURCES, data[JUNC_SRCQUAL_INDEX]));
+                    if (!data[JUNC_SRCQUAL_INDEX].ToDouble(out double c0)) {
+                        LogException(new EnException(ErrorCode.Err202, SectType.SOURCES, data[JUNC_SRCQUAL_INDEX]));
                     }
-                    else if(!EnumsTxt.TryParse(data[JUNC_SRCTYPE_INDEX], out type)) {
-                        LogException(new ENException(ErrorCode.Err201, SectType.SOURCES, data[JUNC_SRCTYPE_INDEX]));
+                    else if(!data[JUNC_SRCTYPE_INDEX].TryParse(out SourceType type)) {
+                        LogException(new EnException(ErrorCode.Err201, SectType.SOURCES, data[JUNC_SRCTYPE_INDEX]));
                     }
                     else if(!string.IsNullOrEmpty(data[JUNC_SRCPAT_INDEX]) && (pat = net.GetPattern(data[JUNC_SRCPAT_INDEX])) == null) {
-                        LogException(new ENException(ErrorCode.Err205, SectType.SOURCES, data[JUNC_SRCPAT_INDEX]));
+                        LogException(new EnException(ErrorCode.Err205, SectType.SOURCES, data[JUNC_SRCPAT_INDEX]));
                     }
                     else {
                         node.QualSource = new QualSource(type, c0, pat);
@@ -1193,12 +1163,11 @@ namespace Epanet.Network.IO.Input {
                 var multipliers = _reader.ReadList();
 
                 foreach (string s in multipliers) {
-                    double factor;
-                    if (s.ToDouble(out factor)) {
+                    if (s.ToDouble(out double factor)) {
                         pat.Add(factor);
                     }
                     else {
-                        LogException(new ENException(ErrorCode.Err202, "PATTERNS", s));
+                        LogException(new EnException(ErrorCode.Err202, "PATTERNS", s));
                         // FIXME: what to do here?
                         break;
                     }
@@ -1208,38 +1177,32 @@ namespace Epanet.Network.IO.Input {
             }
         }
 
-        private static long GetSeconds(string value) {
+        private static TimeSpan GetSeconds(string value) {
             value = (value ?? string.Empty).Trim();
-            if (string.IsNullOrEmpty(value)) return -1;
+            if (string.IsNullOrEmpty(value)) return TimeSpan.MinValue;
 
             int index = value.LastIndexOfAny(new[] {' ', '\t'});
 
-            if (index == -1) {
-                return (long)(Utilities.GetHour(value) * 3600);
-            }
-
-            return (long)(Utilities.GetHour(value.Substring(0, index), value.Substring(index + 1)) * 3600);
+            return index == -1 
+                ? Utilities.ToTimeSpan(value) 
+                : Utilities.ToTimeSpan(value.Substring(0, index), value.Substring(index + 1));
         }
 
         private void ReadOptions() {
-            double y;
-
             var options = _reader.ReadArray(MAXOPTIONS);
 
-            bool autoLength = _reader.ReadBoolean();
+            net.AutoLength = _reader.ReadBoolean();
 
             //-----------------------------------------------------------------------------------
 
             string line = options[FLOW_UNITS_INDEX];
 
             {
-                FlowUnitsType flag;
-
-                if (EnumsTxt.TryParse(line, out flag)) {
+                if (line.TryParse(out FlowUnitsType flag)) {
                     net.FlowFlag = flag;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err201, SectType.OPTIONS, "UNITS " + line));
+                    LogException(new EnException(ErrorCode.Err201, SectType.OPTIONS, "UNITS " + line));
                 }
             }
 
@@ -1247,13 +1210,11 @@ namespace Epanet.Network.IO.Input {
 
             line = options[HLOSS_FORM_INDEX];
             {
-                FormType flag;
-
-                if (EnumsTxt.TryParse(line, out flag)) {
+                if (line.TryParse(out FormType flag)) {
                     net.FormFlag = flag;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err201, SectType.OPTIONS, "HEADLOSS " + line));
+                    LogException(new EnException(ErrorCode.Err201, SectType.OPTIONS, "HEADLOSS " + line));
                 }
             }
 
@@ -1261,11 +1222,11 @@ namespace Epanet.Network.IO.Input {
 
             line = options[SPEC_GRAV_INDEX];
 
-            if (line.ToDouble(out y) && y > 0) {
+            if (line.ToDouble(out double y) && y > 0) {
                 net.SpGrav = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "SPECIFIC GRAVITY " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "SPECIFIC GRAVITY " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1276,7 +1237,7 @@ namespace Epanet.Network.IO.Input {
                 net.Viscos = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "VISCOSITY " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "VISCOSITY " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1287,7 +1248,7 @@ namespace Epanet.Network.IO.Input {
                 net.MaxIter = (int)y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "TRIALS " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "TRIALS " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1300,7 +1261,7 @@ namespace Epanet.Network.IO.Input {
                 net.HAcc = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "ACCURACY " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "ACCURACY " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1314,7 +1275,7 @@ namespace Epanet.Network.IO.Input {
                 net.ExtraIter = 0;
             }
             else {
-                LogException(new ENException(ErrorCode.Err201, SectType.OPTIONS, "UNBALANCED " + line));
+                LogException(new EnException(ErrorCode.Err201, SectType.OPTIONS, "UNBALANCED " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1333,7 +1294,7 @@ namespace Epanet.Network.IO.Input {
                 net.DMult = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "DEMAND MULTIPLIER " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "DEMAND MULTIPLIER " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1344,20 +1305,19 @@ namespace Epanet.Network.IO.Input {
                 net.QExp = 1 / y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "EMITTER EXPONENT " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "EMITTER EXPONENT " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             {
                 line = options[STATUS_RPT_INDEX];
-                StatFlag flag;
 
-                if (EnumsTxt.TryParse(line, out flag) && y > 0) {
+                if (line.TryParse(out StatFlag flag) && y > 0) {
                     net.StatFlag = flag;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err201, SectType.REPORT, "STATUS " + line));
+                    LogException(new EnException(ErrorCode.Err201, SectType.REPORT, "STATUS " + line));
                 }
             }
 
@@ -1366,8 +1326,7 @@ namespace Epanet.Network.IO.Input {
             line = options[QUAL_PARAM_INDEX];
 
             {
-                QualType flag;
-                net.QualFlag = EnumsTxt.TryParse(line, out flag) ? flag : QualType.CHEM;
+                net.QualFlag = line.TryParse(out QualType flag) ? flag : QualType.CHEM;
                 
                 string units = options[QUAL_UNITS_INDEX];
 
@@ -1382,7 +1341,7 @@ namespace Epanet.Network.IO.Input {
                     Node node = net.GetNode(options[TRACE_NODE_INDEX]);
                 
                     if (node == null) {
-                        LogException(new ENException(ErrorCode.Err212, SectType.OPTIONS, "QUALITY TRACE " + line));
+                        LogException(new EnException(ErrorCode.Err212, SectType.OPTIONS, "QUALITY TRACE " + line));
                     }
                     else {
                         net.TraceNode = node.Name;
@@ -1407,7 +1366,7 @@ namespace Epanet.Network.IO.Input {
                 net.Diffus = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err201, SectType.OPTIONS, "DIFFUSIVITY " + line));
+                LogException(new EnException(ErrorCode.Err201, SectType.OPTIONS, "DIFFUSIVITY " + line));
             }
 
             
@@ -1419,7 +1378,7 @@ namespace Epanet.Network.IO.Input {
                 net.QTol = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err201, SectType.OPTIONS, "QTOL " + line));
+                LogException(new EnException(ErrorCode.Err201, SectType.OPTIONS, "QTOL " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1430,7 +1389,7 @@ namespace Epanet.Network.IO.Input {
                 net.BulkOrder = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "ORDER BULK " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "ORDER BULK " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1444,7 +1403,7 @@ namespace Epanet.Network.IO.Input {
                 net.WallOrder = 1;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "ORDER WALL " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "ORDER WALL " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1455,7 +1414,7 @@ namespace Epanet.Network.IO.Input {
                 net.KBulk = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "GLOBAL BULK " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "GLOBAL BULK " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1466,7 +1425,7 @@ namespace Epanet.Network.IO.Input {
                 net.KWall = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "GLOBAL WALL " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "GLOBAL WALL " + line));
             }
             
             //-----------------------------------------------------------------------------------
@@ -1477,7 +1436,7 @@ namespace Epanet.Network.IO.Input {
                 net.CLimit = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "LIMITING POTENTIAL " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "LIMITING POTENTIAL " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1488,113 +1447,108 @@ namespace Epanet.Network.IO.Input {
                 net.RFactor = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.REACTIONS, "ROUGHNESS CORRELATION " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.REACTIONS, "ROUGHNESS CORRELATION " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[DURATION_INDEX];
-            long t;
+            TimeSpan t;
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.Duration = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "DURATION " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "DURATION " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[HYD_TSTEP_INDEX];
-            
-            if((t = GetSeconds(line)) >= 0) {
+
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.HStep = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "HYDRAULIC TIMESTEP " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "HYDRAULIC TIMESTEP " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[QUAL_TSTEP_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 //Check if Quality Time Step is in hours instead of minutes
-                if(t > 3600)
-                    net.QStep = t / 60;
-                else
-                    net.QStep = t;
+                net.QStep = t > TimeSpan.FromHours(1) ? new TimeSpan(t.Ticks / 60) : t;  //? BUG?
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "QUALITY TIMESTEP " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "QUALITY TIMESTEP " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[PAT_TSTEP_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.PStep = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "PATTERN TIMESTEP " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "PATTERN TIMESTEP " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[PAT_START_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.PStart = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "PATTERN START " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "PATTERN START " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[RPT_TSTEP_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.RStep = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "REPORT TIMESTEP " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "REPORT TIMESTEP " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[RPT_START_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
                 net.RStart = t;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "REPORT START " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "REPORT START " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[START_TIME_INDEX];
 
-            if((t = GetSeconds(line)) >= 0) {
-                net.Tstart = t % Constants.SECperDAY;
+            if((t = GetSeconds(line)) != TimeSpan.MinValue) {
+                net.Tstart = t.TimeOfDay();
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "START CLOCKTIME " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "START CLOCKTIME " + line));
             }
 
             //-----------------------------------------------------------------------------------
 
             line = options[TIME_STAT_INDEX];
             {
-                TStatType flag;
-
-                if (EnumsTxt.TryParse(line, out flag)) {
+                if (line.TryParse(out TimeStatType flag)) {
                     net.TstatFlag = flag;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err213, SectType.TIMES, "STATISTIC " + line));
+                    LogException(new EnException(ErrorCode.Err213, SectType.TIMES, "STATISTIC " + line));
                 }
             }
 
@@ -1606,7 +1560,7 @@ namespace Epanet.Network.IO.Input {
                 net.EPump = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL EFFIC " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL EFFIC " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1617,7 +1571,7 @@ namespace Epanet.Network.IO.Input {
                 net.ECost = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PRICE " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PRICE " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1628,7 +1582,7 @@ namespace Epanet.Network.IO.Input {
                 net.ECost = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PRICE " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PRICE " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1642,7 +1596,7 @@ namespace Epanet.Network.IO.Input {
                     net.EPatId = pat.Name;
                 }
                 else {
-                    LogException(new ENException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PATTERN " + line));
+                    LogException(new EnException(ErrorCode.Err213, SectType.ENERGY, "GLOBAL PATTERN " + line));
                 }
             }
 
@@ -1654,7 +1608,7 @@ namespace Epanet.Network.IO.Input {
                 net.DCost = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.ENERGY, "DEMAND CHARGE " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.ENERGY, "DEMAND CHARGE " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1665,7 +1619,7 @@ namespace Epanet.Network.IO.Input {
                 net.CheckFreq = (int)y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "CHECKFREQ " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "CHECKFREQ " + line));
             }
             
             //-----------------------------------------------------------------------------------
@@ -1676,7 +1630,7 @@ namespace Epanet.Network.IO.Input {
                 net.MaxCheck = (int)y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "MAXCHECK " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "MAXCHECK " + line));
             }
 
             //-----------------------------------------------------------------------------------
@@ -1687,7 +1641,7 @@ namespace Epanet.Network.IO.Input {
                 net.DampLimit = y;
             }
             else {
-                LogException(new ENException(ErrorCode.Err213, SectType.OPTIONS, "DAMPLIMIT " + line));
+                LogException(new EnException(ErrorCode.Err213, SectType.OPTIONS, "DAMPLIMIT " + line));
             }
 
         }
@@ -1814,7 +1768,7 @@ namespace Epanet.Network.IO.Input {
             /// <summary>
             /// Reads a floating-point number from the reader object's stream and returns its value.
             /// </summary>
-            public double ReadFloat() {
+            private double ReadFloat() {
                 switch (ReadValue()) {
                 case TValueType.vaExtended:
                     return ReadExtended();
@@ -1828,7 +1782,7 @@ namespace Epanet.Network.IO.Input {
             /// <summary>
             /// Reads an 64-bit integer from the reader object's stream and returns its value.
             /// </summary>
-            public long ReadInt64() {
+            private long ReadInt64() {
                 switch (NextValue()) {
                 case TValueType.vaInt64:
                     ReadValue();

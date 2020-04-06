@@ -23,21 +23,26 @@ namespace Epanet.Network.IO.Output {
     public abstract class OutputComposer {
 
         ///<summary>Composer creation method.</summary>
+        /// <param name="net">Hydraulic network reference.</param>
         /// <param name="type">Composer type.</param>
         /// <returns>Composer reference.</returns>
-        public static OutputComposer Create(FileType type) {
+        public static OutputComposer Create(Network net, FileType type) {
             switch (type) {
-            case FileType.INP_FILE:       return new InpComposer();
-            case FileType.XML_FILE:       return new XmlComposer(false);
-            case FileType.XML_GZ_FILE:    return new XmlComposer(true);
+            case FileType.INP_FILE:       return new InpComposer(net);
+            case FileType.XML_FILE:       return new XmlComposer(net, false);
+            case FileType.XML_GZ_FILE:    return new XmlComposer(net, true);
             }
             return null;
         }
 
-        ///<summary>Abstract method to implement the output file creation.</summary>
+        protected readonly Network _net;
+
         /// <param name="net">Hydraulic network reference.</param>
+        protected OutputComposer(Network net) { _net = net; }
+
+        ///<summary>Abstract method to implement the output file creation.</summary>
         /// <param name="fileName">File name reference.</param>
-        public abstract void Composer(Network net, string fileName);
+        public abstract void Compose(string fileName);
 
     }
 
